@@ -15820,5 +15820,28 @@
         "text": "Roadmap progress is 685/705 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-cabinet-referral-boundary",
+    "version": "0.673.0",
+    "releasedAt": "2026-08-13T00:12:00+07:00",
+    "title": "Реферальные начисления защищены и локализованы",
+    "summary": "Кабинет получает минимальный контракт начислений, история ограничивается базой данных, а cabinet и admin показывают понятные русские величины.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "API кабинета больше не допускает user/source/program/metadata поля, возвращает последние 100 начислений, а административная история ограничена последними 200 записями."
+      },
+      {
+        "type": "improved",
+        "text": "Общий formatter показывает типы и величины начислений по-русски: например, 7 days отображается как 7 дней и одинаково выглядит в кабинете и админке."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 686/706 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

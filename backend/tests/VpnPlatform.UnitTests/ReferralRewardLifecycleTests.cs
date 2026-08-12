@@ -58,6 +58,37 @@ public class ReferralRewardLifecycleTests
     }
 
     [Fact]
+    public async Task Cabinet_Referral_History_Should_Return_Only_The_Latest_100_Rewards()
+    {
+        await using var connection = await OpenConnectionAsync();
+        await using var db = CreateDb(connection);
+        await db.Database.EnsureCreatedAsync();
+        var user = User("reward-history@example.test", "REF-HISTORY");
+        db.Users.Add(user);
+        db.RewardLedgers.AddRange(Enumerable.Range(0, 105).Select(index => new RewardLedger
+        {
+            UserId = user.Id,
+            Type = "bonus-days",
+            Status = RewardStatus.Approved,
+            Value = index,
+            CurrencyOrUnit = "days",
+            CreatedAt = new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero).AddMinutes(index),
+            UpdatedAt = new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero).AddMinutes(index)
+        }));
+        await db.SaveChangesAsync();
+
+        var response = Assert.IsType<OkObjectResult>(await CreateMeController(db, user.Id).GetReferrals(CancellationToken.None));
+        var rewards = Assert.IsAssignableFrom<IEnumerable<object>>(response.Value).ToList();
+        var values = rewards
+            .Select(item => (decimal)item.GetType().GetProperty("Value")!.GetValue(item)!)
+            .ToList();
+
+        Assert.Equal(100, rewards.Count);
+        Assert.Equal(104m, values[0]);
+        Assert.Equal(5m, values[^1]);
+    }
+
+    [Fact]
     public async Task Referral_Rewards_Should_Respect_First_Purchase_And_Promo_Stacking()
     {
         await using var connection = await OpenConnectionAsync();

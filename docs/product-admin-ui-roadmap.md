@@ -1,6 +1,6 @@
 # Product/UI roadmap: сайт, кабинет и админка VPN Platform
 
-Дата актуализации: 2026-08-12.
+Дата актуализации: 2026-08-13.
 
 Этот документ был исходным продуктовым планом по единому сайту, кабинету и админке. Актуальный источник правды по production-ready статусу находится в [PRODUCT_COMPLETION_ROADMAP.md](PRODUCT_COMPLETION_ROADMAP.md). Здесь оставлен компактный продуктовый срез, чтобы старые незакрытые чекбоксы не противоречили фактическим проверкам.
 
@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `685/705` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `686/706` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,8 +85,8 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1365/1365`.
-- [x] Frontend unit tests: `156/156`.
+- [x] Backend full suite: `1367/1367`.
+- [x] Frontend unit tests: `157/157`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
@@ -167,7 +167,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-12-cabinet-support-boundary`, версия `0.672.0`; обращения и сообщения кабинета используют минимальные контракты без служебных user/Telegram/assignment/attachment полей, DB-side limits и понятное название канала; backend `1365/1365`.
+- [x] Latest "Что нового": `2026-08-13-cabinet-referral-boundary`, версия `0.673.0`; история начислений кабинета использует минимальный fail-closed контракт и DB-side top-100, admin — top-200, а оба интерфейса показывают локализованные типы и величины; backend `1367/1367`.
 
 ## Как вести дальше
 

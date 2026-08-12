@@ -1,6 +1,19 @@
 # Результаты проверок
 
-Дата проверки: 2026-08-12.
+Дата проверки: 2026-08-13.
+
+## Check 2026-08-13: cabinet referral boundary
+
+Scope:
+- Cabinet referral API не должен раскрывать user/source/program/metadata поля; пользовательская история должна ограничиваться 100 записями, административная — 200 записями на стороне БД.
+- Cabinet и admin должны показывать тип и величину начисления по-русски без технического `days` на desktop/mobile/responsive экранах.
+
+Results:
+- Roadmap progress: `686/706` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-cabinet-referral-boundary`, version `0.673.0`.
+- Fail-first: backend `0/1`, frontend `0/2`; API возвращал 105 пользовательских начислений, frontend принимал служебный `userId`, helper локализации отсутствовал, а cabinet/admin показывали `7 days`.
+- After fix: отдельный `CabinetRewardLedgerDto`, DB-side top-100/top-200 для SQLite/PostgreSQL, fail-closed cabinet validator и общий referral formatter сохраняют полный admin contract и показывают `7 дней`.
+- Targeted backend `11/11`, frontend `90/90`; backend `1367/1367`; frontend `157/157`; typecheck/build; cabinet desktop/mobile `2/2`; admin full flow `1/1`; all-screens/responsive `7/7`; fresh SQLite checkout/payment/subscription/VPN access, EF drift и dependency audit `0 vulnerabilities` зелёные. Real VPS/staging/live evidence remains open; provider/Telegram cabinets, Bot API, SMTP and production-like 3x-ui were not checked locally.
 
 ## Check 2026-08-12: cabinet support boundary
 

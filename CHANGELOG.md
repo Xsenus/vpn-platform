@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.673.0 - 2026-08-13
+
+Release entry: `2026-08-13-cabinet-referral-boundary`.
+
+### Исправлено
+
+- История реферальных начислений больше не materialize-ится целиком: кабинет получает последние 100 записей, административный экран — последние 200, с сортировкой и ограничением на стороне SQLite/PostgreSQL.
+- Пользовательский API-клиент fail-closed отклоняет `userId`, `sourceUserId`, `referralProgramId`, `metadataJson` и другие служебные поля, при этом полный административный контракт сохранён.
+
+### Улучшено
+
+- Cabinet и admin используют общее русскоязычное форматирование типов и величин начисления: техническое `7 days` отображается как `7 дней`, валюты форматируются единообразно.
+
+### Проверено
+
+- Fail-first backend `0/1`, frontend `0/2`; targeted backend `11/11`, frontend `90/90`, backend `1367/1367`, frontend `157/157`, typecheck/build, cabinet desktop/mobile `2/2`, admin full flow `1/1`, all-screens/responsive `7/7`, fresh SQLite, EF drift и dependency audit `0 vulnerabilities` зелёные.
+- Roadmap `686/706` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider/Telegram кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались; статус остается staging-ready baseline, not production-ready.
+
 ## 0.672.0 - 2026-08-12
 
 Release entry: `2026-08-12-cabinet-support-boundary`.

@@ -19,6 +19,14 @@ public sealed record InitMePaymentHttpRequest(string? ReturnUrl);
 public sealed record CreateMeSupportConversationHttpRequest(string Subject, string Text, Guid? OrderId, Guid? SubscriptionId);
 public sealed record MeSupportReplyHttpRequest(string Text, int? Revision = null);
 public sealed record MeSupportStatusHttpRequest(string Status, int? Revision = null);
+public sealed record CabinetRewardLedgerDto(
+    Guid Id,
+    string Type,
+    string Status,
+    decimal Value,
+    string CurrencyOrUnit,
+    DateTimeOffset? ProcessedAt,
+    DateTimeOffset CreatedAt);
 public sealed record CabinetSubscriptionDto(
     Guid Id,
     Guid TariffId,
@@ -687,20 +695,36 @@ public class MeController : ControllerBase
     [HttpGet("referrals")]
     public async Task<IActionResult> GetReferrals(CancellationToken cancellationToken)
     {
-        var rewards = await _db.RewardLedgers.AsNoTracking()
-            .Where(x => x.UserId == ResolveUserId())
-            .Select(x => new
-            {
-                x.Id,
-                x.Type,
-                Status = x.Status.ToString(),
-                x.Value,
-                x.CurrencyOrUnit,
-                x.ProcessedAt,
-                x.CreatedAt
-            })
-            .ToListAsync(cancellationToken);
-        return Ok(rewards.OrderByDescending(x => x.CreatedAt).ToList());
+        var userId = ResolveUserId();
+        IQueryable<RewardLedger> query;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            query = _db.RewardLedgers.FromSqlInterpolated($"""
+                SELECT r.*
+                FROM "RewardLedgers" AS r
+                WHERE r."UserId" = {userId}
+                ORDER BY julianday(r."CreatedAt") DESC, r."Id" DESC
+                LIMIT 100
+                """);
+        }
+        else
+        {
+            query = _db.RewardLedgers
+                .Where(x => x.UserId == userId)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(100);
+        }
+
+        var rewards = await query.AsNoTracking().ToListAsync(cancellationToken);
+        return Ok(rewards.Select(x => new CabinetRewardLedgerDto(
+            x.Id,
+            x.Type,
+            x.Status.ToString(),
+            x.Value,
+            x.CurrencyOrUnit,
+            x.ProcessedAt,
+            x.CreatedAt)).ToList());
     }
 
     [HttpGet("accesses")]

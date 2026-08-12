@@ -1869,7 +1869,8 @@ test('cabinet covers register, login, payments, subscription access and support'
   await firstCopyButton.click()
   await expect(page.getByText('Не удалось скопировать', { exact: true }).first()).toBeVisible()
   const referralRewardRow = page.locator('.list-item').filter({ hasText: 'Бонусные дни' })
-  await expect(referralRewardRow.getByText('7 days', { exact: false })).toBeVisible()
+  await expect(referralRewardRow.getByText('7 дней', { exact: false })).toBeVisible()
+  await expect(referralRewardRow).not.toContainText('days')
   await expect(referralRewardRow.getByText('Подтверждено')).toBeVisible()
 
   const staleOrderCard = page.locator('.payment-record').filter({ hasText: 'Истёкший заказ' })

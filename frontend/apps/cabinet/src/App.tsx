@@ -24,9 +24,9 @@ import {
   validatePasswordResetConfirm,
   validatePasswordResetRequest
 } from '@vpn-platform/api-client'
-import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, ExternalLinkActions, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
+import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, ExternalLinkActions, formatReferralRewardType, formatReferralRewardValue, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
-import { buildCabinetSummary, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getEffectiveSubscriptionStatus, getNextCabinetAccessExpiryDelay, getSubscriptionAccessExpiry, getSubscriptionRenewalAvailability, isCurrentSubscription } from './cabinet-dashboard'
+import { buildCabinetSummary, getAccessQrAvailability, getCabinetAccessTerminalReason, getEffectiveSubscriptionStatus, getNextCabinetAccessExpiryDelay, getSubscriptionAccessExpiry, getSubscriptionRenewalAvailability, isCurrentSubscription } from './cabinet-dashboard'
 import { cabinetSessionEndedMessage, isCabinetAccessTokenExpired, isCabinetSessionRejected } from './cabinet-session'
 import { buildOrderExportText, canOpenOrderPaymentConfirmation, formatPaymentMoney, getLatestPaymentForOrder, getNextOrderPaymentExpiryDelay, getOrderPaymentAvailability, getOrderPaymentProviderAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
 import { resolveCabinetPublicWebUrl } from './cabinet-public-url'
@@ -1759,7 +1759,7 @@ export function App() {
               <div key={reward.id} className="list-item">
                 <div>
                   <strong>{formatReferralRewardType(reward.type)}</strong>
-                  <div className="muted">{reward.value} {reward.currencyOrUnit} · {new Date(reward.createdAt).toLocaleDateString()}</div>
+                  <div className="muted">{formatReferralRewardValue(reward.value, reward.currencyOrUnit)} · {new Date(reward.createdAt).toLocaleDateString()}</div>
                 </div>
                 <StatusBadge value={reward.status} />
               </div>

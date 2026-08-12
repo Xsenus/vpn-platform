@@ -638,6 +638,19 @@ function cabinetAccessFixture(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function cabinetReferralFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'reward-1',
+    type: 'bonus-days',
+    status: 'Approved',
+    value: 7,
+    currencyOrUnit: 'days',
+    processedAt: adminFixtureTimestamp,
+    createdAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
 function cabinetSupportConversationFixture(overrides: Record<string, unknown> = {}) {
   return {
     id: 'support-1',
@@ -1594,6 +1607,31 @@ test('ApiClient accepts only the safe cabinet access contract', async () => {
   for (let index = 0; index < 5; index += 1) {
     await assert.rejects(
       () => client.getMyAccesses('user-token'),
+      (error: unknown) => error instanceof ApiClientError && error.status === 502
+    )
+  }
+})
+
+test('ApiClient accepts only the safe cabinet referral contract', async () => {
+  const responses = [
+    [cabinetReferralFixture()],
+    [{ ...cabinetReferralFixture(), userId: 'private-user-id' }],
+    [{ ...cabinetReferralFixture(), sourceUserId: 'private-source-user-id' }],
+    [{ ...cabinetReferralFixture(), referralProgramId: 'private-program-id' }],
+    [{ ...cabinetReferralFixture(), metadataJson: '{"private":true}' }]
+  ]
+  globalThis.fetch = (async () => new Response(JSON.stringify(responses.shift()), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const rewards = await client.getMyReferrals('user-token')
+
+  assert.equal(rewards[0]?.value, 7)
+  for (let index = 0; index < 4; index += 1) {
+    await assert.rejects(
+      () => client.getMyReferrals('user-token'),
       (error: unknown) => error instanceof ApiClientError && error.status === 502
     )
   }

@@ -1,5 +1,7 @@
 import React, { PropsWithChildren, useEffect, useId, useRef, useState } from 'react'
 
+export { formatReferralRewardType, formatReferralRewardValue } from './referral-format'
+
 export const designTokens = {
   colors: {
     bg: 'var(--bg)',

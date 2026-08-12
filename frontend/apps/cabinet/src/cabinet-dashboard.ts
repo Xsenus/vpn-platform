@@ -20,15 +20,6 @@ export function isCurrentSubscription(subscription: CabinetSubscriptionDto, now 
   return status === 'Active' || status === 'GracePeriod'
 }
 
-export function formatReferralRewardType(type: string) {
-  const labels: Record<string, string> = {
-    'bonus-days': 'Бонусные дни',
-    cashback: 'Кэшбэк',
-    discount: 'Скидка'
-  }
-  return labels[type.trim().toLowerCase()] ?? 'Реферальное начисление'
-}
-
 export function getSubscriptionRenewalAvailability(subscription: CabinetSubscriptionDto) {
   if (subscription.status === 'Blocked') {
     return {

@@ -2156,7 +2156,7 @@ function isAdminReferralProgramDto(value: unknown): value is AdminReferralProgra
 }
 
 function isAdminRewardLedgerDto(value: unknown): value is AdminRewardLedgerDto {
-  return isRewardLedgerDto(value)
+  return hasRewardLedgerFields(value)
     && isRecord(value)
     && hasString(value, 'userId', true)
     && hasNullableString(value, 'sourceUserId')
@@ -3076,7 +3076,7 @@ function isCabinetAccessCredentialDto(value: unknown): value is CabinetAccessCre
     && forbiddenFields.every((field) => !(field in value))
 }
 
-function isRewardLedgerDto(value: unknown): value is RewardLedgerDto {
+function hasRewardLedgerFields(value: unknown): value is RewardLedgerDto {
   if (!isRecord(value)) return false
 
   return hasString(value, 'id', true)
@@ -3087,6 +3087,13 @@ function isRewardLedgerDto(value: unknown): value is RewardLedgerDto {
     && hasString(value, 'currencyOrUnit', true)
     && hasNullableDateString(value, 'processedAt')
     && hasDateString(value, 'createdAt')
+}
+
+function isRewardLedgerDto(value: unknown): value is RewardLedgerDto {
+  if (!hasRewardLedgerFields(value)) return false
+
+  const forbiddenFields = ['userId', 'sourceUserId', 'referralProgramId', 'metadataJson', 'updatedAt']
+  return forbiddenFields.every((field) => !(field in value))
 }
 
 function isSupportConversationDto(value: unknown): value is SupportConversationDto {

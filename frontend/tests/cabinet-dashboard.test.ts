@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { CabinetAccessCredentialDto, CabinetSubscriptionDto } from '../packages/api-client/src/index.ts'
-import { buildCabinetSummary, daysUntil, findAccessForSubscription, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getEffectiveSubscriptionStatus, getNextCabinetAccessExpiryDelay, getSubscriptionRenewalAvailability, selectCurrentSubscription } from '../apps/cabinet/src/cabinet-dashboard.ts'
+import { buildCabinetSummary, daysUntil, findAccessForSubscription, getAccessQrAvailability, getCabinetAccessTerminalReason, getEffectiveSubscriptionStatus, getNextCabinetAccessExpiryDelay, getSubscriptionRenewalAvailability, selectCurrentSubscription } from '../apps/cabinet/src/cabinet-dashboard.ts'
+import { formatReferralRewardType, formatReferralRewardValue } from '../packages/ui/src/referral-format.ts'
 
 function subscription(overrides: Partial<CabinetSubscriptionDto>): CabinetSubscriptionDto {
   return {
@@ -175,4 +176,8 @@ test('referral reward types remain user-facing', () => {
   assert.equal(formatReferralRewardType('bonus-days'), 'Бонусные дни')
   assert.equal(formatReferralRewardType('cashback'), 'Кэшбэк')
   assert.equal(formatReferralRewardType('custom-ledger-type'), 'Реферальное начисление')
+  assert.equal(formatReferralRewardValue(1, 'days'), '1 день')
+  assert.equal(formatReferralRewardValue(2, 'days'), '2 дня')
+  assert.equal(formatReferralRewardValue(5, 'days'), '5 дней')
+  assert.equal(formatReferralRewardValue(125.5, 'RUB'), '125,50 ₽')
 })

@@ -2608,12 +2608,26 @@ public class AdminOperationsController : ControllerBase
     [HttpGet("referrals")]
     public async Task<IActionResult> GetReferrals(CancellationToken cancellationToken)
     {
-        var rewards = await _db.RewardLedgers.AsNoTracking().ToListAsync(cancellationToken);
-        return Ok(rewards
-            .OrderByDescending(x => x.CreatedAt)
-            .ThenByDescending(x => x.Id)
-            .Select(MapAdminRewardLedgerDto)
-            .ToList());
+        IQueryable<RewardLedger> query;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            query = _db.RewardLedgers.FromSqlRaw("""
+                SELECT r.*
+                FROM "RewardLedgers" AS r
+                ORDER BY julianday(r."CreatedAt") DESC, r."Id" DESC
+                LIMIT 200
+                """);
+        }
+        else
+        {
+            query = _db.RewardLedgers
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(200);
+        }
+
+        var rewards = await query.AsNoTracking().ToListAsync(cancellationToken);
+        return Ok(rewards.Select(MapAdminRewardLedgerDto).ToList());
     }
 
     [HttpGet("referral-programs")]

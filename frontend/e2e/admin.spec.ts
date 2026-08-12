@@ -4723,7 +4723,9 @@ test('admin panel covers login and critical operational mutations across all sec
 
   await openAdminSection(page, 'Рефералы', 'referrals')
   const referralsPanel = page.locator('#referrals')
-  await expect(referralsPanel.locator('.list-item').filter({ hasText: 'Бонусные дни' })).toBeVisible()
+  const rewardRow = referralsPanel.locator('.list-item').filter({ hasText: 'Бонусные дни' })
+  await expect(rewardRow).toContainText('7 дней')
+  await expect(rewardRow).not.toContainText('days')
   await referralsPanel.getByLabel('Название').fill('Referral Playwright E2E')
   await referralsPanel.locator('form select').first().selectOption('active')
   const createReferralRequest = page.waitForRequest((request) => request.method() === 'POST' && new URL(request.url()).pathname === '/api/admin/referral-programs')

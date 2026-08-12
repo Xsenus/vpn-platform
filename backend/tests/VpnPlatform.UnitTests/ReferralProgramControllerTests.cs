@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Domain.Entities;
@@ -34,6 +35,31 @@ public class ReferralProgramControllerTests
         Assert.Equal(2, audits.Count);
         Assert.Contains(audits, x => x.Action == "referral_program.create" && x.EntityId == created.Id.ToString());
         Assert.Contains(audits, x => x.Action == "referral_program.update" && x.EntityId == created.Id.ToString() && x.BeforeJson != x.AfterJson);
+    }
+
+    [Fact]
+    public async Task Admin_Referral_History_Should_Return_Only_The_Latest_200_Rewards()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new ApplicationDbContext(
+            new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        db.RewardLedgers.AddRange(Enumerable.Range(0, 205).Select(index => new RewardLedger
+        {
+            UserId = Guid.NewGuid(),
+            Value = index,
+            CurrencyOrUnit = "days",
+            CreatedAt = new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero).AddMinutes(index)
+        }));
+        await db.SaveChangesAsync();
+
+        var result = Assert.IsType<List<AdminRewardLedgerDto>>(
+            Assert.IsType<OkObjectResult>(await new AdminOperationsController(db, null!, null!, null!).GetReferrals(CancellationToken.None)).Value);
+
+        Assert.Equal(200, result.Count);
+        Assert.Equal(204m, result[0].Value);
+        Assert.Equal(5m, result[^1].Value);
     }
 
     [Theory]

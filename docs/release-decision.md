@@ -22,9 +22,9 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1365/1365`.
+- Backend full suite: `1367/1367`.
 - API Release build: OK.
-- Frontend unit tests: `156/156`.
+- Frontend unit tests: `157/157`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
 - Browser console smoke: `227/227`; responsive all-screens проверяет content/modal/control geometry на 25 viewport-конфигурациях `305x568..2560x1440`, включая точные пары `N/N+1` для всех CSS-breakpoints; production inventory маршрутов и admin sections, local WebP decode и representative screenshots проверены.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-12-cabinet-support-boundary`, версия `0.672.0`; cabinet support read/command DTO не раскрывают user/Telegram/assignment/internal-note/attachment metadata, последние 100 обращений и 200 видимых сообщений ограничиваются БД. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `685/705` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-13-cabinet-referral-boundary`, версия `0.673.0`; cabinet reward DTO не раскрывает user/source/program/metadata, последние 100 пользовательских и 200 административных начислений ограничиваются БД, величины локализованы. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `686/706` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

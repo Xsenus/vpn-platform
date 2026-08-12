@@ -52,7 +52,7 @@ import {
   PanelSyncRunDto,
   normalizeApiError
 } from '@vpn-platform/api-client'
-import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
+import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, formatReferralRewardType, formatReferralRewardValue, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from './admin-users'
 import { adminSectionIds, adminSectionLabels, canAccessAdminSection, canWriteAdminSection, parseAdminSectionHref, type AdminSectionId } from './admin-capabilities'
 import { getAdminPageMetadata } from './admin-page-metadata'
@@ -4625,7 +4625,7 @@ export function App() {
           <h3>Начисления</h3>
           <div className="list-stack">
             {referralRewards.length === 0 && <EmptyState title="Начислений нет" description="Начисления появятся после успешных покупок по реферальным приглашениям." />}
-            {referralRewards.slice(0, 50).map((reward) => <div key={reward.id} className="list-item"><span><strong>{reward.type === 'bonus-days' ? 'Бонусные дни' : reward.type === 'cashback' ? 'Кэшбэк' : reward.type === 'discount' ? 'Скидка' : reward.type}</strong> · {reward.value} {reward.currencyOrUnit}<span className="muted"> · получатель {shortId(reward.userId)} · программа {shortId(reward.referralProgramId)} · {formatDate(reward.createdAt)}</span></span><StatusBadge value={reward.status} /></div>)}
+            {referralRewards.slice(0, 50).map((reward) => <div key={reward.id} className="list-item"><span><strong>{formatReferralRewardType(reward.type)}</strong> · {formatReferralRewardValue(reward.value, reward.currencyOrUnit)}<span className="muted"> · получатель {shortId(reward.userId)} · программа {shortId(reward.referralProgramId)} · {formatDate(reward.createdAt)}</span></span><StatusBadge value={reward.status} /></div>)}
           </div>
         </Card>
       </div>
