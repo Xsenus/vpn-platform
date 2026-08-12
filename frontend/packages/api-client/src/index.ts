@@ -388,11 +388,13 @@ export type PaymentWebhookEventDto = {
   providerPaymentId: string
   externalEventId: string
   eventType: string
-  status: string
+  status: 'Received' | 'Duplicate' | 'Verified' | 'Processed' | 'Rejected' | 'Failed'
   signatureValidated: boolean
   receivedAt: string
   processedAt?: string | null
-  errorText: string
+  isRetryable: boolean
+  isTerminal: boolean
+  requiresAttention: boolean
 }
 
 export type RefundDto = {
@@ -1321,6 +1323,7 @@ const orderTypeValues = new Set<OrderType>(['NewSubscription', 'Renewal', 'Upgra
 const orderStatusValues = new Set(['Draft', 'PendingPayment', 'PaymentReceived', 'FulfillmentInProgress', 'Completed', 'Failed', 'Cancelled', 'Expired', 'Refunded', 'PartiallyProcessed'])
 const paymentStatusValues = new Set(['New', 'Pending', 'WaitingConfirmation', 'Succeeded', 'Failed', 'Cancelled', 'Refunded', 'PartiallyRefunded', 'Unknown'])
 const refundStatusValues = new Set(['New', 'Pending', 'Succeeded', 'Failed', 'Cancelled', 'Unknown'])
+const paymentWebhookEventStatusValues = new Set(['Received', 'Duplicate', 'Verified', 'Processed', 'Rejected', 'Failed'])
 const subscriptionStatusValues = new Set(['PendingActivation', 'Active', 'GracePeriod', 'Expired', 'Suspended', 'Cancelled', 'Blocked'])
 const accessCredentialStatusValues = new Set(['Provisioning', 'Active', 'Rotating', 'Disabled', 'Revoked', 'Error', 'SyncRequired'])
 const rewardStatusValues = new Set(['Pending', 'Approved', 'Cancelled', 'Reverted'])
@@ -1928,10 +1931,17 @@ function isPaymentWebhookEventDto(value: unknown): value is PaymentWebhookEventD
     && hasString(value, 'externalEventId')
     && hasString(value, 'eventType', true)
     && hasString(value, 'status', true)
+    && paymentWebhookEventStatusValues.has(value.status as string)
     && hasBoolean(value, 'signatureValidated')
     && hasDateString(value, 'receivedAt')
     && hasNullableDateString(value, 'processedAt')
-    && hasString(value, 'errorText')
+    && hasBoolean(value, 'isRetryable')
+    && hasBoolean(value, 'isTerminal')
+    && hasBoolean(value, 'requiresAttention')
+    && value.errorText === undefined
+    && value.rawPayload === undefined
+    && value.headersJson === undefined
+    && value.payloadSha256 === undefined
 }
 
 function isRefundDto(value: unknown): value is RefundDto {

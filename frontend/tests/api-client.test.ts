@@ -1708,6 +1708,35 @@ test('ApiClient rejects provider diagnostics in admin refund response', async ()
     (error: unknown) => error instanceof ApiClientError && error.status === 502)
 })
 
+test('ApiClient admin payment webhook events require safe operational state', async () => {
+  const validEvent = {
+    id: 'webhook-1', provider: 'YooKassa', paymentAttemptId: 'payment-1', paymentProviderAccountId: 'account-1',
+    providerPaymentId: 'provider-payment-1', externalEventId: 'event-1', eventType: 'payment.succeeded', status: 'Failed',
+    signatureValidated: false, receivedAt: adminFixtureTimestamp, processedAt: adminFixtureTimestamp,
+    isRetryable: true, isTerminal: false, requiresAttention: true
+  }
+  let responseBody: unknown = [validEvent]
+  globalThis.fetch = (async () => new Response(JSON.stringify(responseBody), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+  const client = new ApiClient('http://localhost:8080')
+
+  assert.deepEqual(await client.getAdminPaymentWebhookEvents('admin-token'), [validEvent])
+
+  for (const unsafeBody of [
+    [{ ...validEvent, errorText: 'private-provider-exception' }],
+    [{ ...validEvent, rawPayload: '{"secret":"provider"}' }],
+    [{ ...validEvent, headersJson: '{"Authorization":"secret"}' }],
+    [{ ...validEvent, status: 'ProviderPrivateFailure' }]
+  ]) {
+    responseBody = unsafeBody
+    await assert.rejects(
+      () => client.getAdminPaymentWebhookEvents('admin-token'),
+      (error: unknown) => error instanceof ApiClientError && error.status === 502)
+  }
+})
+
 test('admin source serializes finance commands by provider, order and payment resources', () => {
   const adminSource = readFileSync(new URL('../apps/admin-panel/src/App.tsx', import.meta.url), 'utf8')
 

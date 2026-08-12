@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-refund-create-recovery`, версия `0.666.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `679/699` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-admin-webhook-event-boundary`, версия `0.667.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `680/700` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,8 +37,8 @@ git diff --check
 
 Что подтверждено на 2026-08-12:
 
-- [x] `STATE-001` Backend test suite проходит: `1354/1354`.
-- [x] `STATE-002` Frontend test suite проходит: `148/148`.
+- [x] `STATE-001` Backend test suite проходит: `1355/1355`.
+- [x] `STATE-002` Frontend test suite проходит: `149/149`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2412,6 +2412,10 @@ git diff --check
   - Что сделать: transport failure после отправки refund create не должен навсегда блокировать платёж; точный повтор должен использовать тот же idempotency key только у провайдера с доказанной create-idempotency. API/UI обязаны показывать durable неопределённость и не раскрывать raw payload, status reason или exception.
   - Что сделано: YooKassa, Stripe и PayPal повторно используют существующую `Unknown` reservation только при совпадении payment, amount и нормализованной reason; другая операция и Т-Банк остаются fail-closed. API пишет actor-aware request audit до provider call и возвращает безопасный `202 Accepted`; admin UI автоматически обновляет список и показывает readiness-команду «Повторить возврат». Причина ограничена 120 символами, frontend validator отклоняет diagnostics и неизвестный status.
   - Доказательство: fail-first backend `0/3`, browser `0/2`; targeted refund/payment regression `86/86`, backend Release `1354/1354`, frontend `148/148`, typecheck/build, desktop/mobile refund Playwright `6/6`, fresh SQLite с latest release `2026-08-12-refund-create-recovery`, EF drift, dependency audit `0 vulnerabilities`, strict UTF-8 и secret scan `673/0` зелёные. Реальные refund/provider кабинеты и VPS/staging/payment/3x-ui evidence остаются внешней проверкой.
+- [x] `P11-ACC-389` Закрыть публичную границу admin webhook events и показать безопасное recovery-состояние. 2026-08-12.
+  - Что сделать: список webhook events не должен раскрывать exception/verifier/provider diagnostics или raw payload/headers; последние 200 записей должны ограничиваться БД. UI обязан различать terminal, retryable и attention state по тем же lease-правилам, что processor.
+  - Что сделано: общий `PaymentWebhookEventRules` определяет десятиминутный claim lease и terminal/retryable/attention semantics для processor и admin read-model. API делает DB-side order/limit, возвращает минимальный DTO без `ErrorText`; frontend валидирует status enum/flags и отклоняет diagnostics. Admin UI показывает время, подпись, безопасные IDs и remediation-note на всех responsive layout.
+  - Доказательство: fail-first backend/frontend `0/2`; webhook/API regression `44/44`, backend Release `1355/1355`, frontend `149/149`, typecheck/build, full admin Playwright `54/54`, targeted desktop/mobile `2/2`, responsive admin matrix `1/1` на всех representative viewport, fresh SQLite, EF drift, dependency audit `0 vulnerabilities`, strict UTF-8 и secret scan `675/0` зелёные. Реальные webhook/provider кабинеты и VPS/staging/payment/3x-ui evidence остаются внешней проверкой.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3061,6 +3065,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-12-028` | P0 | Admin webhook event boundary | Admin API возвращал внутренний `ErrorText`, включая provider/verifier exception, frontend доверял произвольному status и diagnostics, а endpoint материализовал всю таблицу до `Take(200)`. | Исправлено локально | DB-side top-200, единые lease/status rules, minimal DTO, fail-closed frontend validator и responsive attention UI проверены SQLite/backend/frontend/browser regressions. Live webhook/provider delivery остаётся внешним evidence. |
 | `BUG-2026-08-12-027` | P0 | Refund create recovery | Provider/network exception оставлял `Unknown` refund с временным ID, но точный повтор не обращался к идемпотентному провайдеру, сверка временного ID была невозможна, UI не обновлялся после отказа, а API мог раскрыть diagnostics и потерять actor audit. | Исправлено локально | Exact idempotent retry для YooKassa/Stripe/PayPal, durable safe `202`, readiness/UI retry, 120-char reason boundary и request audit проверены SQLite/controller/frontend/browser regressions. TBank и live provider outcome остаются fail-closed/external evidence. |
 | `BUG-2026-08-12-026` | P0 | Admin payment recheck boundary | Admin recheck возвращал `RawResponse` и `StatusReason` в браузер, мог раскрыть provider exception в HTTP error и не фиксировал actor-aware audit, если внешний вызов завершался ошибкой. | Исправлено локально | Minimal response DTO, API-level redaction, readiness preflight и durable request audit проверены controller/SQLite/frontend/browser regressions. Live provider recheck остаётся внешним evidence. |
 | `BUG-2026-08-12-025` | P0 | Refund reconciliation | `New/Pending/Unknown` возврат блокировал все следующие возвраты навсегда: API, worker и UI не умели получить статус конкретной операции у провайдера. | Исправлено локально | YooKassa/Stripe/PayPal GET reconciliation с полным proof, order gate, idempotent amount apply, admin readiness/UI/audit и SQLite/browser regressions. TBank остаётся явно unsupported без доказательства конкретного partial refund. |

@@ -15682,5 +15682,28 @@
         "text": "Roadmap progress is 679/699 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; live refunds, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-admin-webhook-event-boundary",
+    "version": "0.667.0",
+    "releasedAt": "2026-08-12T21:00:00+07:00",
+    "title": "Журнал вебхуков показывает безопасное состояние",
+    "summary": "Администратор видит события, требующие внимания или повторной доставки, без внутренних ошибок и данных провайдера.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Список webhook events больше не содержит exception, raw payload, headers или другую внутреннюю диагностику провайдера."
+      },
+      {
+        "type": "improved",
+        "text": "Последние события ограничиваются на стороне БД, а админка показывает проверку подписи, время, безопасные идентификаторы и состояние повторной доставки."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 680/700 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; live webhooks, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

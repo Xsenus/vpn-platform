@@ -34,8 +34,6 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         RefundStatus.Unknown
     };
 
-    private static readonly TimeSpan WebhookClaimTimeout = TimeSpan.FromMinutes(10);
-
     private readonly IApplicationDbContext _db;
     private readonly IPaymentProviderFactory _paymentProviderFactory;
     private readonly IEnumerable<IPaymentWebhookVerifier> _webhookVerifiers;
@@ -356,7 +354,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         PaymentWebhookEvent webhookEvent;
         if (existingEvent is not null)
         {
-            if (IsTerminalWebhookEvent(existingEvent.Status))
+            if (PaymentWebhookEventRules.IsTerminal(existingEvent.Status))
             {
                 return Result<string>.Success("Webhook already processed.");
             }
@@ -399,7 +397,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
                     throw;
                 }
 
-                if (IsTerminalWebhookEvent(existingEvent.Status))
+                if (PaymentWebhookEventRules.IsTerminal(existingEvent.Status))
                 {
                     return Result<string>.Success("Webhook already processed.");
                 }
@@ -582,7 +580,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
     private async Task<bool> TryClaimWebhookEventAsync(PaymentWebhookEvent existingEvent, DateTimeOffset now, CancellationToken cancellationToken)
     {
-        var staleBefore = now - WebhookClaimTimeout;
+        var staleBefore = now - PaymentWebhookEventRules.ClaimTimeout;
         IQueryable<PaymentWebhookEvent> claimable;
         if (existingEvent.Status == PaymentWebhookEventStatus.Failed)
         {
@@ -629,13 +627,10 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             .Where(x => x.Id == webhookEventId)
             .Select(x => (PaymentWebhookEventStatus?)x.Status)
             .FirstOrDefaultAsync(cancellationToken);
-        return status.HasValue && IsTerminalWebhookEvent(status.Value)
+        return status.HasValue && PaymentWebhookEventRules.IsTerminal(status.Value)
             ? Result<string>.Success("Webhook already processed.")
             : Result<string>.Failure("Webhook processing is already in progress; retry shortly.", isRetryable: true);
     }
-
-    private static bool IsTerminalWebhookEvent(PaymentWebhookEventStatus status)
-        => status is PaymentWebhookEventStatus.Processed or PaymentWebhookEventStatus.Rejected or PaymentWebhookEventStatus.Duplicate;
 
     private void MarkWebhookFailed(PaymentWebhookEvent webhookEvent, string error)
     {

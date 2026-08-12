@@ -1183,7 +1183,10 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/payment-webhook-events') {
-      await fulfillJson(route, [{ id: 'webhook-e2e', provider: 'YooKassa', paymentAttemptId: 'payment-e2e', paymentProviderAccountId: 'provider-yookassa', providerPaymentId: 'yk-admin-e2e', externalEventId: 'evt-admin-e2e', eventType: 'payment.succeeded', status: 'Processed', signatureValidated: true, receivedAt: now, processedAt: now, errorText: '' }])
+      await fulfillJson(route, [
+        { id: 'webhook-failed-e2e', provider: 'YooKassa', paymentAttemptId: 'payment-e2e', paymentProviderAccountId: 'provider-yookassa', providerPaymentId: 'yk-admin-e2e', externalEventId: 'evt-failed-e2e', eventType: 'payment.waiting_for_capture', status: 'Failed', signatureValidated: false, receivedAt: now, processedAt: now, isRetryable: true, isTerminal: false, requiresAttention: true },
+        { id: 'webhook-e2e', provider: 'YooKassa', paymentAttemptId: 'payment-e2e', paymentProviderAccountId: 'provider-yookassa', providerPaymentId: 'yk-admin-e2e', externalEventId: 'evt-admin-e2e', eventType: 'payment.succeeded', status: 'Processed', signatureValidated: true, receivedAt: now, processedAt: now, isRetryable: false, isTerminal: true, requiresAttention: false }
+      ])
       return
     }
 
@@ -3531,6 +3534,33 @@ test('admin payment recheck and refunds persist across reload', async ({ page })
   await expect(paymentRow).toContainText('Возврат недоступен: Сумма уже возвращена.')
   await expect(paymentsPanel.getByText(/Возврат (200|390) RUB · rf-e2e-/)).toHaveCount(2)
   expect(api.getAuthorizedRequestCount('/api/admin/payments/payment-e2e/refund', 'POST', 'Bearer admin-refund-token')).toBe(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(browserErrors).toEqual([])
+})
+
+test('admin shows safe webhook attention state without provider diagnostics', async ({ page }) => {
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
+  await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-webhook-token', 'admin-webhook-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Оплаты', 'payments')
+
+  const paymentsPanel = page.locator('#payments')
+  const webhookRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: 'payment.waiting_for_capture' })
+  await expect(paymentsPanel.getByRole('heading', { name: 'Последние вебхуки' })).toBeVisible()
+  await expect(webhookRow).toContainText('Ошибка')
+  await expect(webhookRow).toContainText('Требует внимания')
+  await expect(webhookRow).toContainText('Событие допускает повторную доставку.')
+  await expect(webhookRow).toContainText('подпись не проверена')
+
+  const html = await paymentsPanel.innerHTML()
+  expect(html).not.toMatch(/errorText|rawPayload|headersJson|private-provider/i)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
 })

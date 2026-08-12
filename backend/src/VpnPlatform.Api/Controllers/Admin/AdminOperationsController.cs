@@ -1372,11 +1372,33 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.FinanceRead)]
     public async Task<IActionResult> GetPaymentWebhookEvents(CancellationToken cancellationToken)
     {
-        var events = await _db.PaymentWebhookEvents
-            .AsNoTracking()
-            .Select(x => new PaymentWebhookEventDto(x.Id, x.Provider, x.PaymentAttemptId, x.PaymentProviderAccountId, x.ProviderPaymentId, x.ExternalEventId, x.EventType, x.Status.ToString(), x.SignatureValidated, x.ReceivedAt, x.ProcessedAt, x.ErrorText))
-            .ToListAsync(cancellationToken);
-        return Ok(events.OrderByDescending(x => x.ReceivedAt).Take(200).ToList());
+        var query = _db.PaymentWebhookEvents.AsNoTracking();
+        var events = _db is DbContext dbContext && dbContext.Database.IsSqlite()
+            ? await _db.PaymentWebhookEvents
+                .FromSqlRaw("SELECT * FROM \"PaymentWebhookEvents\" ORDER BY julianday(\"ReceivedAt\") DESC, julianday(\"CreatedAt\") DESC LIMIT 200")
+                .AsNoTracking()
+                .ToListAsync(cancellationToken)
+            : await query
+                .OrderByDescending(x => x.ReceivedAt)
+                .ThenByDescending(x => x.CreatedAt)
+                .Take(200)
+                .ToListAsync(cancellationToken);
+        var now = _clock.UtcNow;
+        return Ok(events.Select(x => new PaymentWebhookEventDto(
+            x.Id,
+            x.Provider,
+            x.PaymentAttemptId,
+            x.PaymentProviderAccountId,
+            x.ProviderPaymentId,
+            x.ExternalEventId,
+            x.EventType,
+            x.Status.ToString(),
+            x.SignatureValidated,
+            x.ReceivedAt,
+            x.ProcessedAt,
+            PaymentWebhookEventRules.IsRetryable(x.Status, x.ReceivedAt, now),
+            PaymentWebhookEventRules.IsTerminal(x.Status),
+            PaymentWebhookEventRules.RequiresAttention(x.Status, x.ReceivedAt, now))).ToList());
     }
 
     [HttpGet("refunds")]

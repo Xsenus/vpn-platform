@@ -4463,7 +4463,23 @@ export function App() {
                 </div>
               )
             })}
-            {paymentWebhookEvents.slice(0, 4).map((event) => <div key={event.id} className="list-item"><span>{event.provider} · {event.eventType} · подпись {event.signatureValidated ? 'проверена' : 'не проверена'}</span><StatusBadge value={event.status} /></div>)}
+            {paymentWebhookEvents.length > 0 && <h4>Последние вебхуки</h4>}
+            {paymentWebhookEvents.slice(0, 4).map((event) => (
+              <div key={event.id} className="list-item-vertical">
+                <div className="item-head">
+                  <div>
+                    <strong>{event.provider} · {event.eventType}</strong>
+                    <div className="muted">Получен: {formatDate(event.receivedAt)} · подпись {event.signatureValidated ? 'проверена' : 'не проверена'}</div>
+                    <div className="muted">Платёж: {shortId(event.paymentAttemptId)} · событие: {shortId(event.externalEventId)}</div>
+                  </div>
+                  <div className="item-status">
+                    <StatusBadge value={event.status} />
+                    {event.requiresAttention && <StatusBadge value="Требует внимания" />}
+                  </div>
+                </div>
+                {event.isRetryable && <div className="safe-note">Событие допускает повторную доставку.</div>}
+              </div>
+            ))}
             {refunds.slice(0, 4).map((refund) => {
               const blocker = refundRecheckBlockerText(refund)
               const retryBlocker = refundRetryBlockerText(refund)

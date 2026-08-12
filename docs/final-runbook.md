@@ -176,8 +176,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-12 локально подтверждено:
 
-- backend full suite: 1354/1354;
-- frontend tests: 148/148;
+- backend full suite: 1355/1355;
+- frontend tests: 149/149;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-12-refund-create-recovery`, версия `0.666.0`; неопределённый refund create возвращает безопасный durable `202`, а admin UI разрешает точный idempotent retry только для поддерживаемого провайдера.
-- roadmap progress: `679/699` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-12-admin-webhook-event-boundary`, версия `0.667.0`; admin webhook events не раскрывают internal diagnostics и показывают безопасное terminal/retryable/attention состояние по processor lease.
+- roadmap progress: `680/700` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

@@ -709,7 +709,12 @@ async function installApiMock(page: Page) {
       return
     }
 
-    if (method === 'GET' && ['/api/admin/payment-webhook-events', '/api/admin/refunds'].includes(path)) {
+    if (method === 'GET' && path === '/api/admin/payment-webhook-events') {
+      await fulfillJson(route, [{ id: 'webhook-responsive', provider: 'YooKassa', paymentAttemptId: 'payment-responsive', paymentProviderAccountId: 'provider-responsive', providerPaymentId: 'provider-payment-responsive', externalEventId: 'event-responsive-long-identifier', eventType: 'payment.waiting_for_capture', status: 'Failed', signatureValidated: false, receivedAt: now, processedAt: now, isRetryable: true, isTerminal: false, requiresAttention: true }])
+      return
+    }
+
+    if (method === 'GET' && path === '/api/admin/refunds') {
       await fulfillJson(route, [])
       return
     }

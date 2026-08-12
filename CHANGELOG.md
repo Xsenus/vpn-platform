@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.667.0 - 2026-08-12
+
+Release entry: `2026-08-12-admin-webhook-event-boundary`.
+
+### Исправлено
+
+- Admin webhook event API больше не передаёт в браузер внутренний `ErrorText`, который мог содержать exception/diagnostics провайдера или verifier-а.
+- Последние 200 webhook events сортируются и ограничиваются на стороне БД; SQLite использует эквивалентную UTC-сортировку, не загружая всю таблицу в память.
+
+### Улучшено
+
+- Единое application-правило определяет terminal/retryable/attention состояние с десятиминутным lease. Admin UI показывает время, подпись, безопасные идентификаторы и remediation-состояние; frontend fail-closed отклоняет неизвестные status и диагностические поля.
+
+### Проверено
+
+- Fail-first backend/frontend `0/2`; webhook/API regression `44/44`, backend Release `1355/1355`, frontend `149/149`, typecheck/build, full admin Playwright `54/54`, targeted desktop/mobile `2/2`, responsive admin matrix `1/1` на всех representative viewport, fresh SQLite, EF drift, dependency audit `0 vulnerabilities`, strict UTF-8 и secret scan `675/0` зелёные.
+- Roadmap `680/700` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные webhook/provider кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## 0.666.0 - 2026-08-12
 
 Release entry: `2026-08-12-refund-create-recovery`.

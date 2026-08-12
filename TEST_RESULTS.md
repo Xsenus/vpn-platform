@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: admin webhook event boundary
+
+Scope:
+- Admin webhook event list не должен раскрывать внутренние verifier/provider exception, raw payload или headers.
+- Оператор должен видеть безопасное terminal/retryable/attention состояние, согласованное с processor lease, а API не должен материализовать всю таблицу до лимита.
+
+Results:
+- Roadmap progress: `680/700` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-admin-webhook-event-boundary`, version `0.667.0`.
+- Fail-first: backend/frontend `0/2`; controller напрямую возвращал `ErrorText` с `private-provider-exception`, frontend доверял произвольному status/diagnostics, а endpoint загружал все события до сортировки и `Take(200)`.
+- After fix: БД возвращает только последние 200 записей; единый `PaymentWebhookEventRules` используется processor и read-model для terminal/retryable/attention. DTO не содержит diagnostics, frontend validator отклоняет `errorText/rawPayload/headersJson/payloadSha256`, admin UI показывает безопасное remediation-состояние.
+- Webhook/API regression `44/44`; backend Release `1355/1355`; frontend `149/149`; typecheck/build; full admin Playwright `54/54`; targeted desktop/mobile `2/2`; responsive admin matrix `1/1` на всех representative viewport; fresh SQLite подтвердил lifecycle, EF drift, dependency audit `0 vulnerabilities`, strict UTF-8 и secret scan `675/0` зелёные. Реальные webhook/provider кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## Check 2026-08-12: refund create recovery
 
 Scope:
