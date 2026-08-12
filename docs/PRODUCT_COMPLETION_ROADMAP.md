@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-13.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-app-release-boundary`, версия `0.675.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `688/708` проверяемых пунктов, готовность `97.2%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-faq-boundary`, версия `0.676.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `689/709` проверяемых пунктов, готовность `97.2%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,8 +37,8 @@ git diff --check
 
 Что подтверждено на 2026-08-13:
 
-- [x] `STATE-001` Backend test suite проходит: `1381/1381`.
-- [x] `STATE-002` Frontend test suite проходит: `161/161`.
+- [x] `STATE-001` Backend test suite проходит: `1388/1388`.
+- [x] `STATE-002` Frontend test suite проходит: `163/163`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2448,6 +2448,10 @@ git diff --check
   - Что сделать: `latest/history` не должны раскрывать внутренние GUID, publication/source и actor/audit metadata; последние 50 пользовательских и 200 административных релизов должны ограничиваться БД. Overview не должен materialize-ить всю таблицу с пунктами, а stale PUT/DELETE не должны перезаписывать или удалять параллельно изменённый релиз.
   - Что сделано: cabinet API получил отдельные минимальные DTO релиза и пункта, frontend применяет exact allow-list validator. SQLite/PostgreSQL ограничивают published history и admin list до materialization; overview считает агрегаты в БД и ограничивает диагностику 200 release ID. `AppRelease.Revision` стал EF concurrency token с migration; PUT/DELETE требуют актуальную revision, возвращают controlled `409`, а admin UI перезагружает актуальную версию с русским сообщением.
   - Доказательство: fail-first backend `3/11`, frontend `0/1`; targeted backend/SQLite `16/16`, frontend contract `3/3`, backend `1381/1381`, frontend `161/161`, typecheck/build и bundle budget зелёные. Stateful CRUD desktop/mobile `2/2`, stale PUT/DELETE desktop/mobile `4/4`, cabinet modal desktop/mobile `2/2`, admin overlap `1/1`, focused releases responsive/WCAG `1/1` на 320/390/1280 px и cabinet representative responsive/modal `1/1`. EF migration/drift и двухконтекстный SQLite concurrency race, strict UTF-8, secret scan `674/0` и dependency audit `0 vulnerabilities` зелёные; реальные provider/Telegram кабинеты и VPS/staging/payment/3x-ui evidence остаются внешней проверкой.
+- [x] `P11-ACC-398` Закрыть публичную и административную границу FAQ. 2026-08-13.
+  - Что сделать: публичный FAQ не должен раскрывать внутренние идентификаторы, publication/audit metadata; public/admin списки, overview и diagnostic выборки должны ограничиваться в БД, а stale PUT/DELETE не должны перезаписывать или удалять параллельно изменённый FAQ.
+  - Что сделано: добавлен минимальный публичный DTO и exact frontend validators; SQLite/PostgreSQL выполняют top-200, агрегаты и bounded category/duplicate diagnostics до materialization с сохранением Unicode-поиска. `FaqEntry.Revision` защищён EF concurrency token и migration; admin PUT/DELETE возвращают controlled `409`, а UI перезагружает актуальную запись с русским сообщением.
+  - Доказательство: fail-first backend `0/2`, frontend `161/162`; targeted backend/SQLite `14/14`, frontend `163/163`, backend `1388/1388`, typecheck/build и bundle budget зелёные. Stateful CRUD desktop/mobile `2/2`, stale PUT/DELETE desktop/mobile `4/4`, public FAQ/landing desktop/mobile `6/6`, focused FAQ responsive/WCAG `1/1` на 320/390/1280 px, public/admin render и overlap `3/3`. EF migration/drift, двухконтекстный file-backed SQLite concurrency race, fresh SQLite, strict UTF-8, secret scan и dependency audit `0 vulnerabilities` зелёные. Объединённый полный desktop Playwright run превысил локальный 5-minute timeout до итогового отчёта и не засчитывался; реальные provider/Telegram кабинеты и VPS/staging/payment/3x-ui evidence остаются внешней проверкой.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

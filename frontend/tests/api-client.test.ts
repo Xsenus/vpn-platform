@@ -69,6 +69,7 @@ function adminReferralProgramFixture(overrides: Record<string, unknown> = {}) {
 function faqFixture(overrides: Record<string, unknown> = {}) {
   return {
     id: 'faq-1',
+    revision: 0,
     question: 'Как подключиться?',
     answer: 'Через кабинет',
     category: 'Подключение',
@@ -959,8 +960,15 @@ test('ApiClient FAQ endpoints cover public and admin CRUD', async () => {
       })
     }
 
-    if (String(url).includes('/api/public/content/faq') || String(url).includes('/api/admin/faq?') || (String(url).endsWith('/api/admin/faq') && (init?.method ?? 'GET') === 'GET')) {
-      return new Response(JSON.stringify([{ id: 'faq-1', question: 'Как подключиться?', answer: 'Через кабинет', category: 'Подключение', isActive: true, showOnHome: true, showOnFaqPage: true, sortOrder: 10, createdAt: '2026-08-05T00:00:00Z', updatedAt: '2026-08-05T00:00:00Z' }]), {
+    if (String(url).includes('/api/public/content/faq')) {
+      return new Response(JSON.stringify([{ question: 'Как подключиться?', answer: 'Через кабинет', category: 'Подключение' }]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (String(url).includes('/api/admin/faq?') || (String(url).endsWith('/api/admin/faq') && (init?.method ?? 'GET') === 'GET')) {
+      return new Response(JSON.stringify([faqFixture()]), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       })
@@ -986,8 +994,8 @@ test('ApiClient FAQ endpoints cover public and admin CRUD', async () => {
   const filteredFaq = await client.getAdminFaq('admin-token', { category: 'Подключение', visibility: 'home', search: 'qr' })
   const overview = await client.getAdminFaqOverview('admin-token')
   await client.createAdminFaq('admin-token', { question: 'Как?', answer: 'Так', category: 'Общее', isActive: true, showOnHome: true, showOnFaqPage: true, sortOrder: 10 })
-  await client.updateAdminFaq('admin-token', 'faq-1', { question: 'Как?', answer: 'Так', category: 'Общее', isActive: true, showOnHome: false, showOnFaqPage: true, sortOrder: 20 })
-  await client.deleteAdminFaq('admin-token', 'faq-1')
+  await client.updateAdminFaq('admin-token', 'faq-1', { question: 'Как?', answer: 'Так', category: 'Общее', isActive: true, showOnHome: false, showOnFaqPage: true, sortOrder: 20 }, 0)
+  await client.deleteAdminFaq('admin-token', 'faq-1', 0)
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/public/content/faq')
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/public/content/faq?home=true')
@@ -996,10 +1004,35 @@ test('ApiClient FAQ endpoints cover public and admin CRUD', async () => {
   assert.equal(calls[4]?.url, 'http://localhost:8080/api/admin/faq/overview')
   assert.equal(calls[5]?.init?.method, 'POST')
   assert.equal(calls[6]?.init?.method, 'PUT')
+  assert.equal(calls[7]?.url, 'http://localhost:8080/api/admin/faq/faq-1?revision=0')
   assert.equal(calls[7]?.init?.method, 'DELETE')
   assert.equal(new Headers(calls[7]?.init?.headers).get('Authorization'), 'Bearer admin-token')
   assert.equal(filteredFaq[0]?.category, 'Подключение')
   assert.equal(overview.hasPublicFaq, true)
+})
+
+test('ApiClient rejects admin metadata in public FAQ responses', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify([faqFixture()]), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  await assert.rejects(
+    () => new ApiClient('http://localhost:8080').getFaq(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502
+  )
+})
+
+test('ApiClient rejects unknown extensions in admin FAQ responses', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify([{ ...faqFixture(), internalNote: 'diagnostic' }]), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  await assert.rejects(
+    () => new ApiClient('http://localhost:8080').getAdminFaq('admin-token'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502
+  )
 })
 
 test('ApiClient site content endpoints cover public and admin CRUD', async () => {
@@ -2659,8 +2692,8 @@ test('ApiClient rejects malformed admin content and app release DTOs', async () 
     () => client.getAdminFaq('admin-token'),
     () => client.getAdminFaqOverview('admin-token'),
     () => client.createAdminFaq('admin-token', faqPayload),
-    () => client.updateAdminFaq('admin-token', 'faq-1', faqPayload),
-    () => client.deleteAdminFaq('admin-token', 'faq-1'),
+    () => client.updateAdminFaq('admin-token', 'faq-1', faqPayload, 0),
+    () => client.deleteAdminFaq('admin-token', 'faq-1', 0),
     () => client.getAdminSiteContent('admin-token'),
     () => client.getAdminHomeContentReadiness('admin-token'),
     () => client.restoreAdminHomeContentDefaults('admin-token'),

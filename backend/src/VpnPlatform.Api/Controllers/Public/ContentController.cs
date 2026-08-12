@@ -23,14 +23,13 @@ public class ContentController : ControllerBase
         var items = await _db.FaqEntries
             .AsNoTracking()
             .Where(x => x.IsActive && x.ShowOnFaqPage && (!home || x.ShowOnHome))
-            .ToListAsync(cancellationToken);
-
-        return Ok(items
             .OrderBy(x => x.SortOrder)
             .ThenBy(x => x.Category)
             .ThenBy(x => x.Question)
-            .Select(MapFaq)
-            .ToList());
+            .Take(200)
+            .ToListAsync(cancellationToken);
+
+        return Ok(items.Select(MapFaq).ToList());
     }
 
     [HttpGet("home")]
@@ -46,8 +45,8 @@ public class ContentController : ControllerBase
         return Ok(blocks.Select(MapSiteContent).ToList());
     }
 
-    private static FaqEntryDto MapFaq(FaqEntry entry)
-        => new(entry.Id, entry.Question, entry.Answer, entry.Category, entry.IsActive, entry.ShowOnHome, entry.ShowOnFaqPage, entry.SortOrder, entry.CreatedAt, entry.UpdatedAt);
+    private static PublicFaqEntryDto MapFaq(FaqEntry entry)
+        => new(entry.Question, entry.Answer, entry.Category);
 
     private static SiteContentBlockDto MapSiteContent(SiteContentBlock block)
         => new(block.Id, block.Key, block.Value, block.Group, block.Label, block.Description, block.InputType, block.IsActive, block.SortOrder, block.CreatedAt, block.UpdatedAt);

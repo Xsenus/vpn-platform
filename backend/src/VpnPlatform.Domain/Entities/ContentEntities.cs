@@ -4,6 +4,7 @@ namespace VpnPlatform.Domain.Entities;
 
 public class FaqEntry : AuditableEntity
 {
+    public int Revision { get; set; }
     public string Question { get; set; } = string.Empty;
     public string Answer { get; set; } = string.Empty;
     public string Category { get; set; } = "Общее";

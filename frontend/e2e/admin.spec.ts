@@ -232,6 +232,7 @@ function workScenario(overrides: Record<string, unknown> = {}) {
 function faqItem(overrides: Record<string, unknown> = {}) {
   return {
     id: 'faq-created-e2e',
+    revision: 0,
     question: 'Как проверить управляемый FAQ?',
     answer: 'Создать, изменить и удалить запись через админку.',
     category: 'E2E',
@@ -1443,7 +1444,18 @@ async function mockAdminApi(page: Page) {
     const faqMutationMatch = path.match(/^\/api\/admin\/faq\/([^/]+)$/)
     if (faqMutationMatch && method === 'PUT') {
       const index = faqEntries.findIndex((item) => item.id === faqMutationMatch[1])
-      const updated = faqItem({ ...faqEntries[index], ...(body as Record<string, unknown>), id: faqMutationMatch[1], updatedAt: now })
+      const faqBody = body as Record<string, unknown>
+      if (index < 0 || faqBody.revision !== faqEntries[index].revision) {
+        await fulfillJson(route, { error: 'FAQ entry changed. Reload it and retry.' }, 409)
+        return
+      }
+      const updated = faqItem({
+        ...faqEntries[index],
+        ...faqBody,
+        id: faqMutationMatch[1],
+        revision: Number(faqEntries[index].revision) + 1,
+        updatedAt: now
+      })
       if (index >= 0) faqEntries[index] = updated
       await fulfillJson(route, updated)
       return
@@ -1451,6 +1463,11 @@ async function mockAdminApi(page: Page) {
 
     if (faqMutationMatch && method === 'DELETE') {
       const index = faqEntries.findIndex((item) => item.id === faqMutationMatch[1])
+      const revision = new URL(request.url()).searchParams.get('revision')
+      if (index < 0 || revision !== String(faqEntries[index].revision)) {
+        await fulfillJson(route, { error: 'FAQ entry changed. Reload it and retry.' }, 409)
+        return
+      }
       if (index >= 0) faqEntries.splice(index, 1)
       await fulfillJson(route, { id: faqMutationMatch[1], deleted: true })
       return
@@ -2001,6 +2018,16 @@ async function mockAdminApi(page: Page) {
         ...releases[index],
         title,
         revision: Number(releases[index].revision) + 1,
+        updatedAt: now
+      })
+    },
+    changeFaqExternally: (id: string, answer = 'Ответ изменен извне') => {
+      const index = faqEntries.findIndex((item) => item.id === id)
+      if (index < 0) return
+      faqEntries[index] = faqItem({
+        ...faqEntries[index],
+        answer,
+        revision: Number(faqEntries[index].revision) + 1,
         updatedAt: now
       })
     },
@@ -4532,7 +4559,7 @@ test('admin managed configuration supports complete CRUD lifecycle', async ({ pa
   await expect(page.getByText('Вопрос FAQ обновлен.')).toBeVisible()
   faqRow = faqPanel.locator('.list-item-vertical').filter({ hasText: 'Как проверить управляемый FAQ?' })
   await expect(faqRow).toContainText('Обновлённый ответ проверен браузерным E2E.')
-  expect(api.getLastRequest('/api/admin/faq/faq-created-e2e', 'PUT')?.body).toMatchObject({ answer: 'Обновлённый ответ проверен браузерным E2E.' })
+  expect(api.getLastRequest('/api/admin/faq/faq-created-e2e', 'PUT')?.body).toMatchObject({ answer: 'Обновлённый ответ проверен браузерным E2E.', revision: 0 })
 
   await faqRow.getByRole('button', { name: 'Удалить' }).click()
   await faqPanel.getByRole('button', { name: 'Подтвердить' }).click()
@@ -4612,6 +4639,44 @@ test('admin app release delete keeps an externally changed release', async ({ pa
   await expect(page.getByRole('alert')).toContainText('не был удален')
   await expect(releasesPanel.getByText('Актуальная версия перед удалением', { exact: true })).toBeVisible()
   expect(api.getRequestCount('/api/app-version/admin/releases/release-admin-e2e', 'DELETE')).toBe(1)
+})
+
+test('admin FAQ editor recovers from a stale revision', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.prepareManagedConfigurationFixtures()
+  await seedAdminSession(page)
+  await page.goto('/#faq')
+
+  const faqPanel = page.locator('#faq')
+  const faqRow = faqPanel.locator('.list-item-vertical').filter({ hasText: 'Как проверить управляемый FAQ?' })
+  await faqRow.getByRole('button', { name: 'Редактировать' }).click()
+  await faqPanel.getByLabel('Ответ').fill('Устаревшая локальная версия')
+
+  api.changeFaqExternally('faq-created-e2e', 'Актуальный внешний ответ')
+  await faqPanel.getByRole('button', { name: 'Сохранить вопрос' }).click()
+
+  await expect(page.getByRole('alert')).toContainText('Вопрос уже изменен другим администратором')
+  await expect(faqPanel.getByRole('heading', { name: 'Редактировать вопрос' })).toBeVisible()
+  await expect(faqPanel.getByLabel('Ответ')).toHaveValue('Актуальный внешний ответ')
+  await expect(faqPanel.locator('.list-stack').getByText('Актуальный внешний ответ', { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/admin/faq/faq-created-e2e', 'PUT')).toBe(1)
+})
+
+test('admin FAQ delete keeps an externally changed entry', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.prepareManagedConfigurationFixtures()
+  await seedAdminSession(page)
+  await page.goto('/#faq')
+
+  const faqPanel = page.locator('#faq')
+  const faqRow = faqPanel.locator('.list-item-vertical').filter({ hasText: 'Как проверить управляемый FAQ?' })
+  await faqRow.getByRole('button', { name: 'Удалить' }).click()
+  api.changeFaqExternally('faq-created-e2e', 'Актуальный ответ перед удалением')
+  await faqPanel.getByRole('button', { name: 'Подтвердить' }).click()
+
+  await expect(page.getByRole('alert')).toContainText('не был удален')
+  await expect(faqPanel.getByText('Актуальный ответ перед удалением', { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/admin/faq/faq-created-e2e', 'DELETE')).toBe(1)
 })
 
 test('admin partial load errors stay scoped and recover without false section data', async ({ page }) => {

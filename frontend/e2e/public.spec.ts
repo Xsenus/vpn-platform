@@ -28,28 +28,14 @@ const homeContent = [
 
 const faqItems = [
   {
-    id: 'faq-payment',
     question: 'Как оплатить VPN?',
     answer: 'Выберите тариф и способ оплаты, затем создайте заказ.',
-    category: 'Оплата',
-    isActive: true,
-    showOnHome: true,
-    showOnFaqPage: true,
-    sortOrder: 1,
-    createdAt: '2026-06-13T00:00:00Z',
-    updatedAt: '2026-06-13T00:00:00Z'
+    category: 'Оплата'
   },
   {
-    id: 'faq-connect',
     question: 'Когда появится подключение?',
     answer: 'После подтверждения платежа доступ появится в личном кабинете.',
-    category: 'Подключение',
-    isActive: true,
-    showOnHome: true,
-    showOnFaqPage: true,
-    sortOrder: 2,
-    createdAt: '2026-06-13T00:00:00Z',
-    updatedAt: '2026-06-13T00:00:00Z'
+    category: 'Подключение'
   }
 ]
 

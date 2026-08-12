@@ -89,6 +89,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<Tariff>().HasIndex(x => x.Slug).IsUnique();
         modelBuilder.Entity<FaqEntry>().HasIndex(x => new { x.IsActive, x.ShowOnFaqPage, x.SortOrder });
         modelBuilder.Entity<FaqEntry>().HasIndex(x => new { x.Category, x.SortOrder });
+        modelBuilder.Entity<FaqEntry>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<SiteContentBlock>().HasIndex(x => x.Key).IsUnique();
         modelBuilder.Entity<SiteContentBlock>().HasIndex(x => new { x.Group, x.IsActive, x.SortOrder });
         modelBuilder.Entity<WorkScenario>().HasIndex(x => x.Key).IsUnique();

@@ -15889,5 +15889,28 @@
         "text": "Roadmap progress is 688/708 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-faq-boundary",
+    "version": "0.676.0",
+    "releasedAt": "2026-08-13T02:10:00+07:00",
+    "title": "FAQ защищён от утечек и параллельных изменений",
+    "summary": "Публичный FAQ получает только пользовательский текст, а админка ограничивает выборки и восстанавливает актуальную версию при конфликте.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Публичный FAQ больше не передаёт внутренние идентификаторы, признаки публикации и audit timestamps; frontend принимает только вопрос, ответ и категорию."
+      },
+      {
+        "type": "improved",
+        "text": "Public/admin списки и overview diagnostics ограничены в базе данных, кириллический SQLite-поиск сохранён, а stale PUT/DELETE возвращают controlled conflict с актуализацией формы и списка."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 689/709 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

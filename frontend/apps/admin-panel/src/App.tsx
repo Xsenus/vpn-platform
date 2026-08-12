@@ -3,6 +3,7 @@ import {
   AccessCredentialDto,
   AdminAuditLogDto,
   AdminAppReleaseDto,
+  AdminFaqItem,
   AdminNotificationDeliveryDto,
   AdminDashboardSummaryDto,
   AdminReferralProgramDto,
@@ -20,7 +21,6 @@ import {
   CreateVpnInboundPayload,
   CreateVpnPanelPayload,
   FaqOverviewDto,
-  FaqItem,
   FaqUpsertPayload,
   OrderDto,
   PaymentAttemptDto,
@@ -1127,7 +1127,7 @@ export function App() {
   const [releaseSearch, setReleaseSearch] = useState('')
   const [releaseForm, setReleaseForm] = useState<AppReleaseUpsertPayload>(defaultReleaseForm)
   const [editingReleaseId, setEditingReleaseId] = useState('')
-  const [faqEntries, setFaqEntries] = useState<FaqItem[]>([])
+  const [faqEntries, setFaqEntries] = useState<AdminFaqItem[]>([])
   const [faqOverview, setFaqOverview] = useState<FaqOverviewDto | null>(null)
   const [faqCategoryFilter, setFaqCategoryFilter] = useState('all')
   const [faqVisibilityFilter, setFaqVisibilityFilter] = useState('all')
@@ -2733,8 +2733,7 @@ export function App() {
     setEditingFaqId('')
   }
 
-  const editFaq = (entry: FaqItem) => {
-    if (!entry.id) return
+  const editFaq = (entry: AdminFaqItem) => {
     setEditingFaqId(entry.id)
     setFaqForm({
       question: entry.question,
@@ -2767,7 +2766,22 @@ export function App() {
 
     await runAction('faq', editingId ? `faq-update-${editingId}` : 'faq-create', async (action) => {
       if (editingId) {
-        await api.updateAdminFaq(token, editingId, payload)
+        const current = faqEntries.find((entry) => entry.id === editingId)
+        if (!current) throw new ApiClientError('Вопрос FAQ больше не найден. Список обновлен.', 409, null)
+        try {
+          await api.updateAdminFaq(token, editingId, payload, current.revision)
+        } catch (error) {
+          if (error instanceof ApiClientError && error.status === 409) {
+            const latest = await api.getAdminFaq(token)
+            if (!action.isCurrent()) return
+            setFaqEntries(latest)
+            const refreshed = latest.find((entry) => entry.id === editingId)
+            if (refreshed) editFaq(refreshed)
+            else resetFaqForm()
+            throw new ApiClientError('Вопрос уже изменен другим администратором. Форма обновлена актуальными данными.', 409, error.payload)
+          }
+          throw error
+        }
       } else {
         await api.createAdminFaq(token, payload)
       }
@@ -2778,11 +2792,20 @@ export function App() {
     }, faqActionResourceKey(editingId || 'create'))
   }
 
-  const handleDeleteFaq = async (entry: FaqItem) => {
+  const handleDeleteFaq = async (entry: AdminFaqItem) => {
     const faqId = entry.id
     if (!faqId) return
     await runAction('faq', `faq-delete-${faqId}`, async (action) => {
-      await api.deleteAdminFaq(token, faqId)
+      try {
+        await api.deleteAdminFaq(token, faqId, entry.revision)
+      } catch (error) {
+        if (error instanceof ApiClientError && error.status === 409) {
+          await action.reloadAll()
+          if (action.isCurrent() && editingFaqIdRef.current === faqId) resetFaqForm()
+          throw new ApiClientError('Вопрос уже изменен другим администратором и не был удален. Список обновлен.', 409, error.payload)
+        }
+        throw error
+      }
       if (!action.isCurrent()) return
       if (editingFaqIdRef.current === faqId) resetFaqForm()
       setNotice('Вопрос FAQ удален.')

@@ -342,7 +342,7 @@ async function installApiMock(page: Page) {
 
     if (method === 'GET' && path.startsWith('/api/public/content/faq')) {
       await fulfillJson(route, [
-        { id: 'faq-all-screens', question: 'How to pay?', answer: 'Use sandbox provider.', category: 'Payment', sortOrder: 1, isActive: true, showOnHome: true, showOnFaqPage: true, createdAt: now, updatedAt: now }
+        { question: 'Как оплатить подписку и получить доступ на нескольких устройствах?', answer: 'Выберите тариф, завершите оплату и откройте личный кабинет. Инструкция и VPN-ключ появятся после подтверждения платежа.', category: 'Оплата и подключение' }
       ])
       return
     }
@@ -564,7 +564,7 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/faq') {
-      await fulfillJson(route, [{ id: 'faq-all-screens', question: 'How to pay?', answer: 'Use sandbox provider.', category: 'Payment', sortOrder: 1, isActive: true, showOnHome: true, showOnFaqPage: true, createdAt: now, updatedAt: now }])
+      await fulfillJson(route, [{ id: 'faq-all-screens', revision: 0, question: 'Как оплатить подписку и получить доступ на нескольких устройствах?', answer: 'Выберите тариф, завершите оплату и откройте личный кабинет. Инструкция и VPN-ключ появятся после подтверждения платежа.', category: 'Оплата и подключение', sortOrder: 1, isActive: true, showOnHome: true, showOnFaqPage: true, createdAt: now, updatedAt: now }])
       return
     }
 
@@ -1220,6 +1220,40 @@ test('admin releases fit focused mobile and desktop viewports', async ({ page })
     await expect(page.locator('#releases')).toBeVisible()
     await expectResponsiveLayout(page, `admin releases at ${viewport.name}`)
     if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin releases at ${viewport.name}`)
+  }
+
+  expect(browserErrors).toEqual([])
+})
+
+test('public and admin FAQ fit focused mobile and desktop viewports', async ({ page }) => {
+  const browserErrors = collectBrowserErrors(page)
+  await installApiMock(page)
+
+  for (const viewport of [
+    { name: 'compact-mobile', width: 320, height: 568 },
+    { name: 'large-mobile', width: 390, height: 844 },
+    { name: 'wide-layout-boundary', width: 1280, height: 900 }
+  ]) {
+    await page.setViewportSize(viewport)
+    await page.goto('http://127.0.0.1:5293/faq')
+    await page.locator('.faq-item summary').first().click()
+    await expect(page.locator('.faq-item').first()).toHaveAttribute('open', '')
+    await expectResponsiveLayout(page, `public FAQ at ${viewport.name}`)
+    if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `public FAQ at ${viewport.name}`)
+
+    await page.goto('http://127.0.0.1:5295/#faq')
+    const hasStoredAdminSession = await page.evaluate(() => Boolean(sessionStorage.getItem('vpn-platform-admin-token')))
+    if (!hasStoredAdminSession) {
+      await page.locator('input[type="email"]').fill('admin@example.test')
+      await page.locator('input[type="password"]').fill('Password123!')
+      await page.locator('form').locator('button[type="submit"]').click()
+    }
+    const faqPanel = page.locator('#faq')
+    await expect(faqPanel).toBeVisible()
+    await faqPanel.locator('.list-item-vertical').first().getByRole('button', { name: 'Редактировать' }).click()
+    await expect(faqPanel.getByRole('heading', { name: 'Редактировать вопрос' })).toBeVisible()
+    await expectResponsiveLayout(page, `admin FAQ editor at ${viewport.name}`)
+    if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin FAQ editor at ${viewport.name}`)
   }
 
   expect(browserErrors).toEqual([])

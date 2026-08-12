@@ -414,8 +414,8 @@ function LandingHomePage({ profile }: { profile: UserProfileDto | null }) {
             </Card>
           )}
           {!homeFaqLoading && !homeFaqError && homeFaq.length === 0 && <EmptyState title="FAQ скоро появится" description="Администратор может добавить вопросы в разделе FAQ." />}
-          {!homeFaqLoading && !homeFaqError && homeFaq.map((item) => (
-            <Card key={item.id ?? item.question} className="faq-preview-card">
+          {!homeFaqLoading && !homeFaqError && homeFaq.map((item, index) => (
+            <Card key={`${item.category}:${item.question}:${index}`} className="faq-preview-card">
               <span>{item.category ?? 'Общее'}</span>
               <h3>{item.question}</h3>
               <p>{item.answer}</p>
@@ -783,7 +783,7 @@ function FaqPage() {
       <div className="card-list faq-list">
         {filteredItems.length === 0 && !error && !loading && <EmptyState title={emptyTitle} description={emptyDescription} />}
         {filteredItems.map((item, index) => (
-          <details className="faq-item" key={item.id ?? item.question} open={filtersActive && index === 0 ? true : undefined}>
+          <details className="faq-item" key={`${item.category}:${item.question}:${index}`} open={filtersActive && index === 0 ? true : undefined}>
             <summary>
               <span>{item.question}</span>
               <small>{normalizeFaqCategory(item.category)}</small>

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.676.0 - 2026-08-13
+
+Release entry: `2026-08-13-faq-boundary`.
+
+### Исправлено
+
+- Публичный FAQ больше не раскрывает внутренние идентификаторы, publication flags, порядок и audit timestamps; frontend принимает только вопрос, ответ и категорию.
+- Устаревшая admin-форма не может перезаписать или удалить параллельно изменённую запись: PUT/DELETE требуют revision и возвращают controlled conflict с актуализацией формы и списка.
+
+### Улучшено
+
+- Public/admin списки, overview aggregates, category и duplicate diagnostics ограничены в БД; SQLite сохраняет регистронезависимый кириллический поиск.
+- `FaqEntry.Revision` защищён EF concurrency token и migration, а public/admin TypeScript-контракты разделены и проверяются exact allow-list validators.
+
+### Проверено
+
+- Fail-first backend `0/2`, frontend `161/162`; targeted backend/SQLite `14/14`, frontend `163/163`, backend `1388/1388`, typecheck/build, bundle budget, FAQ CRUD/conflict/public/render/responsive gates, SQLite concurrency, EF drift, UTF-8 и audit `0 vulnerabilities` зелёные. Объединённый полный desktop Playwright run превысил 5-minute timeout без итогового отчёта и не засчитывался.
+- Roadmap `689/709` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider/Telegram кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались; статус остается staging-ready baseline, not production-ready.
+
 ## 0.675.0 - 2026-08-13
 
 Release entry: `2026-08-13-app-release-boundary`.

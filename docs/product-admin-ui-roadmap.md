@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `688/708` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `689/709` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,8 +85,8 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1381/1381`.
-- [x] Frontend unit tests: `161/161`.
+- [x] Backend full suite: `1388/1388`.
+- [x] Frontend unit tests: `163/163`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
@@ -167,7 +167,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-13-app-release-boundary`, версия `0.675.0`; cabinet release DTO скрывает admin metadata, списки ограничены DB-side top-50/top-200, а admin PUT/DELETE используют optimistic revision с controlled conflict; backend `1381/1381`.
+- [x] Latest "Что нового": `2026-08-13-faq-boundary`, версия `0.676.0`; public FAQ DTO скрывает admin metadata, public/admin списки и diagnostics ограничены в БД, а admin PUT/DELETE используют optimistic revision с controlled conflict; backend `1388/1388`.
 
 ## Как вести дальше
 

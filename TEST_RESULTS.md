@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: FAQ boundary
+
+Scope:
+- Публичный FAQ не должен раскрывать admin metadata; public/admin list, overview aggregates и diagnostic выборки должны ограничиваться в БД.
+- Admin PUT/DELETE должны отклонять stale revision и восстанавливать актуальную запись на desktop/mobile без потери чужих изменений.
+
+Results:
+- Roadmap progress: `689/709` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-faq-boundary`, version `0.676.0`.
+- Fail-first: backend `0/2`, frontend `161/162`; public/admin списки возвращали 205 записей, public contract принимал admin metadata, а PUT/DELETE не имели revision contract.
+- After fix: минимальный public DTO и exact validators, DB-side top-200/aggregates/bounded diagnostics, Unicode-aware SQLite search, EF concurrency migration и controlled `409` с reload/recovery формы и списка.
+- Targeted backend/SQLite `14/14`, frontend `163/163`; backend `1388/1388`, typecheck/build и bundle budget зелёные. CRUD desktop/mobile `2/2`, stale PUT/DELETE desktop/mobile `4/4`, public FAQ/landing desktop/mobile `6/6`, focused FAQ responsive/WCAG `1/1` на 320/390/1280 px, public/admin render и overlap `3/3`. EF migration/drift, двухконтекстный file-backed SQLite race, fresh SQLite, strict UTF-8 without BOM, secret scan и dependency audit `0 vulnerabilities` зелёные. Объединённый полный desktop Playwright run превысил локальный 5-minute timeout до итогового отчёта и не засчитывался. Real VPS/staging/live evidence remains open; provider/Telegram cabinets, Bot API, SMTP and production-like 3x-ui were not checked locally.
+
 ## Check 2026-08-13: app release boundary
 
 Scope:

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
@@ -27,13 +28,42 @@ public sealed class AdminFaqController : ControllerBase
         [FromQuery] string? search = null,
         CancellationToken cancellationToken = default)
     {
-        var entries = await _db.FaqEntries
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
+        IQueryable<FaqEntry> query;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            RegisterSqliteUnicodeLower(dbContext);
+            var normalizedCategory = NormalizeOptionalCategory(category);
+            var normalizedVisibility = NormalizeVisibility(visibility);
+            var normalizedSearch = search?.Trim().ToLowerInvariant() ?? string.Empty;
+            query = _db.FaqEntries.FromSqlInterpolated($"""
+                SELECT f.*
+                FROM "FaqEntries" AS f
+                WHERE ({normalizedCategory} = '' OR unicode_lower(trim(f."Category")) = {normalizedCategory})
+                  AND ({normalizedVisibility} = 'all'
+                    OR ({normalizedVisibility} = 'active' AND f."IsActive" = 1)
+                    OR ({normalizedVisibility} = 'hidden' AND f."IsActive" = 0)
+                    OR ({normalizedVisibility} = 'home' AND f."IsActive" = 1 AND f."ShowOnHome" = 1)
+                    OR ({normalizedVisibility} = 'faq' AND f."IsActive" = 1 AND f."ShowOnFaqPage" = 1))
+                  AND ({normalizedSearch} = ''
+                    OR instr(unicode_lower(f."Question"), {normalizedSearch}) > 0
+                    OR instr(unicode_lower(f."Answer"), {normalizedSearch}) > 0
+                    OR instr(unicode_lower(f."Category"), {normalizedSearch}) > 0)
+                ORDER BY f."SortOrder", f."Category", f."Question", f."Id"
+                LIMIT 200
+                """);
+        }
+        else
+        {
+            query = ApplyFilters(_db.FaqEntries.AsNoTracking(), category, visibility, search)
+                .OrderBy(x => x.SortOrder)
+                .ThenBy(x => x.Category)
+                .ThenBy(x => x.Question)
+                .ThenBy(x => x.Id)
+                .Take(200);
+        }
 
-        var filtered = ApplyFilters(entries, category, visibility, search);
-
-        return Ok(filtered
+        var entries = await query.AsNoTracking().ToListAsync(cancellationToken);
+        return Ok(entries
             .OrderBy(x => x.SortOrder)
             .ThenBy(x => x.Category)
             .ThenBy(x => x.Question)
@@ -44,39 +74,32 @@ public sealed class AdminFaqController : ControllerBase
     [HttpGet("overview")]
     public async Task<IActionResult> GetOverview(CancellationToken cancellationToken)
     {
-        var entries = await _db.FaqEntries
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
-
-        var categories = entries
+        var totalCount = await _db.FaqEntries.AsNoTracking().CountAsync(cancellationToken);
+        var activeCount = await _db.FaqEntries.AsNoTracking().CountAsync(x => x.IsActive, cancellationToken);
+        var homeCount = await _db.FaqEntries.AsNoTracking().CountAsync(x => x.IsActive && x.ShowOnHome, cancellationToken);
+        var faqPageCount = await _db.FaqEntries.AsNoTracking().CountAsync(x => x.IsActive && x.ShowOnFaqPage, cancellationToken);
+        var categories = (await GetCategoryRepresentativesAsync(cancellationToken))
             .Select(x => NormalizeCategory(x.Category))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(x => x)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        var duplicateQuestions = entries
-            .GroupBy(x => $"{NormalizeCategory(x.Category).ToLowerInvariant()}::{x.Question.Trim().ToLowerInvariant()}")
-            .Where(x => x.Count() > 1)
-            .Select(x =>
-            {
-                var first = x.First();
-                return $"{NormalizeCategory(first.Category)}: {first.Question.Trim()}";
-            })
+        var duplicateQuestions = (await GetDuplicateRepresentativesAsync(cancellationToken))
+            .Select(x => $"{NormalizeCategory(x.Category)}: {x.Question.Trim()}")
             .OrderBy(x => x)
             .ToArray();
 
         return Ok(new
         {
-            TotalCount = entries.Count,
-            ActiveCount = entries.Count(x => x.IsActive),
-            HiddenCount = entries.Count(x => !x.IsActive),
-            HomeCount = entries.Count(x => x.IsActive && x.ShowOnHome),
-            FaqPageCount = entries.Count(x => x.IsActive && x.ShowOnFaqPage),
-            PublicCount = entries.Count(x => x.IsActive && x.ShowOnFaqPage),
+            TotalCount = totalCount,
+            ActiveCount = activeCount,
+            HiddenCount = totalCount - activeCount,
+            HomeCount = homeCount,
+            FaqPageCount = faqPageCount,
+            PublicCount = faqPageCount,
             CategoryCount = categories.Length,
             Categories = categories,
             DuplicateQuestions = duplicateQuestions,
-            HasPublicFaq = entries.Any(x => x.IsActive && x.ShowOnFaqPage),
-            HasHomeFaq = entries.Any(x => x.IsActive && x.ShowOnHome)
+            HasPublicFaq = faqPageCount > 0,
+            HasHomeFaq = homeCount > 0
         });
     }
 
@@ -119,6 +142,14 @@ public sealed class AdminFaqController : ControllerBase
         {
             return NotFound();
         }
+        if (!request.Revision.HasValue || request.Revision.Value < 0)
+        {
+            return BadRequest(new { error = "FAQ revision is required and must be a non-negative integer." });
+        }
+        if (request.Revision.Value != entry.Revision)
+        {
+            return Conflict(new { error = "FAQ entry changed. Reload it and retry.", revision = entry.Revision });
+        }
 
         var candidate = new FaqEntry();
         Apply(candidate, request);
@@ -129,27 +160,50 @@ public sealed class AdminFaqController : ControllerBase
 
         var before = MapFaq(entry);
         Copy(candidate, entry);
+        entry.Revision = checked(entry.Revision + 1);
         entry.UpdatedAt = DateTimeOffset.UtcNow;
         AdminAuditLogWriter.Add(_db, this, "faq.update", "FaqEntry", entry.Id, before, MapFaq(entry));
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "FAQ entry changed. Reload it and retry." });
+        }
 
         return Ok(MapFaq(entry));
     }
 
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = AdminPolicies.AdminWrite)]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(Guid id, [FromQuery] int? revision, CancellationToken cancellationToken)
     {
         var entry = await _db.FaqEntries.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (entry is null)
         {
             return NotFound();
         }
+        if (!revision.HasValue || revision.Value < 0)
+        {
+            return BadRequest(new { error = "FAQ revision is required and must be a non-negative integer." });
+        }
+        if (revision.Value != entry.Revision)
+        {
+            return Conflict(new { error = "FAQ entry changed. Reload it and retry.", revision = entry.Revision });
+        }
 
         var before = MapFaq(entry);
         _db.FaqEntries.Remove(entry);
         AdminAuditLogWriter.Add(_db, this, "faq.delete", "FaqEntry", entry.Id, before, null);
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "FAQ entry changed. Reload it and retry." });
+        }
         return Ok(new { id, deleted = true });
     }
 
@@ -184,13 +238,13 @@ public sealed class AdminFaqController : ControllerBase
         return null;
     }
 
-    private static IReadOnlyList<FaqEntry> ApplyFilters(IReadOnlyList<FaqEntry> entries, string? category, string? visibility, string? search)
+    private static IQueryable<FaqEntry> ApplyFilters(IQueryable<FaqEntry> entries, string? category, string? visibility, string? search)
     {
-        var filtered = entries.AsEnumerable();
+        var filtered = entries;
         if (!string.IsNullOrWhiteSpace(category) && !string.Equals(category, "all", StringComparison.OrdinalIgnoreCase))
         {
-            var normalizedCategory = NormalizeCategory(category);
-            filtered = filtered.Where(x => string.Equals(NormalizeCategory(x.Category), normalizedCategory, StringComparison.OrdinalIgnoreCase));
+            var normalizedCategory = NormalizeCategory(category).ToLower();
+            filtered = filtered.Where(x => x.Category.Trim().ToLower() == normalizedCategory);
         }
 
         if (!string.IsNullOrWhiteSpace(visibility) && !string.Equals(visibility, "all", StringComparison.OrdinalIgnoreCase))
@@ -207,31 +261,160 @@ public sealed class AdminFaqController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var normalizedSearch = search.Trim();
+            var normalizedSearch = search.Trim().ToLower();
             filtered = filtered.Where(x =>
-                x.Question.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
-                x.Answer.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
-                NormalizeCategory(x.Category).Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase));
+                x.Question.ToLower().Contains(normalizedSearch) ||
+                x.Answer.ToLower().Contains(normalizedSearch) ||
+                x.Category.ToLower().Contains(normalizedSearch));
         }
 
-        return filtered.ToList();
+        return filtered;
+    }
+
+    private async Task<List<FaqEntry>> GetDuplicateRepresentativesAsync(CancellationToken cancellationToken)
+    {
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            RegisterSqliteUnicodeLower(dbContext);
+            return await _db.FaqEntries.FromSqlRaw("""
+                    SELECT f.* FROM "FaqEntries" AS f
+                    WHERE f."Id" IN (
+                        SELECT min(candidate."Id")
+                        FROM "FaqEntries" AS candidate
+                        GROUP BY unicode_lower(trim(candidate."Category")), unicode_lower(trim(candidate."Question"))
+                        HAVING count(*) > 1
+                        ORDER BY unicode_lower(trim(candidate."Category")), unicode_lower(trim(candidate."Question"))
+                        LIMIT 200)
+                    ORDER BY f."Category", f."Question", f."Id"
+                    """)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+
+        if (_db is DbContext postgresContext && postgresContext.Database.IsNpgsql())
+        {
+            return await _db.FaqEntries.FromSqlRaw("""
+                    SELECT DISTINCT ON (lower(trim(f."Category")), lower(trim(f."Question"))) f.*
+                    FROM "FaqEntries" AS f
+                    WHERE EXISTS (
+                        SELECT 1 FROM "FaqEntries" AS other
+                        WHERE other."Id" <> f."Id"
+                          AND lower(trim(other."Category")) = lower(trim(f."Category"))
+                          AND lower(trim(other."Question")) = lower(trim(f."Question")))
+                    ORDER BY lower(trim(f."Category")), lower(trim(f."Question")), f."Id"
+                    LIMIT 200
+                    """)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+
+        var entries = await _db.FaqEntries
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+        return entries
+            .GroupBy(x => $"{NormalizeCategory(x.Category).ToLowerInvariant()}::{x.Question.Trim().ToLowerInvariant()}")
+            .Where(x => x.Count() > 1)
+            .Select(x => x.OrderBy(item => item.Id).First())
+            .OrderBy(x => x.Category)
+            .ThenBy(x => x.Question)
+            .Take(200)
+            .ToList();
+    }
+
+    private async Task<List<FaqEntry>> GetCategoryRepresentativesAsync(CancellationToken cancellationToken)
+    {
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            RegisterSqliteUnicodeLower(dbContext);
+            return await _db.FaqEntries.FromSqlRaw("""
+                    SELECT f.* FROM "FaqEntries" AS f
+                    WHERE f."Id" IN (
+                        SELECT min(candidate."Id")
+                        FROM "FaqEntries" AS candidate
+                        GROUP BY unicode_lower(trim(candidate."Category"))
+                        ORDER BY unicode_lower(trim(candidate."Category"))
+                        LIMIT 200)
+                    ORDER BY unicode_lower(trim(f."Category")), f."Id"
+                    """)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+
+        if (_db is DbContext postgresContext && postgresContext.Database.IsNpgsql())
+        {
+            return await _db.FaqEntries.FromSqlRaw("""
+                    SELECT DISTINCT ON (lower(trim(f."Category"))) f.*
+                    FROM "FaqEntries" AS f
+                    ORDER BY lower(trim(f."Category")), f."Id"
+                    LIMIT 200
+                    """)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+
+        var entries = await _db.FaqEntries.AsNoTracking().ToListAsync(cancellationToken);
+        return entries
+            .GroupBy(x => NormalizeCategory(x.Category), StringComparer.OrdinalIgnoreCase)
+            .Select(x => x.OrderBy(item => item.Id).First())
+            .OrderBy(x => x.Category)
+            .Take(200)
+            .ToList();
+    }
+
+    private static string NormalizeOptionalCategory(string? category)
+        => string.IsNullOrWhiteSpace(category) || string.Equals(category.Trim(), "all", StringComparison.OrdinalIgnoreCase)
+            ? string.Empty
+            : NormalizeCategory(category).ToLowerInvariant();
+
+    private static string NormalizeVisibility(string? visibility)
+        => visibility?.Trim().ToLowerInvariant() switch
+        {
+            "active" => "active",
+            "hidden" => "hidden",
+            "home" => "home",
+            "faq" => "faq",
+            _ => "all"
+        };
+
+    private static void RegisterSqliteUnicodeLower(DbContext dbContext)
+    {
+        if (dbContext.Database.GetDbConnection() is SqliteConnection connection)
+        {
+            connection.CreateFunction<string?, string?>("unicode_lower", value => value?.ToLowerInvariant(), isDeterministic: true);
+        }
     }
 
     private async Task<bool> HasDuplicateQuestionAsync(string question, string category, Guid? exceptId, CancellationToken cancellationToken)
     {
-        var entries = await _db.FaqEntries
-            .AsNoTracking()
-            .Where(x => !exceptId.HasValue || x.Id != exceptId.Value)
-            .ToListAsync(cancellationToken);
+        var normalizedQuestion = question.Trim().ToLowerInvariant();
+        var normalizedCategory = NormalizeCategory(category).ToLowerInvariant();
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            RegisterSqliteUnicodeLower(dbContext);
+            var excludedId = exceptId ?? Guid.Empty;
+            return await _db.FaqEntries.FromSqlInterpolated($"""
+                    SELECT f.* FROM "FaqEntries" AS f
+                    WHERE f."Id" <> {excludedId}
+                      AND unicode_lower(trim(f."Question")) = {normalizedQuestion}
+                      AND unicode_lower(trim(f."Category")) = {normalizedCategory}
+                    LIMIT 1
+                    """)
+                .AsNoTracking()
+                .AnyAsync(cancellationToken);
+        }
 
-        return entries.Any(x =>
-            string.Equals(x.Question.Trim(), question.Trim(), StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(NormalizeCategory(x.Category), NormalizeCategory(category), StringComparison.OrdinalIgnoreCase));
+        return await _db.FaqEntries
+            .AsNoTracking()
+            .AnyAsync(x =>
+                (!exceptId.HasValue || x.Id != exceptId.Value)
+                && x.Question.Trim().ToLower() == normalizedQuestion
+                && x.Category.Trim().ToLower() == normalizedCategory,
+                cancellationToken);
     }
 
     private static string NormalizeCategory(string? category)
         => string.IsNullOrWhiteSpace(category) ? "Общее" : category.Trim();
 
     private static FaqEntryDto MapFaq(FaqEntry entry)
-        => new(entry.Id, entry.Question, entry.Answer, entry.Category, entry.IsActive, entry.ShowOnHome, entry.ShowOnFaqPage, entry.SortOrder, entry.CreatedAt, entry.UpdatedAt);
+        => new(entry.Id, entry.Revision, entry.Question, entry.Answer, entry.Category, entry.IsActive, entry.ShowOnHome, entry.ShowOnFaqPage, entry.SortOrder, entry.CreatedAt, entry.UpdatedAt);
 }

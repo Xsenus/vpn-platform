@@ -17,6 +17,20 @@ namespace VpnPlatform.UnitTests;
 public class FaqControllerTests
 {
     [Fact]
+    public void Faq_Read_Paths_Should_Keep_Production_Limits_Before_Materialization()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var publicSource = File.ReadAllText(Path.Combine(repositoryRoot, "backend", "src", "VpnPlatform.Api", "Controllers", "Public", "ContentController.cs"));
+        var adminSource = File.ReadAllText(Path.Combine(repositoryRoot, "backend", "src", "VpnPlatform.Api", "Controllers", "Admin", "AdminFaqController.cs"));
+
+        Assert.Contains(".Take(200)", publicSource, StringComparison.Ordinal);
+        Assert.Contains("LIMIT 200", adminSource, StringComparison.Ordinal);
+        Assert.Contains(".Take(200)", adminSource, StringComparison.Ordinal);
+        Assert.Contains("unicode_lower", adminSource, StringComparison.Ordinal);
+        Assert.Contains("DISTINCT ON", adminSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task PublicFaq_Should_Return_Only_Active_Published_Items_In_Sort_Order()
     {
         await using var db = CreateDb();
@@ -28,7 +42,7 @@ public class FaqControllerTests
         await db.SaveChangesAsync();
         var controller = new ContentController(db);
 
-        var response = AssertOk<List<FaqEntryDto>>(await controller.GetFaq(cancellationToken: CancellationToken.None));
+        var response = AssertOk<List<PublicFaqEntryDto>>(await controller.GetFaq(cancellationToken: CancellationToken.None));
 
         Assert.Equal(new[] { "Первый", "Второй" }, response.Select(x => x.Question).ToArray());
     }
@@ -43,10 +57,27 @@ public class FaqControllerTests
         await db.SaveChangesAsync();
         var controller = new ContentController(db);
 
-        var response = AssertOk<List<FaqEntryDto>>(await controller.GetFaq(home: true, cancellationToken: CancellationToken.None));
+        var response = AssertOk<List<PublicFaqEntryDto>>(await controller.GetFaq(home: true, cancellationToken: CancellationToken.None));
 
         Assert.Single(response);
         Assert.Equal("Главная", response[0].Question);
+    }
+
+    [Fact]
+    public async Task PublicFaq_Should_Return_Minimal_Contract_And_Limit_Result_Set()
+    {
+        await using var db = CreateDb();
+        db.FaqEntries.AddRange(Enumerable.Range(1, 205).Select(index =>
+            Entry($"Вопрос {index:D3}", "Ответ", "Общее", sortOrder: index)));
+        await db.SaveChangesAsync();
+        var controller = new ContentController(db);
+
+        using var response = ToJson(await controller.GetFaq(cancellationToken: CancellationToken.None));
+        var items = response.RootElement.EnumerateArray().ToArray();
+
+        Assert.Equal(200, items.Length);
+        Assert.Equal("Вопрос 001", items[0].GetProperty("Question").GetString());
+        Assert.Equal(new[] { "Answer", "Category", "Question" }, items[0].EnumerateObject().Select(x => x.Name).Order().ToArray());
     }
 
     [Fact]
@@ -58,9 +89,9 @@ public class FaqControllerTests
 
         var created = AssertOk<FaqEntryDto>(await controller.Create(createRequest, CancellationToken.None));
         var list = AssertOk<List<FaqEntryDto>>(await controller.Get(cancellationToken: CancellationToken.None));
-        var updateRequest = createRequest with { Answer = "Оплата доступна на странице тарифов.", SortOrder = 5 };
+        var updateRequest = createRequest with { Answer = "Оплата доступна на странице тарифов.", SortOrder = 5, Revision = created.Revision };
         var updated = AssertOk<FaqEntryDto>(await controller.Update(created.Id, updateRequest, CancellationToken.None));
-        var deleted = await controller.Delete(created.Id, CancellationToken.None);
+        var deleted = await controller.Delete(created.Id, updated.Revision, CancellationToken.None);
 
         Assert.Contains(list, x => x.Question == "Как оплатить?");
         Assert.Equal("Оплата доступна на странице тарифов.", updated.Answer);
@@ -73,6 +104,28 @@ public class FaqControllerTests
         Assert.Contains(audits, x => x.Action == "faq.update" && x.EntityId == created.Id.ToString() && x.BeforeJson != x.AfterJson);
         Assert.Contains(audits, x => x.Action == "faq.delete" && x.EntityId == created.Id.ToString() && x.AfterJson == "{}");
         Assert.All(audits, x => Assert.NotEqual("unknown", x.ActorId));
+    }
+
+    [Fact]
+    public async Task AdminFaq_Should_Limit_List_And_Require_Revision_For_Mutations()
+    {
+        await using var db = CreateDb();
+        db.FaqEntries.AddRange(Enumerable.Range(1, 205).Select(index =>
+            Entry($"Вопрос {index:D3}", "Ответ", "Общее", sortOrder: index)));
+        await db.SaveChangesAsync();
+        var controller = CreateAdminController(db);
+
+        var list = AssertOk<List<FaqEntryDto>>(await controller.Get(cancellationToken: CancellationToken.None));
+        var first = list[0];
+        var update = await controller.Update(
+            first.Id,
+            new FaqEntryUpsertRequest(first.Question, "Новый ответ", first.Category, true, true, true, first.SortOrder),
+            CancellationToken.None);
+        var delete = await controller.Delete(first.Id, revision: null, CancellationToken.None);
+
+        Assert.Equal(200, list.Count);
+        Assert.IsType<BadRequestObjectResult>(update);
+        Assert.IsType<BadRequestObjectResult>(delete);
     }
 
     [Fact]
@@ -133,6 +186,61 @@ public class FaqControllerTests
     }
 
     [Fact]
+    public async Task AdminFaq_Should_Normalize_Category_Overview_Case_Insensitively()
+    {
+        await using var db = CreateDb();
+        db.FaqEntries.AddRange(
+            Entry("Первый", "Ответ", " Оплата "),
+            Entry("Второй", "Ответ", "оплата"),
+            Entry("Третий", "Ответ", "Подключение"));
+        await db.SaveChangesAsync();
+        var controller = CreateAdminController(db);
+
+        using var overview = ToJson(await controller.GetOverview(CancellationToken.None));
+        var categories = ReadStringArray(overview.RootElement.GetProperty("Categories"));
+
+        Assert.Equal(2, overview.RootElement.GetProperty("CategoryCount").GetInt32());
+        Assert.Contains(categories, category => string.Equals(category, "Оплата", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(categories, category => string.Equals(category, "Подключение", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task AdminFaq_Should_Keep_Overview_Counts_Complete_And_Limit_Diagnostics()
+    {
+        await using var db = CreateDb();
+        db.FaqEntries.AddRange(Enumerable.Range(1, 205).SelectMany(index => new[]
+        {
+            Entry($"Повтор {index:D3}", "Первый", $"Категория {index:D3}", sortOrder: index),
+            Entry($" повтор {index:D3} ", "Второй", $" категория {index:D3} ", sortOrder: index + 300)
+        }));
+        await db.SaveChangesAsync();
+        var controller = CreateAdminController(db);
+
+        using var overview = ToJson(await controller.GetOverview(CancellationToken.None));
+        var root = overview.RootElement;
+
+        Assert.Equal(410, root.GetProperty("TotalCount").GetInt32());
+        Assert.Equal(410, root.GetProperty("ActiveCount").GetInt32());
+        Assert.InRange(root.GetProperty("Categories").GetArrayLength(), 1, 200);
+        Assert.InRange(root.GetProperty("DuplicateQuestions").GetArrayLength(), 1, 200);
+    }
+
+    [Fact]
+    public async Task AdminFaq_Should_Filter_Cyrillic_Search_In_Sqlite()
+    {
+        await using var db = CreateDb();
+        db.FaqEntries.AddRange(
+            Entry("Как получить QR?", "Откройте личный кабинет.", "Подключение"),
+            Entry("Как оплатить?", "Банковской картой.", "Оплата"));
+        await db.SaveChangesAsync();
+        var controller = CreateAdminController(db);
+
+        var response = AssertOk<List<FaqEntryDto>>(await controller.Get(search: "ПОДКЛЮЧ", cancellationToken: CancellationToken.None));
+
+        Assert.Equal("Как получить QR?", Assert.Single(response).Question);
+    }
+
+    [Fact]
     public async Task AdminFaq_Should_Reject_Duplicate_Question_In_Category()
     {
         await using var db = CreateDb();
@@ -142,7 +250,7 @@ public class FaqControllerTests
 
         var duplicateCreate = await controller.Create(new FaqEntryUpsertRequest(" как оплатить? ", "Другой ответ.", " оплата ", true, true, true, 20), CancellationToken.None);
         var created = AssertOk<FaqEntryDto>(await controller.Create(new FaqEntryUpsertRequest("Как подключиться?", "Ответ.", "Подключение", true, true, true, 30), CancellationToken.None));
-        var duplicateUpdate = await controller.Update(created.Id, new FaqEntryUpsertRequest("Как оплатить?", "Ответ.", "Оплата", true, true, true, 40), CancellationToken.None);
+        var duplicateUpdate = await controller.Update(created.Id, new FaqEntryUpsertRequest("Как оплатить?", "Ответ.", "Оплата", true, true, true, 40, created.Revision), CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(duplicateCreate);
         Assert.IsType<BadRequestObjectResult>(duplicateUpdate);
@@ -150,6 +258,50 @@ public class FaqControllerTests
         Assert.Equal(created.Question, persisted.Question);
         Assert.Equal(created.Category, persisted.Category);
         Assert.Single(await db.AuditLogs.ToListAsync(), x => x.Action == "faq.create");
+    }
+
+    [Fact]
+    public async Task AdminFaq_Should_Reject_Cross_Context_Concurrent_Update()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-faq-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite($"Data Source={databasePath}")
+                .Options;
+            await using (var setup = new ApplicationDbContext(options))
+            {
+                await setup.Database.EnsureCreatedAsync();
+                setup.FaqEntries.Add(Entry("Исходный вопрос", "Исходный ответ", "Общее"));
+                await setup.SaveChangesAsync();
+            }
+
+            await using var firstDb = new ApplicationDbContext(options);
+            await using var secondDb = new ApplicationDbContext(options);
+            var first = await firstDb.FaqEntries.SingleAsync();
+            var second = await secondDb.FaqEntries.SingleAsync();
+            var firstController = CreateAdminController(firstDb);
+            var secondController = CreateAdminController(secondDb);
+
+            var firstResult = AssertOk<FaqEntryDto>(await firstController.Update(
+                first.Id,
+                new FaqEntryUpsertRequest("Первое изменение", first.Answer, first.Category, true, true, true, 10, first.Revision),
+                CancellationToken.None));
+            var secondResult = await secondController.Update(
+                second.Id,
+                new FaqEntryUpsertRequest("Второе изменение", second.Answer, second.Category, true, true, true, 10, second.Revision),
+                CancellationToken.None);
+
+            Assert.Equal(1, firstResult.Revision);
+            Assert.IsType<ConflictObjectResult>(secondResult);
+            await using var verify = new ApplicationDbContext(options);
+            Assert.Equal("Первое изменение", (await verify.FaqEntries.SingleAsync()).Question);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (File.Exists(databasePath)) File.Delete(databasePath);
+        }
     }
 
     private static FaqEntry Entry(
@@ -215,4 +367,22 @@ public class FaqControllerTests
 
     private static string[] ReadStringArray(JsonElement element)
         => element.EnumerateArray().Select(x => x.GetString() ?? string.Empty).ToArray();
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "README.md"))
+                && Directory.Exists(Path.Combine(directory.FullName, "frontend"))
+                && Directory.Exists(Path.Combine(directory.FullName, "backend")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Repository root was not found for FAQ controller tests.");
+    }
 }

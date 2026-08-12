@@ -1155,16 +1155,20 @@ export type AdminUserOverviewDto = {
 export type UpdateTariffPayload = Partial<Pick<TariffDto, 'name' | 'slug' | 'description' | 'fullDescription' | 'featuresJson' | 'badge' | 'price' | 'currency' | 'durationDays' | 'maxDevices' | 'trafficLimit' | 'isTrial' | 'isActive' | 'sortOrder' | 'category' | 'allowedRegionsCsv' | 'allowedNodeGroupsCsv' | 'isReferralEligible' | 'provisioningScenario' | 'afterPaymentText'>>
 
 export type FaqItem = {
-  id?: string
   question: string
   answer: string
-  category?: string
-  isActive?: boolean
-  showOnHome?: boolean
-  showOnFaqPage?: boolean
-  sortOrder?: number
-  createdAt?: string
-  updatedAt?: string
+  category: string
+}
+
+export type AdminFaqItem = FaqItem & {
+  id: string
+  revision: number
+  isActive: boolean
+  showOnHome: boolean
+  showOnFaqPage: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
 }
 
 export type FaqUpsertPayload = {
@@ -1614,7 +1618,31 @@ function isTariffDto(value: unknown): value is TariffDto {
 function isFaqItem(value: unknown): value is FaqItem {
   if (!isRecord(value)) return false
 
+  return hasString(value, 'question', true)
+    && hasString(value, 'answer', true)
+    && hasString(value, 'category', true)
+    && Object.keys(value).every((key) => key === 'question' || key === 'answer' || key === 'category')
+}
+
+function isAdminFaqItem(value: unknown): value is AdminFaqItem {
+  if (!isRecord(value)) return false
+
+  const allowedFields = new Set([
+    'id',
+    'revision',
+    'question',
+    'answer',
+    'category',
+    'isActive',
+    'showOnHome',
+    'showOnFaqPage',
+    'sortOrder',
+    'createdAt',
+    'updatedAt'
+  ])
+
   return hasString(value, 'id', true)
+    && hasInteger(value, 'revision', 0)
     && hasString(value, 'question', true)
     && hasString(value, 'answer', true)
     && hasString(value, 'category', true)
@@ -1624,6 +1652,7 @@ function isFaqItem(value: unknown): value is FaqItem {
     && hasInteger(value, 'sortOrder')
     && hasString(value, 'createdAt', true)
     && hasString(value, 'updatedAt', true)
+    && Object.keys(value).every((key) => allowedFields.has(key))
 }
 
 function isSiteContentBlockDto(value: unknown): value is SiteContentBlockDto {
@@ -3407,11 +3436,11 @@ export class ApiClient {
   }
 
   getFaq(): Promise<FaqItem[]> {
-    return this.requestArray<FaqItem>('/api/public/content/faq', { errorMessage: apiFallbackErrorMessage }, isFaqItem, (items) => hasUniqueStringKey(items, 'id'))
+    return this.requestArray<FaqItem>('/api/public/content/faq', { errorMessage: apiFallbackErrorMessage }, isFaqItem)
   }
 
   getHomeFaq(): Promise<FaqItem[]> {
-    return this.requestArray<FaqItem>('/api/public/content/faq?home=true', { errorMessage: apiFallbackErrorMessage }, isFaqItem, (items) => hasUniqueStringKey(items, 'id'))
+    return this.requestArray<FaqItem>('/api/public/content/faq?home=true', { errorMessage: apiFallbackErrorMessage }, isFaqItem)
   }
 
   getHomeContent(): Promise<SiteContentBlockDto[]> {
@@ -4096,13 +4125,13 @@ export class ApiClient {
     return this.request<AppReleaseOverviewDto>('/api/app-version/admin/releases/overview', { token, errorMessage: apiFallbackErrorMessage }, 'object', isAppReleaseOverviewDto)
   }
 
-  getAdminFaq(token: string, filters: AdminFaqFilters = {}): Promise<FaqItem[]> {
+  getAdminFaq(token: string, filters: AdminFaqFilters = {}): Promise<AdminFaqItem[]> {
     const params = new URLSearchParams()
     if (filters.category && filters.category !== 'all') params.set('category', filters.category)
     if (filters.visibility && filters.visibility !== 'all') params.set('visibility', filters.visibility)
     if (filters.search) params.set('search', filters.search)
     const query = params.toString()
-    return this.requestArray<FaqItem>(`/api/admin/faq${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage }, isFaqItem, (items) => hasUniqueStringKey(items, 'id'))
+    return this.requestArray<AdminFaqItem>(`/api/admin/faq${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage }, isAdminFaqItem, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminFaqOverview(token: string): Promise<FaqOverviewDto> {
@@ -4183,26 +4212,26 @@ export class ApiClient {
     }, 'object', isDeleteResultDto)
   }
 
-  createAdminFaq(token: string, payload: FaqUpsertPayload): Promise<FaqItem> {
-    return this.request<FaqItem>('/api/admin/faq', {
+  createAdminFaq(token: string, payload: FaqUpsertPayload): Promise<AdminFaqItem> {
+    return this.request<AdminFaqItem>('/api/admin/faq', {
       method: 'POST',
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    }, 'object', isFaqItem)
+    }, 'object', isAdminFaqItem)
   }
 
-  updateAdminFaq(token: string, id: string, payload: FaqUpsertPayload): Promise<FaqItem> {
-    return this.request<FaqItem>(`/api/admin/faq/${id}`, {
+  updateAdminFaq(token: string, id: string, payload: FaqUpsertPayload, revision: number): Promise<AdminFaqItem> {
+    return this.request<AdminFaqItem>(`/api/admin/faq/${id}`, {
       method: 'PUT',
       token,
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, revision }),
       errorMessage: apiFallbackErrorMessage
-    }, 'object', isFaqItem)
+    }, 'object', isAdminFaqItem)
   }
 
-  deleteAdminFaq(token: string, id: string): Promise<{ id: string; deleted: boolean }> {
-    return this.request<{ id: string; deleted: boolean }>(`/api/admin/faq/${id}`, {
+  deleteAdminFaq(token: string, id: string, revision: number): Promise<{ id: string; deleted: boolean }> {
+    return this.request<{ id: string; deleted: boolean }>(`/api/admin/faq/${id}?revision=${encodeURIComponent(String(revision))}`, {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage

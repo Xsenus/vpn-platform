@@ -4,34 +4,19 @@ import { filterFaqItems, getFaqCategories, normalizeFaqCategory, FAQ_ALL_CATEGOR
 
 const faqItems = [
   {
-    id: 'faq-1',
     question: 'Как оплатить тариф?',
     answer: 'Выберите тариф и доступный способ оплаты.',
-    category: 'Оплата',
-    isActive: true,
-    showOnHome: true,
-    showOnFaqPage: true,
-    sortOrder: 10
+    category: 'Оплата'
   },
   {
-    id: 'faq-2',
     question: 'Как подключить VPN?',
     answer: 'Скопируйте ссылку из кабинета или отсканируйте QR-код.',
-    category: 'Подключение',
-    isActive: true,
-    showOnHome: true,
-    showOnFaqPage: true,
-    sortOrder: 20
+    category: 'Подключение'
   },
   {
-    id: 'faq-3',
     question: 'Что делать при продлении?',
     answer: 'Откройте кабинет и повторите оплату активного тарифа.',
-    category: '',
-    isActive: true,
-    showOnHome: false,
-    showOnFaqPage: true,
-    sortOrder: 30
+    category: ''
   }
 ]
 
@@ -42,8 +27,8 @@ test('public FAQ helpers normalize and sort categories for Russian UI', () => {
 })
 
 test('public FAQ helpers filter by category and full text search', () => {
-  assert.equal(filterFaqItems(faqItems, FAQ_ALL_CATEGORY, 'qr').map((item) => item.id).join(','), 'faq-2')
-  assert.equal(filterFaqItems(faqItems, 'Оплата', 'тариф').map((item) => item.id).join(','), 'faq-1')
-  assert.equal(filterFaqItems(faqItems, 'Общее', 'продлении').map((item) => item.id).join(','), 'faq-3')
+  assert.equal(filterFaqItems(faqItems, FAQ_ALL_CATEGORY, 'qr').map((item) => item.question).join(','), 'Как подключить VPN?')
+  assert.equal(filterFaqItems(faqItems, 'Оплата', 'тариф').map((item) => item.question).join(','), 'Как оплатить тариф?')
+  assert.equal(filterFaqItems(faqItems, 'Общее', 'продлении').map((item) => item.question).join(','), 'Что делать при продлении?')
   assert.deepEqual(filterFaqItems(faqItems, 'Подключение', 'оплата'), [])
 })
