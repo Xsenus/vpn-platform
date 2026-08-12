@@ -15636,5 +15636,28 @@
         "text": "Roadmap progress is 677/697 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; live refunds, provider cabinets, Telegram/Bot API and SMTP must be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-admin-payment-recheck-boundary",
+    "version": "0.665.0",
+    "releasedAt": "2026-08-12T19:30:00+07:00",
+    "title": "Сверка платежа не раскрывает данные провайдера",
+    "summary": "Ручная сверка платежа возвращает администратору только безопасный статус и сохраняет операторский аудит до обращения к провайдеру.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Payment и order recheck больше не возвращают raw provider response, status reason или transport exception в браузер."
+      },
+      {
+        "type": "improved",
+        "text": "Оба endpoint выполняют readiness preflight, записывают actor-aware audit до внешнего вызова и возвращают минимальный orderId/paymentId/status DTO."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 678/698 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

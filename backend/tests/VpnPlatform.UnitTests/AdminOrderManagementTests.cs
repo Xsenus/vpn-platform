@@ -89,9 +89,14 @@ public class AdminOrderManagementTests
         Assert.Equal(order.Id, json.RootElement.GetProperty("OrderId").GetGuid());
         Assert.Equal(latestPayment.Id, json.RootElement.GetProperty("PaymentId").GetGuid());
         Assert.Equal("WaitingConfirmation", json.RootElement.GetProperty("Status").GetString());
+        Assert.False(json.RootElement.TryGetProperty("RawResponse", out _));
         Assert.Equal(latestPayment.Id, provider.LastStatusPaymentId);
         await db.Entry(latestPayment).ReloadAsync();
         Assert.Equal(PaymentStatus.WaitingConfirmation, latestPayment.Status);
+        var audit = Assert.Single(await db.AuditLogs.AsNoTracking().Where(x => x.Action == "order.payment.recheck").ToListAsync());
+        Assert.Equal("admin", audit.ActorType);
+        Assert.DoesNotContain("private-provider-marker", audit.BeforeJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-provider-marker", audit.AfterJson, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -137,7 +142,10 @@ public class AdminOrderManagementTests
             .RecheckOrderPayment(order.Id, CancellationToken.None);
 
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Contains("not support", JsonSerializer.Serialize(badRequest.Value), StringComparison.OrdinalIgnoreCase);
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(badRequest.Value));
+        Assert.Equal("Сверка статуса платежа недоступна.", json.RootElement.GetProperty("error").GetString());
+        Assert.False(json.RootElement.GetProperty("readiness").GetProperty("CanRecheck").GetBoolean());
+        Assert.NotEmpty(json.RootElement.GetProperty("readiness").GetProperty("Blockers").EnumerateArray());
         Assert.Null(provider.LastStatusPaymentId);
         await db.Entry(payment).ReloadAsync();
         Assert.Equal(PaymentStatus.Pending, payment.Status);
@@ -257,7 +265,7 @@ public class AdminOrderManagementTests
         public Task<PaymentStatusResult> GetStatusAsync(PaymentAttempt payment, PaymentProviderAccount account, CancellationToken cancellationToken)
         {
             LastStatusPaymentId = payment.Id;
-            return Task.FromResult(new PaymentStatusResult(payment.ProviderPaymentId, status, """{"status":"ok"}"""));
+            return Task.FromResult(new PaymentStatusResult(payment.ProviderPaymentId, status, """{"status":"ok","private":"private-provider-marker"}"""));
         }
 
         public Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)

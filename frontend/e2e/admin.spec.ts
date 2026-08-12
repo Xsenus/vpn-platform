@@ -1001,7 +1001,7 @@ async function mockAdminApi(page: Page) {
       }
       payments[0] = { ...payments[0], status: 'Succeeded', signatureValidated: true, canRefund: true, refundableAmount: 590 - Number(payments[0].refundedAmount ?? 0), refundBlockers: [], statusReason: null, updatedAt: now }
       orders[0] = { ...orders[0], status: 'PaymentReceived', lastPaymentStatus: 'Succeeded', updatedAt: now }
-      await fulfillJson(route, { orderId: 'order-e2e', paymentId: 'payment-e2e', status: 'Succeeded', rawResponse: '{}', statusReason: null })
+      await fulfillJson(route, { orderId: 'order-e2e', paymentId: 'payment-e2e', status: 'Succeeded' })
       return
     }
 

@@ -697,7 +697,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         }
         catch (Exception ex)
         {
-            return Result<PaymentStatusResult>.Failure(ex.Message);
+            return Result<PaymentStatusResult>.Failure(ex.Message, isRetryable: true);
         }
     }
 

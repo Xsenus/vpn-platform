@@ -174,10 +174,10 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 ## 7. Текущий статус
 
-На 2026-08-09 локально подтверждено:
+На 2026-08-12 локально подтверждено:
 
-- backend full suite: 1342/1342;
-- frontend tests: 144/144;
+- backend full suite: 1345/1345;
+- frontend tests: 145/145;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-12-refund-status-reconciliation`, версия `0.664.0`; незавершённые возвраты YooKassa/Stripe/PayPal сверяются по отдельному provider refund ID с идемпотентным применением результата, а Т-Банк fail-closed остаётся unsupported.
-- roadmap progress: `677/697` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-12-admin-payment-recheck-boundary`, версия `0.665.0`; admin payment/order recheck возвращает только безопасный DTO, выполняет readiness preflight и сохраняет операторский audit до provider call.
+- roadmap progress: `678/698` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

@@ -50,6 +50,7 @@ public sealed record RefundPaymentHttpRequest(decimal Amount, string? Reason);
 public sealed record RefundReadinessDto(bool IsSupported, bool CanRefund, decimal RefundableAmount, IReadOnlyList<string> Blockers);
 public sealed record RecheckReadinessDto(bool IsSupported, bool CanRecheck, IReadOnlyList<string> Blockers);
 public sealed record RefundRecheckReadinessDto(bool IsSupported, bool CanRecheck, IReadOnlyList<string> Blockers);
+public sealed record AdminPaymentRecheckDto(Guid OrderId, Guid PaymentId, string Status);
 public sealed record SetProviderEnabledHttpRequest(bool Enabled);
 public sealed record AdminSupportReplyHttpRequest(string Text, int? Revision = null);
 public sealed record AdminSupportStatusHttpRequest(string Status, Guid? AssignedToUserId = null, int? Revision = null);
@@ -1146,6 +1147,7 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> RecheckOrderPayment(Guid id, CancellationToken cancellationToken)
     {
         var paymentCandidates = await _db.Payments.AsNoTracking()
+            .Include(x => x.PaymentProviderAccount)
             .Where(x => x.OrderId == id)
             .ToListAsync(cancellationToken);
         var payment = paymentCandidates
@@ -1154,20 +1156,34 @@ public class AdminOperationsController : ControllerBase
 
         if (payment is null)
         {
-            return BadRequest(new { error = "Order does not have payment attempts to recheck." });
+            return BadRequest(new { error = "У заказа нет платежных попыток для сверки." });
         }
+
+        var readiness = BuildRecheckReadiness(payment);
+        if (!readiness.CanRecheck)
+        {
+            return BadRequest(new { error = "Сверка статуса платежа недоступна.", readiness });
+        }
+
+        AddAuditLog(
+            "order.payment.recheck",
+            nameof(Order),
+            id,
+            JsonSerializer.Serialize(new
+            {
+                PaymentId = payment.Id,
+                PaymentStatus = payment.Status.ToString(),
+                payment.Provider,
+                payment.ProviderMode,
+                payment.ProviderPaymentId
+            }),
+            JsonSerializer.Serialize(new { Outcome = "requested", PaymentId = payment.Id }));
+        await _db.SaveChangesAsync(cancellationToken);
 
         var result = await _paymentOrchestrator.RecheckPaymentAsync(payment.Id, cancellationToken);
         return result.IsSuccess
-            ? Ok(new
-            {
-                OrderId = id,
-                PaymentId = payment.Id,
-                Status = result.Value!.Status.ToString(),
-                result.Value.RawResponse,
-                result.Value.StatusReason
-            })
-            : BadRequest(new { error = result.Error });
+            ? Ok(new AdminPaymentRecheckDto(id, payment.Id, result.Value!.Status.ToString()))
+            : BadRequest(BuildPaymentRecheckError(result.IsRetryable));
     }
 
     [HttpGet("payments")]
@@ -1239,8 +1255,39 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.FinanceWrite)]
     public async Task<IActionResult> RecheckPayment(Guid id, CancellationToken cancellationToken)
     {
+        var payment = await _db.Payments.AsNoTracking()
+            .Include(x => x.PaymentProviderAccount)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (payment is null)
+        {
+            return BadRequest(new { error = "Платёжная попытка не найдена." });
+        }
+
+        var readiness = BuildRecheckReadiness(payment);
+        if (!readiness.CanRecheck)
+        {
+            return BadRequest(new { error = "Сверка статуса платежа недоступна.", readiness });
+        }
+
+        AddAuditLog(
+            "payment.recheck",
+            nameof(PaymentAttempt),
+            id,
+            JsonSerializer.Serialize(new
+            {
+                payment.OrderId,
+                Status = payment.Status.ToString(),
+                payment.Provider,
+                payment.ProviderMode,
+                payment.ProviderPaymentId
+            }),
+            JsonSerializer.Serialize(new { Outcome = "requested" }));
+        await _db.SaveChangesAsync(cancellationToken);
+
         var result = await _paymentOrchestrator.RecheckPaymentAsync(id, cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        return result.IsSuccess
+            ? Ok(new AdminPaymentRecheckDto(payment.OrderId, id, result.Value!.Status.ToString()))
+            : BadRequest(BuildPaymentRecheckError(result.IsRetryable));
     }
 
     [HttpPost("payments/{id:guid}/refund")]
@@ -2983,6 +3030,15 @@ public class AdminOperationsController : ControllerBase
 
         return new RefundRecheckReadinessDto(isSupported, blockers.Count == 0, blockers);
     }
+
+    private static object BuildPaymentRecheckError(bool retryable)
+        => new
+        {
+            error = retryable
+                ? "Не удалось подтвердить статус платежа у провайдера. Повторите попытку позже."
+                : "Не удалось выполнить сверку статуса платежа.",
+            retryable
+        };
 
     private void AddAuditLog(string action, string entityType, Guid entityId, string beforeJson, string afterJson)
     {

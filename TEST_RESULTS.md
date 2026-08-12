@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: admin payment recheck boundary
+
+Scope:
+- Admin payment/order recheck не должен возвращать raw provider payload, status reason или transport exception в браузер.
+- Каждая отправленная провайдеру сверка должна иметь actor-aware audit, сохранённый до внешнего вызова, включая failure path.
+
+Results:
+- Roadmap progress: `678/698` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-admin-payment-recheck-boundary`, version `0.665.0`.
+- Fail-first: `0/3`; успешный ответ раскрывал `RawResponse`, операция не оставляла admin audit, а transport/status reason мог попасть в HTTP error.
+- After fix: оба endpoint выполняют readiness preflight, сохраняют admin request audit до provider call, возвращают только `orderId/paymentId/status`; API redaction отделена от внутренней application-диагностики, frontend fail-closed отклоняет расширенный payload.
+- Targeted payment/admin/concurrency regression `92/92`; backend Release `1345/1345`; frontend `145/145`; typecheck/build; desktop/mobile Playwright `2/2`; fresh SQLite подтвердил latest release `2026-08-12-admin-payment-recheck-boundary`; EF drift, dependency audit `0 vulnerabilities`, strict UTF-8 и secret scan `673/0` зелёные. Реальные provider кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## Check 2026-08-12: refund status reconciliation
 
 Scope:

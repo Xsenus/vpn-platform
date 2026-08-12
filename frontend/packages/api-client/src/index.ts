@@ -222,11 +222,9 @@ export type AdminOrderFilters = {
 }
 
 export type PaymentStatusResultDto = {
-  orderId?: string
+  orderId: string
   paymentId: string
   status: string
-  rawResponse: string
-  statusReason?: string | null
 }
 
 export type PaymentInitResult = {
@@ -1832,12 +1830,12 @@ function isAdminNotificationRetryResult(value: unknown): value is { id: string; 
 function isPaymentStatusResultDto(value: unknown): value is PaymentStatusResultDto {
   if (!isRecord(value)) return false
 
-  return (value.orderId === undefined || hasString(value, 'orderId', true))
+  return hasString(value, 'orderId', true)
     && hasString(value, 'paymentId', true)
     && hasString(value, 'status', true)
     && paymentStatusValues.has(value.status as string)
-    && hasString(value, 'rawResponse')
-    && (value.statusReason === undefined || hasNullableString(value, 'statusReason'))
+    && value.rawResponse === undefined
+    && value.statusReason === undefined
 }
 
 function isPaymentProviderCapabilityDto(value: unknown): value is PaymentProviderCapabilityDto {

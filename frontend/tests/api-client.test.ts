@@ -1795,7 +1795,7 @@ test('ApiClient admin order filters and recheck endpoints use finance-safe route
       })
     }
 
-    return new Response(JSON.stringify({ orderId: 'order-1', paymentId: 'payment-1', status: 'Succeeded', rawResponse: '{}' }), {
+    return new Response(JSON.stringify({ orderId: 'order-1', paymentId: 'payment-1', status: 'Succeeded' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -1815,6 +1815,23 @@ test('ApiClient admin order filters and recheck endpoints use finance-safe route
   assert.equal(orders[0]?.lastPaymentId, 'payment-1')
   assert.equal(orderRecheck.paymentId, 'payment-1')
   assert.equal(paymentRecheck.status, 'Succeeded')
+})
+
+test('ApiClient rejects provider raw payload in admin payment recheck response', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify({
+    orderId: 'order-1',
+    paymentId: 'payment-1',
+    status: 'Succeeded',
+    rawResponse: '{"private":"provider-secret-marker"}'
+  }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  await assert.rejects(
+    () => client.recheckAdminPayment('admin-token', 'payment-1'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502)
 })
 
 test('ApiClient admin Telegram bot settings masks token at API boundary', async () => {

@@ -201,6 +201,7 @@ public class AdminRefundManagementTests
         var user = User();
         var tariff = Tariff();
         var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Pending, amount: 100m);
+        payment.Order!.Status = OrderStatus.PendingPayment;
 
         switch (invalidState)
         {
@@ -274,6 +275,83 @@ public class AdminRefundManagementTests
         Assert.Equal(PaymentStatus.Pending, payment.Status);
         Assert.Empty(await db.AuditLogs.ToListAsync());
         Assert.Empty(await db.OutboxMessages.ToListAsync());
+    }
+
+    [Fact]
+    public async Task RecheckPayment_Controller_Should_Write_Admin_Audit_Without_Provider_Raw_Response()
+    {
+        await using var db = CreateDb();
+        var account = Account(PaymentProvider.YooKassa, secret: "secret");
+        var user = User();
+        var tariff = Tariff();
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Pending, amount: 100m);
+        payment.Order!.Status = OrderStatus.PendingPayment;
+        db.AddRange(user, tariff, account, payment.Order!, payment);
+        await db.SaveChangesAsync();
+
+        var provider = new TrackingPaymentProvider(PaymentProvider.YooKassa, status: PaymentStatus.WaitingConfirmation);
+        var controller = CreateController(db, CreateOrchestrator(db, provider));
+        var ok = Assert.IsType<OkObjectResult>(await controller.RecheckPayment(payment.Id, CancellationToken.None));
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(ok.Value));
+
+        Assert.False(json.RootElement.TryGetProperty("RawResponse", out _));
+        var audit = Assert.Single(await db.AuditLogs.AsNoTracking().Where(x => x.Action == "payment.recheck").ToListAsync());
+        Assert.Equal("admin", audit.ActorType);
+        Assert.DoesNotContain("private-provider-marker", audit.BeforeJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-provider-marker", audit.AfterJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RecheckPayment_Controller_Should_Keep_Request_Audit_When_Provider_Fails()
+    {
+        await using var db = CreateDb();
+        var account = Account(PaymentProvider.YooKassa, secret: "secret");
+        var user = User();
+        var tariff = Tariff();
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Pending, amount: 100m);
+        payment.Order!.Status = OrderStatus.PendingPayment;
+        db.AddRange(user, tariff, account, payment.Order, payment);
+        await db.SaveChangesAsync();
+
+        var provider = new TrackingPaymentProvider(PaymentProvider.YooKassa, statusError: "provider-status-private-marker");
+        var controller = CreateController(db, CreateOrchestrator(db, provider));
+        var badRequest = Assert.IsType<BadRequestObjectResult>(await controller.RecheckPayment(payment.Id, CancellationToken.None));
+
+        Assert.DoesNotContain("provider-status-private-marker", JsonSerializer.Serialize(badRequest.Value), StringComparison.Ordinal);
+        var audit = Assert.Single(await db.AuditLogs.AsNoTracking().Where(x => x.Action == "payment.recheck").ToListAsync());
+        Assert.DoesNotContain("provider-status-private-marker", audit.BeforeJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("provider-status-private-marker", audit.AfterJson, StringComparison.Ordinal);
+        await db.Entry(payment).ReloadAsync();
+        Assert.Equal(PaymentStatus.Pending, payment.Status);
+    }
+
+    [Fact]
+    public async Task RecheckPayment_Controller_Should_Not_Expose_Unknown_Provider_Status_Reason()
+    {
+        await using var db = CreateDb();
+        var account = Account(PaymentProvider.YooKassa, secret: "secret");
+        var user = User();
+        var tariff = Tariff();
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Pending, amount: 100m);
+        payment.Order!.Status = OrderStatus.PendingPayment;
+        db.AddRange(user, tariff, account, payment.Order, payment);
+        await db.SaveChangesAsync();
+
+        var provider = new TrackingPaymentProvider(
+            PaymentProvider.YooKassa,
+            status: PaymentStatus.Unknown,
+            statusReason: "provider-unknown-private-marker");
+        var controller = CreateController(db, CreateOrchestrator(db, provider));
+        var badRequest = Assert.IsType<BadRequestObjectResult>(await controller.RecheckPayment(payment.Id, CancellationToken.None));
+        var response = JsonSerializer.Serialize(badRequest.Value);
+        using var responseJson = JsonDocument.Parse(response);
+
+        Assert.DoesNotContain("provider-unknown-private-marker", response, StringComparison.Ordinal);
+        Assert.Contains(
+            "Повторите попытку позже",
+            responseJson.RootElement.GetProperty("error").GetString(),
+            StringComparison.Ordinal);
+        Assert.Single(await db.AuditLogs.AsNoTracking().Where(x => x.Action == "payment.recheck").ToListAsync());
     }
 
     [Theory]
@@ -1082,7 +1160,9 @@ public class AdminRefundManagementTests
         PaymentProvider provider,
         string? statusPaymentId = null,
         PaymentStatus? status = null,
-        RefundStatus? refundStatus = null) : IPaymentProvider, IPaymentRefundStatusProvider
+        RefundStatus? refundStatus = null,
+        string? statusError = null,
+        string? statusReason = null) : IPaymentProvider, IPaymentRefundStatusProvider
     {
         public PaymentProvider Provider { get; } = provider;
         public int StatusCalls { get; private set; }
@@ -1099,7 +1179,11 @@ public class AdminRefundManagementTests
         public Task<PaymentStatusResult> GetStatusAsync(PaymentAttempt payment, PaymentProviderAccount account, CancellationToken cancellationToken)
         {
             StatusCalls++;
-            return Task.FromResult(new PaymentStatusResult(statusPaymentId ?? payment.ProviderPaymentId, status ?? payment.Status, "{}"));
+            if (!string.IsNullOrWhiteSpace(statusError))
+            {
+                throw new InvalidOperationException(statusError);
+            }
+            return Task.FromResult(new PaymentStatusResult(statusPaymentId ?? payment.ProviderPaymentId, status ?? payment.Status, "{\"private\":\"private-provider-marker\"}", statusReason));
         }
 
         public Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)

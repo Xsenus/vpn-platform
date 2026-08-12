@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.665.0 - 2026-08-12
+
+Release entry: `2026-08-12-admin-payment-recheck-boundary`.
+
+### Исправлено
+
+- Admin payment/order recheck больше не возвращает raw provider response, status reason или transport exception в браузер.
+- Попытка ручной сверки сохраняет actor-aware audit до внешнего provider call, поэтому отказ сети не стирает операторское действие.
+
+### Улучшено
+
+- Оба endpoint выполняют единый readiness preflight, возвращают минимальный `orderId/paymentId/status` DTO и безопасные русские ошибки; frontend validator fail-closed отклоняет расширенный ответ.
+
+### Проверено
+
+- Fail-first `0/3`; targeted payment/admin/concurrency regression `92/92`, backend Release `1345/1345`, frontend `145/145`, typecheck/build, desktop/mobile Playwright `2/2`, fresh SQLite, EF drift, dependency audit `0 vulnerabilities`, strict UTF-8 и secret scan `673/0` зелёные.
+- Roadmap `678/698` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## 0.664.0 - 2026-08-12
 
 Release entry: `2026-08-12-refund-status-reconciliation`.
