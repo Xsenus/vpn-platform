@@ -1,8 +1,11 @@
 using System.Security.Claims;
+using System.Data.Common;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Api.Controllers.Me;
@@ -17,6 +20,136 @@ namespace VpnPlatform.UnitTests;
 
 public class MeSupportControllerTests
 {
+    private static readonly string[] ForbiddenCabinetConversationFields =
+    [
+        "UserId", "TelegramUserId", "AssignedToUserId", "InternalNote"
+    ];
+
+    private static readonly string[] ForbiddenCabinetMessageFields =
+    [
+        "UserId", "TelegramUserId", "AttachmentsJson", "IsInternalNote"
+    ];
+
+    [Fact]
+    public async Task Cabinet_Support_Should_Return_Only_User_Facing_Fields()
+    {
+        var userId = Guid.NewGuid();
+        await using var db = CreateDbContext();
+        var conversation = new SupportConversation
+        {
+            UserId = userId,
+            TelegramUserId = 777001,
+            AssignedToUserId = Guid.NewGuid(),
+            Channel = "web",
+            Status = "open",
+            Subject = "Безопасная граница",
+            InternalNote = "private-order-context"
+        };
+        db.SupportConversations.Add(conversation);
+        db.SupportMessages.Add(new SupportMessage
+        {
+            SupportConversationId = conversation.Id,
+            UserId = userId,
+            TelegramUserId = 777001,
+            Direction = "inbound",
+            Text = "Пользовательское сообщение",
+            AttachmentsJson = "[{\"private\":true}]"
+        });
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, userId);
+        var conversationsResult = await controller.GetSupportConversations(CancellationToken.None);
+        var messagesResult = await controller.GetSupportMessages(conversation.Id, CancellationToken.None);
+
+        var conversations = Assert.IsAssignableFrom<System.Collections.IEnumerable>(Assert.IsType<OkObjectResult>(conversationsResult).Value);
+        var messages = Assert.IsAssignableFrom<System.Collections.IEnumerable>(Assert.IsType<OkObjectResult>(messagesResult).Value);
+        var conversationJson = JsonSerializer.Serialize(conversations.Cast<object>().Single());
+        var messageJson = JsonSerializer.Serialize(messages.Cast<object>().Single());
+        AssertForbiddenFields(conversationJson, ForbiddenCabinetConversationFields);
+        AssertForbiddenFields(messageJson, ForbiddenCabinetMessageFields);
+    }
+
+    [Fact]
+    public async Task Cabinet_Support_Commands_Should_Return_Only_User_Facing_Fields()
+    {
+        var userId = Guid.NewGuid();
+        await using var db = CreateDbContext();
+        var controller = CreateController(db, userId);
+
+        var createResult = await controller.CreateSupportConversation(
+            new CreateMeSupportConversationHttpRequest(
+                "Проверка оплаты",
+                "Пожалуйста, проверьте состояние оплаты.",
+                null,
+                null),
+            CancellationToken.None);
+        var created = Assert.IsType<CabinetSupportConversationDto>(Assert.IsType<OkObjectResult>(createResult).Value);
+        var replyResult = await controller.ReplySupportConversation(
+            created.Id,
+            new MeSupportReplyHttpRequest("Дополнительные сведения", created.Revision),
+            CancellationToken.None);
+        var reply = Assert.IsType<CabinetSupportMessageDto>(Assert.IsType<OkObjectResult>(replyResult).Value);
+
+        AssertForbiddenFields(JsonSerializer.Serialize(created), ForbiddenCabinetConversationFields);
+        AssertForbiddenFields(JsonSerializer.Serialize(reply), ForbiddenCabinetMessageFields);
+    }
+
+    [Fact]
+    public async Task Cabinet_Support_Should_Apply_History_Limits_In_Sqlite_Queries()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new CommandCaptureInterceptor();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var baseTime = DateTimeOffset.UtcNow.AddDays(-10);
+        db.Users.Add(new User
+        {
+            Id = userId,
+            Email = "support-limit@example.test",
+            DisplayName = "Support limit user",
+            Status = UserStatus.Active
+        });
+        var conversations = Enumerable.Range(0, 105).Select(index => new SupportConversation
+        {
+            UserId = userId,
+            Channel = "web",
+            Status = "open",
+            Subject = $"Conversation {index:D3}",
+            CreatedAt = baseTime.AddMinutes(index),
+            UpdatedAt = baseTime.AddMinutes(index)
+        }).ToArray();
+        db.SupportConversations.AddRange(conversations);
+        var selected = conversations[^1];
+        db.SupportMessages.AddRange(Enumerable.Range(0, 205).Select(index => new SupportMessage
+        {
+            SupportConversationId = selected.Id,
+            UserId = userId,
+            Direction = "inbound",
+            Text = $"Message {index:D3}",
+            CreatedAt = baseTime.AddSeconds(index)
+        }));
+        await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
+
+        var controller = CreateController(db, userId);
+        var conversationsResult = await controller.GetSupportConversations(CancellationToken.None);
+        var messagesResult = await controller.GetSupportMessages(selected.Id, CancellationToken.None);
+
+        var conversationItems = Assert.IsAssignableFrom<System.Collections.IEnumerable>(Assert.IsType<OkObjectResult>(conversationsResult).Value).Cast<object>().ToArray();
+        var messageItems = Assert.IsAssignableFrom<System.Collections.IEnumerable>(Assert.IsType<OkObjectResult>(messagesResult).Value).Cast<object>().ToArray();
+        Assert.Equal(100, conversationItems.Length);
+        Assert.Equal(200, messageItems.Length);
+        Assert.Contains(interceptor.Commands, command => command.Contains("SupportConversations", StringComparison.OrdinalIgnoreCase) && command.Contains("LIMIT 100", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(interceptor.Commands, command => command.Contains("SupportMessages", StringComparison.OrdinalIgnoreCase) && command.Contains("LIMIT 200", StringComparison.OrdinalIgnoreCase));
+    }
+
     [Fact]
     public async Task Cabinet_Support_Flow_Should_Work_With_Sqlite()
     {
@@ -45,7 +178,7 @@ public class MeSupportControllerTests
             CancellationToken.None);
 
         var createOk = Assert.IsType<OkObjectResult>(createResult);
-        var conversationDto = Assert.IsType<SupportConversationDto>(createOk.Value);
+        var conversationDto = Assert.IsType<CabinetSupportConversationDto>(createOk.Value);
         Assert.Equal("open", conversationDto.Status);
 
         var admin = CreateAdminController(db, adminId);
@@ -65,11 +198,10 @@ public class MeSupportControllerTests
 
         var messagesResult = await cabinet.GetSupportMessages(conversationDto.Id, CancellationToken.None);
         var messagesOk = Assert.IsType<OkObjectResult>(messagesResult);
-        var messages = Assert.IsAssignableFrom<IReadOnlyCollection<SupportMessageDto>>(messagesOk.Value);
+        var messages = Assert.IsAssignableFrom<IReadOnlyCollection<CabinetSupportMessageDto>>(messagesOk.Value);
         Assert.Equal(2, messages.Count);
         Assert.Contains(messages, x => x.Direction == "inbound" && x.Text.Contains("платеж", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(messages, x => x.Direction == "outbound" && x.Text.Contains("заказ", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(messages, x => x.IsInternalNote);
 
         var closeResult = await cabinet.UpdateSupportConversationStatus(conversationDto.Id, new MeSupportStatusHttpRequest("closed", conversationDto.Revision + 3), CancellationToken.None);
         Assert.IsType<OkObjectResult>(closeResult);
@@ -101,10 +233,9 @@ public class MeSupportControllerTests
             CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
-        var dto = Assert.IsType<SupportConversationDto>(ok.Value);
+        var dto = Assert.IsType<CabinetSupportConversationDto>(ok.Value);
         Assert.Equal("web", dto.Channel);
         Assert.Equal("open", dto.Status);
-        Assert.Equal(string.Empty, dto.InternalNote);
 
         var conversation = await db.SupportConversations.SingleAsync();
         var message = await db.SupportMessages.SingleAsync();
@@ -133,14 +264,14 @@ public class MeSupportControllerTests
         db.SupportMessages.Add(new SupportMessage { SupportConversationId = conversation.Id, UserId = userId, Direction = "inbound", Text = "Вопрос" });
         db.SupportMessages.Add(new SupportMessage { SupportConversationId = conversation.Id, Direction = "internal", Text = "Скрытая заметка", IsInternalNote = true });
         db.SupportMessages.Add(new SupportMessage { SupportConversationId = conversation.Id, Direction = "internal", Text = "Legacy скрытая заметка", IsInternalNote = false });
+        db.SupportMessages.Add(new SupportMessage { SupportConversationId = conversation.Id, Direction = "Internal", Text = "Legacy заметка с другим регистром", IsInternalNote = false });
         await db.SaveChangesAsync();
 
         var controller = CreateController(db, userId);
         var messagesResult = await controller.GetSupportMessages(conversation.Id, CancellationToken.None);
         var messagesOk = Assert.IsType<OkObjectResult>(messagesResult);
-        var messages = Assert.IsAssignableFrom<IReadOnlyCollection<SupportMessageDto>>(messagesOk.Value);
+        var messages = Assert.IsAssignableFrom<IReadOnlyCollection<CabinetSupportMessageDto>>(messagesOk.Value);
         Assert.Single(messages);
-        Assert.DoesNotContain(messages, x => x.IsInternalNote);
 
         var statusResult = await controller.UpdateSupportConversationStatus(conversation.Id, new MeSupportStatusHttpRequest("closed", conversation.Revision), CancellationToken.None);
         Assert.IsType<OkObjectResult>(statusResult);
@@ -279,5 +410,37 @@ public class MeSupportControllerTests
             .UseSqlite(connection)
             .Options;
         return new ApplicationDbContext(options);
+    }
+
+    private static void AssertForbiddenFields(string json, IEnumerable<string> fields)
+    {
+        foreach (var field in fields)
+        {
+            Assert.DoesNotContain($"\"{field}\"", json, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private sealed class CommandCaptureInterceptor : Microsoft.EntityFrameworkCore.Diagnostics.DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+
+        public override InterceptionResult<DbDataReader> ReaderExecuting(
+            DbCommand command,
+            Microsoft.EntityFrameworkCore.Diagnostics.CommandEventData eventData,
+            InterceptionResult<DbDataReader> result)
+        {
+            Commands.Add(command.CommandText);
+            return base.ReaderExecuting(command, eventData, result);
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            Microsoft.EntityFrameworkCore.Diagnostics.CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+        }
     }
 }

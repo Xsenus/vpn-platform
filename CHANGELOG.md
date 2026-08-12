@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.672.0 - 2026-08-12
+
+Release entry: `2026-08-12-cabinet-support-boundary`.
+
+### Исправлено
+
+- Cabinet support API больше не раскрывает user/Telegram/assignment/internal-note/attachment metadata в списке обращений, сообщениях, создании и ответе.
+- История обращений и сообщений больше не materialize-ится целиком: БД возвращает последние 100 обращений и 200 видимых сообщений.
+
+### Улучшено
+
+- Отдельные `CabinetSupportConversationDto` и `CabinetSupportMessageDto` защищены fail-closed frontend validators; полный административный контракт и internal-note workflow сохранены.
+- В списке обращений технический канал `web` отображается как «Личный кабинет», а последние сообщения возвращаются пользователю в хронологическом порядке.
+
+### Проверено
+
+- Fail-first backend `0/2`, frontend `0/1`; targeted backend/support/source guard `11/11`, backend `1365/1365`, frontend `156/156`, typecheck/build, support desktop/mobile Playwright `12/12`, cabinet all-screens desktop/responsive `2/2`, fresh SQLite, EF drift, `RoadmapCurrentStateTests` и dependency audit `0 vulnerabilities` зелёные.
+- Roadmap `685/705` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider/Telegram кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались; статус остается staging-ready baseline, not production-ready.
+
 ## 0.671.0 - 2026-08-12
 
 Release entry: `2026-08-12-cabinet-order-boundary`.

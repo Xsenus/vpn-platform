@@ -240,13 +240,9 @@ const alternateProvider = {
 function supportConversation(id: string, subject: string) {
   return {
     id,
-    userId: user.id,
-    telegramUserId: null,
     channel: 'web',
     status: 'open',
     subject,
-    assignedToUserId: null,
-    internalNote: '',
     revision: 0,
     closedAt: null,
     createdAt: now,
@@ -258,12 +254,8 @@ function supportMessage(id: string, conversationId: string, text: string) {
   return {
     id,
     supportConversationId: conversationId,
-    userId: user.id,
-    telegramUserId: null,
     direction: 'inbound',
     text,
-    attachmentsJson: '[]',
-    isInternalNote: false,
     createdAt: now
   }
 }
@@ -539,13 +531,9 @@ async function mockCabinetApi(page: Page) {
       }
       const conversation = {
         id: 'support-created',
-        userId: user.id,
-        telegramUserId: null,
         channel: 'web',
         status: 'open',
         subject: payload.subject,
-        assignedToUserId: null,
-        internalNote: '',
         revision: 0,
         closedAt: null,
         createdAt: now,
@@ -554,12 +542,8 @@ async function mockCabinetApi(page: Page) {
       const firstMessage = {
         id: 'support-message-1',
         supportConversationId: conversation.id,
-        userId: user.id,
-        telegramUserId: null,
         direction: 'inbound',
         text: payload.text,
-        attachmentsJson: '[]',
-        isInternalNote: false,
         createdAt: now
       }
       supportConversations = [conversation]
@@ -592,12 +576,8 @@ async function mockCabinetApi(page: Page) {
       const message = {
         id: 'support-message-2',
         supportConversationId: 'support-created',
-        userId: user.id,
-        telegramUserId: null,
         direction: 'inbound',
         text: payload.text,
-        attachmentsJson: '[]',
-        isInternalNote: false,
         createdAt: now
       }
       supportMessagesByConversationId.set('support-created', [
@@ -1493,6 +1473,8 @@ test('cabinet support messages failure stays scoped and recovers on explicit ret
   await seedCabinetSession(page, 'access-token-support-retry', 'refresh-token-support-retry')
 
   await page.goto('/')
+
+  await expect(page.locator('.support-ticket small').first()).toContainText('Личный кабинет')
   await expect(page.getByRole('button', { name: /Первая переписка/ })).toBeVisible()
   const messagesPath = '/api/me/support/conversations/support-first/messages'
   await expect.poll(() => api.getRequestCount(messagesPath)).toBe(1)

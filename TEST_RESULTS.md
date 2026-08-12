@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: cabinet support boundary
+
+Scope:
+- Cabinet support read/create/reply API не должен раскрывать user/Telegram/assignment/internal-note/attachment metadata; admin support contract должен сохраниться.
+- Последние 100 обращений и 200 видимых сообщений должны ограничиваться БД, а UI обязан сохранять ownership/race/logout privacy, revision concurrency и responsive geometry.
+
+Results:
+- Roadmap progress: `685/705` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-cabinet-support-boundary`, version `0.672.0`.
+- Fail-first: backend `0/2`, frontend `0/1`; API возвращал `UserId`, Telegram/assignment/internal-note/attachment fields, materialize-ил 105 обращений до top-100 и отдавал 205 сообщений без лимита, а минимальный safe response отклонялся frontend validator.
+- After fix: отдельные `CabinetSupportConversationDto`/`CabinetSupportMessageDto` используются read/create/reply; SQLite/PostgreSQL выполняют DB-side top-100/top-200, visible messages разворачиваются в хронологический порядок. Frontend fail-closed отклоняет admin diagnostics и показывает пользовательское название канала.
+- Targeted backend/support/source guard `11/11`; backend `1365/1365`; frontend `156/156`; typecheck/build; support desktop/mobile Playwright `12/12`; cabinet all-screens desktop/responsive `2/2`; fresh SQLite checkout/payment/subscription/VPN access, EF drift и dependency audit `0 vulnerabilities` зелёные. Real VPS/staging/live evidence remains open; provider/Telegram cabinets, Bot API, SMTP and production-like 3x-ui were not checked locally.
+
 ## Check 2026-08-12: cabinet order boundary
 
 Scope:

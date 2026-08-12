@@ -66,6 +66,27 @@ public class FreshLocalSetupSmokeTests
             ordersAction.IndexOf(".Take(100)", StringComparison.Ordinal) <
             ordersAction.LastIndexOf("ToListAsync(cancellationToken)", StringComparison.Ordinal),
             "/api/me/orders must apply the history limit before materialization.");
+
+        var supportConversationsActionStart = meController.IndexOf("[HttpGet(\"support/conversations\")]", StringComparison.Ordinal);
+        var supportMessagesActionStart = meController.IndexOf("[HttpGet(\"support/conversations/{id:guid}/messages\")]", StringComparison.Ordinal);
+        var createSupportActionStart = meController.IndexOf("[HttpPost(\"support/conversations\")]", StringComparison.Ordinal);
+        Assert.True(supportConversationsActionStart >= 0 && supportMessagesActionStart > supportConversationsActionStart && createSupportActionStart > supportMessagesActionStart);
+        var supportConversationsAction = meController[supportConversationsActionStart..supportMessagesActionStart];
+        var supportMessagesAction = meController[supportMessagesActionStart..createSupportActionStart];
+        Assert.Contains("Database.IsSqlite()", supportConversationsAction, StringComparison.Ordinal);
+        Assert.Contains("LIMIT 100", supportConversationsAction, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(".Take(100)", supportConversationsAction, StringComparison.Ordinal);
+        Assert.True(
+            supportConversationsAction.IndexOf(".Take(100)", StringComparison.Ordinal) <
+            supportConversationsAction.LastIndexOf("ToListAsync(cancellationToken)", StringComparison.Ordinal),
+            "/api/me/support/conversations must apply the history limit before materialization.");
+        Assert.Contains("Database.IsSqlite()", supportMessagesAction, StringComparison.Ordinal);
+        Assert.Contains("LIMIT 200", supportMessagesAction, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(".Take(200)", supportMessagesAction, StringComparison.Ordinal);
+        Assert.True(
+            supportMessagesAction.IndexOf(".Take(200)", StringComparison.Ordinal) <
+            supportMessagesAction.LastIndexOf("ToListAsync(cancellationToken)", StringComparison.Ordinal),
+            "/api/me/support/conversations/{id}/messages must apply the history limit before materialization.");
     }
 
     [Fact]

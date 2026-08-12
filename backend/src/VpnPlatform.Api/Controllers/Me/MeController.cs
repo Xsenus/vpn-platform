@@ -58,6 +58,21 @@ public sealed record CabinetOrderCommandDto(
     string PaymentProvider,
     Guid? LinkedSubscriptionId);
 public sealed record CabinetPaymentInitDto(string PaymentId, string RedirectUrl);
+public sealed record CabinetSupportConversationDto(
+    Guid Id,
+    string Channel,
+    string Status,
+    string Subject,
+    int Revision,
+    DateTimeOffset? ClosedAt,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+public sealed record CabinetSupportMessageDto(
+    Guid Id,
+    Guid SupportConversationId,
+    string Direction,
+    string Text,
+    DateTimeOffset CreatedAt);
 public sealed record CabinetAccessCredentialDto(
     Guid Id,
     Guid SubscriptionId,
@@ -417,13 +432,31 @@ public class MeController : ControllerBase
     public async Task<IActionResult> GetSupportConversations(CancellationToken cancellationToken)
     {
         var userId = ResolveUserId();
-        var conversations = await _db.SupportConversations
+        IQueryable<SupportConversation> query;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            query = _db.SupportConversations.FromSqlInterpolated($"""
+                SELECT c.*
+                FROM "SupportConversations" AS c
+                WHERE c."UserId" = {userId}
+                ORDER BY julianday(c."UpdatedAt") DESC, julianday(c."CreatedAt") DESC
+                LIMIT 100
+                """);
+        }
+        else
+        {
+            query = _db.SupportConversations
+                .Where(x => x.UserId == userId)
+                .OrderByDescending(x => x.UpdatedAt)
+                .ThenByDescending(x => x.CreatedAt)
+                .Take(100);
+        }
+
+        var conversations = await query
             .AsNoTracking()
-            .Where(x => x.UserId == userId)
-            .Select(x => new SupportConversationDto(x.Id, x.UserId, x.TelegramUserId, x.Channel, x.Status, x.Subject, x.AssignedToUserId, string.Empty, x.Revision, x.ClosedAt, x.CreatedAt, x.UpdatedAt))
             .ToListAsync(cancellationToken);
 
-        return Ok(conversations.OrderByDescending(x => x.UpdatedAt).Take(100).ToList());
+        return Ok(conversations.Select(MapSupportConversation).ToList());
     }
 
     [HttpGet("support/conversations/{id:guid}/messages")]
@@ -437,13 +470,37 @@ public class MeController : ControllerBase
             return NotFound(new { error = "Support conversation not found." });
         }
 
-        var messages = await _db.SupportMessages
+        IQueryable<SupportMessage> query;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            query = _db.SupportMessages.FromSqlInterpolated($"""
+                SELECT m.*
+                FROM "SupportMessages" AS m
+                WHERE m."SupportConversationId" = {id}
+                  AND m."IsInternalNote" = 0
+                  AND lower(m."Direction") <> 'internal'
+                ORDER BY julianday(m."CreatedAt") DESC, julianday(m."UpdatedAt") DESC
+                LIMIT 200
+                """);
+        }
+        else
+        {
+            query = _db.SupportMessages
+                .Where(x => x.SupportConversationId == id && !x.IsInternalNote && x.Direction.ToLower() != "internal")
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.UpdatedAt)
+                .Take(200);
+        }
+
+        var messages = await query
             .AsNoTracking()
-            .Where(x => x.SupportConversationId == id && !x.IsInternalNote && x.Direction != "internal")
-            .Select(x => new SupportMessageDto(x.Id, x.SupportConversationId, x.UserId, x.TelegramUserId, x.Direction, x.Text, x.AttachmentsJson, x.IsInternalNote, x.CreatedAt))
             .ToListAsync(cancellationToken);
 
-        return Ok(messages.OrderBy(x => x.CreatedAt).ToList());
+        return Ok(messages
+            .OrderBy(x => x.CreatedAt)
+            .ThenBy(x => x.UpdatedAt)
+            .Select(MapSupportMessage)
+            .ToList());
     }
 
     [HttpPost("support/conversations")]
@@ -502,7 +559,7 @@ public class MeController : ControllerBase
         _db.SupportMessages.Add(message);
         await _db.SaveChangesAsync(cancellationToken);
 
-        return Ok(new SupportConversationDto(conversation.Id, conversation.UserId, conversation.TelegramUserId, conversation.Channel, conversation.Status, conversation.Subject, conversation.AssignedToUserId, string.Empty, conversation.Revision, conversation.ClosedAt, conversation.CreatedAt, conversation.UpdatedAt));
+        return Ok(MapSupportConversation(conversation));
     }
 
     [HttpPost("support/conversations/{id:guid}/reply")]
@@ -555,7 +612,7 @@ public class MeController : ControllerBase
             return Conflict(new { error = "Support conversation changed. Reload it and retry." });
         }
 
-        return Ok(new SupportMessageDto(message.Id, message.SupportConversationId, message.UserId, message.TelegramUserId, message.Direction, message.Text, message.AttachmentsJson, message.IsInternalNote, message.CreatedAt));
+        return Ok(MapSupportMessage(message));
     }
 
     [HttpPatch("support/conversations/{id:guid}/status")]
@@ -764,6 +821,25 @@ public class MeController : ControllerBase
             order.ExpiresAt,
             order.PaymentProvider.ToString(),
             order.LinkedSubscriptionId);
+
+    private static CabinetSupportConversationDto MapSupportConversation(SupportConversation conversation)
+        => new(
+            conversation.Id,
+            conversation.Channel,
+            conversation.Status,
+            conversation.Subject,
+            conversation.Revision,
+            conversation.ClosedAt,
+            conversation.CreatedAt,
+            conversation.UpdatedAt);
+
+    private static CabinetSupportMessageDto MapSupportMessage(SupportMessage message)
+        => new(
+            message.Id,
+            message.SupportConversationId,
+            message.Direction,
+            message.Text,
+            message.CreatedAt);
 
     private static string GetCabinetPaymentInitError(string? error)
     {

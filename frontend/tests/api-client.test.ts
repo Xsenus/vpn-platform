@@ -638,6 +638,31 @@ function cabinetAccessFixture(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function cabinetSupportConversationFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'support-1',
+    channel: 'web',
+    status: 'open',
+    subject: 'Оплата',
+    revision: 4,
+    closedAt: null,
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function cabinetSupportMessageFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'message-1',
+    supportConversationId: 'support-1',
+    direction: 'inbound',
+    text: 'Нужна помощь',
+    createdAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
 function adminPaymentProviderAccountFixture(overrides: Record<string, unknown> = {}) {
   return {
     id: 'provider-1',
@@ -1152,8 +1177,8 @@ test('ApiClient.initMyPayment calls tokenized endpoint', async () => {
 
 test('ApiClient cabinet support endpoints are tokenized and link order context', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
-  const conversation = { id: 'support-1', userId: 'user-1', telegramUserId: null, channel: 'web', status: 'open', subject: 'Оплата', assignedToUserId: null, internalNote: 'Связано: заказ order-1.', revision: 4, closedAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-  const message = { id: 'message-1', supportConversationId: 'support-1', userId: 'user-1', telegramUserId: null, direction: 'inbound', text: 'Нужна помощь', attachmentsJson: '[]', isInternalNote: false, createdAt: new Date().toISOString() }
+  const conversation = { id: 'support-1', channel: 'web', status: 'open', subject: 'Оплата', revision: 4, closedAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  const message = { id: 'message-1', supportConversationId: 'support-1', direction: 'inbound', text: 'Нужна помощь', createdAt: new Date().toISOString() }
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     const path = String(url)
@@ -1571,6 +1596,35 @@ test('ApiClient accepts only the safe cabinet access contract', async () => {
       () => client.getMyAccesses('user-token'),
       (error: unknown) => error instanceof ApiClientError && error.status === 502
     )
+  }
+})
+
+test('ApiClient accepts only safe cabinet support contracts', async () => {
+  const responses = [
+    [cabinetSupportConversationFixture()],
+    [cabinetSupportMessageFixture()],
+    [{ ...cabinetSupportConversationFixture(), userId: 'private-user-id' }],
+    [{ ...cabinetSupportConversationFixture(), telegramUserId: 777001 }],
+    [{ ...cabinetSupportConversationFixture(), assignedToUserId: 'private-agent-id' }],
+    [{ ...cabinetSupportConversationFixture(), internalNote: 'private-order-context' }],
+    [{ ...cabinetSupportMessageFixture(), userId: 'private-user-id' }],
+    [{ ...cabinetSupportMessageFixture(), telegramUserId: 777001 }],
+    [{ ...cabinetSupportMessageFixture(), attachmentsJson: '[{\"private\":true}]' }],
+    [{ ...cabinetSupportMessageFixture(), isInternalNote: false }]
+  ]
+  globalThis.fetch = (async () => new Response(JSON.stringify(responses.shift()), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  assert.equal((await client.getMySupportConversations('user-token'))[0]?.subject, 'Оплата')
+  assert.equal((await client.getMySupportMessages('user-token', 'support-1'))[0]?.text, 'Нужна помощь')
+  for (let index = 0; index < 4; index += 1) {
+    await assert.rejects(() => client.getMySupportConversations('user-token'), (error: unknown) => error instanceof ApiClientError && error.status === 502)
+  }
+  for (let index = 0; index < 4; index += 1) {
+    await assert.rejects(() => client.getMySupportMessages('user-token', 'support-1'), (error: unknown) => error instanceof ApiClientError && error.status === 502)
   }
 })
 

@@ -522,6 +522,25 @@ export type SupportMessageDto = {
   createdAt: string
 }
 
+export type CabinetSupportConversationDto = {
+  id: string
+  channel: string
+  status: string
+  subject: string
+  revision: number
+  closedAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type CabinetSupportMessageDto = {
+  id: string
+  supportConversationId: string
+  direction: string
+  text: string
+  createdAt: string
+}
+
 export type CreateMySupportConversationPayload = {
   subject: string
   text: string
@@ -3089,20 +3108,34 @@ function isSupportConversationDto(value: unknown): value is SupportConversationD
     && hasDateString(value, 'updatedAt')
 }
 
-function isSupportMessageDto(value: unknown): value is SupportMessageDto {
+function isCabinetSupportConversationDto(value: unknown): value is CabinetSupportConversationDto {
   if (!isRecord(value)) return false
 
+  const forbiddenFields = ['userId', 'telegramUserId', 'assignedToUserId', 'internalNote']
+  return hasString(value, 'id', true)
+    && hasString(value, 'channel', true)
+    && supportChannelValues.has(value.channel as string)
+    && hasString(value, 'status', true)
+    && supportStatusValues.has(value.status as string)
+    && hasString(value, 'subject', true)
+    && hasInteger(value, 'revision', 0)
+    && hasNullableDateString(value, 'closedAt')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+    && forbiddenFields.every((field) => !(field in value))
+}
+
+function isCabinetSupportMessageDto(value: unknown): value is CabinetSupportMessageDto {
+  if (!isRecord(value)) return false
+
+  const forbiddenFields = ['userId', 'telegramUserId', 'attachmentsJson', 'isInternalNote']
   return hasString(value, 'id', true)
     && hasString(value, 'supportConversationId', true)
-    && hasNullableString(value, 'userId')
-    && hasNullableInteger(value, 'telegramUserId', 1)
     && hasString(value, 'direction', true)
     && supportDirectionValues.has(value.direction as string)
     && hasString(value, 'text', true)
-    && hasString(value, 'attachmentsJson')
-    && hasBoolean(value, 'isInternalNote')
-    && value.isInternalNote === false
     && hasDateString(value, 'createdAt')
+    && forbiddenFields.every((field) => !(field in value))
 }
 
 function isTelegramStatusDto(value: unknown): value is TelegramStatusDto {
@@ -3463,16 +3496,16 @@ export class ApiClient {
     return this.request<CabinetPaymentAttemptDto>(`/api/me/payments/${paymentId}`, { token, errorMessage: apiFallbackErrorMessage }, 'object', isCabinetPaymentAttemptDto)
   }
 
-  getMySupportConversations(token: string): Promise<SupportConversationDto[]> {
-    return this.requestArray<SupportConversationDto>('/api/me/support/conversations', { token, errorMessage: apiFallbackErrorMessage }, isSupportConversationDto, (items) => hasUniqueStringKey(items, 'id'))
+  getMySupportConversations(token: string): Promise<CabinetSupportConversationDto[]> {
+    return this.requestArray<CabinetSupportConversationDto>('/api/me/support/conversations', { token, errorMessage: apiFallbackErrorMessage }, isCabinetSupportConversationDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
-  getMySupportMessages(token: string, conversationId: string): Promise<SupportMessageDto[]> {
-    return this.requestArray<SupportMessageDto>(`/api/me/support/conversations/${conversationId}/messages`, { token, errorMessage: apiFallbackErrorMessage }, isSupportMessageDto, (items) => hasUniqueStringKey(items, 'id'))
+  getMySupportMessages(token: string, conversationId: string): Promise<CabinetSupportMessageDto[]> {
+    return this.requestArray<CabinetSupportMessageDto>(`/api/me/support/conversations/${conversationId}/messages`, { token, errorMessage: apiFallbackErrorMessage }, isCabinetSupportMessageDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
-  createMySupportConversation(token: string, payload: CreateMySupportConversationPayload): Promise<SupportConversationDto> {
-    return this.request<SupportConversationDto>('/api/me/support/conversations', {
+  createMySupportConversation(token: string, payload: CreateMySupportConversationPayload): Promise<CabinetSupportConversationDto> {
+    return this.request<CabinetSupportConversationDto>('/api/me/support/conversations', {
       method: 'POST',
       token,
       body: JSON.stringify({
@@ -3482,16 +3515,16 @@ export class ApiClient {
         subscriptionId: payload.subscriptionId ?? null
       }),
       errorMessage: apiFallbackErrorMessage
-    }, 'object', isSupportConversationDto)
+    }, 'object', isCabinetSupportConversationDto)
   }
 
-  replyMySupportConversation(token: string, conversationId: string, text: string, revision: number): Promise<SupportMessageDto> {
-    return this.request<SupportMessageDto>(`/api/me/support/conversations/${conversationId}/reply`, {
+  replyMySupportConversation(token: string, conversationId: string, text: string, revision: number): Promise<CabinetSupportMessageDto> {
+    return this.request<CabinetSupportMessageDto>(`/api/me/support/conversations/${conversationId}/reply`, {
       method: 'POST',
       token,
       body: JSON.stringify({ text, revision }),
       errorMessage: apiFallbackErrorMessage
-    }, 'object', isSupportMessageDto)
+    }, 'object', isCabinetSupportMessageDto)
   }
 
   updateMySupportConversationStatus(token: string, conversationId: string, status: 'open' | 'closed', revision: number): Promise<{ conversationId: string; status: string; revision: number }> {

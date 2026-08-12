@@ -1,15 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import type { SupportConversationDto } from '../packages/api-client/src/index.ts'
-import { countOpenSupportConversations, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from '../apps/cabinet/src/cabinet-support.ts'
+import type { CabinetSupportConversationDto } from '../packages/api-client/src/index.ts'
+import { countOpenSupportConversations, getSupportChannelLabel, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from '../apps/cabinet/src/cabinet-support.ts'
 
-function conversation(overrides: Partial<SupportConversationDto>): SupportConversationDto {
+function conversation(overrides: Partial<CabinetSupportConversationDto>): CabinetSupportConversationDto {
   return {
     id: 'support-1',
     channel: 'web',
     status: 'open',
     subject: 'Оплата',
-    internalNote: '',
     revision: 0,
     createdAt: '2026-05-27T10:00:00Z',
     updatedAt: '2026-05-27T10:00:00Z',
@@ -24,6 +23,11 @@ test('cabinet support validates new conversation and reply text', () => {
   assert.match(validateSupportRequest('О', 'коротко').join(' '), /Тема обращения/)
   assert.match(validateSupportRequest('Оплата', 'коротко').join(' '), /Сообщение/)
   assert.match(validateSupportReply('').join(' '), /Ответ/)
+})
+
+test('cabinet support presents channel names for users', () => {
+  assert.equal(getSupportChannelLabel('web'), 'Личный кабинет')
+  assert.equal(getSupportChannelLabel('telegram'), 'Telegram')
 })
 
 test('cabinet support explains statuses in Russian', () => {

@@ -1,4 +1,4 @@
-import type { SupportConversationDto } from '@vpn-platform/api-client'
+import type { CabinetSupportConversationDto } from '@vpn-platform/api-client'
 
 export function validateSupportRequest(subject: string, text: string) {
   const errors: string[] = []
@@ -29,11 +29,14 @@ export function getSupportStatusMessage(status: string) {
   }
 }
 
-export function countOpenSupportConversations(conversations: SupportConversationDto[]) {
+export function countOpenSupportConversations(conversations: CabinetSupportConversationDto[]) {
   return conversations.filter((item) => item.status === 'open' || item.status === 'pending').length
 }
 
-export function selectCurrentSupportConversation(conversations: SupportConversationDto[], selectedId: string) {
+export function selectCurrentSupportConversation(conversations: CabinetSupportConversationDto[], selectedId: string) {
   return conversations.find((item) => item.id === selectedId) ?? conversations[0] ?? null
 }
 
+export function getSupportChannelLabel(channel: string) {
+  return channel.toLowerCase() === 'telegram' ? 'Telegram' : 'Личный кабинет'
+}

@@ -12,8 +12,8 @@ import {
   PublicPaymentProviderDto,
   RewardLedgerDto,
   CabinetSubscriptionDto,
-  SupportConversationDto,
-  SupportMessageDto,
+  CabinetSupportConversationDto,
+  CabinetSupportMessageDto,
   TelegramLinkTokenDto,
   TelegramStatusDto,
   UserProfileDto,
@@ -30,7 +30,7 @@ import { buildCabinetSummary, formatReferralRewardType, getAccessQrAvailability,
 import { cabinetSessionEndedMessage, isCabinetAccessTokenExpired, isCabinetSessionRejected } from './cabinet-session'
 import { buildOrderExportText, canOpenOrderPaymentConfirmation, formatPaymentMoney, getLatestPaymentForOrder, getNextOrderPaymentExpiryDelay, getOrderPaymentAvailability, getOrderPaymentProviderAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
 import { resolveCabinetPublicWebUrl } from './cabinet-public-url'
-import { countOpenSupportConversations, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from './cabinet-support'
+import { countOpenSupportConversations, getSupportChannelLabel, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from './cabinet-support'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const configuredPublicWebUrl = import.meta.env.VITE_PUBLIC_WEB_URL
@@ -125,8 +125,8 @@ export function App() {
   const [payments, setPayments] = useState<CabinetPaymentAttemptDto[]>([])
   const [accesses, setAccesses] = useState<CabinetAccessCredentialDto[]>([])
   const [referrals, setReferrals] = useState<RewardLedgerDto[]>([])
-  const [supportConversations, setSupportConversations] = useState<SupportConversationDto[]>([])
-  const [supportMessages, setSupportMessages] = useState<SupportMessageDto[]>([])
+  const [supportConversations, setSupportConversations] = useState<CabinetSupportConversationDto[]>([])
+  const [supportMessages, setSupportMessages] = useState<CabinetSupportMessageDto[]>([])
   const [selectedSupportConversationId, setSelectedSupportConversationId] = useState('')
   const [supportSubject, setSupportSubject] = useState('')
   const [supportText, setSupportText] = useState('')
@@ -945,7 +945,7 @@ export function App() {
     const conversation = selectedSupportConversation
     const submittedReply = supportReplyText
     await runSessionAction(`support-reply-${conversation.id}`, 'Не удалось отправить сообщение в поддержку', async (action) => {
-      let message: SupportMessageDto
+      let message: CabinetSupportMessageDto
       try {
         message = await api.replyMySupportConversation(token, conversation.id, submittedReply.trim(), conversation.revision)
       } catch (e) {
@@ -1699,7 +1699,7 @@ export function App() {
                   >
                     <span>
                       <strong>{conversation.subject || 'Обращение в поддержку'}</strong>
-                      <small>{conversation.channel} · {new Date(conversation.updatedAt).toLocaleString()}</small>
+                      <small>{getSupportChannelLabel(conversation.channel)} · {new Date(conversation.updatedAt).toLocaleString()}</small>
                     </span>
                     <StatusBadge value={conversation.status} />
                   </button>

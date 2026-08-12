@@ -409,13 +409,9 @@ async function installApiMock(page: Page) {
     if (method === 'GET' && path.startsWith('/api/me/support/conversations')) {
       await fulfillJson(route, path.endsWith('/messages') ? [] : [{
         id: 'support-all-screens',
-        userId: user.id,
-        telegramUserId: null,
         channel: 'web',
         status: 'open',
         subject: 'Smoke support',
-        assignedToUserId: null,
-        internalNote: '',
         revision: 0,
         closedAt: null,
         createdAt: now,
