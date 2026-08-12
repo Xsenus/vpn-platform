@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: payment refund capability preflight
+
+Scope:
+- Refund capability должен проверяться внутри общего orchestrator, а не только в admin controller/UI.
+- Неподдерживаемый provider не должен создавать durable reservation, блокировать будущую сверку или вызывать adapter factory/provider.
+
+Results:
+- Roadmap progress: `664/684` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-payment-refund-capability-preflight`, version `0.651.0`.
+- Reproduction before fix: direct RoboKassa orchestrator call обошел admin readiness, вызвал factory/provider и завершил unsupported refund как успешный.
+- After fix: ранний capability preflight выполняется до idempotency key/order gate/reservation; factory calls `0`, provider refund calls `0`, refunds `0`, payment остается `Succeeded` с refunded amount `0`.
+- Refund/concurrency/webhook regression: `22/22`; backend full suite: `1240/1240`; Release build: `0` warnings/errors. UI/DTO не менялись: актуальные frontend `141/141`, typecheck/build и Playwright `220/220` за `13.6 min` остаются применимыми.
+
 ## Check 2026-08-12: payment manual recheck capability guard
 
 Scope:

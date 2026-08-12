@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-09 локально подтверждено:
 
-- backend full suite: 1239/1239;
+- backend full suite: 1240/1240;
 - frontend tests: 141/141;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-12-payment-manual-recheck-capability-guard`, версия `0.650.0`; ручная перепроверка платежа доступна только для провайдеров с явной capability, а backend и admin UI отклоняют неподдерживаемую команду до adapter/API call.
-- roadmap progress: `663/683` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-12-payment-refund-capability-preflight`, версия `0.651.0`; общий orchestrator отклоняет unsupported refund до order gate, durable reservation, factory и provider call.
+- roadmap progress: `664/684` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

@@ -13,6 +13,32 @@ namespace VpnPlatform.UnitTests;
 public class PaymentRefundResilienceTests
 {
     [Fact]
+    public async Task Unsupported_Provider_Should_Fail_Before_Refund_Reservation_Or_Adapter_Resolution()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 12, 4, 0, 0, TimeSpan.Zero);
+        var paymentId = await SeedRefundablePaymentAsync(db, now, PaymentProvider.RoboKassa);
+        var provider = new TrackingPaymentProvider(() => { }, PaymentProvider.RoboKassa);
+        var factory = new TrackingPaymentProviderFactory(provider);
+        var orchestrator = CreateOrchestrator(db, factory, now);
+
+        var result = await orchestrator.RefundPaymentAsync(paymentId, 40m, "unsupported-provider", CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("does not support refunds", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, factory.GetCalls);
+        Assert.Equal(0, provider.RefundCalls);
+        Assert.Empty(await db.Refunds.AsNoTracking().ToListAsync());
+        var payment = await db.Payments.AsNoTracking().SingleAsync(x => x.Id == paymentId);
+        Assert.Equal(PaymentStatus.Succeeded, payment.Status);
+        Assert.Equal(0m, payment.RefundedAmount);
+    }
+
+    [Fact]
     public async Task Reservation_Save_Failure_Should_Not_Call_Provider()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -104,24 +130,27 @@ public class PaymentRefundResilienceTests
     }
 
     private static PaymentOrchestrator CreateOrchestrator(ApplicationDbContext db, IPaymentProvider provider, DateTimeOffset now)
+        => CreateOrchestrator(db, new TestPaymentProviderFactory(provider), now);
+
+    private static PaymentOrchestrator CreateOrchestrator(ApplicationDbContext db, IPaymentProviderFactory providerFactory, DateTimeOffset now)
     {
         var clock = new FixedClock(now);
         var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
-        return new PaymentOrchestrator(db, new TestPaymentProviderFactory(provider), Array.Empty<IPaymentWebhookVerifier>(), accounts, null!, clock);
+        return new PaymentOrchestrator(db, providerFactory, Array.Empty<IPaymentWebhookVerifier>(), accounts, null!, clock);
     }
 
-    private static async Task<Guid> SeedRefundablePaymentAsync(ApplicationDbContext db, DateTimeOffset now)
+    private static async Task<Guid> SeedRefundablePaymentAsync(ApplicationDbContext db, DateTimeOffset now, PaymentProvider provider = PaymentProvider.YooKassa)
     {
         var user = new User { Id = Guid.NewGuid(), Email = $"refund-{Guid.NewGuid():N}@example.test", DisplayName = "Refund User", PasswordHash = "hash" };
         var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Refund tariff", Slug = $"refund-{Guid.NewGuid():N}", Description = "Refund", DurationDays = 30, Price = 100m, Currency = "RUB", MaxDevices = 3, IsActive = true };
-        var account = new PaymentProviderAccount { Id = Guid.NewGuid(), Provider = PaymentProvider.YooKassa, Mode = PaymentProviderMode.Sandbox, Name = $"refund-{Guid.NewGuid():N}", PublicName = "YooKassa", IsEnabled = true, ShopId = "shop", SecretKeyProtected = "secret" };
-        var order = new Order { Id = Guid.NewGuid(), UserId = user.Id, TariffId = tariff.Id, Amount = 100m, Currency = "RUB", Status = OrderStatus.Completed, ExpiresAt = now.AddMinutes(15), PaymentProvider = PaymentProvider.YooKassa };
+        var account = new PaymentProviderAccount { Id = Guid.NewGuid(), Provider = provider, Mode = PaymentProviderMode.Sandbox, Name = $"refund-{Guid.NewGuid():N}", PublicName = provider.ToString(), IsEnabled = true, ShopId = "shop", SecretKeyProtected = "secret" };
+        var order = new Order { Id = Guid.NewGuid(), UserId = user.Id, TariffId = tariff.Id, Amount = 100m, Currency = "RUB", Status = OrderStatus.Completed, ExpiresAt = now.AddMinutes(15), PaymentProvider = provider };
         var payment = new PaymentAttempt
         {
             Id = Guid.NewGuid(),
             OrderId = order.Id,
             PaymentProviderAccountId = account.Id,
-            Provider = PaymentProvider.YooKassa,
+            Provider = provider,
             ProviderMode = PaymentProviderMode.Sandbox,
             ProviderPaymentId = $"payment-{Guid.NewGuid():N}",
             IdempotencyKey = $"payment-{Guid.NewGuid():N}",
@@ -156,9 +185,9 @@ public class PaymentRefundResilienceTests
         }
     }
 
-    private sealed class TrackingPaymentProvider(Action beforeReturn) : IPaymentProvider
+    private sealed class TrackingPaymentProvider(Action beforeReturn, PaymentProvider provider = PaymentProvider.YooKassa) : IPaymentProvider
     {
-        public PaymentProvider Provider => PaymentProvider.YooKassa;
+        public PaymentProvider Provider => provider;
         public int RefundCalls { get; private set; }
 
         public Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken)
@@ -216,5 +245,16 @@ public class PaymentRefundResilienceTests
     private sealed class TestPaymentProviderFactory(IPaymentProvider provider) : IPaymentProviderFactory
     {
         public IPaymentProvider Get(PaymentProvider _) => provider;
+    }
+
+    private sealed class TrackingPaymentProviderFactory(IPaymentProvider provider) : IPaymentProviderFactory
+    {
+        public int GetCalls { get; private set; }
+
+        public IPaymentProvider Get(PaymentProvider _)
+        {
+            GetCalls++;
+            return provider;
+        }
     }
 }

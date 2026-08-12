@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.651.0 - 2026-08-12
+
+Release entry: `2026-08-12-payment-refund-capability-preflight`.
+
+### Исправлено
+
+- `PaymentOrchestrator` теперь сам отклоняет возврат для провайдера без refund capability до order gate, idempotency lookup, durable reservation, adapter resolution и внешнего вызова.
+- Прямой service caller больше не может обойти admin readiness и создать ложный успешный либо `Unknown` refund для RoboKassa, YooMoney, CloudPayments или Prodamus.
+
+### Проверено
+
+- Fail-first direct orchestrator regression воспроизвел успешный unsupported refund; после исправления refund/concurrency/webhook suite `22/22` подтверждает нулевые factory/provider calls, пустую таблицу refunds и неизменный платеж.
+- Backend `1240/1240`; Release build `0` warnings/errors; актуальный frontend `141/141` и полный Playwright `220/220` за `13.6 min` остаются применимыми, UI/DTO не менялись.
+- Roadmap: `664/684` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked; реальные provider/VPS/staging evidence локальными проверками не закрывались.
+
 ## 0.650.0 - 2026-08-12
 
 Release entry: `2026-08-12-payment-manual-recheck-capability-guard`.

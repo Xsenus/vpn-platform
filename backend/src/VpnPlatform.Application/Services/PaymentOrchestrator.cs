@@ -646,6 +646,11 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             return Result<RefundDto>.Failure("Payment attempt not found.");
         }
 
+        if (!PaymentProviderConfigurationRules.SupportsRefund(payment.Provider))
+        {
+            return Result<RefundDto>.Failure($"Payment provider {payment.Provider} does not support refunds.");
+        }
+
         var refundIdempotencyKey = BuildRefundIdempotencyKey(payment.Id, amount, reason);
         await using var processingGate = await PaymentProcessingGate.AcquireOrderAsync(payment.OrderId, cancellationToken);
 
