@@ -58,13 +58,23 @@ export type AppReleaseItemDto = {
   sortOrder: number
 }
 
+export type CabinetAppReleaseItemDto = {
+  type: AppReleaseItemType | string
+  text: string
+}
+
 export type AppReleaseDto = {
-  id: string
   releaseId: string
   version: string
   releasedAt: string
   title: string
   summary: string
+  items: CabinetAppReleaseItemDto[]
+}
+
+export type AdminAppReleaseDto = Omit<AppReleaseDto, 'items'> & {
+  id: string
+  revision: number
   isActive: boolean
   source: string
   items: AppReleaseItemDto[]
@@ -91,6 +101,7 @@ export type AppReleaseUpsertPayload = {
   isActive: boolean
   source?: string | null
   items: AppReleaseItemDto[]
+  revision?: number | null
 }
 
 export type AppReleaseOverviewDto = {
@@ -2174,10 +2185,36 @@ function isAppReleaseItemDto(value: unknown): value is AppReleaseItemDto {
     && hasInteger(value, 'sortOrder', 0)
 }
 
+function isCabinetAppReleaseItemDto(value: unknown): value is CabinetAppReleaseItemDto {
+  return isRecord(value)
+    && hasString(value, 'type', true)
+    && appReleaseItemTypeValues.has(value.type as string)
+    && hasString(value, 'text', true)
+    && !('id' in value)
+    && !('sortOrder' in value)
+    && Object.keys(value).every((key) => key === 'type' || key === 'text')
+}
+
 function isAppReleaseDto(value: unknown): value is AppReleaseDto {
   if (!isRecord(value)) return false
 
+  const allowedFields = new Set(['releaseId', 'version', 'releasedAt', 'title', 'summary', 'items'])
+
+  return hasString(value, 'releaseId', true)
+    && hasString(value, 'version', true)
+    && hasDateString(value, 'releasedAt')
+    && hasString(value, 'title', true)
+    && hasString(value, 'summary', true)
+    && Array.isArray(value.items)
+    && value.items.every(isCabinetAppReleaseItemDto)
+    && Object.keys(value).every((key) => allowedFields.has(key))
+}
+
+function isAdminAppReleaseDto(value: unknown): value is AdminAppReleaseDto {
+  if (!isRecord(value)) return false
+
   return hasString(value, 'id', true)
+    && hasInteger(value, 'revision', 0)
     && hasString(value, 'releaseId', true)
     && hasString(value, 'version', true)
     && hasDateString(value, 'releasedAt')
@@ -3586,7 +3623,7 @@ export class ApiClient {
   }
 
   getAppVersionHistory(token: string): Promise<AppReleaseDto[]> {
-    return this.requestArray<AppReleaseDto>('/api/app-version/history', { token, errorMessage: apiFallbackErrorMessage }, isAppReleaseDto, (items) => hasUniqueStringKey(items, 'id'))
+    return this.requestArray<AppReleaseDto>('/api/app-version/history', { token, errorMessage: apiFallbackErrorMessage }, isAppReleaseDto, (items) => hasUniqueStringKey(items, 'releaseId'))
   }
 
   markAppVersionSeen(token: string, releaseId: string): Promise<{ releaseId: string; seen: boolean }> {
@@ -4046,13 +4083,13 @@ export class ApiClient {
     return this.requestArray<AdminRewardLedgerDto>('/api/admin/referrals', { token, errorMessage: apiFallbackErrorMessage }, isAdminRewardLedgerDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
-  getAdminAppReleases(token: string, filters: AppReleaseFilters = {}): Promise<AppReleaseDto[]> {
+  getAdminAppReleases(token: string, filters: AppReleaseFilters = {}): Promise<AdminAppReleaseDto[]> {
     const params = new URLSearchParams()
     if (filters.visibility && filters.visibility !== 'all') params.set('visibility', filters.visibility)
     if (filters.source && filters.source !== 'all') params.set('source', filters.source)
     if (filters.search) params.set('search', filters.search)
     const query = params.toString()
-    return this.requestArray<AppReleaseDto>(`/api/app-version/admin/releases${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage }, isAppReleaseDto, (items) => hasUniqueStringKey(items, 'id'))
+    return this.requestArray<AdminAppReleaseDto>(`/api/app-version/admin/releases${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage }, isAdminAppReleaseDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminAppReleaseOverview(token: string): Promise<AppReleaseOverviewDto> {
@@ -4172,26 +4209,26 @@ export class ApiClient {
     }, 'object', isDeleteResultDto)
   }
 
-  createAdminAppRelease(token: string, payload: AppReleaseUpsertPayload): Promise<AppReleaseDto> {
-    return this.request<AppReleaseDto>('/api/app-version/admin/releases', {
+  createAdminAppRelease(token: string, payload: AppReleaseUpsertPayload): Promise<AdminAppReleaseDto> {
+    return this.request<AdminAppReleaseDto>('/api/app-version/admin/releases', {
       method: 'POST',
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    }, 'object', isAppReleaseDto)
+    }, 'object', isAdminAppReleaseDto)
   }
 
-  updateAdminAppRelease(token: string, id: string, payload: AppReleaseUpsertPayload): Promise<AppReleaseDto> {
-    return this.request<AppReleaseDto>(`/api/app-version/admin/releases/${id}`, {
+  updateAdminAppRelease(token: string, id: string, payload: AppReleaseUpsertPayload): Promise<AdminAppReleaseDto> {
+    return this.request<AdminAppReleaseDto>(`/api/app-version/admin/releases/${id}`, {
       method: 'PUT',
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    }, 'object', isAppReleaseDto)
+    }, 'object', isAdminAppReleaseDto)
   }
 
-  deleteAdminAppRelease(token: string, id: string): Promise<{ id: string; deleted: boolean }> {
-    return this.request<{ id: string; deleted: boolean }>(`/api/app-version/admin/releases/${id}`, {
+  deleteAdminAppRelease(token: string, id: string, revision: number): Promise<{ id: string; deleted: boolean }> {
+    return this.request<{ id: string; deleted: boolean }>(`/api/app-version/admin/releases/${id}?revision=${encodeURIComponent(String(revision))}`, {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage

@@ -36,7 +36,7 @@ public sealed class AppVersionController : ControllerBase
             .AsNoTracking()
             .AnyAsync(x => x.UserId == userId && x.AppReleaseId == release.Id, cancellationToken);
 
-        var dto = MapRelease(release);
+        var dto = MapCabinetRelease(release);
         return Ok(new AppVersionLatestResponse(dto.Version, dto, seen));
     }
 
@@ -45,7 +45,7 @@ public sealed class AppVersionController : ControllerBase
     {
         var releases = await GetPublishedActiveReleasesAsync(cancellationToken);
 
-        return Ok(releases.Select(MapRelease).ToList());
+        return Ok(releases.Select(MapCabinetRelease).ToList());
     }
 
     [HttpPost("mark-seen")]
@@ -91,16 +91,50 @@ public sealed class AppVersionController : ControllerBase
         [FromQuery] string? search = null,
         CancellationToken cancellationToken = default)
     {
-        var releases = await _db.AppReleases
-            .AsNoTracking()
-            .Include(x => x.Items)
-            .ToListAsync(cancellationToken);
+        IQueryable<AppRelease> query;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            var now = DateTimeOffset.UtcNow;
+            var normalizedVisibility = NormalizeVisibility(visibility);
+            var normalizedSource = NormalizeSourceFilter(source);
+            var normalizedSearch = search?.Trim().ToLowerInvariant() ?? string.Empty;
+            query = _db.AppReleases.FromSqlInterpolated($"""
+                SELECT r.*
+                FROM "AppReleases" AS r
+                WHERE ({normalizedVisibility} = 'all'
+                    OR ({normalizedVisibility} = 'published' AND r."IsActive" = 1 AND julianday(r."ReleasedAt") <= julianday({now}))
+                    OR ({normalizedVisibility} = 'upcoming' AND r."IsActive" = 1 AND julianday(r."ReleasedAt") > julianday({now}))
+                    OR ({normalizedVisibility} = 'hidden' AND r."IsActive" = 0))
+                  AND ({normalizedSource} = 'all' OR lower(r."Source") = {normalizedSource})
+                  AND ({normalizedSearch} = ''
+                    OR instr(lower(r."ReleaseId"), {normalizedSearch}) > 0
+                    OR instr(lower(r."Version"), {normalizedSearch}) > 0
+                    OR instr(lower(r."Title"), {normalizedSearch}) > 0
+                    OR instr(lower(r."Summary"), {normalizedSearch}) > 0
+                    OR EXISTS (
+                        SELECT 1 FROM "AppReleaseItems" AS i
+                        WHERE i."AppReleaseId" = r."Id" AND instr(lower(i."Text"), {normalizedSearch}) > 0))
+                ORDER BY julianday(r."ReleasedAt") DESC, julianday(r."CreatedAt") DESC, r."Id" DESC
+                LIMIT 200
+                """);
+        }
+        else
+        {
+            query = ApplyAdminFilters(_db.AppReleases.AsNoTracking(), visibility, source, search)
+                .OrderByDescending(x => x.ReleasedAt)
+                .ThenByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(200);
+        }
 
-        var orderedReleases = ApplyAdminFilters(releases, visibility, source, search)
+        var orderedReleases = (await query
+                .AsNoTracking()
+                .Include(x => x.Items)
+                .ToListAsync(cancellationToken))
             .OrderByDescending(x => x.ReleasedAt)
             .ThenByDescending(x => x.CreatedAt)
-            .Take(200)
-            .Select(MapRelease)
+            .ThenByDescending(x => x.Id)
+            .Select(MapAdminRelease)
             .ToList();
 
         return Ok(orderedReleases);
@@ -111,32 +145,58 @@ public sealed class AppVersionController : ControllerBase
     public async Task<IActionResult> GetAdminReleasesOverview(CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
-        var releases = await _db.AppReleases
-            .AsNoTracking()
-            .Include(x => x.Items)
-            .ToListAsync(cancellationToken);
-        var published = releases
-            .Where(x => x.IsActive && x.ReleasedAt <= now)
-            .OrderByDescending(x => x.ReleasedAt)
-            .ThenByDescending(x => x.CreatedAt)
-            .ToList();
+        IQueryable<AppRelease> publishedQuery;
+        IQueryable<AppRelease> upcomingQuery;
+        IQueryable<AppRelease> emptyQuery;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            publishedQuery = _db.AppReleases.FromSqlInterpolated($"""
+                SELECT r.* FROM "AppReleases" AS r
+                WHERE r."IsActive" = 1 AND julianday(r."ReleasedAt") <= julianday({now})
+                """);
+            upcomingQuery = _db.AppReleases.FromSqlInterpolated($"""
+                SELECT r.* FROM "AppReleases" AS r
+                WHERE r."IsActive" = 1 AND julianday(r."ReleasedAt") > julianday({now})
+                """);
+            emptyQuery = _db.AppReleases.FromSqlRaw("""
+                SELECT r.* FROM "AppReleases" AS r
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM "AppReleaseItems" AS i
+                    WHERE i."AppReleaseId" = r."Id" AND trim(i."Text") <> '')
+                ORDER BY r."ReleaseId"
+                LIMIT 200
+                """);
+        }
+        else
+        {
+            publishedQuery = _db.AppReleases.Where(x => x.IsActive && x.ReleasedAt <= now);
+            upcomingQuery = _db.AppReleases.Where(x => x.IsActive && x.ReleasedAt > now);
+            emptyQuery = _db.AppReleases
+                .Where(x => !x.Items.Any(item => item.Text.Trim() != string.Empty))
+                .OrderBy(x => x.ReleaseId)
+                .Take(200);
+        }
+
+        var totalCount = await _db.AppReleases.AsNoTracking().CountAsync(cancellationToken);
+        var publishedCount = await publishedQuery.AsNoTracking().CountAsync(cancellationToken);
+        var upcomingCount = await upcomingQuery.AsNoTracking().CountAsync(cancellationToken);
+        var hiddenCount = await _db.AppReleases.AsNoTracking().CountAsync(x => !x.IsActive, cancellationToken);
+        var agentCount = await _db.AppReleases.AsNoTracking().CountAsync(x => x.Source.ToLower() == "agent", cancellationToken);
+        var latestPublished = await GetLatestPublishedReleaseSummaryAsync(now, cancellationToken);
+        var emptyReleaseIds = await emptyQuery.AsNoTracking().Select(x => x.ReleaseId).ToArrayAsync(cancellationToken);
 
         return Ok(new
         {
-            TotalCount = releases.Count,
-            PublishedCount = published.Count,
-            UpcomingCount = releases.Count(x => x.IsActive && x.ReleasedAt > now),
-            HiddenCount = releases.Count(x => !x.IsActive),
-            AgentCount = releases.Count(x => string.Equals(x.Source, "agent", StringComparison.OrdinalIgnoreCase)),
-            ManualCount = releases.Count(x => string.Equals(x.Source, "manual", StringComparison.OrdinalIgnoreCase)),
+            TotalCount = totalCount,
+            PublishedCount = publishedCount,
+            UpcomingCount = upcomingCount,
+            HiddenCount = hiddenCount,
+            AgentCount = agentCount,
+            ManualCount = totalCount - agentCount,
             SeenCount = await _db.AppReleaseSeen.AsNoTracking().CountAsync(cancellationToken),
-            LatestPublishedReleaseId = published.FirstOrDefault()?.ReleaseId,
-            LatestPublishedVersion = published.FirstOrDefault()?.Version,
-            EmptyReleaseIds = releases
-                .Where(x => x.Items.Count == 0 || x.Items.All(item => string.IsNullOrWhiteSpace(item.Text)))
-                .Select(x => x.ReleaseId)
-                .OrderBy(x => x)
-                .ToArray()
+            LatestPublishedReleaseId = latestPublished?.ReleaseId,
+            LatestPublishedVersion = latestPublished?.Version,
+            EmptyReleaseIds = emptyReleaseIds
         });
     }
 
@@ -179,9 +239,9 @@ public sealed class AppVersionController : ControllerBase
         }
 
         _db.AppReleases.Add(release);
-        AdminAuditLogWriter.Add(_db, this, "app_release.create", "AppRelease", release.Id, null, MapRelease(release));
+        AdminAuditLogWriter.Add(_db, this, "app_release.create", "AppRelease", release.Id, null, MapAdminRelease(release));
         await _db.SaveChangesAsync(cancellationToken);
-        return Ok(MapRelease(release));
+        return Ok(MapAdminRelease(release));
     }
 
     [HttpPut("admin/releases/{id:guid}")]
@@ -202,6 +262,15 @@ public sealed class AppVersionController : ControllerBase
             return NotFound();
         }
 
+        if (!request.Revision.HasValue || request.Revision.Value < 0)
+        {
+            return BadRequest(new { error = "App release revision is required and must be a non-negative integer." });
+        }
+        if (request.Revision.Value != release.Revision)
+        {
+            return Conflict(new { error = "App release changed. Reload it and retry.", revision = release.Revision });
+        }
+
         var releaseId = request.ReleaseId.Trim();
         var duplicate = await _db.AppReleases.AnyAsync(x => x.Id != id && x.ReleaseId == releaseId, cancellationToken);
         if (duplicate)
@@ -209,7 +278,7 @@ public sealed class AppVersionController : ControllerBase
             return BadRequest(new { error = "ReleaseId already exists." });
         }
 
-        var before = MapRelease(release);
+        var before = MapAdminRelease(release);
         var actor = ResolveActor();
         release.ReleaseId = releaseId;
         release.Version = request.Version.Trim();
@@ -218,6 +287,7 @@ public sealed class AppVersionController : ControllerBase
         release.Summary = request.Summary.Trim();
         release.IsActive = request.IsActive;
         release.Source = NormalizeSource(request.Source);
+        release.Revision = checked(release.Revision + 1);
         release.UpdatedAt = DateTimeOffset.UtcNow;
         release.UpdatedByUserId = actor.UserId;
         release.UpdatedByUserName = actor.UserName;
@@ -230,18 +300,25 @@ public sealed class AppVersionController : ControllerBase
             _db.AppReleaseItems.Add(item);
         }
 
-        AdminAuditLogWriter.Add(_db, this, "app_release.update", "AppRelease", release.Id, before, MapRelease(release, nextItems));
-        await _db.SaveChangesAsync(cancellationToken);
+        AdminAuditLogWriter.Add(_db, this, "app_release.update", "AppRelease", release.Id, before, MapAdminRelease(release, nextItems));
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "App release changed. Reload it and retry." });
+        }
         var updated = await _db.AppReleases
             .AsNoTracking()
             .Include(x => x.Items)
             .FirstAsync(x => x.Id == id, cancellationToken);
-        return Ok(MapRelease(updated));
+        return Ok(MapAdminRelease(updated));
     }
 
     [HttpDelete("admin/releases/{id:guid}")]
     [Authorize(Policy = AdminPolicies.AdminWrite)]
-    public async Task<IActionResult> DeleteAdminRelease(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteAdminRelease(Guid id, [FromQuery] int? revision, CancellationToken cancellationToken)
     {
         var release = await _db.AppReleases
             .Include(x => x.Items)
@@ -250,32 +327,87 @@ public sealed class AppVersionController : ControllerBase
         {
             return NotFound();
         }
+        if (!revision.HasValue || revision.Value < 0)
+        {
+            return BadRequest(new { error = "App release revision is required and must be a non-negative integer." });
+        }
+        if (revision.Value != release.Revision)
+        {
+            return Conflict(new { error = "App release changed. Reload it and retry.", revision = release.Revision });
+        }
 
-        var before = MapRelease(release);
+        var before = MapAdminRelease(release);
         _db.AppReleases.Remove(release);
         AdminAuditLogWriter.Add(_db, this, "app_release.delete", "AppRelease", release.Id, before, null);
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "App release changed. Reload it and retry." });
+        }
         return Ok(new { id, deleted = true });
+    }
+
+    private async Task<AppRelease?> GetLatestPublishedReleaseSummaryAsync(DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            return await _db.AppReleases.FromSqlInterpolated($"""
+                    SELECT r.* FROM "AppReleases" AS r
+                    WHERE r."IsActive" = 1 AND julianday(r."ReleasedAt") <= julianday({now})
+                    ORDER BY julianday(r."ReleasedAt") DESC, julianday(r."CreatedAt") DESC, r."Id" DESC
+                    LIMIT 1
+                    """)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        return await _db.AppReleases
+            .AsNoTracking()
+            .Where(x => x.IsActive && x.ReleasedAt <= now)
+            .OrderByDescending(x => x.ReleasedAt)
+            .ThenByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     private async Task<List<AppRelease>> GetPublishedActiveReleasesAsync(CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
-        var releases = await _db.AppReleases
-            .AsNoTracking()
-            .Include(x => x.Items)
-            .Where(x => x.IsActive)
-            .ToListAsync(cancellationToken);
+        IQueryable<AppRelease> query;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            query = _db.AppReleases.FromSqlInterpolated($"""
+                SELECT r.*
+                FROM "AppReleases" AS r
+                WHERE r."IsActive" = 1 AND julianday(r."ReleasedAt") <= julianday({now})
+                ORDER BY julianday(r."ReleasedAt") DESC, julianday(r."CreatedAt") DESC, r."Id" DESC
+                LIMIT 50
+                """);
+        }
+        else
+        {
+            query = _db.AppReleases
+                .Where(x => x.IsActive && x.ReleasedAt <= now)
+                .OrderByDescending(x => x.ReleasedAt)
+                .ThenByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(50);
+        }
 
-        return releases
-            .Where(x => x.ReleasedAt <= now)
+        return (await query
+                .AsNoTracking()
+                .Include(x => x.Items)
+                .ToListAsync(cancellationToken))
             .OrderByDescending(x => x.ReleasedAt)
             .ThenByDescending(x => x.CreatedAt)
-            .Take(50)
+            .ThenByDescending(x => x.Id)
             .ToList();
     }
 
-    private static IEnumerable<AppRelease> ApplyAdminFilters(IEnumerable<AppRelease> releases, string? visibility, string? source, string? search)
+    private static IQueryable<AppRelease> ApplyAdminFilters(IQueryable<AppRelease> releases, string? visibility, string? source, string? search)
     {
         var now = DateTimeOffset.UtcNow;
         var filtered = releases;
@@ -293,29 +425,30 @@ public sealed class AppVersionController : ControllerBase
         if (!string.IsNullOrWhiteSpace(source) && !string.Equals(source, "all", StringComparison.OrdinalIgnoreCase))
         {
             var normalizedSource = NormalizeSource(source);
-            filtered = filtered.Where(x => string.Equals(NormalizeSource(x.Source), normalizedSource, StringComparison.OrdinalIgnoreCase));
+            filtered = filtered.Where(x => x.Source.ToLower() == normalizedSource);
         }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var normalizedSearch = search.Trim();
+            var normalizedSearch = search.Trim().ToLower();
             filtered = filtered.Where(x =>
-                x.ReleaseId.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
-                x.Version.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
-                x.Title.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
-                x.Summary.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
-                x.Items.Any(item => item.Text.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)));
+                x.ReleaseId.ToLower().Contains(normalizedSearch) ||
+                x.Version.ToLower().Contains(normalizedSearch) ||
+                x.Title.ToLower().Contains(normalizedSearch) ||
+                x.Summary.ToLower().Contains(normalizedSearch) ||
+                x.Items.Any(item => item.Text.ToLower().Contains(normalizedSearch)));
         }
 
         return filtered;
     }
 
-    private static AppReleaseDto MapRelease(AppRelease release)
-        => MapRelease(release, release.Items);
+    private static AppReleaseDto MapAdminRelease(AppRelease release)
+        => MapAdminRelease(release, release.Items);
 
-    private static AppReleaseDto MapRelease(AppRelease release, IEnumerable<AppReleaseItem> items)
+    private static AppReleaseDto MapAdminRelease(AppRelease release, IEnumerable<AppReleaseItem> items)
         => new(
             release.Id,
+            release.Revision,
             release.ReleaseId,
             release.Version,
             release.ReleasedAt,
@@ -333,6 +466,18 @@ public sealed class AppVersionController : ControllerBase
             release.UpdatedByUserName,
             release.CreatedAt,
             release.UpdatedAt);
+
+    private static CabinetAppReleaseDto MapCabinetRelease(AppRelease release)
+        => new(
+            release.ReleaseId,
+            release.Version,
+            release.ReleasedAt,
+            release.Title,
+            release.Summary,
+            release.Items
+                .OrderBy(x => x.SortOrder)
+                .Select(x => new CabinetAppReleaseItemDto(x.Type, x.Text))
+                .ToList());
 
     private static IEnumerable<AppReleaseItem> MapRequestItems(IReadOnlyList<AppReleaseItemDto> items)
         => items
@@ -369,6 +514,20 @@ public sealed class AppVersionController : ControllerBase
 
     private static string NormalizeSource(string? source)
         => (source ?? string.Empty).Trim().ToLowerInvariant() == "agent" ? "agent" : "manual";
+
+    private static string NormalizeVisibility(string? visibility)
+        => (visibility ?? string.Empty).Trim().ToLowerInvariant() switch
+        {
+            "published" => "published",
+            "upcoming" => "upcoming",
+            "hidden" => "hidden",
+            _ => "all"
+        };
+
+    private static string NormalizeSourceFilter(string? source)
+        => string.IsNullOrWhiteSpace(source) || string.Equals(source, "all", StringComparison.OrdinalIgnoreCase)
+            ? "all"
+            : NormalizeSource(source);
 
     private Guid ResolveUserId()
     {

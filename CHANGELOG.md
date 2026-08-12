@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.675.0 - 2026-08-13
+
+Release entry: `2026-08-13-app-release-boundary`.
+
+### Исправлено
+
+- Cabinet `latest/history` больше не раскрывают внутренние GUID, publication/source и actor/audit metadata релизов; frontend принимает только точный пользовательский контракт.
+- Параллельно изменённый релиз нельзя перезаписать или удалить из устаревшей формы: PUT/DELETE требуют revision и возвращают controlled conflict с перезагрузкой актуального списка.
+
+### Улучшено
+
+- Пользовательская история ограничена последними 50 релизами, административный список — 200 релизами до materialization на SQLite/PostgreSQL.
+- Overview считает агрегаты в БД и ограничивает список релизов без пунктов; `AppRelease.Revision` защищён EF concurrency token и migration.
+
+### Проверено
+
+- Fail-first backend `3/11`, frontend `0/1`; targeted backend `16/16`, frontend `3/3`, backend `1381/1381`, frontend `161/161`, typecheck/build, bundle budget, CRUD/conflict/browser responsive gates, SQLite concurrency, EF drift, UTF-8, secret scan `674/0` и audit `0 vulnerabilities` зелёные.
+- Roadmap `688/708` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider/Telegram кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались; статус остается staging-ready baseline, not production-ready.
+
 ## 0.674.0 - 2026-08-13
 
 Release entry: `2026-08-13-admin-referral-program-boundary`.

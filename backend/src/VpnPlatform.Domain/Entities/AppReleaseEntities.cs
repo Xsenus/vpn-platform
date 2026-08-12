@@ -12,6 +12,7 @@ public class AppRelease : AuditableEntity
     public string Summary { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
     public string Source { get; set; } = "manual";
+    public int Revision { get; set; }
     public Guid? CreatedByUserId { get; set; }
     public string CreatedByUserName { get; set; } = string.Empty;
     public Guid? UpdatedByUserId { get; set; }

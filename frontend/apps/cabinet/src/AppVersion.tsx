@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ApiClient, AppReleaseDto, AppReleaseItemDto } from '@vpn-platform/api-client'
+import { ApiClient, AppReleaseDto, CabinetAppReleaseItemDto } from '@vpn-platform/api-client'
 import { PrimaryButton } from '@vpn-platform/ui'
 
 type AppVersionGateProps = {
@@ -65,7 +65,7 @@ function formatReleaseDate(value: string) {
     : date.toLocaleString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-function normalizeItemType(item: AppReleaseItemDto) {
+function normalizeItemType(item: CabinetAppReleaseItemDto) {
   return itemLabels[item.type] ? item.type : 'new'
 }
 

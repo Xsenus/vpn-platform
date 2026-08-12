@@ -85,6 +85,7 @@ function faqFixture(overrides: Record<string, unknown> = {}) {
 function appReleaseFixture(overrides: Record<string, unknown> = {}) {
   return {
     id: 'release-guid',
+    revision: 0,
     releaseId: 'release-1',
     version: '0.2.0',
     releasedAt: adminFixtureTimestamp,
@@ -99,6 +100,18 @@ function appReleaseFixture(overrides: Record<string, unknown> = {}) {
     updatedByUserName: 'Agent',
     createdAt: adminFixtureTimestamp,
     updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
+function cabinetAppReleaseFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    releaseId: 'release-1',
+    version: '0.2.0',
+    releasedAt: adminFixtureTimestamp,
+    title: 'Что нового',
+    summary: 'Описание релиза',
+    items: [{ type: 'new', text: 'Пункт релиза' }],
     ...overrides
   }
 }
@@ -2642,7 +2655,7 @@ test('ApiClient rejects malformed admin content and app release DTOs', async () 
     () => client.getAdminAppReleaseOverview('admin-token'),
     () => client.createAdminAppRelease('admin-token', releasePayload),
     () => client.updateAdminAppRelease('admin-token', 'release-guid', releasePayload),
-    () => client.deleteAdminAppRelease('admin-token', 'release-guid'),
+    () => client.deleteAdminAppRelease('admin-token', 'release-guid', 0),
     () => client.getAdminFaq('admin-token'),
     () => client.getAdminFaqOverview('admin-token'),
     () => client.createAdminFaq('admin-token', faqPayload),
@@ -2666,6 +2679,32 @@ test('ApiClient rejects malformed admin content and app release DTOs', async () 
     await assert.rejects(operation, isInvalidResponseDataError)
   }
   assert.equal(responses.length, 0)
+})
+
+test('ApiClient rejects admin metadata in cabinet app release responses', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify([appReleaseFixture()]), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  await assert.rejects(
+    () => new ApiClient('http://localhost:8080').getAppVersionHistory('user-token'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+  )
+})
+
+test('ApiClient rejects unknown extensions in cabinet app release responses', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify([
+    cabinetAppReleaseFixture({ internalNote: 'private' })
+  ]), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  await assert.rejects(
+    () => new ApiClient('http://localhost:8080').getAppVersionHistory('user-token'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+  )
 })
 
 test('ApiClient rejects malformed VPN panel, inbound, client and observation DTOs', async () => {
@@ -2971,7 +3010,7 @@ test('ApiClient app version endpoints are tokenized and mapped', async () => {
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     if (String(url).endsWith('/latest')) {
-      return new Response(JSON.stringify({ currentVersion: '0.2.0', latestRelease: appReleaseFixture(), seenByCurrentUser: true }), {
+      return new Response(JSON.stringify({ currentVersion: '0.2.0', latestRelease: cabinetAppReleaseFixture(), seenByCurrentUser: true }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       })
@@ -2982,7 +3021,10 @@ test('ApiClient app version endpoints are tokenized and mapped', async () => {
         headers: { 'Content-Type': 'application/json' }
       })
     }
-    if (String(url).endsWith('/history') || String(url).includes('/admin/releases?') || (String(url).endsWith('/admin/releases') && (init?.method ?? 'GET') === 'GET')) {
+    if (String(url).endsWith('/history')) {
+      return new Response(JSON.stringify([cabinetAppReleaseFixture()]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+    if (String(url).includes('/admin/releases?') || (String(url).endsWith('/admin/releases') && (init?.method ?? 'GET') === 'GET')) {
       return new Response(JSON.stringify([appReleaseFixture()]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
@@ -3031,9 +3073,10 @@ test('ApiClient app version endpoints are tokenized and mapped', async () => {
     summary: 'Описание',
     isActive: true,
     source: 'manual',
+    revision: 0,
     items: [{ type: 'fixed', text: 'Исправление', sortOrder: 10 }]
   })
-  await client.deleteAdminAppRelease('admin-token', 'release-guid')
+  await client.deleteAdminAppRelease('admin-token', 'release-guid', 0)
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/app-version/latest')
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/app-version/history')
@@ -3043,6 +3086,7 @@ test('ApiClient app version endpoints are tokenized and mapped', async () => {
   assert.equal(calls[5]?.url, 'http://localhost:8080/api/app-version/admin/releases/overview')
   assert.equal(calls[6]?.init?.method, 'POST')
   assert.equal(calls[7]?.init?.method, 'PUT')
+  assert.equal(calls[8]?.url, 'http://localhost:8080/api/app-version/admin/releases/release-guid?revision=0')
   assert.equal(calls[8]?.init?.method, 'DELETE')
   assert.equal(new Headers(calls[2]?.init?.headers).get('Authorization'), 'Bearer user-token')
   assert.equal(new Headers(calls[8]?.init?.headers).get('Authorization'), 'Bearer admin-token')

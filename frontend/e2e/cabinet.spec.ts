@@ -28,34 +28,24 @@ const privateCabinetStateLabels = [
 ]
 
 const appVersionRelease = {
-  id: 'release-cabinet-e2e',
   releaseId: '2026-08-10-cabinet-modal-focus',
   version: '0.573.0',
   releasedAt: now,
   title: 'Проверка модального окна',
   summary: 'Клавиатурный фокус должен оставаться внутри окна обновления.',
-  isActive: true,
-  source: 'agent',
   items: [
-    { id: 'release-item-cabinet-e2e', type: 'fixed', text: 'Проверен полный клавиатурный lifecycle.', sortOrder: 10 }
-  ],
-  createdByUserId: null,
-  createdByUserName: 'Codex',
-  updatedByUserId: null,
-  updatedByUserName: 'Codex',
-  createdAt: now,
-  updatedAt: now
+    { type: 'fixed', text: 'Проверен полный клавиатурный lifecycle.' }
+  ]
 }
 
 const staleAppVersionRelease = {
   ...appVersionRelease,
-  id: 'release-cabinet-stale',
   releaseId: '2026-08-09-cabinet-stale-history',
   version: '0.572.0',
   title: 'Устаревшая история обновлений',
   summary: 'Этот ответ принадлежит завершённой сессии.',
   items: [
-    { id: 'release-item-cabinet-stale', type: 'fixed', text: 'Старый ответ не должен попасть в новую сессию.', sortOrder: 10 }
+    { type: 'fixed', text: 'Старый ответ не должен попасть в новую сессию.' }
   ]
 }
 

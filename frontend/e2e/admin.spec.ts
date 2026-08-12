@@ -182,6 +182,7 @@ function adminSupportMessage(id: string, conversationId: string, userId: string,
 function release(overrides: Record<string, unknown> = {}) {
   return {
     id: 'release-admin-e2e',
+    revision: 0,
     releaseId: '2026-06-13-admin-e2e-seed',
     version: '0.91.1',
     releasedAt: '2026-06-13T07:00:00Z',
@@ -1359,6 +1360,7 @@ async function mockAdminApi(page: Page) {
       const created = release({
         ...releaseBody,
         id: 'release-created-e2e',
+        revision: 0,
         items: Array.isArray(releaseBody.items)
           ? releaseBody.items.map((item, index) => ({ ...(item as Record<string, unknown>), id: `release-created-item-${index + 1}` }))
           : [],
@@ -1374,10 +1376,15 @@ async function mockAdminApi(page: Page) {
     if (releaseMutationMatch && method === 'PUT') {
       const index = releases.findIndex((item) => item.id === releaseMutationMatch[1])
       const releaseBody = body as Record<string, unknown>
+      if (index < 0 || releaseBody.revision !== releases[index].revision) {
+        await fulfillJson(route, { error: 'App release changed. Reload it and retry.' }, 409)
+        return
+      }
       const updated = release({
         ...releases[index],
         ...releaseBody,
         id: releaseMutationMatch[1],
+        revision: Number(releases[index].revision) + 1,
         items: Array.isArray(releaseBody.items)
           ? releaseBody.items.map((item, itemIndex) => ({ ...(item as Record<string, unknown>), id: `release-updated-item-${itemIndex + 1}` }))
           : [],
@@ -1390,6 +1397,11 @@ async function mockAdminApi(page: Page) {
 
     if (releaseMutationMatch && method === 'DELETE') {
       const index = releases.findIndex((item) => item.id === releaseMutationMatch[1])
+      const revision = new URL(request.url()).searchParams.get('revision')
+      if (index < 0 || revision !== String(releases[index].revision)) {
+        await fulfillJson(route, { error: 'App release changed. Reload it and retry.' }, 409)
+        return
+      }
       if (index >= 0) releases.splice(index, 1)
       await fulfillJson(route, { id: releaseMutationMatch[1], deleted: true })
       return
@@ -1982,6 +1994,16 @@ async function mockAdminApi(page: Page) {
     returnInvalidServersResponse: () => { invalidServersResponse = true },
     returnInvalidProvisioningRunsResponse: () => { invalidProvisioningRunsResponse = true },
     returnInvalidBotSettingsResponse: () => { invalidBotSettingsResponse = true },
+    changeReleaseExternally: (id: string, title = 'Релиз изменен извне') => {
+      const index = releases.findIndex((item) => item.id === id)
+      if (index < 0) return
+      releases[index] = release({
+        ...releases[index],
+        title,
+        revision: Number(releases[index].revision) + 1,
+        updatedAt: now
+      })
+    },
     delayNextVpnPanelInbounds: () => { delayNextVpnPanelInboundsResponse = true },
     delayNextBotSettingsCheck: () => { delayNextBotSettingsCheckResponse = true },
     useDetailRequestRaceFixture: () => {
@@ -4488,7 +4510,7 @@ test('admin managed configuration supports complete CRUD lifecycle', async ({ pa
   await releaseRow.getByRole('button', { name: 'Удалить' }).click()
   await releasesPanel.getByRole('button', { name: 'Подтвердить' }).click()
   await expect(releasesPanel.getByText('CRUD Release Updated', { exact: true })).toHaveCount(0)
-  expect(api.getLastRequest('/api/app-version/admin/releases/release-created-e2e', 'DELETE')).toBeTruthy()
+  expect(api.getRequestCount('/api/app-version/admin/releases/release-created-e2e', 'DELETE')).toBe(1)
 
   await openAdminSection(page, 'FAQ', 'faq')
   const faqPanel = page.locator('#faq')
@@ -4554,6 +4576,42 @@ test('admin managed configuration supports complete CRUD lifecycle', async ({ pa
 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
+})
+
+test('admin app release editor recovers from a stale revision', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page)
+  await page.goto('/#releases')
+
+  const releasesPanel = page.locator('#releases')
+  const releaseRow = releasesPanel.locator('.list-item-vertical').filter({ hasText: 'Админский E2E seed' })
+  await releaseRow.getByRole('button', { name: 'Редактировать' }).click()
+  await expect(releasesPanel.getByRole('heading', { name: 'Редактировать релиз' })).toBeVisible()
+  await releasesPanel.getByLabel('Заголовок').fill('Устаревшая локальная правка')
+
+  api.changeReleaseExternally('release-admin-e2e', 'Актуальная внешняя версия')
+  await releasesPanel.getByRole('button', { name: 'Сохранить релиз' }).click()
+
+  await expect(page.getByRole('alert')).toContainText('Релиз уже изменен другим администратором')
+  await expect(releasesPanel.getByRole('heading', { name: 'Создать релиз' })).toBeVisible()
+  await expect(releasesPanel.getByText('Актуальная внешняя версия', { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/app-version/admin/releases/release-admin-e2e', 'PUT')).toBe(1)
+})
+
+test('admin app release delete keeps an externally changed release', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page)
+  await page.goto('/#releases')
+
+  const releasesPanel = page.locator('#releases')
+  const releaseRow = releasesPanel.locator('.list-item-vertical').filter({ hasText: 'Админский E2E seed' })
+  await releaseRow.getByRole('button', { name: 'Удалить' }).click()
+  api.changeReleaseExternally('release-admin-e2e', 'Актуальная версия перед удалением')
+  await releasesPanel.getByRole('button', { name: 'Подтвердить' }).click()
+
+  await expect(page.getByRole('alert')).toContainText('не был удален')
+  await expect(releasesPanel.getByText('Актуальная версия перед удалением', { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/app-version/admin/releases/release-admin-e2e', 'DELETE')).toBe(1)
 })
 
 test('admin partial load errors stay scoped and recover without false section data', async ({ page }) => {

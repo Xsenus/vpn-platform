@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: app release boundary
+
+Scope:
+- Cabinet `latest/history` не должны раскрывать внутренние release/actor/publication metadata; history/list limits и overview aggregates должны выполняться в БД.
+- Admin PUT/DELETE должны отклонять stale revision и восстанавливать актуальное состояние формы/списка на desktop и mobile.
+
+Results:
+- Roadmap progress: `688/708` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-app-release-boundary`, version `0.675.0`.
+- Fail-first: backend `3/11`, frontend `0/1`; cabinet API возвращал полный admin DTO, history/list materialize-или таблицы до `Take`, а PUT/DELETE не имели revision contract.
+- After fix: отдельные exact cabinet DTO/validators, DB-side top-50/top-200 и aggregate overview, EF concurrency migration и controlled `409` с русским reload/recovery для PUT/DELETE.
+- Targeted backend/SQLite `16/16`, frontend contract `3/3`; backend `1381/1381`, frontend `161/161`, typecheck/build и bundle budget зелёные. CRUD desktop/mobile `2/2`, stale PUT/DELETE desktop/mobile `4/4`, cabinet modal desktop/mobile `2/2`, admin overlap `1/1`, focused releases responsive/WCAG `1/1` на 320/390/1280 px, cabinet representative responsive/modal `1/1`. EF migration/drift и двухконтекстный SQLite concurrency race, strict UTF-8 without BOM, secret scan `674/0` и dependency audit `0 vulnerabilities` зелёные. Real VPS/staging/live evidence remains open; provider/Telegram cabinets, Bot API, SMTP and production-like 3x-ui were not checked locally.
+
 ## Check 2026-08-13: admin referral program boundary
 
 Scope:

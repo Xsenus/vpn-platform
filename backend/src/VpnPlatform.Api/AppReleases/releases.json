@@ -15866,5 +15866,28 @@
         "text": "Roadmap progress is 687/707 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-app-release-boundary",
+    "version": "0.675.0",
+    "releasedAt": "2026-08-13T01:20:00+07:00",
+    "title": "История обновлений защищена от утечек и конфликтов",
+    "summary": "Кабинет получает только пользовательские данные релизов, а админка защищает параллельное изменение и удаление.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "API latest/history больше не передаёт внутренние GUID, признаки публикации, источник и данные администраторов; frontend принимает только точный пользовательский контракт."
+      },
+      {
+        "type": "improved",
+        "text": "История и административный список ограничены в базе данных, overview считает агрегаты без загрузки всей таблицы, а stale PUT/DELETE возвращают понятный конфликт с перезагрузкой актуальной версии."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 688/708 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

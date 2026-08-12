@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AccessCredentialDto,
   AdminAuditLogDto,
+  AdminAppReleaseDto,
   AdminNotificationDeliveryDto,
   AdminDashboardSummaryDto,
   AdminReferralProgramDto,
@@ -14,7 +15,6 @@ import {
   ApiClient,
   ApiClientError,
   AppReleaseOverviewDto,
-  AppReleaseDto,
   AppReleaseUpsertPayload,
   CreateServerPayload,
   CreateVpnInboundPayload,
@@ -1120,7 +1120,7 @@ export function App() {
   const [referralProgramForm, setReferralProgramForm] = useState<ReferralProgramFormState>(defaultReferralProgramForm)
   const [editingReferralProgramId, setEditingReferralProgramId] = useState('')
   const [editingProviderAccountId, setEditingProviderAccountId] = useState('')
-  const [appReleases, setAppReleases] = useState<AppReleaseDto[]>([])
+  const [appReleases, setAppReleases] = useState<AdminAppReleaseDto[]>([])
   const [appReleaseOverview, setAppReleaseOverview] = useState<AppReleaseOverviewDto | null>(null)
   const [releaseVisibilityFilter, setReleaseVisibilityFilter] = useState('all')
   const [releaseSourceFilter, setReleaseSourceFilter] = useState('all')
@@ -2646,7 +2646,7 @@ export function App() {
     setEditingReleaseId('')
   }
 
-  const editRelease = (release: AppReleaseDto) => {
+  const editRelease = (release: AdminAppReleaseDto) => {
     setEditingReleaseId(release.id)
     setReleaseForm({
       releaseId: release.releaseId,
@@ -2656,6 +2656,7 @@ export function App() {
       summary: release.summary,
       isActive: release.isActive,
       source: release.source,
+      revision: release.revision,
       items: release.items.length > 0 ? release.items.map((item, index) => ({
         id: item.id ?? null,
         type: item.type,
@@ -2688,7 +2689,16 @@ export function App() {
 
     await runAction('releases', editingId ? `release-update-${editingId}` : 'release-create', async (action) => {
       if (editingId) {
-        await api.updateAdminAppRelease(token, editingId, payload)
+        try {
+          await api.updateAdminAppRelease(token, editingId, payload)
+        } catch (error) {
+          if (error instanceof ApiClientError && error.status === 409) {
+            await action.reloadAll()
+            if (action.isCurrent() && releaseFormRef.current === submittedForm && editingReleaseIdRef.current === editingId) resetReleaseForm()
+            throw new ApiClientError('Релиз уже изменен другим администратором. Список обновлен: откройте актуальную версию и повторите правку.', 409, error.payload)
+          }
+          throw error
+        }
       } else {
         await api.createAdminAppRelease(token, payload)
       }
@@ -2699,9 +2709,18 @@ export function App() {
     }, appReleaseActionResourceKey(editingId || 'create'))
   }
 
-  const handleDeleteRelease = async (release: AppReleaseDto) => {
+  const handleDeleteRelease = async (release: AdminAppReleaseDto) => {
     await runAction('releases', `release-delete-${release.id}`, async (action) => {
-      await api.deleteAdminAppRelease(token, release.id)
+      try {
+        await api.deleteAdminAppRelease(token, release.id, release.revision)
+      } catch (error) {
+        if (error instanceof ApiClientError && error.status === 409) {
+          await action.reloadAll()
+          if (action.isCurrent() && editingReleaseIdRef.current === release.id) resetReleaseForm()
+          throw new ApiClientError('Релиз уже изменен другим администратором и не был удален. Список обновлен.', 409, error.payload)
+        }
+        throw error
+      }
       if (!action.isCurrent()) return
       if (editingReleaseIdRef.current === release.id) resetReleaseForm()
       setNotice(`Релиз ${release.version} удален.`)

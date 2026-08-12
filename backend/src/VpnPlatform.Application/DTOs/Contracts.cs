@@ -86,6 +86,7 @@ public sealed record WorkScenarioUpsertRequest(
 public sealed record AppReleaseItemDto(Guid? Id, string Type, string Text, int SortOrder);
 public sealed record AppReleaseDto(
     Guid Id,
+    int Revision,
     string ReleaseId,
     string Version,
     DateTimeOffset ReleasedAt,
@@ -101,7 +102,15 @@ public sealed record AppReleaseDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
-public sealed record AppVersionLatestResponse(string? CurrentVersion, AppReleaseDto? LatestRelease, bool SeenByCurrentUser);
+public sealed record CabinetAppReleaseItemDto(string Type, string Text);
+public sealed record CabinetAppReleaseDto(
+    string ReleaseId,
+    string Version,
+    DateTimeOffset ReleasedAt,
+    string Title,
+    string Summary,
+    IReadOnlyList<CabinetAppReleaseItemDto> Items);
+public sealed record AppVersionLatestResponse(string? CurrentVersion, CabinetAppReleaseDto? LatestRelease, bool SeenByCurrentUser);
 public sealed record AppReleaseUpsertRequest(
     string ReleaseId,
     string Version,
@@ -110,7 +119,8 @@ public sealed record AppReleaseUpsertRequest(
     string Summary,
     bool IsActive,
     string? Source,
-    IReadOnlyList<AppReleaseItemDto> Items);
+    IReadOnlyList<AppReleaseItemDto> Items,
+    int? Revision = null);
 public sealed record AppReleaseMarkSeenRequest(string ReleaseId);
 
 public sealed record CreateCheckoutSessionCommand(Guid TariffId, OrderType Type, ChannelType Channel, PaymentProvider PaymentProvider, string? PromoCode, bool IsFirstPurchase, string? EmailHint, string? ReturnUrl);

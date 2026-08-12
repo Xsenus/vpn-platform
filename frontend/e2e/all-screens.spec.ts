@@ -247,6 +247,7 @@ const providerAccount = {
 
 const release = {
   id: 'release-all-screens',
+  revision: 0,
   releaseId: '2026-06-14-all-screens-browser-smoke',
   version: '0.107.0',
   releasedAt: now,
@@ -261,6 +262,15 @@ const release = {
   updatedByUserName: 'Agent',
   createdAt: now,
   updatedAt: now
+}
+
+const cabinetRelease = {
+  releaseId: release.releaseId,
+  version: release.version,
+  releasedAt: release.releasedAt,
+  title: release.title,
+  summary: release.summary,
+  items: release.items.map((item) => ({ type: item.type, text: item.text }))
 }
 
 function jsonResponse(body: unknown, status = 200) {
@@ -368,16 +378,19 @@ async function installApiMock(page: Page) {
           totalViews: 0,
           latestPublishedReleaseId: release.releaseId,
           latestPublishedVersion: release.version,
-          latestPublishedRelease: release,
           emptyReleaseIds: []
         })
         return
       }
-      if (path.includes('/history') || path.includes('/admin/releases')) {
+      if (path.includes('/admin/releases')) {
         await fulfillJson(route, [release])
         return
       }
-      await fulfillJson(route, { currentVersion: release.version, latestRelease: release, seenByCurrentUser: true })
+      if (path.includes('/history')) {
+        await fulfillJson(route, [cabinetRelease])
+        return
+      }
+      await fulfillJson(route, { currentVersion: release.version, latestRelease: cabinetRelease, seenByCurrentUser: true })
       return
     }
 
@@ -1182,6 +1195,31 @@ test('admin referrals fit focused mobile and desktop viewports', async ({ page }
     await expect(page.locator('#referrals')).toBeVisible()
     await expectResponsiveLayout(page, `admin referrals at ${viewport.name}`)
     if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin referrals at ${viewport.name}`)
+  }
+
+  expect(browserErrors).toEqual([])
+})
+
+test('admin releases fit focused mobile and desktop viewports', async ({ page }) => {
+  const browserErrors = collectBrowserErrors(page)
+  await installApiMock(page)
+
+  for (const viewport of [
+    { name: 'compact-mobile', width: 320, height: 568 },
+    { name: 'large-mobile', width: 390, height: 844 },
+    { name: 'wide-layout-boundary', width: 1280, height: 900 }
+  ]) {
+    await page.setViewportSize(viewport)
+    await page.goto('http://127.0.0.1:5295/#releases')
+    const hasStoredAdminSession = await page.evaluate(() => Boolean(sessionStorage.getItem('vpn-platform-admin-token')))
+    if (!hasStoredAdminSession) {
+      await page.locator('input[type="email"]').fill('admin@example.test')
+      await page.locator('input[type="password"]').fill('Password123!')
+      await page.locator('form').locator('button[type="submit"]').click()
+    }
+    await expect(page.locator('#releases')).toBeVisible()
+    await expectResponsiveLayout(page, `admin releases at ${viewport.name}`)
+    if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin releases at ${viewport.name}`)
   }
 
   expect(browserErrors).toEqual([])
