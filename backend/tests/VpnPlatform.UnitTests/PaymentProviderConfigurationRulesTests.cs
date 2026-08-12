@@ -169,4 +169,38 @@ public class PaymentProviderConfigurationRulesTests
         account.SecretKeyProtected = "protected-secret";
         Assert.False(PaymentProviderConfigurationRules.IsCredentiallessLocalSandbox(account, "Local"));
     }
+
+    [Theory]
+    [InlineData(PaymentProvider.YooKassa, true)]
+    [InlineData(PaymentProvider.TBankAcquiring, true)]
+    [InlineData(PaymentProvider.Stripe, false)]
+    [InlineData(PaymentProvider.PayPal, true)]
+    public void Refund_Configuration_Should_Require_Provider_Credentials_Outside_LocalSandbox(
+        PaymentProvider provider,
+        bool requiresShopId)
+    {
+        var account = new PaymentProviderAccount
+        {
+            Id = Guid.NewGuid(),
+            Provider = provider,
+            Mode = PaymentProviderMode.Production,
+            IsEnabled = true
+        };
+        var payment = new PaymentAttempt
+        {
+            PaymentProviderAccountId = account.Id,
+            PaymentProviderAccount = account,
+            Provider = provider,
+            ProviderMode = PaymentProviderMode.Production,
+            ProviderPaymentId = "provider-payment-id",
+            Status = PaymentStatus.Succeeded,
+            Amount = 100m,
+            Currency = "RUB"
+        };
+
+        var issues = PaymentProviderConfigurationRules.GetRefundConfigurationIssues(payment, account, "Production");
+
+        Assert.Contains(issues, x => x.Code == "secret_missing");
+        Assert.Equal(requiresShopId, issues.Any(x => x.Code == "shop_id_missing"));
+    }
 }

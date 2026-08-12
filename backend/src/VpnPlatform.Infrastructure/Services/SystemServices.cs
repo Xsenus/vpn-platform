@@ -18,6 +18,11 @@ public class SystemClock : IClock
     public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
 }
 
+public sealed class RuntimeEnvironment(IHostEnvironment environment) : IRuntimeEnvironment
+{
+    public string EnvironmentName => environment.EnvironmentName;
+}
+
 public class PasswordService : IPasswordService
 {
     public string Hash(string input)

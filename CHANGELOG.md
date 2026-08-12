@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.653.0 - 2026-08-12
+
+Release entry: `2026-08-12-payment-refund-account-readiness-preflight`.
+
+### Исправлено
+
+- `PaymentOrchestrator` теперь повторяет account/config readiness на свежем snapshot до durable refund reservation и provider call: проверяет provider/mode snapshot, enabled/Disabled state, provider payment ID и обязательные merchant credentials.
+- Admin readiness и service preflight используют один application rule; direct caller больше не может выполнить возврат через выключенный, несовпадающий или неполностью настроенный аккаунт и создать ложный успешный либо `Unknown` outcome.
+
+### Проверено
+
+- Fail-first `0/7`: все invalid account/config states завершали возврат успешно; после исправления service/API/DI boundary `13/13`, payment regression `153/153`.
+- Backend `1268/1268`; Release build `0` warnings/errors. Актуальные frontend `141/141` и полный Playwright `220/220` за `13.6 min` остаются применимыми, UI/DTO не менялись.
+- Roadmap: `666/686` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked; реальные provider/VPS/staging evidence локальными проверками не закрывались.
+
 ## 0.652.0 - 2026-08-12
 
 Release entry: `2026-08-12-payment-local-sandbox-refund-contract`.

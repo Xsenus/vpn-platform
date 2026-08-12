@@ -4,6 +4,7 @@ using VpnPlatform.Domain.Enums;
 namespace VpnPlatform.Application.Common;
 
 public sealed record PaymentProviderCapabilityRule(string Key, string Label, bool Supported, string Status);
+public sealed record PaymentRefundConfigurationIssue(string Code, string Message);
 
 public static class PaymentProviderConfigurationRules
 {
@@ -32,6 +33,93 @@ public static class PaymentProviderConfigurationRules
                || environmentName.Equals("Test", StringComparison.OrdinalIgnoreCase)
                || environmentName.Equals("Testing", StringComparison.OrdinalIgnoreCase)
                || environmentName.Equals("Sandbox", StringComparison.OrdinalIgnoreCase));
+
+    public static IReadOnlyList<PaymentRefundConfigurationIssue> GetRefundConfigurationIssues(
+        PaymentAttempt payment,
+        PaymentProviderAccount? account,
+        string? environmentName)
+    {
+        var issues = new List<PaymentRefundConfigurationIssue>();
+        if (account is null || payment.PaymentProviderAccountId is null)
+        {
+            issues.Add(new("account_missing", "Платеж не связан с аккаунтом платежного провайдера."));
+            return issues;
+        }
+
+        if (account.Provider != payment.Provider)
+        {
+            issues.Add(new("provider_mismatch", "Аккаунт провайдера не совпадает с провайдером платежа."));
+        }
+
+        if (account.Mode != payment.ProviderMode)
+        {
+            issues.Add(new("provider_mode_mismatch", "Режим аккаунта провайдера не совпадает с режимом исходного платежа."));
+        }
+
+        if (!account.IsEnabled)
+        {
+            issues.Add(new("account_disabled", "Аккаунт платежного провайдера выключен."));
+        }
+
+        if (account.Mode == PaymentProviderMode.Disabled)
+        {
+            issues.Add(new("mode_disabled", "Аккаунт платежного провайдера находится в режиме Disabled."));
+        }
+
+        if (string.IsNullOrWhiteSpace(payment.ProviderPaymentId))
+        {
+            issues.Add(new("provider_payment_id_missing", "Не сохранен идентификатор платежа у провайдера."));
+        }
+
+        if (IsCredentiallessLocalSandbox(account, environmentName))
+        {
+            return issues;
+        }
+
+        var hasShopId = !string.IsNullOrWhiteSpace(account.ShopId);
+        var hasSecret = !string.IsNullOrWhiteSpace(account.SecretKeyProtected);
+        switch (payment.Provider)
+        {
+            case PaymentProvider.YooKassa:
+                if (!hasShopId)
+                {
+                    issues.Add(new("shop_id_missing", "Для возврата YooKassa нужен ShopId."));
+                }
+                if (!hasSecret)
+                {
+                    issues.Add(new("secret_missing", "Для возврата YooKassa нужен SecretKey."));
+                }
+                break;
+            case PaymentProvider.TBankAcquiring:
+                if (!hasShopId)
+                {
+                    issues.Add(new("shop_id_missing", "Для возврата TBank нужен TerminalKey."));
+                }
+                if (!hasSecret)
+                {
+                    issues.Add(new("secret_missing", "Для возврата TBank нужен Password терминала."));
+                }
+                break;
+            case PaymentProvider.Stripe:
+                if (!hasSecret)
+                {
+                    issues.Add(new("secret_missing", "Для возврата Stripe нужен SecretKey."));
+                }
+                break;
+            case PaymentProvider.PayPal:
+                if (!hasShopId)
+                {
+                    issues.Add(new("shop_id_missing", "Для возврата PayPal нужен Client ID."));
+                }
+                if (!hasSecret)
+                {
+                    issues.Add(new("secret_missing", "Для возврата PayPal нужен Client secret."));
+                }
+                break;
+        }
+
+        return issues;
+    }
 
     public static bool IsCheckoutConfigured(PaymentProviderAccount account)
         => GetCheckoutConfigurationIssue(account) is null;

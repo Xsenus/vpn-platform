@@ -15360,5 +15360,28 @@
         "text": "Roadmap progress is 665/685 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-payment-refund-account-readiness-preflight",
+    "version": "0.653.0",
+    "releasedAt": "2026-08-12T11:18:02+07:00",
+    "title": "Возврат проверяет аккаунт провайдера до записи операции",
+    "summary": "Admin и payment orchestrator используют единый account/config preflight до refund reservation и внешнего вызова.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Direct service caller больше не может провести возврат через выключенный, несовпадающий по provider/mode или неполностью настроенный платежный аккаунт."
+      },
+      {
+        "type": "improved",
+        "text": "Fresh snapshot проверяется до durable reservation, factory и provider call; Local sandbox exception определяется реальной runtime environment через DI."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 666/686 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

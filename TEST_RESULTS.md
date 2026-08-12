@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: payment refund account readiness preflight
+
+Scope:
+- Direct service caller не должен обходить admin refund readiness для disabled/mismatched account, provider mode snapshot, provider payment ID и merchant credentials.
+- Controller и orchestrator должны использовать один environment-aware account/config contract до reservation и provider call.
+
+Results:
+- Roadmap progress: `666/686` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-payment-refund-account-readiness-preflight`, version `0.653.0`.
+- Reproduction before fix: SQLite fail-first `0/7`; provider mismatch, disabled account/mode, provider-mode mismatch, missing provider payment ID, merchant ID или secret завершались успешным refund через injected adapter.
+- After fix: общий rule возвращает точные blocker codes/messages; orchestrator применяет его к свежему snapshot до reservation/factory/provider, admin DTO показывает ту же причину, Local sandbox exception получает runtime environment через DI.
+- Service/API/DI boundary: `13/13`; payment regression: `153/153`; backend full suite: `1268/1268`; Release build: `0` warnings/errors. UI/DTO не менялись: актуальные frontend `141/141`, typecheck/build и Playwright `220/220` за `13.6 min` остаются применимыми.
+
 ## Check 2026-08-12: payment local sandbox refund contract
 
 Scope:

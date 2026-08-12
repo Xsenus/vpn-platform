@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-payment-local-sandbox-refund-contract`, версия `0.652.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `665/685` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-payment-refund-account-readiness-preflight`, версия `0.653.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `666/686` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-12:
 
-- [x] `STATE-001` Backend test suite проходит: `1255/1255`.
+- [x] `STATE-001` Backend test suite проходит: `1268/1268`.
 - [x] `STATE-002` Frontend test suite проходит: `141/141`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2356,6 +2356,10 @@ git diff --check
   - Что сделать: credentialless Local/Test sandbox должен поддерживать refund без provider credentials и внешней сети, а admin readiness не должен противоречить adapter behavior; Production обязан остаться fail-closed.
   - Что сделано: общий environment-aware predicate используется infrastructure adapters и admin readiness; Stripe, PayPal и TBank возвращают детерминированный sandbox refund до credentials/HTTP, а аккаунты с секретами и Production сохраняют реальный provider path.
   - Доказательство: fail-first provider/readiness `0/6`; после исправления targeted SQLite/provider/rules `21/21`, payment regression `92/92`, backend `1255/1255`, Release build `0` warnings/errors. Три SQLite admin -> orchestrator -> real adapter cases подтверждают durable `Succeeded` refund без HTTP; реальные provider кабинеты и live payment smoke остаются открытыми.
+- [x] `P11-ACC-376` Закрыть service-level refund account/config readiness boundary. 2026-08-12.
+  - Что сделать: direct service caller не должен обходить admin blockers для provider/mode mismatch, disabled account, отсутствующего provider payment ID или merchant credentials; Local sandbox exception должен определяться реальной runtime environment.
+  - Что сделано: единый `GetRefundConfigurationIssues` возвращает machine-readable blockers для controller и orchestrator; service проверяет свежий snapshot до reservation/factory/provider, а `IRuntimeEnvironment` передает environment через реальный DI container.
+  - Доказательство: fail-first `0/7` успешно проводил invalid refunds; после исправления service/API/DI `13/13`, payment regression `153/153`, backend `1268/1268`, Release build `0` warnings/errors. Refund rows/provider calls/payment mutations отсутствуют; реальные provider кабинеты остаются внешним evidence.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3005,6 +3009,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-12-013` | P1 | Payment refund account readiness | Direct `PaymentOrchestrator` не проверял provider/mode snapshot, enabled state, provider payment ID и credentials: injected adapter успешно проводил refund в обход admin readiness. | Исправлено локально | Общий application rule, runtime environment DI и SQLite `0/7 -> 7/7` подтверждают отказ до reservation/factory/provider; live refunds остаются внешним evidence. |
 | `BUG-2026-08-12-012` | P1 | Payment local sandbox refunds | Local seed объявлял Stripe, PayPal и TBank refund-capable и поддерживал checkout/recheck без credentials, но refund требовал реальные secrets/HTTP, а admin readiness блокировал операцию. | Исправлено локально | Общий environment-aware predicate, no-HTTP adapter tests и SQLite admin-to-adapter refund flow закрывают локальный контракт; реальные provider refunds остаются внешним evidence. |
 | `BUG-2026-08-12-011` | P1 | Payment refund orchestration | Общий orchestrator не проверял refund capability: direct caller обходил admin readiness, создавал reservation и мог завершить неподдерживаемый refund либо оставить ложный `Unknown` blocker. | Исправлено локально | Ранний service preflight и SQLite fail-first подтверждают отсутствие factory/provider calls, refund rows и payment mutations; live provider evidence остается открытым. |
 | `BUG-2026-08-12-010` | P1 | Admin payment operations | Админка активировала ручную перепроверку всех платежей, хотя adapters RoboKassa, YooMoney, CloudPayments и Prodamus ее не поддерживают; backend доходил до adapter вместо раннего capability preflight. | Исправлено локально | Единый capability contract, DTO/UI blocker и ранний orchestrator guard подтверждены unit/controller и desktop/mobile browser regression; live provider evidence остается открытым. |

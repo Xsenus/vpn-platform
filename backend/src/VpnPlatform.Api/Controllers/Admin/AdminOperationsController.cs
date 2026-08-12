@@ -2825,104 +2825,12 @@ public class AdminOperationsController : ControllerBase
             blockers.Add("Есть незавершенный возврат: сверьте его статус у провайдера перед новой операцией.");
         }
 
-        if (string.IsNullOrWhiteSpace(payment.ProviderPaymentId))
-        {
-            blockers.Add("Не сохранен идентификатор платежа у провайдера.");
-        }
-
         var account = payment.PaymentProviderAccount;
-        if (payment.PaymentProviderAccountId is null || account is null)
-        {
-            blockers.Add("Платеж не связан с аккаунтом платежного провайдера.");
-        }
-        else
-        {
-            if (account.Provider != payment.Provider)
-            {
-                blockers.Add("Аккаунт провайдера не совпадает с провайдером платежа.");
-            }
-
-            if (!account.IsEnabled)
-            {
-                blockers.Add("Аккаунт платежного провайдера выключен.");
-            }
-
-            if (account.Mode == PaymentProviderMode.Disabled)
-            {
-                blockers.Add("Аккаунт платежного провайдера находится в режиме Disabled.");
-            }
-
-            AddProviderSpecificRefundBlockers(payment, account, blockers);
-        }
+        blockers.AddRange(PaymentProviderConfigurationRules
+            .GetRefundConfigurationIssues(payment, account, _hostEnvironment?.EnvironmentName)
+            .Select(x => x.Message));
 
         return new RefundReadinessDto(isSupported, blockers.Count == 0, refundableAmount, blockers);
-    }
-
-    private void AddProviderSpecificRefundBlockers(PaymentAttempt payment, PaymentProviderAccount account, List<string> blockers)
-    {
-        static bool Missing(string? value) => string.IsNullOrWhiteSpace(value);
-        var hasSecret = !Missing(account.SecretKeyProtected);
-
-        if (PaymentProviderConfigurationRules.IsCredentiallessLocalSandbox(account, _hostEnvironment?.EnvironmentName))
-        {
-            return;
-        }
-
-        switch (payment.Provider)
-        {
-            case PaymentProvider.YooKassa:
-                if (account.Mode == PaymentProviderMode.Production && Missing(account.ShopId))
-                {
-                    blockers.Add("Для production-возврата YooKassa нужен ShopId.");
-                }
-
-                if (account.Mode == PaymentProviderMode.Production && !hasSecret)
-                {
-                    blockers.Add("Для production-возврата YooKassa нужен SecretKey.");
-                }
-                break;
-
-            case PaymentProvider.TBankAcquiring:
-                if (Missing(account.ShopId))
-                {
-                    blockers.Add("Для возврата TBank нужен TerminalKey.");
-                }
-
-                if (!hasSecret)
-                {
-                    blockers.Add("Для возврата TBank нужен Password терминала.");
-                }
-                break;
-
-            case PaymentProvider.Stripe:
-                if (!hasSecret)
-                {
-                    blockers.Add("Для возврата Stripe нужен SecretKey.");
-                }
-
-                if (Missing(payment.ProviderPaymentId))
-                {
-                    blockers.Add("Для возврата Stripe нужен Checkout Session ID.");
-                }
-                break;
-
-            case PaymentProvider.PayPal:
-                if (Missing(account.ShopId))
-                {
-                    blockers.Add("Для возврата PayPal нужен Client ID.");
-                }
-
-                if (!hasSecret)
-                {
-                    blockers.Add("Для возврата PayPal нужен Client secret.");
-                }
-
-                if (Missing(payment.ProviderPaymentId))
-                {
-                    blockers.Add("Для возврата PayPal нужен Order ID, чтобы получить capture.");
-                }
-                break;
-        }
     }
 
     private void AddAuditLog(string action, string entityType, Guid entityId, string beforeJson, string afterJson)

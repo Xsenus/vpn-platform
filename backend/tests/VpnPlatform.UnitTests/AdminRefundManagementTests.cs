@@ -147,6 +147,34 @@ public class AdminRefundManagementTests
         Assert.Empty(paymentJson.GetProperty("RefundBlockers").EnumerateArray());
     }
 
+    [Fact]
+    public async Task GetPayments_Should_Expose_Provider_Mode_Snapshot_Mismatch_Blocker()
+    {
+        await using var db = CreateDb();
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(PaymentProvider.YooKassa, secret: "secret");
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        account.Mode = PaymentProviderMode.Production;
+
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.PaymentProviderAccounts.Add(account);
+        db.Orders.Add(payment.Order!);
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db);
+        var ok = Assert.IsType<OkObjectResult>(await controller.GetPayments(CancellationToken.None));
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(ok.Value));
+        var paymentJson = json.RootElement.EnumerateArray().Single();
+
+        Assert.False(paymentJson.GetProperty("CanRefund").GetBoolean());
+        Assert.Contains(
+            paymentJson.GetProperty("RefundBlockers").EnumerateArray(),
+            item => item.GetString()?.Contains("режим", StringComparison.OrdinalIgnoreCase) == true);
+    }
+
     [Theory]
     [InlineData(PaymentProvider.Stripe)]
     [InlineData(PaymentProvider.PayPal)]
@@ -170,7 +198,8 @@ public class AdminRefundManagementTests
             Array.Empty<IPaymentWebhookVerifier>(),
             accounts,
             null!,
-            clock);
+            clock,
+            new TestRuntimeEnvironment("Local"));
         var user = User();
         var tariff = Tariff();
         var account = Account(providerType, secret: string.Empty);
@@ -353,6 +382,11 @@ public class AdminRefundManagementTests
         public string ApplicationName { get; set; } = "VpnPlatform.UnitTests";
         public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
         public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+    }
+
+    private sealed class TestRuntimeEnvironment(string environmentName) : IRuntimeEnvironment
+    {
+        public string EnvironmentName { get; } = environmentName;
     }
 
     private sealed class StaticHttpClientFactory(HttpClient client) : IHttpClientFactory

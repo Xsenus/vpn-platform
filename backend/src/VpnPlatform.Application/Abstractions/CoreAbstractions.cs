@@ -10,6 +10,11 @@ public interface IClock
     DateTimeOffset UtcNow { get; }
 }
 
+public interface IRuntimeEnvironment
+{
+    string EnvironmentName { get; }
+}
+
 public interface ITokenService
 {
     string CreateAccessToken(User user, IEnumerable<string> roles);

@@ -6,6 +6,7 @@ using VpnPlatform.Application;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
+using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure;
@@ -70,6 +71,19 @@ public class PaymentProviderContractTests
         Assert.Equal(expected, mappers);
         Assert.DoesNotContain(PaymentProvider.TelegramStars, verifiers);
         Assert.DoesNotContain(PaymentProvider.TelegramStars, mappers);
+    }
+
+    [Fact]
+    public void Infrastructure_Should_Provide_Runtime_Environment_To_Payment_Orchestrator()
+    {
+        using var serviceProvider = BuildInfrastructureProvider();
+        using var scope = serviceProvider.CreateScope();
+
+        var environment = scope.ServiceProvider.GetRequiredService<IRuntimeEnvironment>();
+        var orchestrator = scope.ServiceProvider.GetRequiredService<PaymentOrchestrator>();
+
+        Assert.Equal("Local", environment.EnvironmentName);
+        Assert.NotNull(orchestrator);
     }
 
     [Theory]

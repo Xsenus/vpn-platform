@@ -42,6 +42,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
     private readonly PaymentProviderAccountService _providerAccounts;
     private readonly SubscriptionService _subscriptionService;
     private readonly IClock _clock;
+    private readonly IRuntimeEnvironment? _runtimeEnvironment;
 
     public PaymentOrchestrator(
         IApplicationDbContext db,
@@ -49,7 +50,8 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         IEnumerable<IPaymentWebhookVerifier> webhookVerifiers,
         PaymentProviderAccountService providerAccounts,
         SubscriptionService subscriptionService,
-        IClock clock)
+        IClock clock,
+        IRuntimeEnvironment? runtimeEnvironment = null)
     {
         _db = db;
         _paymentProviderFactory = paymentProviderFactory;
@@ -57,6 +59,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         _providerAccounts = providerAccounts;
         _subscriptionService = subscriptionService;
         _clock = clock;
+        _runtimeEnvironment = runtimeEnvironment;
     }
 
     public async Task<Result<PaymentInitResult>> InitPaymentAsync(PaymentInitCommand command, CancellationToken cancellationToken = default)
@@ -670,6 +673,15 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         if (currentPayment is null || currentPayment.PaymentProviderAccount is null)
         {
             return Result<RefundDto>.Failure("Payment attempt not found.");
+        }
+
+        var configurationIssues = PaymentProviderConfigurationRules.GetRefundConfigurationIssues(
+            currentPayment,
+            currentPayment.PaymentProviderAccount,
+            _runtimeEnvironment?.EnvironmentName);
+        if (configurationIssues.Count > 0)
+        {
+            return Result<RefundDto>.Failure($"Payment cannot be refunded: {string.Join(" ", configurationIssues.Select(x => x.Message))}");
         }
 
         var hasUnresolvedRefund = await _db.Refunds.AsNoTracking()

@@ -326,7 +326,14 @@ public class PaymentWebhookProcessingTests
         var paymentProviderFactory = new PaymentProviderFactory(new IPaymentProvider[] { yooKassa });
         var nodeAllocation = new NodeAllocationService(db);
         var subscriptionService = new SubscriptionService(db, clock, nodeAllocation, new TestVpnProviderFactory());
-        return new PaymentOrchestrator(db, paymentProviderFactory, new IPaymentWebhookVerifier[] { yooKassa }, providerAccounts, subscriptionService, clock);
+        return new PaymentOrchestrator(
+            db,
+            paymentProviderFactory,
+            new IPaymentWebhookVerifier[] { yooKassa },
+            providerAccounts,
+            subscriptionService,
+            clock,
+            new TestRuntimeEnvironment(Environments.Development));
     }
 
     private static ApplicationDbContext CreateDbContext()
@@ -405,5 +412,10 @@ public class PaymentWebhookProcessingTests
         public string ApplicationName { get; set; } = "VpnPlatform.UnitTests";
         public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
         public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+    }
+
+    private sealed class TestRuntimeEnvironment(string environmentName) : IRuntimeEnvironment
+    {
+        public string EnvironmentName { get; } = environmentName;
     }
 }

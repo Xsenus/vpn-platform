@@ -12,6 +12,69 @@ namespace VpnPlatform.UnitTests;
 
 public class PaymentRefundResilienceTests
 {
+    [Theory]
+    [InlineData(InvalidRefundAccountState.ProviderMismatch)]
+    [InlineData(InvalidRefundAccountState.AccountDisabled)]
+    [InlineData(InvalidRefundAccountState.ModeDisabled)]
+    [InlineData(InvalidRefundAccountState.ProviderModeMismatch)]
+    [InlineData(InvalidRefundAccountState.MissingProviderPaymentId)]
+    [InlineData(InvalidRefundAccountState.MissingShopId)]
+    [InlineData(InvalidRefundAccountState.MissingCredentials)]
+    public async Task Invalid_Refund_Account_State_Should_Fail_Before_Reservation_Or_Provider_Call(InvalidRefundAccountState invalidState)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 12, 5, 0, 0, TimeSpan.Zero);
+        var paymentId = await SeedRefundablePaymentAsync(db, now);
+        var payment = await db.Payments.Include(x => x.PaymentProviderAccount).SingleAsync(x => x.Id == paymentId);
+        var account = Assert.IsType<PaymentProviderAccount>(payment.PaymentProviderAccount);
+        switch (invalidState)
+        {
+            case InvalidRefundAccountState.ProviderMismatch:
+                account.Provider = PaymentProvider.Stripe;
+                break;
+            case InvalidRefundAccountState.AccountDisabled:
+                account.IsEnabled = false;
+                break;
+            case InvalidRefundAccountState.ModeDisabled:
+                account.Mode = PaymentProviderMode.Disabled;
+                break;
+            case InvalidRefundAccountState.ProviderModeMismatch:
+                account.Mode = PaymentProviderMode.Production;
+                break;
+            case InvalidRefundAccountState.MissingProviderPaymentId:
+                payment.ProviderPaymentId = string.Empty;
+                break;
+            case InvalidRefundAccountState.MissingShopId:
+                account.ShopId = string.Empty;
+                break;
+            case InvalidRefundAccountState.MissingCredentials:
+                account.SecretKeyProtected = string.Empty;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(invalidState), invalidState, null);
+        }
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        var provider = new TrackingPaymentProvider(() => { });
+        var factory = new TrackingPaymentProviderFactory(provider);
+        var orchestrator = CreateOrchestrator(db, factory, now);
+
+        var result = await orchestrator.RefundPaymentAsync(paymentId, 40m, "invalid-account-state", CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(0, factory.GetCalls);
+        Assert.Equal(0, provider.RefundCalls);
+        Assert.Empty(await db.Refunds.AsNoTracking().ToListAsync());
+        var unchanged = await db.Payments.AsNoTracking().SingleAsync(x => x.Id == paymentId);
+        Assert.Equal(PaymentStatus.Succeeded, unchanged.Status);
+        Assert.Equal(0m, unchanged.RefundedAmount);
+    }
+
     [Fact]
     public async Task Unsupported_Provider_Should_Fail_Before_Refund_Reservation_Or_Adapter_Resolution()
     {
@@ -256,5 +319,16 @@ public class PaymentRefundResilienceTests
             GetCalls++;
             return provider;
         }
+    }
+
+    public enum InvalidRefundAccountState
+    {
+        ProviderMismatch,
+        AccountDisabled,
+        ModeDisabled,
+        ProviderModeMismatch,
+        MissingProviderPaymentId,
+        MissingShopId,
+        MissingCredentials
     }
 }

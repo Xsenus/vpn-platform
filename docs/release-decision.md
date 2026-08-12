@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1255/1255`.
+- Backend full suite: `1268/1268`.
 - API Release build: OK.
 - Frontend unit tests: `141/141`.
 - Frontend typecheck/build: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-12-payment-local-sandbox-refund-contract`, версия `0.652.0`; credentialless local sandbox refund для Stripe, PayPal и TBank выполняется без HTTP, но реальные provider refunds не подтверждены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `665/685` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-12-payment-refund-account-readiness-preflight`, версия `0.653.0`; refund account/config readiness едина для admin и orchestrator, но реальные provider refunds не подтверждены. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `666/686` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

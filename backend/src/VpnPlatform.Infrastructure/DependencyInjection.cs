@@ -38,6 +38,7 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
+        services.AddSingleton<IRuntimeEnvironment, RuntimeEnvironment>();
 
         services.AddHttpClient("YooKassa", client =>
         {
