@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.677.0 - 2026-08-13
+
+Release entry: `2026-08-13-site-content-boundary`.
+
+### Исправлено
+
+- Публичный content API больше не раскрывает внутренние ID, редакторские поля, publication flags и audit timestamps; frontend принимает только `key/value`.
+- Устаревшая admin-форма не может перезаписать или удалить параллельно изменённый блок: PUT/DELETE требуют revision и восстанавливают актуальную версию после controlled conflict.
+
+### Улучшено
+
+- Public/admin списки ограничены DB-side top-200; readiness считает totals/required states в БД и ограничивает duplicate diagnostics.
+- `SiteContentBlock.Revision` защищён EF concurrency token и migration, а public/admin TypeScript-контракты разделены exact allow-list validators.
+
+### Проверено
+
+- Fail-first backend `5/7`, frontend `163/165`; targeted backend/SQLite `9/9`, EF drift `2/2`, frontend `165/165`, backend `1392/1392`, typecheck/build, bundle budget, CRUD/conflict/public/render/responsive gates и audit `0 vulnerabilities` зелёные. Первый full backend run имел transient timeout overrun `1391/1392`; isolated test и последовательный full rerun прошли.
+- Roadmap `690/710` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider/Telegram кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались; статус остается staging-ready baseline, not production-ready.
+
 ## 0.676.0 - 2026-08-13
 
 Release entry: `2026-08-13-faq-boundary`.

@@ -2854,7 +2854,23 @@ export function App() {
 
     await runAction('content', editingId ? `content-update-${editingId}` : 'content-create', async (action) => {
       if (editingId) {
-        await api.updateAdminSiteContent(token, editingId, payload)
+        const current = siteContentBlocks.find((block) => block.id === editingId)
+        if (!current) throw new ApiClientError('Редактируемый блок больше не найден. Список обновлен.', 409, null)
+        try {
+          await api.updateAdminSiteContent(token, editingId, payload, current.revision)
+        } catch (error) {
+          if (error instanceof ApiClientError && error.status === 409) {
+            const refreshed = await api.getAdminSiteContent(token)
+            if (action.isCurrent()) {
+              setSiteContentBlocks(refreshed)
+              const latest = refreshed.find((block) => block.id === editingId)
+              if (latest) editSiteContent(latest)
+              else resetSiteContentForm()
+            }
+            throw new ApiClientError('Блок уже изменен другим администратором. В форму загружена актуальная версия.', 409, error.payload)
+          }
+          throw error
+        }
       } else {
         await api.createAdminSiteContent(token, payload)
       }
@@ -2867,7 +2883,16 @@ export function App() {
 
   const handleDeleteSiteContent = async (block: SiteContentBlockDto) => {
     await runAction('content', `content-delete-${block.id}`, async (action) => {
-      await api.deleteAdminSiteContent(token, block.id)
+      try {
+        await api.deleteAdminSiteContent(token, block.id, block.revision)
+      } catch (error) {
+        if (error instanceof ApiClientError && error.status === 409) {
+          await action.reloadAll()
+          if (action.isCurrent() && editingSiteContentIdRef.current === block.id) resetSiteContentForm()
+          throw new ApiClientError('Блок уже изменен другим администратором и не был удален. Список обновлен.', 409, error.payload)
+        }
+        throw error
+      }
       if (!action.isCurrent()) return
       if (editingSiteContentIdRef.current === block.id) resetSiteContentForm()
       setNotice('Блок контента удален.')

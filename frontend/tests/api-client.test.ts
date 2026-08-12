@@ -1052,7 +1052,11 @@ test('ApiClient site content endpoints cover public and admin CRUD', async () =>
         return new Response(JSON.stringify({ id: 'content-1', deleted: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
       }
 
-      const payload = { id: 'content-1', key: 'home.hero.title', value: 'VPN title', group: 'home', label: 'Hero title', description: '', inputType: 'text', isActive: true, sortOrder: 10, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+      if (String(url).includes('/api/public/content/home')) {
+        return new Response(JSON.stringify([{ key: 'home.hero.title', value: 'VPN title' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+
+      const payload = { id: 'content-1', revision: 0, key: 'home.hero.title', value: 'VPN title', group: 'home', label: 'Hero title', description: '', inputType: 'text', isActive: true, sortOrder: 10, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
       return new Response(JSON.stringify(init?.method ? payload : [payload]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
 
@@ -1065,8 +1069,8 @@ test('ApiClient site content endpoints cover public and admin CRUD', async () =>
   const readiness = await client.getAdminHomeContentReadiness('admin-token')
   const restored = await client.restoreAdminHomeContentDefaults('admin-token')
   await client.createAdminSiteContent('admin-token', { key: 'home.hero.title', value: 'VPN title', group: 'home', label: 'Hero title', inputType: 'text', isActive: true, sortOrder: 10 })
-  await client.updateAdminSiteContent('admin-token', 'content-1', { key: 'home.hero.title', value: 'New title', group: 'home', label: 'Hero title', inputType: 'text', isActive: true, sortOrder: 10 })
-  await client.deleteAdminSiteContent('admin-token', 'content-1')
+  await client.updateAdminSiteContent('admin-token', 'content-1', { key: 'home.hero.title', value: 'New title', group: 'home', label: 'Hero title', inputType: 'text', isActive: true, sortOrder: 10 }, 0)
+  await client.deleteAdminSiteContent('admin-token', 'content-1', 0)
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/public/content/home')
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/site-content?group=home')
@@ -1075,10 +1079,61 @@ test('ApiClient site content endpoints cover public and admin CRUD', async () =>
   assert.equal(calls[3]?.init?.method, 'POST')
   assert.equal(calls[4]?.init?.method, 'POST')
   assert.equal(calls[5]?.init?.method, 'PUT')
+  assert.equal(JSON.parse(String(calls[5]?.init?.body)).revision, 0)
+  assert.equal(calls[6]?.url, 'http://localhost:8080/api/admin/site-content/content-1?revision=0')
   assert.equal(calls[6]?.init?.method, 'DELETE')
   assert.equal(new Headers(calls[6]?.init?.headers).get('Authorization'), 'Bearer admin-token')
   assert.equal(readiness.isReady, true)
   assert.equal(restored.created, 1)
+})
+
+test('ApiClient rejects admin metadata in public site content responses', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify([{
+    id: 'content-1',
+    key: 'home.hero.title',
+    value: 'VPN title',
+    group: 'home',
+    label: 'Hero title',
+    description: 'Internal description',
+    inputType: 'text',
+    isActive: true,
+    sortOrder: 10,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }]), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  await assert.rejects(
+    () => new ApiClient('http://localhost:8080').getHomeContent(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502
+  )
+})
+
+test('ApiClient rejects unknown extensions in admin site content responses', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify([{
+    id: 'content-1',
+    key: 'home.hero.title',
+    value: 'VPN title',
+    group: 'home',
+    label: 'Hero title',
+    description: '',
+    inputType: 'text',
+    isActive: true,
+    sortOrder: 10,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    internalNote: 'diagnostic'
+  }]), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  await assert.rejects(
+    () => new ApiClient('http://localhost:8080').getAdminSiteContent('admin-token'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502
+  )
 })
 
 test('ApiClient work scenario endpoints cover admin CRUD', async () => {
@@ -2698,8 +2753,8 @@ test('ApiClient rejects malformed admin content and app release DTOs', async () 
     () => client.getAdminHomeContentReadiness('admin-token'),
     () => client.restoreAdminHomeContentDefaults('admin-token'),
     () => client.createAdminSiteContent('admin-token', siteContentPayload),
-    () => client.updateAdminSiteContent('admin-token', 'content-1', siteContentPayload),
-    () => client.deleteAdminSiteContent('admin-token', 'content-1'),
+    () => client.updateAdminSiteContent('admin-token', 'content-1', siteContentPayload, 0),
+    () => client.deleteAdminSiteContent('admin-token', 'content-1', 0),
     () => client.getAdminWorkScenarios('admin-token'),
     () => client.createAdminWorkScenario('admin-token', scenarioPayload),
     () => client.updateAdminWorkScenario('admin-token', 'scenario-1', scenarioPayload),

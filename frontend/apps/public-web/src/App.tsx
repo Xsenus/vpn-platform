@@ -8,7 +8,7 @@ import {
   PaymentInitResult,
   PaymentProvider,
   PublicPaymentProviderDto,
-  SiteContentBlockDto,
+  PublicSiteContentBlockDto,
   TariffDto,
   UserProfileDto,
   translateAuthError,
@@ -169,7 +169,7 @@ const defaultHomeContent: Record<string, string> = {
   'home.checkout.copyPaymentLink': 'Скопировать ссылку'
 }
 
-function mapContent(blocks: SiteContentBlockDto[]) {
+function mapContent(blocks: PublicSiteContentBlockDto[]) {
   return blocks.reduce<Record<string, string>>((acc, block) => {
     if (block.key && block.value) acc[block.key] = block.value
     return acc

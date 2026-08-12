@@ -13,6 +13,7 @@ namespace VpnPlatform.Api.Controllers.Admin;
 [Route("api/admin/site-content")]
 public class AdminSiteContentController : ControllerBase
 {
+    private const int ListLimit = 200;
     private static readonly IReadOnlyList<SiteContentDefault> RequiredHomeDefaults =
     [
         new("home.hero.eyebrow", "VPN Platform", "Hero eyebrow", "Надзаголовок первого экрана", 10),
@@ -34,6 +35,8 @@ public class AdminSiteContentController : ControllerBase
         new("home.footer.text", "VPN Platform объединяет продажи, оплату, выдачу и поддержку VPN-доступов в одном интерфейсе.", "Footer text", "Основной текст footer главной страницы", 610, "textarea"),
         new("home.checkout.afterPaymentText", "После оплаты вернитесь в кабинет: статус заказа обновится автоматически, а VPN-доступ появится после подтверждения платежа.", "Текст после оплаты", "Инструкция в блоке созданной покупки", 830, "textarea")
     ];
+    private static readonly string[] RequiredHomeKeys = RequiredHomeDefaults.Select(item => item.Key).ToArray();
+    private static readonly string[] NormalizedRequiredHomeKeys = RequiredHomeKeys.Select(key => key.ToLowerInvariant()).ToArray();
 
     private readonly IApplicationDbContext _db;
 
@@ -56,6 +59,7 @@ public class AdminSiteContentController : ControllerBase
             .OrderBy(x => x.Group)
             .ThenBy(x => x.SortOrder)
             .ThenBy(x => x.Key)
+            .Take(ListLimit)
             .ToListAsync(cancellationToken);
 
         return Ok(blocks.Select(Map).ToList());
@@ -64,29 +68,25 @@ public class AdminSiteContentController : ControllerBase
     [HttpGet("home-readiness")]
     public async Task<IActionResult> GetHomeReadiness(CancellationToken cancellationToken = default)
     {
-        var blocks = await _db.SiteContentBlocks.AsNoTracking()
-            .Where(x => x.Group == "home" || x.Key.StartsWith("home."))
-            .ToListAsync(cancellationToken);
-        return Ok(BuildHomeReadiness(blocks));
+        return Ok(await BuildHomeReadiness(cancellationToken));
     }
 
     [HttpPost("home-defaults")]
     [Authorize(Policy = AdminPolicies.AdminWrite)]
     public async Task<IActionResult> RestoreHomeDefaults(CancellationToken cancellationToken)
     {
-        var blocks = await _db.SiteContentBlocks
-            .Where(x => x.Group == "home" || x.Key.StartsWith("home."))
-            .ToListAsync(cancellationToken);
-        var byKey = blocks
-            .GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(x => x.Key, x => x.First(), StringComparer.OrdinalIgnoreCase);
         var created = 0;
         var restored = 0;
         var now = DateTimeOffset.UtcNow;
 
         foreach (var item in RequiredHomeDefaults)
         {
-            if (!byKey.TryGetValue(item.Key, out var block))
+            var normalizedKey = item.Key.ToLowerInvariant();
+            var block = await _db.SiteContentBlocks
+                .Where(candidate => candidate.Key.ToLower() == normalizedKey)
+                .OrderBy(candidate => candidate.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (block is null)
             {
                 block = item.ToEntity();
                 _db.SiteContentBlocks.Add(block);
@@ -140,6 +140,7 @@ public class AdminSiteContentController : ControllerBase
             if (changed)
             {
                 block.UpdatedAt = now;
+                block.Revision++;
                 restored++;
             }
         }
@@ -152,11 +153,16 @@ public class AdminSiteContentController : ControllerBase
             Guid.Empty,
             null,
             new { created, restored });
-        await _db.SaveChangesAsync(cancellationToken);
-        var nextBlocks = await _db.SiteContentBlocks.AsNoTracking()
-            .Where(x => x.Group == "home" || x.Key.StartsWith("home."))
-            .ToListAsync(cancellationToken);
-        return Ok(new { created, restored, readiness = BuildHomeReadiness(nextBlocks) });
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Site content changed. Reload it and retry." });
+        }
+
+        return Ok(new { created, restored, readiness = await BuildHomeReadiness(cancellationToken) });
     }
 
     [HttpPost]
@@ -183,6 +189,14 @@ public class AdminSiteContentController : ControllerBase
     {
         var block = await _db.SiteContentBlocks.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (block is null) return NotFound();
+        if (!request.Revision.HasValue || request.Revision.Value < 0)
+        {
+            return BadRequest(new { error = "Site content revision is required and must be a non-negative integer." });
+        }
+        if (request.Revision.Value != block.Revision)
+        {
+            return Conflict(new { error = "Site content changed. Reload it and retry.", revision = block.Revision });
+        }
 
         var candidate = new SiteContentBlock();
         var error = Apply(candidate, request);
@@ -194,23 +208,46 @@ public class AdminSiteContentController : ControllerBase
 
         var before = Map(block);
         Copy(candidate, block);
+        block.Revision++;
         block.UpdatedAt = DateTimeOffset.UtcNow;
         AdminAuditLogWriter.Add(_db, this, "site_content.update", "SiteContentBlock", block.Id, before, Map(block));
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Site content changed. Reload it and retry." });
+        }
         return Ok(Map(block));
     }
 
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = AdminPolicies.AdminWrite)]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(Guid id, [FromQuery] int? revision, CancellationToken cancellationToken)
     {
         var block = await _db.SiteContentBlocks.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (block is null) return NotFound();
+        if (!revision.HasValue || revision.Value < 0)
+        {
+            return BadRequest(new { error = "Site content revision is required and must be a non-negative integer." });
+        }
+        if (revision.Value != block.Revision)
+        {
+            return Conflict(new { error = "Site content changed. Reload it and retry.", revision = block.Revision });
+        }
 
         var before = Map(block);
         _db.SiteContentBlocks.Remove(block);
         AdminAuditLogWriter.Add(_db, this, "site_content.delete", "SiteContentBlock", block.Id, before, null);
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Site content changed. Reload it and retry." });
+        }
         return Ok(new { id, deleted = true });
     }
 
@@ -243,15 +280,36 @@ public class AdminSiteContentController : ControllerBase
     }
 
     private static SiteContentBlockDto Map(SiteContentBlock block)
-        => new(block.Id, block.Key, block.Value, block.Group, block.Label, block.Description, block.InputType, block.IsActive, block.SortOrder, block.CreatedAt, block.UpdatedAt);
+        => new(block.Id, block.Revision, block.Key, block.Value, block.Group, block.Label, block.Description, block.InputType, block.IsActive, block.SortOrder, block.CreatedAt, block.UpdatedAt);
 
-    private static object BuildHomeReadiness(IReadOnlyCollection<SiteContentBlock> blocks)
+    private async Task<object> BuildHomeReadiness(CancellationToken cancellationToken)
     {
-        var byKey = blocks.ToLookup(x => x.Key, StringComparer.OrdinalIgnoreCase);
-        var missing = RequiredHomeDefaults.Where(x => !byKey.Contains(x.Key)).Select(x => x.Key).ToArray();
-        var inactive = blocks.Where(x => RequiredHomeDefaults.Any(required => required.Key.Equals(x.Key, StringComparison.OrdinalIgnoreCase)) && !x.IsActive).Select(x => x.Key).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        var empty = blocks.Where(x => RequiredHomeDefaults.Any(required => required.Key.Equals(x.Key, StringComparison.OrdinalIgnoreCase)) && string.IsNullOrWhiteSpace(x.Value)).Select(x => x.Key).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        var duplicate = byKey.Where(x => x.Count() > 1).Select(x => x.Key).ToArray();
+        var requiredStatuses = await _db.SiteContentBlocks.AsNoTracking()
+            .Where(x => NormalizedRequiredHomeKeys.Contains(x.Key.ToLower()))
+            .GroupBy(x => x.Key.ToLower())
+            .Select(group => new
+            {
+                Key = group.Key,
+                Count = group.Count(),
+                HasInactive = group.Any(block => !block.IsActive),
+                HasEmpty = group.Any(block => block.Value.Trim() == ""),
+                HasActiveValue = group.Any(block => block.IsActive && block.Value.Trim() != "")
+            })
+            .ToListAsync(cancellationToken);
+        var statusByKey = requiredStatuses.ToDictionary(status => status.Key, StringComparer.OrdinalIgnoreCase);
+        var duplicate = await _db.SiteContentBlocks.AsNoTracking()
+            .Where(x => x.Group == "home" || x.Key.StartsWith("home."))
+            .GroupBy(x => x.Key.ToLower())
+            .Where(group => group.Count() > 1)
+            .OrderBy(group => group.Key)
+            .Select(group => group.Key)
+            .Take(ListLimit)
+            .ToArrayAsync(cancellationToken);
+        var publicBlocksCount = await _db.SiteContentBlocks.AsNoTracking()
+            .CountAsync(x => x.Group == "home" && x.IsActive, cancellationToken);
+        var missing = RequiredHomeKeys.Where(key => !statusByKey.ContainsKey(key)).ToArray();
+        var inactive = RequiredHomeKeys.Where(key => statusByKey.TryGetValue(key, out var status) && status.HasInactive).ToArray();
+        var empty = RequiredHomeKeys.Where(key => statusByKey.TryGetValue(key, out var status) && status.HasEmpty).ToArray();
         var required = RequiredHomeDefaults.Count;
         var ready = missing.Length == 0 && inactive.Length == 0 && empty.Length == 0 && duplicate.Length == 0;
 
@@ -259,14 +317,14 @@ public class AdminSiteContentController : ControllerBase
         {
             IsReady = ready,
             RequiredCount = required,
-            PresentCount = RequiredHomeDefaults.Count(x => byKey.Contains(x.Key)),
-            ActiveRequiredCount = RequiredHomeDefaults.Count(x => byKey[x.Key].Any(block => block.IsActive && !string.IsNullOrWhiteSpace(block.Value))),
+            PresentCount = requiredStatuses.Count,
+            ActiveRequiredCount = requiredStatuses.Count(status => status.HasActiveValue),
             MissingKeys = missing,
             InactiveKeys = inactive,
             EmptyKeys = empty,
             DuplicateKeys = duplicate,
-            PublicBlocksCount = blocks.Count(x => x.Group == "home" && x.IsActive),
-            RequiredKeys = RequiredHomeDefaults.Select(x => x.Key).ToArray()
+            PublicBlocksCount = publicBlocksCount,
+            RequiredKeys = RequiredHomeKeys
         };
     }
 

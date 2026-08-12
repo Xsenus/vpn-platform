@@ -1201,8 +1201,14 @@ export type AdminFaqFilters = {
   search?: string
 }
 
+export type PublicSiteContentBlockDto = {
+  key: string
+  value: string
+}
+
 export type SiteContentBlockDto = {
   id: string
+  revision: number
   key: string
   value: string
   group: string
@@ -1224,6 +1230,7 @@ export type SiteContentBlockUpsertPayload = {
   inputType?: string | null
   isActive: boolean
   sortOrder: number
+  revision?: number | null
 }
 
 export type SiteContentReadinessDto = {
@@ -1655,10 +1662,24 @@ function isAdminFaqItem(value: unknown): value is AdminFaqItem {
     && Object.keys(value).every((key) => allowedFields.has(key))
 }
 
+function isPublicSiteContentBlockDto(value: unknown): value is PublicSiteContentBlockDto {
+  if (!isRecord(value)) return false
+
+  const allowedFields = new Set(['key', 'value'])
+  return hasString(value, 'key', true)
+    && hasString(value, 'value')
+    && Object.keys(value).every((key) => allowedFields.has(key))
+}
+
 function isSiteContentBlockDto(value: unknown): value is SiteContentBlockDto {
   if (!isRecord(value)) return false
 
+  const allowedFields = new Set([
+    'id', 'revision', 'key', 'value', 'group', 'label', 'description', 'inputType',
+    'isActive', 'sortOrder', 'createdAt', 'updatedAt'
+  ])
   return hasString(value, 'id', true)
+    && hasInteger(value, 'revision', 0)
     && hasString(value, 'key', true)
     && hasString(value, 'value')
     && hasString(value, 'group', true)
@@ -1669,6 +1690,7 @@ function isSiteContentBlockDto(value: unknown): value is SiteContentBlockDto {
     && hasInteger(value, 'sortOrder')
     && hasString(value, 'createdAt', true)
     && hasString(value, 'updatedAt', true)
+    && Object.keys(value).every((key) => allowedFields.has(key))
 }
 
 function isPublicPaymentProviderDto(value: unknown): value is PublicPaymentProviderDto {
@@ -3443,12 +3465,12 @@ export class ApiClient {
     return this.requestArray<FaqItem>('/api/public/content/faq?home=true', { errorMessage: apiFallbackErrorMessage }, isFaqItem)
   }
 
-  getHomeContent(): Promise<SiteContentBlockDto[]> {
-    return this.requestArray<SiteContentBlockDto>(
+  getHomeContent(): Promise<PublicSiteContentBlockDto[]> {
+    return this.requestArray<PublicSiteContentBlockDto>(
       '/api/public/content/home',
       { errorMessage: apiFallbackErrorMessage },
-      isSiteContentBlockDto,
-      (items) => hasUniqueStringKey(items, 'id') && hasUniqueStringKey(items, 'key')
+      isPublicSiteContentBlockDto,
+      (items) => hasUniqueStringKey(items, 'key')
     )
   }
 
@@ -4165,17 +4187,17 @@ export class ApiClient {
     }, 'object', isSiteContentBlockDto)
   }
 
-  updateAdminSiteContent(token: string, id: string, payload: SiteContentBlockUpsertPayload): Promise<SiteContentBlockDto> {
+  updateAdminSiteContent(token: string, id: string, payload: SiteContentBlockUpsertPayload, revision: number): Promise<SiteContentBlockDto> {
     return this.request<SiteContentBlockDto>(`/api/admin/site-content/${id}`, {
       method: 'PUT',
       token,
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, revision }),
       errorMessage: apiFallbackErrorMessage
     }, 'object', isSiteContentBlockDto)
   }
 
-  deleteAdminSiteContent(token: string, id: string): Promise<{ id: string; deleted: boolean }> {
-    return this.request<{ id: string; deleted: boolean }>(`/api/admin/site-content/${id}`, {
+  deleteAdminSiteContent(token: string, id: string, revision: number): Promise<{ id: string; deleted: boolean }> {
+    return this.request<{ id: string; deleted: boolean }>(`/api/admin/site-content/${id}?revision=${encodeURIComponent(String(revision))}`, {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage

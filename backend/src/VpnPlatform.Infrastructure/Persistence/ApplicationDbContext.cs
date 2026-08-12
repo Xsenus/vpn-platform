@@ -92,6 +92,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<FaqEntry>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<SiteContentBlock>().HasIndex(x => x.Key).IsUnique();
         modelBuilder.Entity<SiteContentBlock>().HasIndex(x => new { x.Group, x.IsActive, x.SortOrder });
+        modelBuilder.Entity<SiteContentBlock>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<WorkScenario>().HasIndex(x => x.Key).IsUnique();
         modelBuilder.Entity<WorkScenario>().HasIndex(x => new { x.IsActive, x.SortOrder });
         modelBuilder.Entity<PromoCode>().HasIndex(x => x.Code).IsUnique();

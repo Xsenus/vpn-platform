@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: site content boundary
+
+Scope:
+- Публичный content API не должен раскрывать admin/audit metadata; public/admin list и readiness должны иметь DB-side bounds.
+- Admin PUT/DELETE должны отклонять stale revision и восстанавливать актуальный блок на desktop/mobile без потери внешних изменений.
+
+Results:
+- Roadmap progress: `690/710` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-site-content-boundary`, version `0.677.0`.
+- Fail-first: backend `5/7`, frontend `163/165`; public/admin возвращали 205 строк, public contract принимал admin metadata, admin validator принимал unknown fields, а второй SQLite DbContext перезаписывал первую правку.
+- After fix: минимальный public DTO и exact validators, DB-side top-200/aggregates/bounded diagnostics, EF concurrency migration и controlled `409` с актуализацией content editor/list.
+- Targeted backend/SQLite `9/9`, EF drift `2/2`, frontend `165/165`; backend `1392/1392`, typecheck/build и bundle budget зелёные. CRUD desktop/mobile `2/2`, stale PUT/DELETE desktop/mobile `4/4`, public managed-content desktop/mobile `4/4`, focused editor responsive/WCAG `1/1` на 320/390/1280 px, public/admin render и overlap `3/3`. Fresh SQLite migration/full checkout-payment-subscription-VPN flow и dependency audit `0 vulnerabilities` зелёные. Первый полный backend run под параллельной нагрузкой имел transient timeout overrun `1391/1392`; isolated rerun и последовательный full rerun прошли. Real VPS/staging/live evidence remains open; provider/Telegram cabinets, Bot API, SMTP and production-like 3x-ui were not checked locally.
+
 ## Check 2026-08-13: FAQ boundary
 
 Scope:

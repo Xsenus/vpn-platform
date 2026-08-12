@@ -249,6 +249,7 @@ function faqItem(overrides: Record<string, unknown> = {}) {
 function siteContentBlock(overrides: Record<string, unknown> = {}) {
   return {
     id: 'content-created-e2e',
+    revision: 0,
     key: 'home.e2e.title',
     value: 'Управляемый блок E2E',
     group: 'home',
@@ -1507,7 +1508,12 @@ async function mockAdminApi(page: Page) {
     const siteContentMutationMatch = path.match(/^\/api\/admin\/site-content\/([^/]+)$/)
     if (siteContentMutationMatch && method === 'PUT') {
       const index = siteContentBlocks.findIndex((item) => item.id === siteContentMutationMatch[1])
-      const updated = siteContentBlock({ ...siteContentBlocks[index], ...(body as Record<string, unknown>), id: siteContentMutationMatch[1], updatedAt: now })
+      const current = siteContentBlocks[index]
+      if (!current || body.revision !== current.revision) {
+        await fulfillJson(route, { error: 'Site content changed. Reload it and retry.' }, 409)
+        return
+      }
+      const updated = siteContentBlock({ ...current, ...(body as Record<string, unknown>), id: siteContentMutationMatch[1], revision: Number(current.revision) + 1, updatedAt: now })
       if (index >= 0) siteContentBlocks[index] = updated
       await fulfillJson(route, updated)
       return
@@ -1515,6 +1521,12 @@ async function mockAdminApi(page: Page) {
 
     if (siteContentMutationMatch && method === 'DELETE') {
       const index = siteContentBlocks.findIndex((item) => item.id === siteContentMutationMatch[1])
+      const current = siteContentBlocks[index]
+      const revision = Number(new URL(request.url()).searchParams.get('revision'))
+      if (!current || revision !== current.revision) {
+        await fulfillJson(route, { error: 'Site content changed. Reload it and retry.' }, 409)
+        return
+      }
       if (index >= 0) siteContentBlocks.splice(index, 1)
       await fulfillJson(route, { id: siteContentMutationMatch[1], deleted: true })
       return
@@ -2225,6 +2237,16 @@ async function mockAdminApi(page: Page) {
     prepareManagedConfigurationFixtures: () => {
       faqEntries.splice(0, faqEntries.length, faqItem())
       siteContentBlocks.splice(0, siteContentBlocks.length, siteContentBlock())
+    },
+    changeSiteContentExternally: (id: string, value: string) => {
+      const index = siteContentBlocks.findIndex((item) => item.id === id)
+      if (index < 0) throw new Error(`Site content fixture ${id} was not found.`)
+      siteContentBlocks[index] = {
+        ...siteContentBlocks[index],
+        value,
+        revision: Number(siteContentBlocks[index].revision) + 1,
+        updatedAt: now
+      }
     },
     updateFirstDetailFixture: (userDisplayName: string, messageText: string) => {
       const nextUser = adminUser('user-first', userDisplayName, 'first@example.test')
@@ -4677,6 +4699,46 @@ test('admin FAQ delete keeps an externally changed entry', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('не был удален')
   await expect(faqPanel.getByText('Актуальный ответ перед удалением', { exact: true })).toBeVisible()
   expect(api.getRequestCount('/api/admin/faq/faq-created-e2e', 'DELETE')).toBe(1)
+})
+
+test('admin site content editor recovers from a stale revision', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.prepareManagedConfigurationFixtures()
+  await seedAdminSession(page)
+  await page.goto('/#content')
+
+  const contentPanel = page.locator('#content')
+  const contentRow = contentPanel.locator('.list-item-vertical').filter({ hasText: 'Заголовок E2E' })
+  await contentRow.getByRole('button', { name: 'Редактировать' }).click()
+  await contentPanel.getByLabel('Значение').fill('Устаревшая локальная версия')
+
+  api.changeSiteContentExternally('content-created-e2e', 'Актуальный внешний текст')
+  await contentPanel.getByRole('button', { name: 'Сохранить блок' }).click()
+
+  await expect(page.getByRole('alert')).toContainText('Блок уже изменен другим администратором')
+  await expect(contentPanel.getByRole('heading', { name: 'Редактировать блок контента' })).toBeVisible()
+  await expect(contentPanel.getByLabel('Значение')).toHaveValue('Актуальный внешний текст')
+  await expect(contentPanel.locator('.list-stack').getByText('Актуальный внешний текст', { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/admin/site-content/content-created-e2e', 'PUT')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin site content delete keeps an externally changed block', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.prepareManagedConfigurationFixtures()
+  await seedAdminSession(page)
+  await page.goto('/#content')
+
+  const contentPanel = page.locator('#content')
+  const contentRow = contentPanel.locator('.list-item-vertical').filter({ hasText: 'Заголовок E2E' })
+  await contentRow.getByRole('button', { name: 'Удалить' }).click()
+  api.changeSiteContentExternally('content-created-e2e', 'Актуальный текст перед удалением')
+  await contentPanel.getByRole('button', { name: 'Подтвердить' }).click()
+
+  await expect(page.getByRole('alert')).toContainText('не был удален')
+  await expect(contentPanel.getByText('Актуальный текст перед удалением', { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/admin/site-content/content-created-e2e', 'DELETE')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
 test('admin partial load errors stay scoped and recover without false section data', async ({ page }) => {

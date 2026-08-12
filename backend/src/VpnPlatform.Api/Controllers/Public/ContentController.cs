@@ -40,6 +40,7 @@ public class ContentController : ControllerBase
             .Where(x => x.IsActive && x.Group == "home")
             .OrderBy(x => x.SortOrder)
             .ThenBy(x => x.Key)
+            .Take(200)
             .ToListAsync(cancellationToken);
 
         return Ok(blocks.Select(MapSiteContent).ToList());
@@ -48,6 +49,6 @@ public class ContentController : ControllerBase
     private static PublicFaqEntryDto MapFaq(FaqEntry entry)
         => new(entry.Question, entry.Answer, entry.Category);
 
-    private static SiteContentBlockDto MapSiteContent(SiteContentBlock block)
-        => new(block.Id, block.Key, block.Value, block.Group, block.Label, block.Description, block.InputType, block.IsActive, block.SortOrder, block.CreatedAt, block.UpdatedAt);
+    private static PublicSiteContentBlockDto MapSiteContent(SiteContentBlock block)
+        => new(block.Key, block.Value);
 }

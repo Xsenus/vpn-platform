@@ -13,18 +13,7 @@ const homeContent = [
   { key: 'home.hero.primaryCta', value: 'Выбрать тариф' },
   { key: 'home.pricing.title', value: 'Тарифы для проверки покупки' },
   { key: 'home.finalCta.title', value: 'Готовы купить VPN?' }
-].map((item, index) => ({
-  id: `content-${index + 1}`,
-  ...item,
-  group: 'home',
-  label: item.key,
-  description: '',
-  inputType: 'text',
-  isActive: true,
-  sortOrder: index + 1,
-  createdAt: '2026-06-13T00:00:00Z',
-  updatedAt: '2026-06-13T00:00:00Z'
-}))
+]
 
 const faqItems = [
   {
@@ -157,7 +146,6 @@ async function mockPublicApi(page: Page) {
           ...homeContent,
           {
             ...homeContent[0],
-            id: 'content-tariffs-load-error',
             key: 'home.errors.tariffsLoad',
             value: customTariffsLoadError
           }

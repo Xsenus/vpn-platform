@@ -324,19 +324,7 @@ async function installApiMock(page: Page) {
         ['home.hero.primaryCta', 'Choose tariff'],
         ['home.pricing.title', 'Tariffs'],
         ['home.finalCta.title', 'Start VPN']
-      ].map(([key, value], index) => ({
-        id: `public-content-${index + 1}`,
-        key,
-        value,
-        group: 'home',
-        label: key,
-        description: '',
-        inputType: 'text',
-        isActive: true,
-        sortOrder: index + 1,
-        createdAt: now,
-        updatedAt: now
-      })))
+      ].map(([key, value]) => ({ key, value })))
       return
     }
 
@@ -586,7 +574,7 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/site-content') {
-      await fulfillJson(route, [{ id: 'content-hero', key: 'home.hero.title', value: 'All screens VPN', group: 'home', label: 'Hero title', description: '', inputType: 'text', isActive: true, sortOrder: 1, createdAt: now, updatedAt: now }])
+      await fulfillJson(route, [{ id: 'content-hero', revision: 0, key: 'home.hero.title', value: 'All screens VPN', group: 'home', label: 'Hero title', description: '', inputType: 'text', isActive: true, sortOrder: 1, createdAt: now, updatedAt: now }])
       return
     }
 
@@ -1013,6 +1001,7 @@ test('all public routes render without blank screens or browser errors', async (
     await expectPageQuality(page, route)
     await expectWcagQuality(page, route)
     if (route === '/') {
+      await expect(page.getByRole('heading', { name: 'All screens VPN' })).toBeVisible()
       await expectLocalBackgroundAssets(page, ['.landing-hero', '.landing-illustration', '.coverage-map'])
       await captureAuditScreenshot(page, testInfo, 'public-home-desktop')
     }
@@ -1254,6 +1243,36 @@ test('public and admin FAQ fit focused mobile and desktop viewports', async ({ p
     await expect(faqPanel.getByRole('heading', { name: 'Редактировать вопрос' })).toBeVisible()
     await expectResponsiveLayout(page, `admin FAQ editor at ${viewport.name}`)
     if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin FAQ editor at ${viewport.name}`)
+  }
+
+  expect(browserErrors).toEqual([])
+})
+
+test('admin site content editor fits focused mobile and desktop viewports', async ({ page }) => {
+  const browserErrors = collectBrowserErrors(page)
+  await installApiMock(page)
+
+  for (const viewport of [
+    { name: 'compact-mobile', width: 320, height: 568 },
+    { name: 'large-mobile', width: 390, height: 844 },
+    { name: 'wide-layout-boundary', width: 1280, height: 900 }
+  ]) {
+    await page.setViewportSize(viewport)
+    await page.goto('http://127.0.0.1:5295/#content')
+    const hasStoredAdminSession = await page.evaluate(() => Boolean(sessionStorage.getItem('vpn-platform-admin-token')))
+    if (!hasStoredAdminSession) {
+      await page.locator('input[type="email"]').fill('admin@example.test')
+      await page.locator('input[type="password"]').fill('Password123!')
+      await page.locator('form').locator('button[type="submit"]').click()
+    }
+    const contentPanel = page.locator('#content')
+    await expect(contentPanel).toBeVisible()
+    await contentPanel.locator('.list-item-vertical').filter({ hasText: 'Hero title' }).getByRole('button', { name: 'Редактировать' }).click()
+    await contentPanel.getByLabel('Ключ').fill('home.audit.очень-длинный-ключ-для-проверки-переноса-на-мобильном-экране')
+    await contentPanel.getByLabel('Название поля').fill('Очень длинное название управляемого поля главной страницы для проверки адаптивной формы')
+    await contentPanel.getByLabel('Значение').fill('Длинный управляемый текст должен переноситься внутри редактора и предпросмотра, не расширять страницу и не перекрывать кнопки сохранения или отмены.')
+    await expectResponsiveLayout(page, `admin site content editor at ${viewport.name}`)
+    if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin site content editor at ${viewport.name}`)
   }
 
   expect(browserErrors).toEqual([])

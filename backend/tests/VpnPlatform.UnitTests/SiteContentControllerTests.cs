@@ -17,6 +17,20 @@ namespace VpnPlatform.UnitTests;
 public class SiteContentControllerTests
 {
     [Fact]
+    public void Site_Content_Read_Paths_Should_Keep_Production_Limits_Before_Materialization()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var publicSource = File.ReadAllText(Path.Combine(repositoryRoot, "backend", "src", "VpnPlatform.Api", "Controllers", "Public", "ContentController.cs"));
+        var adminSource = File.ReadAllText(Path.Combine(repositoryRoot, "backend", "src", "VpnPlatform.Api", "Controllers", "Admin", "AdminSiteContentController.cs"));
+
+        Assert.Contains(".Take(200)", publicSource, StringComparison.Ordinal);
+        Assert.Contains(".Take(ListLimit)", adminSource, StringComparison.Ordinal);
+        Assert.Contains("CountAsync", adminSource, StringComparison.Ordinal);
+        Assert.Contains("GroupBy", adminSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("BuildHomeReadiness(blocks)", adminSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task PublicHomeContent_Should_Return_Only_Active_Home_Blocks()
     {
         await using var db = CreateDb();
@@ -33,9 +47,28 @@ public class SiteContentControllerTests
         await db.SaveChangesAsync();
         var controller = new ContentController(db);
 
-        var response = AssertOk<List<SiteContentBlockDto>>(await controller.GetHomeContent(CancellationToken.None));
+        var response = AssertOk<List<PublicSiteContentBlockDto>>(await controller.GetHomeContent(CancellationToken.None));
 
         Assert.Equal(new[] { "home.hero.title", "home.hero.subtitle", "home.seo.title", "home.features.item1", "home.footer.text", "home.errors.checkoutCreate", "home.checkout.afterPaymentText" }, response.Select(x => x.Key).ToArray());
+    }
+
+    [Fact]
+    public async Task Public_And_Admin_Content_Lists_Should_Be_Bounded_And_Public_Payload_Should_Be_Minimal()
+    {
+        await using var db = CreateDb();
+        db.SiteContentBlocks.AddRange(Enumerable.Range(0, 205)
+            .Select(index => Block($"home.audit.{index:D3}", $"Значение {index}", sortOrder: index)));
+        await db.SaveChangesAsync();
+
+        var publicResult = await new ContentController(db).GetHomeContent(CancellationToken.None);
+        var adminResult = await CreateAdminController(db).Get("home", CancellationToken.None);
+        using var publicJson = ToJson(publicResult);
+        using var adminJson = ToJson(adminResult);
+
+        Assert.Equal(200, publicJson.RootElement.GetArrayLength());
+        Assert.Equal(200, adminJson.RootElement.GetArrayLength());
+        var publicItem = publicJson.RootElement[0];
+        Assert.Equal(new[] { "Key", "Value" }, publicItem.EnumerateObject().Select(property => property.Name).Order().ToArray());
     }
 
     [Fact]
@@ -47,8 +80,8 @@ public class SiteContentControllerTests
 
         var created = AssertOk<SiteContentBlockDto>(await controller.Create(createRequest, CancellationToken.None));
         var list = AssertOk<List<SiteContentBlockDto>>(await controller.Get("home", CancellationToken.None));
-        var updated = AssertOk<SiteContentBlockDto>(await controller.Update(created.Id, createRequest with { Value = "Новый заголовок", InputType = "textarea" }, CancellationToken.None));
-        var deleted = await controller.Delete(created.Id, CancellationToken.None);
+        var updated = AssertOk<SiteContentBlockDto>(await controller.Update(created.Id, createRequest with { Value = "Новый заголовок", InputType = "textarea", Revision = created.Revision }, CancellationToken.None));
+        var deleted = await controller.Delete(created.Id, updated.Revision, CancellationToken.None);
 
         Assert.Contains(list, x => x.Key == "home.hero.title");
         Assert.Equal("Новый заголовок", updated.Value);
@@ -103,7 +136,7 @@ public class SiteContentControllerTests
         Assert.Empty(ReadStringArray(readiness.GetProperty("EmptyKeys")));
 
         var publicController = new ContentController(db);
-        var publicBlocks = AssertOk<List<SiteContentBlockDto>>(await publicController.GetHomeContent(CancellationToken.None));
+        var publicBlocks = AssertOk<List<PublicSiteContentBlockDto>>(await publicController.GetHomeContent(CancellationToken.None));
 
         Assert.Contains(publicBlocks, x => x.Key == "home.seo.title");
         Assert.Contains(publicBlocks, x => x.Key == "home.features.item1");
@@ -127,7 +160,7 @@ public class SiteContentControllerTests
             CancellationToken.None));
         var duplicateUpdate = await controller.Update(
             created.Id,
-            new SiteContentBlockUpsertRequest("home.hero.title", "Описание", "home", "Hero subtitle", "", "textarea", true, 40),
+            new SiteContentBlockUpsertRequest("home.hero.title", "Описание", "home", "Hero subtitle", "", "textarea", true, 40, created.Revision),
             CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(duplicateCreate);
@@ -136,6 +169,86 @@ public class SiteContentControllerTests
         Assert.Equal(created.Key, persisted.Key);
         Assert.Equal(created.Value, persisted.Value);
         Assert.Single(await db.AuditLogs.ToListAsync(), x => x.Action == "site_content.create");
+    }
+
+    [Fact]
+    public async Task AdminSiteContent_Should_Require_Revision_For_Update_And_Delete()
+    {
+        await using var db = CreateDb();
+        db.SiteContentBlocks.Add(Block("home.hero.title", "Заголовок", sortOrder: 20));
+        await db.SaveChangesAsync();
+        var block = await db.SiteContentBlocks.SingleAsync();
+        var controller = CreateAdminController(db);
+
+        var update = await controller.Update(
+            block.Id,
+            new SiteContentBlockUpsertRequest(block.Key, "Новый заголовок", block.Group, block.Label, block.Description, block.InputType, true, block.SortOrder),
+            CancellationToken.None);
+        var delete = await controller.Delete(block.Id, revision: null, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(update);
+        Assert.IsType<BadRequestObjectResult>(delete);
+        Assert.Equal("Заголовок", (await db.SiteContentBlocks.SingleAsync()).Value);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Fact]
+    public async Task AdminSiteContent_Should_Reject_Cross_Context_Concurrent_Update()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-site-content-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite($"Data Source={databasePath}")
+                .Options;
+            await using (var setup = new ApplicationDbContext(options))
+            {
+                await setup.Database.EnsureCreatedAsync();
+                setup.SiteContentBlocks.Add(Block("home.hero.title", "Исходный заголовок", sortOrder: 10));
+                await setup.SaveChangesAsync();
+            }
+
+            await using var firstDb = new ApplicationDbContext(options);
+            await using var secondDb = new ApplicationDbContext(options);
+            var first = await firstDb.SiteContentBlocks.SingleAsync();
+            var second = await secondDb.SiteContentBlocks.SingleAsync();
+            var firstController = CreateAdminController(firstDb);
+            var secondController = CreateAdminController(secondDb);
+
+            var firstResult = await firstController.Update(
+                first.Id,
+                new SiteContentBlockUpsertRequest(first.Key, "Первое изменение", first.Group, first.Label, first.Description, first.InputType, true, first.SortOrder, first.Revision),
+                CancellationToken.None);
+            var secondResult = await secondController.Update(
+                second.Id,
+                new SiteContentBlockUpsertRequest(second.Key, "Второе изменение", second.Group, second.Label, second.Description, second.InputType, true, second.SortOrder, second.Revision),
+                CancellationToken.None);
+
+            Assert.IsType<OkObjectResult>(firstResult);
+            Assert.IsType<ConflictObjectResult>(secondResult);
+            await using var verify = new ApplicationDbContext(options);
+            Assert.Equal("Первое изменение", (await verify.SiteContentBlocks.SingleAsync()).Value);
+
+            await using var updateDb = new ApplicationDbContext(options);
+            await using var deleteDb = new ApplicationDbContext(options);
+            var updateCandidate = await updateDb.SiteContentBlocks.SingleAsync();
+            var deleteCandidate = await deleteDb.SiteContentBlocks.SingleAsync();
+            var updateResult = await CreateAdminController(updateDb).Update(
+                updateCandidate.Id,
+                new SiteContentBlockUpsertRequest(updateCandidate.Key, "Изменение перед удалением", updateCandidate.Group, updateCandidate.Label, updateCandidate.Description, updateCandidate.InputType, true, updateCandidate.SortOrder, updateCandidate.Revision),
+                CancellationToken.None);
+            var staleDelete = await CreateAdminController(deleteDb).Delete(deleteCandidate.Id, deleteCandidate.Revision, CancellationToken.None);
+
+            Assert.IsType<OkObjectResult>(updateResult);
+            Assert.IsType<ConflictObjectResult>(staleDelete);
+            await using var finalVerify = new ApplicationDbContext(options);
+            Assert.Equal("Изменение перед удалением", (await finalVerify.SiteContentBlocks.SingleAsync()).Value);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (File.Exists(databasePath)) File.Delete(databasePath);
+        }
     }
 
     private static SiteContentBlock Block(string key, string value, string group = "home", bool isActive = true, int sortOrder = 100)
@@ -194,4 +307,22 @@ public class SiteContentControllerTests
 
     private static string[] ReadStringArray(JsonElement element)
         => element.EnumerateArray().Select(x => x.GetString() ?? string.Empty).ToArray();
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "README.md"))
+                && Directory.Exists(Path.Combine(directory.FullName, "frontend"))
+                && Directory.Exists(Path.Combine(directory.FullName, "backend")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Repository root was not found for site content controller tests.");
+    }
 }
