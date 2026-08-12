@@ -20,7 +20,7 @@ public class FinalDocsChangelogTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("1300/1300", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-12-provider-refund-payload-recovery", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-12-paypal-capture-id-refund", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -66,8 +66,8 @@ public class FinalDocsChangelogTests
         foreach (var expected in new[]
                  {
                      "1300/1300",
-                     "2026-08-12-provider-refund-payload-recovery",
-                     "0.659.0",
+                     "2026-08-12-paypal-capture-id-refund",
+                     "0.660.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",

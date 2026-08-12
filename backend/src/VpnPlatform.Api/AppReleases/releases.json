@@ -15521,5 +15521,28 @@
         "text": "Roadmap progress is 672/692 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; live Stripe/PayPal refunds, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-paypal-capture-id-refund",
+    "version": "0.660.0",
+    "releasedAt": "2026-08-12T16:35:00+07:00",
+    "title": "PayPal возврат использует capture ID",
+    "summary": "Completed PayPal order передаёт во refund endpoint идентификатор фактического capture, а не ID заказа.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Resolver выбирает purchase_units payments capture до корневого completed order ID."
+      },
+      {
+        "type": "improved",
+        "text": "Direct capture webhook остаётся fallback без повторного order GET, а regression требует точный capture refund URL."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 673/693 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; live PayPal refund, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

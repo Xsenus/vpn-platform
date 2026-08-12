@@ -45,7 +45,7 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-12-provider-refund-payload-recovery", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-12-paypal-capture-id-refund", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("227/227", readme, StringComparison.Ordinal);
     }
 
@@ -59,8 +59,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1300/1300",
-                     "2026-08-12-provider-refund-payload-recovery",
-                     "0.659.0",
+                     "2026-08-12-paypal-capture-id-refund",
+                     "0.660.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

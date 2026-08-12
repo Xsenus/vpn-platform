@@ -422,6 +422,10 @@ public class AdminRefundManagementTests
         Assert.Equal(RefundStatus.Succeeded, refund.Status);
         Assert.Equal(providerType == PaymentProvider.Stripe ? "re_test_1" : "REFUND-1", refund.ProviderRefundId);
         Assert.Equal(2 + (providerType == PaymentProvider.PayPal ? 1 : 0), handler.Requests.Count);
+        if (providerType == PaymentProvider.PayPal)
+        {
+            Assert.Contains(handler.Requests, request => request.Method == HttpMethod.Post && request.Path == "/v2/payments/captures/CAPTURE-1/refund");
+        }
     }
 
     [Theory]
@@ -615,6 +619,10 @@ public class AdminRefundManagementTests
         {
             var path = request.RequestUri?.AbsolutePath ?? string.Empty;
             Requests.Add((request.Method, path));
+            var isUnexpectedPayPalRefund = provider == PaymentProvider.PayPal
+                && request.Method == HttpMethod.Post
+                && path.Contains("/v2/payments/captures/", StringComparison.OrdinalIgnoreCase)
+                && path != "/v2/payments/captures/CAPTURE-1/refund";
             var json = provider switch
             {
                 PaymentProvider.Stripe when request.Method == HttpMethod.Get => """{"id":"cs_test_1","payment_status":"paid","payment_intent":"pi_test_1"}""",
@@ -624,7 +632,7 @@ public class AdminRefundManagementTests
                 PaymentProvider.PayPal => """{"id":"REFUND-1","status":"COMPLETED"}""",
                 _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, null)
             };
-            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            return Task.FromResult(new HttpResponseMessage(isUnexpectedPayPalRefund ? System.Net.HttpStatusCode.NotFound : System.Net.HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             });

@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: PayPal capture ID refund
+
+Scope:
+- Completed PayPal order должен использовать capture ID из `purchase_units[].payments.captures[]`, а не корневой order ID.
+- Capture webhook payload должен разрешать refund без лишнего order GET; неверный capture endpoint не должен маскироваться тестовым stub.
+
+Results:
+- Roadmap progress: `673/693` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-paypal-capture-id-refund`, version `0.660.0`.
+- Fail-first: direct + SQLite regression `2/4`; фактический URL был `/v2/payments/captures/ORDER-1/refund`.
+- After fix: вложенный `CAPTURE-1` имеет приоритет, direct capture webhook остаётся fallback; HTTP stub возвращает `404` для любого другого capture refund URL.
+- Direct + SQLite `4/4`; payment/refund regression `75/75`; backend Release `1300/1300`; frontend `144/144`; Playwright `227/227`; fresh SQLite, EF drift, encoding и secret scan зелёные. Реальный PayPal/provider/VPS/staging/3x-ui evidence локально не закрывался.
+
 ## Check 2026-08-12: provider refund payload recovery
 
 Scope:

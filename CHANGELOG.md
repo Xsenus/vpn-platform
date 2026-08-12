@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.660.0 - 2026-08-12
+
+Release entry: `2026-08-12-paypal-capture-id-refund`.
+
+### Исправлено
+
+- PayPal refund больше не подставляет ID completed order в endpoint, который принимает только capture ID.
+- Resolver сначала читает `purchase_units[].payments.captures[].id`; прямой `resource.id` используется только как fallback для capture webhook.
+
+### Проверено
+
+- Fail-first direct + SQLite `2/4` зафиксировал `/captures/ORDER-1/refund`; после исправления `4/4`, payment/refund regression `75/75`, backend Release `1300/1300`.
+- Roadmap `673/693` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальный PayPal refund и provider/VPS/staging/3x-ui evidence локальными проверками не закрывались.
+
 ## 0.659.0 - 2026-08-12
 
 Release entry: `2026-08-12-provider-refund-payload-recovery`.

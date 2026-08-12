@@ -565,6 +565,18 @@ public class AdditionalPaymentProviderSignatureTests
         Assert.Equal(2 + (providerType == PaymentProvider.PayPal ? 1 : 0), handler.Requests.Count);
         Assert.Contains(handler.Requests, request => request.Method == HttpMethod.Get);
         Assert.Contains(handler.Requests, request => request.Method == HttpMethod.Post && request.Path.Contains("refund", StringComparison.OrdinalIgnoreCase));
+        if (providerType == PaymentProvider.PayPal)
+        {
+            Assert.Contains(handler.Requests, request => request.Method == HttpMethod.Post && request.Path == "/v2/payments/captures/CAPTURE-1/refund");
+
+            var getCount = handler.Requests.Count(request => request.Method == HttpMethod.Get);
+            payment.WebhookPayload = """{"resource":{"id":"CAPTURE-1","status":"COMPLETED"}}""";
+            var storedCaptureResult = await provider.RefundAsync(payment, account, 90m, "stored capture refund", CancellationToken.None);
+
+            Assert.Equal(RefundStatus.Succeeded, storedCaptureResult.Status);
+            Assert.Equal(getCount, handler.Requests.Count(request => request.Method == HttpMethod.Get));
+            Assert.Equal(2, handler.Requests.Count(request => request.Method == HttpMethod.Post && request.Path == "/v2/payments/captures/CAPTURE-1/refund"));
+        }
     }
 
     private static string HmacSha256Hex(string secret, string payload)
@@ -675,6 +687,10 @@ public class AdditionalPaymentProviderSignatureTests
         {
             var path = request.RequestUri?.AbsolutePath ?? string.Empty;
             Requests.Add((request.Method, path));
+            var isUnexpectedPayPalRefund = provider == PaymentProvider.PayPal
+                && request.Method == HttpMethod.Post
+                && path.Contains("/v2/payments/captures/", StringComparison.OrdinalIgnoreCase)
+                && path != "/v2/payments/captures/CAPTURE-1/refund";
             var json = provider switch
             {
                 PaymentProvider.Stripe when request.Method == HttpMethod.Get => """{"id":"cs_test_1","payment_status":"paid","payment_intent":"pi_test_1"}""",
@@ -684,7 +700,7 @@ public class AdditionalPaymentProviderSignatureTests
                 PaymentProvider.PayPal => """{"id":"REFUND-1","status":"COMPLETED"}""",
                 _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, null)
             };
-            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            return Task.FromResult(new HttpResponseMessage(isUnexpectedPayPalRefund ? System.Net.HttpStatusCode.NotFound : System.Net.HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             });

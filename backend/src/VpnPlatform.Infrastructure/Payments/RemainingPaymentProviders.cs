@@ -744,11 +744,6 @@ public sealed class PayPalPaymentProvider : IPaymentProvider, IPaymentWebhookVer
                 var root = doc.RootElement.TryGetProperty("resource", out var resource) && resource.ValueKind == JsonValueKind.Object
                     ? resource
                     : doc.RootElement;
-                if (root.TryGetProperty("id", out var directId)
-                    && directId.ValueKind == JsonValueKind.String
-                    && root.TryGetProperty("status", out var status)
-                    && status.ValueKind == JsonValueKind.String
-                    && string.Equals(status.GetString(), "COMPLETED", StringComparison.OrdinalIgnoreCase)) return directId.GetString() ?? string.Empty;
                 if (root.TryGetProperty("purchase_units", out var units) && units.ValueKind == JsonValueKind.Array)
                 {
                     foreach (var unit in units.EnumerateArray())
@@ -768,6 +763,11 @@ public sealed class PayPalPaymentProvider : IPaymentProvider, IPaymentWebhookVer
                         }
                     }
                 }
+                if (root.TryGetProperty("id", out var directId)
+                    && directId.ValueKind == JsonValueKind.String
+                    && root.TryGetProperty("status", out var status)
+                    && status.ValueKind == JsonValueKind.String
+                    && string.Equals(status.GetString(), "COMPLETED", StringComparison.OrdinalIgnoreCase)) return directId.GetString() ?? string.Empty;
                 return string.Empty;
             }
             catch (JsonException)

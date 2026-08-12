@@ -346,9 +346,10 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - all-screens gate проверяет clipping контента, dialog bounds и перекрытия controls на 25 viewport-парах; VPN actions, referrals datetime fields и release editor исправлены на проблемных границах;
 - public/admin browser inventory использует typed production route/section sources и не допускает тихого выпадения нового экрана из аудита;
 - Stripe/PayPal refund восстанавливает provider-specific ID через API, если сохранённый legacy payload повреждён, не создавая ложную ручную сверку до внешнего вызова;
+- PayPal refund использует вложенный capture ID из completed order, а не ID самого заказа;
 - backend `1300/1300`, frontend `144/144`, полный Playwright `227/227` за `15.0 min`, dependency audit `0 vulnerabilities`;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-provider-refund-payload-recovery`, версия `0.659.0`;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-paypal-capture-id-refund`, версия `0.660.0`;
 - server API, own-VPS onboarding, queue и executor отклоняют inventory-breaking IP/SSH values; executor использует фиксированный alias и `ArgumentList`, а admin-форма показывает те же diagnostics до submit;
-- roadmap progress: `672/692` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- roadmap progress: `673/693` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.
