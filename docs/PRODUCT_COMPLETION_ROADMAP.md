@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-payment-refund-account-readiness-preflight`, версия `0.653.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `666/686` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-payment-recheck-account-readiness-preflight`, версия `0.654.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `667/687` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-12:
 
-- [x] `STATE-001` Backend test suite проходит: `1268/1268`.
+- [x] `STATE-001` Backend test suite проходит: `1279/1279`.
 - [x] `STATE-002` Frontend test suite проходит: `141/141`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2360,6 +2360,10 @@ git diff --check
   - Что сделать: direct service caller не должен обходить admin blockers для provider/mode mismatch, disabled account, отсутствующего provider payment ID или merchant credentials; Local sandbox exception должен определяться реальной runtime environment.
   - Что сделано: единый `GetRefundConfigurationIssues` возвращает machine-readable blockers для controller и orchestrator; service проверяет свежий snapshot до reservation/factory/provider, а `IRuntimeEnvironment` передает environment через реальный DI container.
   - Доказательство: fail-first `0/7` успешно проводил invalid refunds; после исправления service/API/DI `13/13`, payment regression `153/153`, backend `1268/1268`, Release build `0` warnings/errors. Refund rows/provider calls/payment mutations отсутствуют; реальные provider кабинеты остаются внешним evidence.
+- [x] `P11-ACC-377` Закрыть manual recheck account/config и provider-ID boundary. 2026-08-12.
+  - Что сделать: поддерживаемый provider не должен обходить disabled/mismatched account, mode snapshot, provider payment ID и credentials; DTO/UI должны показывать фактическую готовность, а чужой ID в ответе адаптера не должен менять платеж.
+  - Что сделано: общий environment-aware operation preflight используется refund/recheck; orchestrator останавливается до adapter call для invalid snapshot и до status apply для mismatched response ID; orders/payments DTO, strict API client и обе admin-команды используют `CanRecheck` и точные blockers.
+  - Доказательство: account/config fail-first `0/7`, provider-ID fail-first `0/1`; после исправления targeted backend `48/48`, payment regression `237/237`, backend `1279/1279`, frontend `141/141`, Playwright `222/222` за `13.2 min`, typecheck/build/audit и EF drift зелёные. Три Local sandbox adapter cases не выполняют HTTP; реальные provider кабинеты и live payment smoke остаются внешним evidence.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3009,6 +3013,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-12-014` | P1 | Payment manual recheck readiness | Поддерживаемый provider обходил account/config readiness, UI разрешал команду только по capability, а orchestrator применял status response без сверки provider payment ID. | Исправлено локально | Общий operation preflight, DTO/UI blockers, SQLite `0/7 -> 7/7` и response-ID guard подтверждают отказ без provider call/state mutation; live provider evidence остаётся открытым. |
 | `BUG-2026-08-12-013` | P1 | Payment refund account readiness | Direct `PaymentOrchestrator` не проверял provider/mode snapshot, enabled state, provider payment ID и credentials: injected adapter успешно проводил refund в обход admin readiness. | Исправлено локально | Общий application rule, runtime environment DI и SQLite `0/7 -> 7/7` подтверждают отказ до reservation/factory/provider; live refunds остаются внешним evidence. |
 | `BUG-2026-08-12-012` | P1 | Payment local sandbox refunds | Local seed объявлял Stripe, PayPal и TBank refund-capable и поддерживал checkout/recheck без credentials, но refund требовал реальные secrets/HTTP, а admin readiness блокировал операцию. | Исправлено локально | Общий environment-aware predicate, no-HTTP adapter tests и SQLite admin-to-adapter refund flow закрывают локальный контракт; реальные provider refunds остаются внешним evidence. |
 | `BUG-2026-08-12-011` | P1 | Payment refund orchestration | Общий orchestrator не проверял refund capability: direct caller обходил admin readiness, создавал reservation и мог завершить неподдерживаемый refund либо оставить ложный `Unknown` blocker. | Исправлено локально | Ранний service preflight и SQLite fail-first подтверждают отсутствие factory/provider calls, refund rows и payment mutations; live provider evidence остается открытым. |

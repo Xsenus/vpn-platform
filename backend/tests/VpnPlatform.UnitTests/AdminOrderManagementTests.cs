@@ -67,7 +67,8 @@ public class AdminOrderManagementTests
             Name = "sandbox-yookassa",
             PublicName = "YooKassa Sandbox",
             IsEnabled = true,
-            ShopId = "shop"
+            ShopId = "shop",
+            SecretKeyProtected = "secret"
         };
         var olderPayment = Payment(order.Id, PaymentStatus.Pending, createdAt: clock.UtcNow.AddMinutes(-10), account.Id);
         var latestPayment = Payment(order.Id, PaymentStatus.Pending, createdAt: clock.UtcNow.AddMinutes(-1), account.Id);

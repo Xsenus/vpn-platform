@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.654.0 - 2026-08-12
+
+Release entry: `2026-08-12-payment-recheck-account-readiness-preflight`.
+
+### Исправлено
+
+- Manual recheck теперь проверяет provider/mode snapshot, enabled/Disabled state, provider payment ID и обязательные credentials до разрешения адаптера и внешнего вызова.
+- Admin orders/payments DTO и UI различают capability и фактическую готовность, показывают точный blocker и не отправляют POST для поддерживаемого, но недоступного аккаунта.
+- Ответ адаптера с несовпадающим provider payment ID отклоняется до применения статуса и любых audit/outbox изменений.
+
+### Проверено
+
+- Fail-first account/config `0/7` и provider-ID `0/1`; после исправления targeted backend `48/48`, payment regression `237/237`, Local sandbox adapters `3/3` без HTTP.
+- Backend `1279/1279`; frontend `141/141`; полный Playwright `222/222` за `13.2 min`; typecheck/build, EF drift и dependency audit зелёные.
+- Roadmap: `667/687` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked; реальные provider/VPS/staging evidence локальными проверками не закрывались.
+
 ## 0.653.0 - 2026-08-12
 
 Release entry: `2026-08-12-payment-refund-account-readiness-preflight`.

@@ -508,10 +508,10 @@ async function mockAdminApi(page: Page) {
   }]
   const providers = [paymentProviderAccount()]
   const orders: Array<Record<string, unknown>> = [
-    { id: 'order-e2e', userId: 'user-e2e', userDisplayName: 'Client E2E', userEmail: 'client@example.test', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', amount: 590, currency: 'RUB', status: 'PaymentReceived', type: 'NewSubscription', channel: 'Web', paymentProvider: 'YooKassa', checkoutSessionId: null, expiresAt: '2026-06-14T07:00:00Z', paidAt: now, isFirstPurchase: true, paymentAttemptsCount: 1, lastPaymentId: 'payment-e2e', lastPaymentStatus: 'Succeeded', lastPaymentProvider: 'YooKassa', lastPaymentRecheckSupported: true, linkedSubscriptionId: 'sub-e2e', createdAt: now, updatedAt: now }
+    { id: 'order-e2e', userId: 'user-e2e', userDisplayName: 'Client E2E', userEmail: 'client@example.test', tariffId: 'tariff-admin-pro', tariffName: 'Admin Pro 30', amount: 590, currency: 'RUB', status: 'PaymentReceived', type: 'NewSubscription', channel: 'Web', paymentProvider: 'YooKassa', checkoutSessionId: null, expiresAt: '2026-06-14T07:00:00Z', paidAt: now, isFirstPurchase: true, paymentAttemptsCount: 1, lastPaymentId: 'payment-e2e', lastPaymentStatus: 'Succeeded', lastPaymentProvider: 'YooKassa', lastPaymentRecheckSupported: true, lastPaymentCanRecheck: true, lastPaymentRecheckBlockers: [], linkedSubscriptionId: 'sub-e2e', createdAt: now, updatedAt: now }
   ]
   const payments: Array<Record<string, unknown>> = [
-    { id: 'payment-e2e', orderId: 'order-e2e', userId: 'user-e2e', userDisplayName: 'Client E2E', provider: 'YooKassa', paymentProviderAccountId: 'provider-yookassa', providerMode: 'Sandbox', providerPaymentId: 'yk-admin-e2e', externalEventId: 'evt-admin-e2e', idempotencyKey: 'idem-admin-e2e', confirmationUrl: 'http://127.0.0.1:5295/payments/return', returnUrl: 'http://127.0.0.1:5295', amount: 590, currency: 'RUB', status: 'Succeeded', signatureValidated: true, isActivationProcessed: true, activationProcessedAt: now, paidAt: now, failedAt: null, refundedAt: null, refundedAmount: 0, statusReason: null, webhookEventsCount: 1, refundsCount: 0, recheckSupported: true, refundSupported: true, canRefund: true, refundableAmount: 590, refundBlockers: [], createdAt: now, updatedAt: now }
+    { id: 'payment-e2e', orderId: 'order-e2e', userId: 'user-e2e', userDisplayName: 'Client E2E', provider: 'YooKassa', paymentProviderAccountId: 'provider-yookassa', providerMode: 'Sandbox', providerPaymentId: 'yk-admin-e2e', externalEventId: 'evt-admin-e2e', idempotencyKey: 'idem-admin-e2e', confirmationUrl: 'http://127.0.0.1:5295/payments/return', returnUrl: 'http://127.0.0.1:5295', amount: 590, currency: 'RUB', status: 'Succeeded', signatureValidated: true, isActivationProcessed: true, activationProcessedAt: now, paidAt: now, failedAt: null, refundedAt: null, refundedAmount: 0, statusReason: null, webhookEventsCount: 1, refundsCount: 0, recheckSupported: true, canRecheck: true, recheckBlockers: [], refundSupported: true, canRefund: true, refundableAmount: 590, refundBlockers: [], createdAt: now, updatedAt: now }
   ]
   const refunds: Array<Record<string, unknown>> = []
   const tariffs = [tariff()]
@@ -1998,15 +1998,36 @@ async function mockAdminApi(page: Page) {
         paymentProvider: 'RoboKassa',
         lastPaymentProvider: 'RoboKassa',
         lastPaymentRecheckSupported: false,
+        lastPaymentCanRecheck: false,
+        lastPaymentRecheckBlockers: ['Провайдер последнего платежа не поддерживает ручную перепроверку статуса.'],
         updatedAt: now
       }
       payments[0] = {
         ...payments[0],
         provider: 'RoboKassa',
         recheckSupported: false,
+        canRecheck: false,
+        recheckBlockers: ['Провайдер этого платежа не поддерживает ручную перепроверку статуса.'],
         refundSupported: false,
         canRefund: false,
         refundBlockers: ['Провайдер не поддерживает возвраты в текущем адаптере.'],
+        updatedAt: now
+      }
+    },
+    prepareUnavailablePaymentRecheck: () => {
+      const blocker = 'Аккаунт платежного провайдера выключен.'
+      orders[0] = {
+        ...orders[0],
+        lastPaymentRecheckSupported: true,
+        lastPaymentCanRecheck: false,
+        lastPaymentRecheckBlockers: [blocker],
+        updatedAt: now
+      }
+      payments[0] = {
+        ...payments[0],
+        recheckSupported: true,
+        canRecheck: false,
+        recheckBlockers: [blocker],
         updatedAt: now
       }
     },
@@ -3208,6 +3229,30 @@ test('admin blocks unsupported payment recheck in order and payment handlers', a
   await expect(orderButton).toHaveAttribute('title', 'Провайдер последнего платежа не поддерживает ручную перепроверку статуса.')
   await expect(paymentButton).toBeDisabled()
   await expect(paymentButton).toHaveAttribute('title', 'Провайдер этого платежа не поддерживает ручную перепроверку статуса.')
+
+  await orderButton.click({ force: true })
+  await paymentButton.click({ force: true })
+  expect(api.getRequestCount('/api/admin/orders/order-e2e/recheck-payment', 'POST')).toBe(0)
+  expect(api.getRequestCount('/api/admin/payments/payment-e2e/recheck', 'POST')).toBe(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin blocks supported payment recheck when provider account is unavailable', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  api.prepareUnavailablePaymentRecheck()
+  await seedAdminSession(page, 'admin-unavailable-recheck-token', 'admin-unavailable-recheck-refresh')
+
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Оплаты', 'payments')
+
+  const paymentsPanel = page.locator('#payments')
+  const orderButton = paymentsPanel.locator('.list-item-vertical').filter({ hasText: '590 RUB · Admin Pro 30' }).first().getByRole('button', { name: 'Проверить оплату' })
+  const paymentButton = page.locator('#payment-payment-e2e').getByRole('button', { name: 'Проверить статус' })
+  await expect(orderButton).toBeDisabled()
+  await expect(orderButton).toHaveAttribute('title', 'Аккаунт платежного провайдера выключен.')
+  await expect(paymentButton).toBeDisabled()
+  await expect(paymentButton).toHaveAttribute('title', 'Аккаунт платежного провайдера выключен.')
 
   await orderButton.click({ force: true })
   await paymentButton.click({ force: true })

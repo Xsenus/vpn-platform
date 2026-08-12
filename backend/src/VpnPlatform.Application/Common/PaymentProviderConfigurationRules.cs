@@ -4,7 +4,7 @@ using VpnPlatform.Domain.Enums;
 namespace VpnPlatform.Application.Common;
 
 public sealed record PaymentProviderCapabilityRule(string Key, string Label, bool Supported, string Status);
-public sealed record PaymentRefundConfigurationIssue(string Code, string Message);
+public sealed record PaymentOperationConfigurationIssue(string Code, string Message);
 
 public static class PaymentProviderConfigurationRules
 {
@@ -34,12 +34,25 @@ public static class PaymentProviderConfigurationRules
                || environmentName.Equals("Testing", StringComparison.OrdinalIgnoreCase)
                || environmentName.Equals("Sandbox", StringComparison.OrdinalIgnoreCase));
 
-    public static IReadOnlyList<PaymentRefundConfigurationIssue> GetRefundConfigurationIssues(
+    public static IReadOnlyList<PaymentOperationConfigurationIssue> GetRefundConfigurationIssues(
         PaymentAttempt payment,
         PaymentProviderAccount? account,
         string? environmentName)
+        => GetPaymentOperationConfigurationIssues(payment, account, environmentName, "возврата");
+
+    public static IReadOnlyList<PaymentOperationConfigurationIssue> GetManualRecheckConfigurationIssues(
+        PaymentAttempt payment,
+        PaymentProviderAccount? account,
+        string? environmentName)
+        => GetPaymentOperationConfigurationIssues(payment, account, environmentName, "перепроверки статуса");
+
+    private static IReadOnlyList<PaymentOperationConfigurationIssue> GetPaymentOperationConfigurationIssues(
+        PaymentAttempt payment,
+        PaymentProviderAccount? account,
+        string? environmentName,
+        string operationName)
     {
-        var issues = new List<PaymentRefundConfigurationIssue>();
+        var issues = new List<PaymentOperationConfigurationIssue>();
         if (account is null || payment.PaymentProviderAccountId is null)
         {
             issues.Add(new("account_missing", "Платеж не связан с аккаунтом платежного провайдера."));
@@ -83,37 +96,37 @@ public static class PaymentProviderConfigurationRules
             case PaymentProvider.YooKassa:
                 if (!hasShopId)
                 {
-                    issues.Add(new("shop_id_missing", "Для возврата YooKassa нужен ShopId."));
+                    issues.Add(new("shop_id_missing", $"Для {operationName} YooKassa нужен ShopId."));
                 }
                 if (!hasSecret)
                 {
-                    issues.Add(new("secret_missing", "Для возврата YooKassa нужен SecretKey."));
+                    issues.Add(new("secret_missing", $"Для {operationName} YooKassa нужен SecretKey."));
                 }
                 break;
             case PaymentProvider.TBankAcquiring:
                 if (!hasShopId)
                 {
-                    issues.Add(new("shop_id_missing", "Для возврата TBank нужен TerminalKey."));
+                    issues.Add(new("shop_id_missing", $"Для {operationName} TBank нужен TerminalKey."));
                 }
                 if (!hasSecret)
                 {
-                    issues.Add(new("secret_missing", "Для возврата TBank нужен Password терминала."));
+                    issues.Add(new("secret_missing", $"Для {operationName} TBank нужен Password терминала."));
                 }
                 break;
             case PaymentProvider.Stripe:
                 if (!hasSecret)
                 {
-                    issues.Add(new("secret_missing", "Для возврата Stripe нужен SecretKey."));
+                    issues.Add(new("secret_missing", $"Для {operationName} Stripe нужен SecretKey."));
                 }
                 break;
             case PaymentProvider.PayPal:
                 if (!hasShopId)
                 {
-                    issues.Add(new("shop_id_missing", "Для возврата PayPal нужен Client ID."));
+                    issues.Add(new("shop_id_missing", $"Для {operationName} PayPal нужен Client ID."));
                 }
                 if (!hasSecret)
                 {
-                    issues.Add(new("secret_missing", "Для возврата PayPal нужен Client secret."));
+                    issues.Add(new("secret_missing", $"Для {operationName} PayPal нужен Client secret."));
                 }
                 break;
         }

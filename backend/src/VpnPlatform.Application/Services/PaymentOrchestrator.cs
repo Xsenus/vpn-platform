@@ -607,7 +607,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             .Include(x => x.Order)
             .Include(x => x.PaymentProviderAccount)
             .FirstOrDefaultAsync(x => x.Id == paymentId, cancellationToken);
-        if (payment is null || payment.PaymentProviderAccount is null)
+        if (payment is null)
         {
             return Result<PaymentStatusResult>.Failure("Payment attempt not found.");
         }
@@ -617,10 +617,24 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             return Result<PaymentStatusResult>.Failure($"Payment provider {payment.Provider} does not support manual status recheck.");
         }
 
+        var configurationIssues = PaymentProviderConfigurationRules.GetManualRecheckConfigurationIssues(
+            payment,
+            payment.PaymentProviderAccount,
+            _runtimeEnvironment?.EnvironmentName);
+        if (configurationIssues.Count > 0)
+        {
+            return Result<PaymentStatusResult>.Failure(string.Join(" ", configurationIssues.Select(x => x.Message)));
+        }
+
         try
         {
             var provider = _paymentProviderFactory.Get(payment.Provider);
-            var statusResult = await provider.GetStatusAsync(payment, payment.PaymentProviderAccount, cancellationToken);
+            var statusResult = await provider.GetStatusAsync(payment, payment.PaymentProviderAccount!, cancellationToken);
+            if (!string.Equals(statusResult.PaymentId, payment.ProviderPaymentId, StringComparison.Ordinal))
+            {
+                return Result<PaymentStatusResult>.Failure("Payment provider returned a mismatched payment identifier.");
+            }
+
             var apply = await ApplyPaymentStatusAsync(payment, statusResult.Status, statusResult.RawResponse, $"manual-recheck:{payment.Id}:{statusResult.Status}", cancellationToken);
             return apply.IsSuccess ? Result<PaymentStatusResult>.Success(statusResult) : Result<PaymentStatusResult>.Failure(apply.Error ?? "Status recheck failed.");
         }

@@ -15383,5 +15383,28 @@
         "text": "Roadmap progress is 666/686 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-payment-recheck-account-readiness-preflight",
+    "version": "0.654.0",
+    "releasedAt": "2026-08-12T11:50:00+07:00",
+    "title": "Перепроверка платежа учитывает готовность аккаунта",
+    "summary": "Manual recheck использует общий account/config preflight, а admin показывает точные причины недоступности команды.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Поддерживаемый provider больше не обходит disabled/mismatched account, mode snapshot, provider payment ID и обязательные credentials."
+      },
+      {
+        "type": "improved",
+        "text": "Orders/payments DTO и admin UI передают фактическую готовность; ответ адаптера с чужим provider payment ID не применяется к платежу."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 667/687 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

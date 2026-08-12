@@ -48,6 +48,7 @@ public sealed record CreateServerHttpRequest(
 public sealed record QueueProvisionHttpRequest(bool DryRun = false);
 public sealed record RefundPaymentHttpRequest(decimal Amount, string? Reason);
 public sealed record RefundReadinessDto(bool IsSupported, bool CanRefund, decimal RefundableAmount, IReadOnlyList<string> Blockers);
+public sealed record RecheckReadinessDto(bool IsSupported, bool CanRecheck, IReadOnlyList<string> Blockers);
 public sealed record SetProviderEnabledHttpRequest(bool Enabled);
 public sealed record AdminSupportReplyHttpRequest(string Text, int? Revision = null);
 public sealed record AdminSupportStatusHttpRequest(string Status, Guid? AssignedToUserId = null, int? Revision = null);
@@ -1076,6 +1077,7 @@ public class AdminOperationsController : ControllerBase
             .Include(x => x.User)
             .Include(x => x.Tariff)
             .Include(x => x.PaymentAttempts)
+                .ThenInclude(payment => payment.PaymentProviderAccount)
             .AsQueryable();
 
         if (parsedStatuses.Count > 0)
@@ -1101,6 +1103,9 @@ public class AdminOperationsController : ControllerBase
                 var lastPayment = x.PaymentAttempts
                     .OrderByDescending(payment => payment.CreatedAt)
                     .FirstOrDefault();
+                var recheck = lastPayment is null
+                    ? new RecheckReadinessDto(false, false, new[] { "У заказа нет платежной попытки." })
+                    : BuildRecheckReadiness(lastPayment);
 
                 return new
                 {
@@ -1124,7 +1129,9 @@ public class AdminOperationsController : ControllerBase
                     LastPaymentId = lastPayment?.Id,
                     LastPaymentStatus = lastPayment?.Status.ToString(),
                     LastPaymentProvider = lastPayment?.Provider.ToString(),
-                    LastPaymentRecheckSupported = lastPayment is not null && PaymentProviderConfigurationRules.SupportsManualRecheck(lastPayment.Provider),
+                    LastPaymentRecheckSupported = recheck.IsSupported,
+                    LastPaymentCanRecheck = recheck.CanRecheck,
+                    LastPaymentRecheckBlockers = recheck.Blockers,
                     LinkedSubscriptionId = OrderService.GetRenewalSubscriptionId(x),
                     x.CreatedAt,
                     x.UpdatedAt
@@ -1185,6 +1192,7 @@ public class AdminOperationsController : ControllerBase
             .Select(x =>
             {
                 var refund = BuildRefundReadiness(x);
+                var recheck = BuildRecheckReadiness(x);
                 return new
                 {
                     x.Id,
@@ -1212,7 +1220,9 @@ public class AdminOperationsController : ControllerBase
                     x.StatusReason,
                     WebhookEventsCount = webhookCounts.GetValueOrDefault(x.Id),
                     RefundsCount = x.Refunds.Count,
-                    RecheckSupported = PaymentProviderConfigurationRules.SupportsManualRecheck(x.Provider),
+                    RecheckSupported = recheck.IsSupported,
+                    CanRecheck = recheck.CanRecheck,
+                    RecheckBlockers = recheck.Blockers,
                     RefundSupported = refund.IsSupported,
                     CanRefund = refund.CanRefund,
                     RefundableAmount = refund.RefundableAmount,
@@ -2831,6 +2841,22 @@ public class AdminOperationsController : ControllerBase
             .Select(x => x.Message));
 
         return new RefundReadinessDto(isSupported, blockers.Count == 0, refundableAmount, blockers);
+    }
+
+    private RecheckReadinessDto BuildRecheckReadiness(PaymentAttempt payment)
+    {
+        var blockers = new List<string>();
+        var isSupported = PaymentProviderConfigurationRules.SupportsManualRecheck(payment.Provider);
+        if (!isSupported)
+        {
+            blockers.Add("Провайдер не поддерживает ручную перепроверку статуса в текущем адаптере.");
+        }
+
+        blockers.AddRange(PaymentProviderConfigurationRules
+            .GetManualRecheckConfigurationIssues(payment, payment.PaymentProviderAccount, _hostEnvironment?.EnvironmentName)
+            .Select(x => x.Message));
+
+        return new RecheckReadinessDto(isSupported, blockers.Count == 0, blockers);
     }
 
     private void AddAuditLog(string action, string entityType, Guid entityId, string beforeJson, string afterJson)

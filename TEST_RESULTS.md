@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: payment manual recheck account readiness preflight
+
+Scope:
+- Manual recheck должен повторять account/config readiness внутри orchestrator и публиковать фактическую готовность в admin orders/payments DTO.
+- Provider status response должен принадлежать исходному provider payment ID до применения статуса.
+
+Results:
+- Roadmap progress: `667/687` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-payment-recheck-account-readiness-preflight`, version `0.654.0`.
+- Reproduction before fix: SQLite account/config fail-first `0/7`; все invalid snapshots вызывали adapter и успешно завершали recheck. Отдельный provider-ID fail-first `0/1` применял `Succeeded` от чужой транзакции.
+- After fix: общий environment-aware operation rule используется controller DTO и orchestrator; strict API client требует `CanRecheck`/blockers, UI блокирует order/payment команды до POST, response ID сверяется ordinal до status apply.
+- Targeted backend: `48/48`; payment regression: `237/237`; backend full suite: `1279/1279`; frontend: `141/141`; Playwright: `222/222` за `13.2 min`; Release build, typecheck/build, EF drift и dependency audit зелёные.
+
 ## Check 2026-08-12: payment refund account readiness preflight
 
 Scope:

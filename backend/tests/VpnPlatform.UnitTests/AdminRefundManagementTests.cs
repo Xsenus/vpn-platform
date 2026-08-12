@@ -49,6 +49,8 @@ public class AdminRefundManagementTests
         Assert.True(readyJson.GetProperty("CanRefund").GetBoolean());
         Assert.True(readyJson.GetProperty("RefundSupported").GetBoolean());
         Assert.True(readyJson.GetProperty("RecheckSupported").GetBoolean());
+        Assert.True(readyJson.GetProperty("CanRecheck").GetBoolean());
+        Assert.Empty(readyJson.GetProperty("RecheckBlockers").EnumerateArray());
         Assert.Equal(70m, readyJson.GetProperty("RefundableAmount").GetDecimal());
         Assert.Empty(readyJson.GetProperty("RefundBlockers").EnumerateArray());
 
@@ -56,6 +58,8 @@ public class AdminRefundManagementTests
         Assert.False(unsupportedJson.GetProperty("CanRefund").GetBoolean());
         Assert.False(unsupportedJson.GetProperty("RefundSupported").GetBoolean());
         Assert.False(unsupportedJson.GetProperty("RecheckSupported").GetBoolean());
+        Assert.False(unsupportedJson.GetProperty("CanRecheck").GetBoolean());
+        Assert.Contains("не поддерживает", unsupportedJson.GetProperty("RecheckBlockers").EnumerateArray().First().GetString());
         Assert.Contains("не поддерживает", unsupportedJson.GetProperty("RefundBlockers").EnumerateArray().First().GetString());
 
         var pendingJson = payments.Single(x => x.GetProperty("Id").GetGuid() == pending.Id);
@@ -170,9 +174,147 @@ public class AdminRefundManagementTests
         var paymentJson = json.RootElement.EnumerateArray().Single();
 
         Assert.False(paymentJson.GetProperty("CanRefund").GetBoolean());
+        Assert.False(paymentJson.GetProperty("CanRecheck").GetBoolean());
         Assert.Contains(
             paymentJson.GetProperty("RefundBlockers").EnumerateArray(),
             item => item.GetString()?.Contains("режим", StringComparison.OrdinalIgnoreCase) == true);
+        Assert.Contains(
+            paymentJson.GetProperty("RecheckBlockers").EnumerateArray(),
+            item => item.GetString()?.Contains("режим", StringComparison.OrdinalIgnoreCase) == true);
+    }
+
+    [Theory]
+    [InlineData("provider_mismatch")]
+    [InlineData("provider_mode_mismatch")]
+    [InlineData("account_disabled")]
+    [InlineData("mode_disabled")]
+    [InlineData("provider_payment_id_missing")]
+    [InlineData("shop_id_missing")]
+    [InlineData("secret_missing")]
+    public async Task RecheckPayment_Should_Reject_Invalid_Account_Snapshot_Before_Provider_Call(string invalidState)
+    {
+        await using var db = CreateDb();
+        var provider = new TrackingPaymentProvider(PaymentProvider.YooKassa);
+        var account = Account(PaymentProvider.YooKassa, secret: "secret");
+        var user = User();
+        var tariff = Tariff();
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Pending, amount: 100m);
+
+        switch (invalidState)
+        {
+            case "provider_mismatch":
+                account.Provider = PaymentProvider.Stripe;
+                break;
+            case "provider_mode_mismatch":
+                account.Mode = PaymentProviderMode.Production;
+                break;
+            case "account_disabled":
+                account.IsEnabled = false;
+                break;
+            case "mode_disabled":
+                account.Mode = PaymentProviderMode.Disabled;
+                payment.ProviderMode = PaymentProviderMode.Disabled;
+                break;
+            case "provider_payment_id_missing":
+                payment.ProviderPaymentId = string.Empty;
+                break;
+            case "shop_id_missing":
+                account.ShopId = string.Empty;
+                break;
+            case "secret_missing":
+                account.SecretKeyProtected = string.Empty;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(invalidState), invalidState, null);
+        }
+
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.PaymentProviderAccounts.Add(account);
+        db.Orders.Add(payment.Order!);
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+
+        var result = await CreateOrchestrator(db, provider, "Production")
+            .RecheckPaymentAsync(payment.Id, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(0, provider.StatusCalls);
+        await db.Entry(payment).ReloadAsync();
+        Assert.Equal(PaymentStatus.Pending, payment.Status);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+        Assert.Empty(await db.OutboxMessages.ToListAsync());
+    }
+
+    [Fact]
+    public async Task RecheckPayment_Should_Reject_Mismatched_Provider_Payment_Id_Without_State_Changes()
+    {
+        await using var db = CreateDb();
+        var provider = new TrackingPaymentProvider(PaymentProvider.YooKassa, "different-provider-payment-id", PaymentStatus.Succeeded);
+        var account = Account(PaymentProvider.YooKassa, secret: "secret");
+        var user = User();
+        var tariff = Tariff();
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Pending, amount: 100m);
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.PaymentProviderAccounts.Add(account);
+        db.Orders.Add(payment.Order!);
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+
+        var result = await CreateOrchestrator(db, provider)
+            .RecheckPaymentAsync(payment.Id, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("identifier", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, provider.StatusCalls);
+        await db.Entry(payment).ReloadAsync();
+        Assert.Equal(PaymentStatus.Pending, payment.Status);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+        Assert.Empty(await db.OutboxMessages.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData(PaymentProvider.Stripe)]
+    [InlineData(PaymentProvider.PayPal)]
+    [InlineData(PaymentProvider.TBankAcquiring)]
+    public async Task RecheckPayment_Should_Complete_Credentialless_LocalSandbox_Flow_On_Sqlite(PaymentProvider providerType)
+    {
+        await using var db = CreateDb();
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 12, 5, 0, 0, TimeSpan.Zero));
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
+        var factory = new StaticHttpClientFactory(new HttpClient(new RejectHttpHandler()));
+        IPaymentProvider provider = providerType switch
+        {
+            PaymentProvider.Stripe => new StripePaymentProvider(factory, accounts, new TestHostEnvironment("Local")),
+            PaymentProvider.PayPal => new PayPalPaymentProvider(factory, accounts, new TestHostEnvironment("Local")),
+            PaymentProvider.TBankAcquiring => new TBankAcquiringPaymentProvider(factory, accounts, new TestHostEnvironment("Local")),
+            _ => throw new ArgumentOutOfRangeException(nameof(providerType), providerType, null)
+        };
+        var orchestrator = new PaymentOrchestrator(
+            db,
+            new TestPaymentProviderFactory(provider),
+            Array.Empty<IPaymentWebhookVerifier>(),
+            accounts,
+            null!,
+            clock,
+            new TestRuntimeEnvironment("Local"));
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(providerType, secret: string.Empty);
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Pending, amount: 100m);
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.PaymentProviderAccounts.Add(account);
+        db.Orders.Add(payment.Order!);
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+
+        var result = await orchestrator.RecheckPaymentAsync(payment.Id, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(payment.ProviderPaymentId, result.Value!.PaymentId);
+        Assert.Equal(PaymentStatus.Pending, result.Value.Status);
     }
 
     [Theory]
@@ -268,11 +410,21 @@ public class AdminRefundManagementTests
             item => item.GetString()?.Contains("заверш", StringComparison.OrdinalIgnoreCase) == true);
     }
 
-    private static PaymentOrchestrator CreateOrchestrator(ApplicationDbContext db, IPaymentProvider provider)
+    private static PaymentOrchestrator CreateOrchestrator(
+        ApplicationDbContext db,
+        IPaymentProvider provider,
+        string environmentName = "Production")
     {
         var clock = new TestClock(new DateTimeOffset(2026, 6, 11, 2, 15, 0, TimeSpan.Zero));
         var providerAccounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
-        return new PaymentOrchestrator(db, new TestPaymentProviderFactory(provider), Array.Empty<IPaymentWebhookVerifier>(), providerAccounts, null!, clock);
+        return new PaymentOrchestrator(
+            db,
+            new TestPaymentProviderFactory(provider),
+            Array.Empty<IPaymentWebhookVerifier>(),
+            providerAccounts,
+            null!,
+            clock,
+            new TestRuntimeEnvironment(environmentName));
     }
 
     private static AdminOperationsController CreateController(
@@ -412,9 +564,13 @@ public class AdminRefundManagementTests
         public IPaymentProvider Get(PaymentProvider _) => provider;
     }
 
-    private sealed class TrackingPaymentProvider(PaymentProvider provider) : IPaymentProvider
+    private sealed class TrackingPaymentProvider(
+        PaymentProvider provider,
+        string? statusPaymentId = null,
+        PaymentStatus? status = null) : IPaymentProvider
     {
         public PaymentProvider Provider { get; } = provider;
+        public int StatusCalls { get; private set; }
         public int RefundCalls { get; private set; }
         public decimal LastRefundAmount { get; private set; }
 
@@ -425,7 +581,10 @@ public class AdminRefundManagementTests
             => throw new NotSupportedException();
 
         public Task<PaymentStatusResult> GetStatusAsync(PaymentAttempt payment, PaymentProviderAccount account, CancellationToken cancellationToken)
-            => Task.FromResult(new PaymentStatusResult(payment.ProviderPaymentId, payment.Status, "{}"));
+        {
+            StatusCalls++;
+            return Task.FromResult(new PaymentStatusResult(statusPaymentId ?? payment.ProviderPaymentId, status ?? payment.Status, "{}"));
+        }
 
         public Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)
         {
