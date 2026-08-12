@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: Telegram Stars charge lifecycle
+
+Scope:
+- Invoice callback, pre-checkout и successful_payment должны использовать один payable-order boundary и не создавать повторные invoice/активации.
+- Фактически списанные Stars нельзя терять при неизвестном payload, terminal order или втором charge.
+
+Results:
+- Roadmap progress: `670/690` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-telegram-stars-charge-lifecycle`, version `0.657.0`.
+- Reproduction before fix: pre-checkout одобрял Cancelled/Expired order; повторный callback вызывал `sendInvoice` ещё раз, callback после успеха падал на unique `Payments.IdempotencyKey`, а unsupported successful_payment payload обещал ручную проверку, но не сохранял charge.
+- After fix: invoice claim атомарно переводит PaymentAttempt в `WaitingConfirmation`; неопределённый transport outcome остаётся fail-closed. Pre-checkout отклоняет non-payable order. Charge event сохраняется до reconciliation; terminal order и второе списание не выдают VPN повторно и не раскрывают state-machine diagnostics пользователю.
+- Telegram purchase flow `48/48`; backend Release `1296/1296`; frontend `142/142`; полный Playwright `226/226` за `12.3 min`; typecheck/build, bundle budget, dependency audit `0 vulnerabilities`, fresh SQLite checkout/webhook/subscription/VPN, EF drift и secret scan зелёные. Реальные Telegram Stars/Bot API, provider/VPS/staging evidence локально не закрывались.
+
 ## Check 2026-08-12: Telegram payment recovery provider lock
 
 Scope:

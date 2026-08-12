@@ -1449,13 +1449,45 @@ public class TelegramBotService
 
     private async Task<RouteResult> PrepareTelegramStarsPaymentAsync(TelegramAccount account, Guid orderId, long? chatId, CancellationToken cancellationToken)
     {
+        await using var processingGate = await PaymentProcessingGate.AcquireOrderAsync(orderId, cancellationToken);
         var order = await _db.Orders.FirstOrDefaultAsync(x => x.Id == orderId && x.UserId == account.UserId, cancellationToken);
         if (order is null)
         {
             return new RouteResult("Заказ не найден.", chatId, LinkedMenuReplyMarkupJson());
         }
 
-        var existing = await _db.Payments.FirstOrDefaultAsync(x => x.OrderId == orderId && x.Provider == PaymentProvider.TelegramStars && (x.Status == PaymentStatus.New || x.Status == PaymentStatus.Pending), cancellationToken);
+        var existing = await _db.Payments.FirstOrDefaultAsync(x => x.OrderId == orderId && x.Provider == PaymentProvider.TelegramStars, cancellationToken);
+        if (existing?.Status == PaymentStatus.Succeeded || order.PaidAt.HasValue || order.Status == OrderStatus.Completed)
+        {
+            return new RouteResult("Этот заказ уже оплачен. Проверьте подписки и VPN-ключи.", chatId, BuildPostPaymentReplyMarkupJson());
+        }
+
+        if (order.Status != OrderStatus.PendingPayment || order.ExpiresAt <= _clock.UtcNow)
+        {
+            if (order.Status == OrderStatus.PendingPayment && order.ExpiresAt <= _clock.UtcNow)
+            {
+                StatusStateMachine.SetOrderStatus(order, OrderStatus.Expired, _clock.UtcNow);
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+
+            return new RouteResult("Заказ больше нельзя оплатить. Создайте новый заказ или обратитесь в поддержку.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
+        }
+
+        if (order.PaymentProvider != PaymentProvider.TelegramStars)
+        {
+            return new RouteResult("Для заказа закреплён другой способ оплаты.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
+        }
+
+        if (existing?.Status == PaymentStatus.WaitingConfirmation)
+        {
+            return new RouteResult("Счёт Telegram Stars уже отправлен или готовится. Откройте сообщение со счётом выше.", chatId, LinkedMenuReplyMarkupJson());
+        }
+
+        if (existing is not null && existing.Status is not (PaymentStatus.New or PaymentStatus.Pending))
+        {
+            return new RouteResult("Предыдущую попытку Telegram Stars нельзя повторить автоматически. Создайте новый заказ или обратитесь в поддержку.", chatId, LinkedMenuReplyMarkupJson());
+        }
+
         if (existing is null)
         {
             existing = new PaymentAttempt
@@ -1471,7 +1503,26 @@ public class TelegramBotService
                 RawRequest = JsonSerializer.Serialize(new { orderId = order.Id, amount = order.Amount, currency = "XTR" })
             };
             _db.Payments.Add(existing);
-            await _db.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                _db.Payments.Remove(existing);
+                existing = await _db.Payments.FirstOrDefaultAsync(
+                    x => x.OrderId == orderId && x.Provider == PaymentProvider.TelegramStars,
+                    cancellationToken);
+                if (existing is null)
+                {
+                    return new RouteResult("Не удалось подготовить платёж Telegram Stars. Повторите попытку позже.", chatId, LinkedMenuReplyMarkupJson());
+                }
+            }
+        }
+
+        if (existing.Status == PaymentStatus.WaitingConfirmation)
+        {
+            return new RouteResult("Счёт Telegram Stars уже отправлен или готовится. Откройте сообщение со счётом выше.", chatId, LinkedMenuReplyMarkupJson());
         }
 
         var payload = $"tgstars:{existing.Id:N}";
@@ -1486,9 +1537,15 @@ public class TelegramBotService
             return new RouteResult("Оплата Telegram Stars временно недоступна для этого тарифа. Обратитесь в поддержку.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
         }
 
+        var claim = await TryClaimTelegramStarsInvoiceAsync(existing, cancellationToken);
+        if (!claim)
+        {
+            return new RouteResult("Счёт Telegram Stars уже отправлен или готовится. Откройте сообщение со счётом выше.", chatId, LinkedMenuReplyMarkupJson());
+        }
+
         try
         {
-            await _invoiceProvider.CreateInvoiceAsync(new TelegramInvoiceRequest(
+            var invoice = await _invoiceProvider.CreateInvoiceAsync(new TelegramInvoiceRequest(
                 order.Id,
                 existing.Id,
                 chatId.Value,
@@ -1497,15 +1554,52 @@ public class TelegramBotService
                 payload,
                 "XTR",
                 (int)amount), cancellationToken);
+            existing.RawResponse = invoice.RawResponse;
+            existing.StatusReason = string.Empty;
+            existing.UpdatedAt = _clock.UtcNow;
+            await _db.SaveChangesAsync(cancellationToken);
             return new RouteResult("Telegram Stars invoice отправлен. После оплаты бот обработает successful_payment.", chatId, LinkedMenuReplyMarkupJson());
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            existing.StatusReason = "Telegram Stars invoice outcome could not be confirmed because the request was cancelled.";
+            existing.UpdatedAt = _clock.UtcNow;
+            await _db.SaveChangesAsync(CancellationToken.None);
+            throw;
         }
         catch (Exception ex)
         {
-            existing.StatusReason = ex.Message;
+            existing.StatusReason = $"Telegram Stars invoice outcome could not be confirmed: {ex.Message}";
             existing.UpdatedAt = _clock.UtcNow;
             await _db.SaveChangesAsync(cancellationToken);
-            return new RouteResult("Не удалось отправить счёт Telegram Stars. Повторите попытку позже или обратитесь в поддержку.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
+            return new RouteResult("Не удалось подтвердить отправку счёта Telegram Stars. Не повторяйте оплату и обратитесь в поддержку.", chatId, LinkedMenuReplyMarkupJson());
         }
+    }
+
+    private async Task<bool> TryClaimTelegramStarsInvoiceAsync(PaymentAttempt payment, CancellationToken cancellationToken)
+    {
+        if (_db is DbContext dbContext && dbContext.Database.IsRelational())
+        {
+            var now = _clock.UtcNow;
+            var claimed = await _db.Payments
+                .Where(x => x.Id == payment.Id && (x.Status == PaymentStatus.New || x.Status == PaymentStatus.Pending))
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.Status, PaymentStatus.WaitingConfirmation)
+                    .SetProperty(x => x.UpdatedAt, now), cancellationToken);
+            if (claimed == 0)
+            {
+                return false;
+            }
+        }
+
+        payment.Status = PaymentStatus.WaitingConfirmation;
+        payment.UpdatedAt = _clock.UtcNow;
+        if (_db is not DbContext relationalContext || !relationalContext.Database.IsRelational())
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        return true;
     }
 
     private async Task<RouteResult> HandlePaymentCheckAsync(TelegramAccount account, string callback, long? chatId, CancellationToken cancellationToken)
@@ -1559,6 +1653,21 @@ public class TelegramBotService
             return new RouteResult(string.Empty, parsed.ChatId, null, parsed.PreCheckoutQueryId, false, validationError);
         }
 
+        if (payment.Order.PaymentProvider != PaymentProvider.TelegramStars
+            || payment.Order.Status != OrderStatus.PendingPayment
+            || payment.Order.PaidAt.HasValue
+            || payment.Order.ExpiresAt <= _clock.UtcNow
+            || payment.Status is not (PaymentStatus.Pending or PaymentStatus.WaitingConfirmation))
+        {
+            if (payment.Order.Status == OrderStatus.PendingPayment && payment.Order.ExpiresAt <= _clock.UtcNow)
+            {
+                StatusStateMachine.SetOrderStatus(payment.Order, OrderStatus.Expired, _clock.UtcNow);
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+
+            return new RouteResult(string.Empty, parsed.ChatId, null, parsed.PreCheckoutQueryId, false, "Order is no longer payable.");
+        }
+
         return new RouteResult(string.Empty, parsed.ChatId, null, parsed.PreCheckoutQueryId, true, null);
     }
 
@@ -1570,6 +1679,11 @@ public class TelegramBotService
             return new RouteResult("Получен successful_payment без telegram_payment_charge_id.", parsed.ChatId, LinkedMenuReplyMarkupJson());
         }
 
+        await using var chargeGate = await PaymentProcessingGate.AcquireWebhookAsync(
+            nameof(PaymentProvider.TelegramStars),
+            chargeId,
+            string.Empty,
+            cancellationToken);
         var existingPaymentEvent = await _db.TelegramBotPayments.AsNoTracking().FirstOrDefaultAsync(x => x.TelegramPaymentChargeId == chargeId, cancellationToken);
         if (existingPaymentEvent is not null)
         {
@@ -1579,34 +1693,92 @@ public class TelegramBotService
         var payload = parsed.SuccessfulPaymentPayload ?? string.Empty;
         if (!payload.StartsWith("tgstars:", StringComparison.OrdinalIgnoreCase) || !Guid.TryParse(payload[8..], out var paymentId))
         {
+            var unmatchedPayment = CreateTelegramBotPayment(account, parsed, rawBody, chargeId, payload, null);
+            if (!await TryPersistTelegramStarsChargeAsync(unmatchedPayment, cancellationToken))
+            {
+                return new RouteResult("Платеж Telegram Stars уже обработан.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+            }
+
             return new RouteResult("Получен successful_payment с неподдерживаемым payload. Платеж сохранен для ручной проверки.", parsed.ChatId, LinkedMenuReplyMarkupJson());
         }
 
+        var paymentOrderId = await _db.Payments.AsNoTracking()
+            .Where(x => x.Id == paymentId && x.Provider == PaymentProvider.TelegramStars)
+            .Select(x => (Guid?)x.OrderId)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (!paymentOrderId.HasValue)
+        {
+            var unmatchedPayment = CreateTelegramBotPayment(account, parsed, rawBody, chargeId, payload, null);
+            if (!await TryPersistTelegramStarsChargeAsync(unmatchedPayment, cancellationToken))
+            {
+                return new RouteResult("Платеж Telegram Stars уже обработан.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+            }
+
+            return new RouteResult("Платеж Telegram Stars не найден. Событие сохранено для ручной проверки.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+        }
+
+        await using var orderGate = await PaymentProcessingGate.AcquireOrderAsync(paymentOrderId.Value, cancellationToken);
         var payment = await _db.Payments.Include(x => x.Order).FirstOrDefaultAsync(x => x.Id == paymentId && x.Provider == PaymentProvider.TelegramStars, cancellationToken);
         if (payment is null || payment.Order is null || payment.Order.UserId != account.UserId)
         {
-            return new RouteResult("Платеж Telegram Stars не найден или не принадлежит пользователю.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+            var unmatchedPayment = CreateTelegramBotPayment(account, parsed, rawBody, chargeId, payload, null);
+            if (!await TryPersistTelegramStarsChargeAsync(unmatchedPayment, cancellationToken))
+            {
+                return new RouteResult("Платеж Telegram Stars уже обработан.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+            }
+
+            return new RouteResult("Платеж Telegram Stars не связан с вашим аккаунтом. Событие сохранено для ручной проверки.", parsed.ChatId, LinkedMenuReplyMarkupJson());
         }
 
-        _db.TelegramBotPayments.Add(new TelegramBotPayment
+        var paymentEvent = CreateTelegramBotPayment(account, parsed, rawBody, chargeId, payload, payment.Id);
+        if (_db is DbContext relationalDb && relationalDb.Database.IsRelational())
         {
-            PaymentAttemptId = payment.Id,
-            TelegramUserId = account.TelegramUserId,
-            ProviderPaymentChargeId = parsed.SuccessfulPaymentProviderChargeId ?? string.Empty,
-            TelegramPaymentChargeId = chargeId,
-            InvoicePayload = payload,
-            TotalAmount = parsed.SuccessfulPaymentTotalAmount ?? 0,
-            Currency = parsed.SuccessfulPaymentCurrency ?? "XTR",
-            RawPayload = Redact(rawBody)
-        });
+            await using var transaction = await relationalDb.Database.BeginTransactionAsync(cancellationToken);
+            if (!await TryPersistTelegramStarsChargeAsync(paymentEvent, cancellationToken))
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return new RouteResult("Платеж Telegram Stars уже обработан.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+            }
 
+            var result = await FinalizeTelegramStarsChargeAsync(account, payment, parsed, rawBody, chargeId, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return result;
+        }
+
+        if (!await TryPersistTelegramStarsChargeAsync(paymentEvent, cancellationToken))
+        {
+            return new RouteResult("Платеж Telegram Stars уже обработан.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+        }
+
+        return await FinalizeTelegramStarsChargeAsync(account, payment, parsed, rawBody, chargeId, cancellationToken);
+    }
+
+    private async Task<RouteResult> FinalizeTelegramStarsChargeAsync(
+        TelegramAccount account,
+        PaymentAttempt payment,
+        ParsedTelegramUpdate parsed,
+        string rawBody,
+        string chargeId,
+        CancellationToken cancellationToken)
+    {
+        var order = payment.Order ?? throw new InvalidOperationException("Telegram Stars payment order is unavailable.");
         var validationError = ValidateTelegramStarsPayload(payment, parsed.SuccessfulPaymentTotalAmount, parsed.SuccessfulPaymentCurrency);
         if (!string.IsNullOrWhiteSpace(validationError))
         {
             payment.StatusReason = validationError;
             payment.WebhookPayload = Redact(rawBody);
             await _db.SaveChangesAsync(cancellationToken);
-            return new RouteResult($"Платеж Telegram Stars отклонен: {validationError}", parsed.ChatId, LinkedMenuReplyMarkupJson());
+            return new RouteResult("Оплата Telegram Stars получена с неверной суммой или валютой. Не повторяйте оплату и обратитесь в поддержку.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+        }
+
+        if (payment.Status == PaymentStatus.Succeeded
+            && !string.IsNullOrWhiteSpace(payment.ExternalEventId)
+            && !string.Equals(payment.ExternalEventId, chargeId, StringComparison.Ordinal))
+        {
+            payment.StatusReason = $"An additional Telegram Stars charge {chargeId} was received after {payment.ExternalEventId}; manual reconciliation is required.";
+            payment.WebhookPayload = Redact(rawBody);
+            await _db.SaveChangesAsync(cancellationToken);
+            return new RouteResult("Получено повторное списание Telegram Stars. Не повторяйте оплату и обратитесь в поддержку для сверки.", parsed.ChatId, LinkedMenuReplyMarkupJson());
         }
 
         var responseText = "Оплата Telegram Stars получена. Проверьте /subscriptions и /keys.";
@@ -1614,50 +1786,152 @@ public class TelegramBotService
         if (payment.Status != PaymentStatus.Succeeded)
         {
             var now = _clock.UtcNow;
-            var paymentStatus = StatusStateMachine.TrySetPaymentStatus(payment, PaymentStatus.Succeeded, now);
-            if (!paymentStatus.IsSuccess)
+            if (_db is DbContext relationalDb && relationalDb.Database.IsRelational())
             {
-                payment.StatusReason = paymentStatus.Error ?? string.Empty;
-                payment.WebhookPayload = Redact(rawBody);
-                await _db.SaveChangesAsync(cancellationToken);
-                return new RouteResult(paymentStatus.Error ?? "Telegram Stars payment status transition is not allowed.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+                var claimed = await _db.Payments
+                    .Where(x => x.Id == payment.Id && x.Status != PaymentStatus.Succeeded
+                        && (x.Status == PaymentStatus.New
+                            || x.Status == PaymentStatus.Pending
+                            || x.Status == PaymentStatus.WaitingConfirmation
+                            || x.Status == PaymentStatus.Unknown))
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(x => x.Status, PaymentStatus.Succeeded)
+                        .SetProperty(x => x.PaidAt, now)
+                        .SetProperty(x => x.SignatureValidated, true)
+                        .SetProperty(x => x.ExternalEventId, chargeId)
+                        .SetProperty(x => x.WebhookPayload, Redact(rawBody))
+                        .SetProperty(x => x.UpdatedAt, now), cancellationToken);
+                if (claimed == 0)
+                {
+                    await relationalDb.Entry(payment).ReloadAsync(cancellationToken);
+                    await relationalDb.Entry(order).ReloadAsync(cancellationToken);
+                    if (payment.Status == PaymentStatus.Succeeded
+                        && !string.Equals(payment.ExternalEventId, chargeId, StringComparison.Ordinal))
+                    {
+                        payment.StatusReason = $"An additional Telegram Stars charge {chargeId} was received after {payment.ExternalEventId}; manual reconciliation is required.";
+                        payment.WebhookPayload = Redact(rawBody);
+                        await _db.SaveChangesAsync(cancellationToken);
+                        return new RouteResult("Получено повторное списание Telegram Stars. Не повторяйте оплату и обратитесь в поддержку для сверки.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+                    }
+
+                    payment.StatusReason = $"Telegram Stars charge was accepted, but payment {payment.Status} requires manual reconciliation.";
+                    payment.WebhookPayload = Redact(rawBody);
+                    await _db.SaveChangesAsync(cancellationToken);
+                    return new RouteResult("Оплата Telegram Stars получена, но платёж требует ручной проверки. Не повторяйте оплату и обратитесь в поддержку.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+                }
+
+                payment.Status = PaymentStatus.Succeeded;
+                payment.UpdatedAt = now;
+            }
+            else
+            {
+                var paymentStatus = StatusStateMachine.TrySetPaymentStatus(payment, PaymentStatus.Succeeded, now);
+                if (!paymentStatus.IsSuccess)
+                {
+                    payment.StatusReason = $"Telegram Stars charge was accepted, but payment {payment.Status} requires manual reconciliation.";
+                    payment.WebhookPayload = Redact(rawBody);
+                    await _db.SaveChangesAsync(cancellationToken);
+                    return new RouteResult("Оплата Telegram Stars получена, но платёж требует ручной проверки. Не повторяйте оплату и обратитесь в поддержку.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+                }
             }
 
             payment.PaidAt = now;
             payment.SignatureValidated = true;
             payment.ExternalEventId = chargeId;
             payment.WebhookPayload = Redact(rawBody);
-            var orderStatus = StatusStateMachine.TrySetOrderStatus(payment.Order, OrderStatus.PaymentReceived, now);
+
+            if (payment.Status != PaymentStatus.Succeeded)
+            {
+                payment.StatusReason = $"Telegram Stars charge was accepted, but payment {payment.Status} requires manual reconciliation.";
+                payment.WebhookPayload = Redact(rawBody);
+                await _db.SaveChangesAsync(cancellationToken);
+                return new RouteResult("Оплата Telegram Stars получена, но платёж требует ручной проверки. Не повторяйте оплату и обратитесь в поддержку.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+            }
+            var orderStatus = StatusStateMachine.TrySetOrderStatus(order, OrderStatus.PaymentReceived, now);
             if (!orderStatus.IsSuccess)
             {
-                payment.StatusReason = orderStatus.Error ?? string.Empty;
+                payment.StatusReason = $"Telegram Stars charge was accepted, but order {order.Status} requires manual reconciliation.";
                 await _db.SaveChangesAsync(cancellationToken);
-                return new RouteResult(orderStatus.Error ?? "Telegram Stars order status transition is not allowed.", parsed.ChatId, LinkedMenuReplyMarkupJson());
+                return new RouteResult("Оплата Telegram Stars получена, но заказ требует ручной проверки. Не повторяйте оплату и обратитесь в поддержку.", parsed.ChatId, LinkedMenuReplyMarkupJson());
             }
 
-            payment.Order.PaidAt = now;
+            order.PaidAt = now;
 
             if (!payment.IsActivationProcessed && _subscriptionService is not null)
             {
-                var activation = await _subscriptionService.ActivateOrRenewFromOrderAsync(payment.Order, payment, cancellationToken);
+                var activation = await _subscriptionService.ActivateOrRenewFromOrderAsync(order, payment, cancellationToken);
                 if (activation.IsSuccess)
                 {
                     payment.IsActivationProcessed = true;
                     payment.ActivationProcessedAt = now;
-                    responseText = await BuildActivatedAccessTextAsync(payment.Order, activation.Value!, cancellationToken);
+                    responseText = await BuildActivatedAccessTextAsync(order, activation.Value!, cancellationToken);
                     responseKeyboard = BuildPostPaymentReplyMarkupJson();
                     await QueueTelegramNotificationAsync(account.TelegramUserId, "subscription_activated", responseText, cancellationToken, responseKeyboard);
                 }
                 else
                 {
                     payment.StatusReason = activation.Error ?? string.Empty;
-                    StatusStateMachine.SetOrderStatus(payment.Order, OrderStatus.PartiallyProcessed, now);
+                    StatusStateMachine.SetOrderStatus(order, OrderStatus.PartiallyProcessed, now);
                 }
             }
         }
 
         await _db.SaveChangesAsync(cancellationToken);
         return new RouteResult(responseText, parsed.ChatId, responseKeyboard);
+    }
+
+    private async Task<bool> TryPersistTelegramStarsChargeAsync(TelegramBotPayment paymentEvent, CancellationToken cancellationToken)
+    {
+        _db.TelegramBotPayments.Add(paymentEvent);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateException ex) when (IsTelegramPaymentChargeUniqueConstraintViolation(ex))
+        {
+            if (_db is DbContext dbContext)
+            {
+                dbContext.Entry(paymentEvent).State = EntityState.Detached;
+            }
+
+            return false;
+        }
+    }
+
+    private static TelegramBotPayment CreateTelegramBotPayment(
+        TelegramAccount account,
+        ParsedTelegramUpdate parsed,
+        string rawBody,
+        string chargeId,
+        string payload,
+        Guid? paymentAttemptId)
+        => new()
+        {
+            PaymentAttemptId = paymentAttemptId,
+            TelegramUserId = account.TelegramUserId,
+            ProviderPaymentChargeId = parsed.SuccessfulPaymentProviderChargeId ?? string.Empty,
+            TelegramPaymentChargeId = chargeId,
+            InvoicePayload = payload,
+            TotalAmount = parsed.SuccessfulPaymentTotalAmount ?? 0,
+            Currency = parsed.SuccessfulPaymentCurrency ?? "XTR",
+            RawPayload = Redact(rawBody)
+        };
+
+    private static bool IsTelegramPaymentChargeUniqueConstraintViolation(DbUpdateException exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            var constraintName = current.GetType().GetProperty("ConstraintName")?.GetValue(current)?.ToString();
+            if (string.Equals(constraintName, "IX_TelegramBotPayments_TelegramPaymentChargeId", StringComparison.OrdinalIgnoreCase)
+                || current.Message.Contains("IX_TelegramBotPayments_TelegramPaymentChargeId", StringComparison.OrdinalIgnoreCase)
+                || current.Message.Contains("TelegramBotPayments.TelegramPaymentChargeId", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string? ValidateTelegramStarsPayload(PaymentAttempt payment, long? totalAmount, string? currency)

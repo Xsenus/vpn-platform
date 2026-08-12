@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-telegram-payment-recovery-provider-lock`, версия `0.656.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `669/689` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-telegram-stars-charge-lifecycle`, версия `0.657.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `670/690` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-12:
 
-- [x] `STATE-001` Backend test suite проходит: `1287/1287`.
+- [x] `STATE-001` Backend test suite проходит: `1296/1296`.
 - [x] `STATE-002` Frontend test suite проходит: `142/142`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -877,6 +877,10 @@ git diff --check
   - Что сделать: убрать дублирующий `/telegram/webhook` из standalone `VpnPlatform.TelegramBot`, чтобы Telegram webhook не жил в двух местах и не расходился с настройками админки.
   - Что сделано: `VpnPlatform.TelegramBot` оставлен для `TelegramLongPollingService`, `TelegramNotificationDispatcherService` и health endpoints; webhook закреплен за основным API `/api/channels/telegram/webhook`. Документация и production example указывают на основной API endpoint.
   - Доказательство: `TelegramBotProcessBoundaryTests` 2/2, targeted Telegram boundary/API suite 41/41, standalone TelegramBot build без предупреждений, backend full suite `493/493`, fresh local SQLite smoke, local SQLite VPS smoke dry-run, latest "Что нового" `2026-06-14-telegram-webhook-boundary`, версия `0.117.0`.
+
+- [x] `P1-TG-007` Закрыть lifecycle счёта и списания Telegram Stars. 2026-08-12.
+  - Что сделано: invoice атомарно резервируется перед Telegram API и не отправляется повторно после успеха или неопределённого transport outcome; pre-checkout отклоняет истёкшие, закрытые и уже оплаченные заказы. `successful_payment` сохраняет charge даже при неизвестном payload, выделяет terminal-order и второе списание для ручной сверки и не выдаёт VPN повторно.
+  - Доказательство: SQLite fail-first и regression в `TelegramBotPurchaseFlowTests`, Telegram purchase flow `48/48`, backend Release `1296/1296`, frontend `142/142`, Playwright `226/226` за `12.3 min`, fresh local SQLite smoke, EF drift и dependency audit `0 vulnerabilities`; latest "Что нового" `2026-08-12-telegram-stars-charge-lifecycle`, версия `0.657.0`. Реальный Telegram Bot API/Stars smoke остаётся внешним evidence для `STATE-011`.
 
 ## P2. Админка как полноценный центр управления
 

@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-12-telegram-payment-recovery-provider-lock";
-    private const string CurrentVersion = "0.656.0";
+    private const string CurrentReleaseId = "2026-08-12-telegram-stars-charge-lifecycle";
+    private const string CurrentVersion = "0.657.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -17,7 +17,7 @@ public class RoadmapCurrentStateTests
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
 
         Assert.Contains("Дата актуализации: 2026-08-12", roadmap, StringComparison.Ordinal);
-        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1287/1287`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1296/1296`.", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-002` Frontend test suite проходит: `142/142`.", roadmap, StringComparison.Ordinal);
         Assert.Contains("11/11", roadmap, StringComparison.Ordinal);
         Assert.Contains(CurrentReleaseId, roadmap, StringComparison.OrdinalIgnoreCase);
@@ -312,9 +312,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("1287/1287", readme, StringComparison.Ordinal);
-        Assert.Contains("1287/1287", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("1287/1287", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("1296/1296", readme, StringComparison.Ordinal);
+        Assert.Contains("1296/1296", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("1296/1296", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,

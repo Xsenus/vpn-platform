@@ -15452,5 +15452,28 @@
         "text": "Roadmap progress is 669/689 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-telegram-stars-charge-lifecycle",
+    "version": "0.657.0",
+    "releasedAt": "2026-08-12T14:20:00+07:00",
+    "title": "Telegram Stars защищён от повторных списаний",
+    "summary": "Invoice, pre-checkout и successful payment используют единый lifecycle и сохраняют спорные списания для сверки.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Повторный callback не отправляет второй счёт, а закрытый или истёкший заказ не проходит pre-checkout."
+      },
+      {
+        "type": "improved",
+        "text": "Неизвестный payload, списание по закрытому заказу и второй charge сохраняются для ручной проверки без повторной выдачи VPN."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 670/690 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; Telegram Stars/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

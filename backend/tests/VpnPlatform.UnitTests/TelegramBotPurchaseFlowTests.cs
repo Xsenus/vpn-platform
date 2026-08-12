@@ -114,6 +114,77 @@ public class TelegramBotPurchaseFlowTests
     }
 
     [Fact]
+    public async Task Telegram_Stars_Second_Charge_Should_Require_Reconciliation_Without_Duplicate_Activation()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        await EnableTelegramStarsAsync(db);
+        var service = CreateBot(db);
+
+        await service.ProcessUpdateAsync(Update(447, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(448, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(449, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(450, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var order = await db.Orders.SingleAsync();
+        await service.ProcessUpdateAsync(CallbackUpdate(451, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var payment = await db.Payments.SingleAsync();
+        await service.ProcessUpdateAsync(SuccessfulPaymentUpdate(452, payment.Id, "tg-charge-original"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        var second = await service.ProcessUpdateAsync(SuccessfulPaymentUpdate(453, payment.Id, "tg-charge-second"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.Contains("повторное списание", second.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("сверки", second.Value.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(2, await db.TelegramBotPayments.CountAsync());
+        Assert.Single(await db.Subscriptions.ToListAsync());
+        Assert.Single(await db.AccessCredentials.ToListAsync());
+        var updatedPayment = await db.Payments.SingleAsync();
+        Assert.Equal(PaymentStatus.Succeeded, updatedPayment.Status);
+        Assert.Contains("additional Telegram Stars charge", updatedPayment.StatusReason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Telegram_Stars_Stale_Context_Second_Charge_Should_Not_Overwrite_First_Charge_Or_Activate_Twice()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var firstDb = CreateSqliteDbContext(connection);
+        await firstDb.Database.EnsureCreatedAsync();
+        var tariff = await SeedCatalogAndProvidersAsync(firstDb);
+        await EnableTelegramStarsAsync(firstDb);
+        var firstService = CreateBot(firstDb);
+
+        await firstService.ProcessUpdateAsync(Update(454, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await firstService.ProcessUpdateAsync(CallbackUpdate(455, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await firstService.ProcessUpdateAsync(CallbackUpdate(456, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await firstService.ProcessUpdateAsync(CallbackUpdate(457, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var order = await firstDb.Orders.SingleAsync();
+        await firstService.ProcessUpdateAsync(CallbackUpdate(458, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var payment = await firstDb.Payments.SingleAsync();
+
+        await using var staleDb = CreateSqliteDbContext(connection);
+        var stalePayment = await staleDb.Payments.Include(x => x.Order).SingleAsync(x => x.Id == payment.Id);
+        Assert.Equal(PaymentStatus.Pending, stalePayment.Status);
+        var staleService = CreateBot(staleDb);
+
+        await firstService.ProcessUpdateAsync(SuccessfulPaymentUpdate(459, payment.Id, "tg-charge-first-atomic"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var second = await staleService.ProcessUpdateAsync(SuccessfulPaymentUpdate(460, payment.Id, "tg-charge-second-stale"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.Contains("повторное списание", second.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        await using var inspectDb = CreateSqliteDbContext(connection);
+        var updatedPayment = await inspectDb.Payments.SingleAsync();
+        Assert.Equal("tg-charge-first-atomic", updatedPayment.ExternalEventId);
+        Assert.Equal(PaymentStatus.Succeeded, updatedPayment.Status);
+        Assert.Contains("tg-charge-second-stale", updatedPayment.StatusReason, StringComparison.Ordinal);
+        Assert.Equal(2, await inspectDb.TelegramBotPayments.CountAsync());
+        Assert.Single(await inspectDb.Subscriptions.ToListAsync());
+        Assert.Single(await inspectDb.AccessCredentials.ToListAsync());
+        Assert.Equal(1, await inspectDb.TelegramBotNotifications.CountAsync(x => x.Type == "subscription_activated"));
+    }
+
+    [Fact]
     public async Task Telegram_Stars_Purchase_Should_Create_Subscription_And_Vpn_Access_On_Sqlite()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -348,6 +419,74 @@ public class TelegramBotPurchaseFlowTests
         Assert.Equal(0, await db.AccessCredentials.CountAsync());
         Assert.NotEqual(PaymentStatus.Succeeded, (await db.Payments.SingleAsync()).Status);
         Assert.Contains("amount", (await db.Payments.SingleAsync()).StatusReason.ToLowerInvariant());
+        Assert.DoesNotContain("PaymentAttempt", first.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("обратитесь в поддержку", first.Value.ResponseText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Telegram_Stars_SuccessfulPayment_With_Unsupported_Payload_Should_Be_Saved_For_Reconciliation()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        await EnableTelegramStarsAsync(db);
+        var service = CreateBot(db);
+
+        await service.ProcessUpdateAsync(Update(436, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(437, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(438, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(439, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        var result = await service.ProcessUpdateAsync(
+            SuccessfulPaymentUpdate(440, Guid.NewGuid(), "tg-charge-unsupported-payload", payload: "unsupported:payload"),
+            new Dictionary<string, string>(),
+            null,
+            CancellationToken.None);
+
+        Assert.Contains("ручной проверки", result.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        var paymentEvent = await db.TelegramBotPayments.SingleAsync();
+        Assert.Null(paymentEvent.PaymentAttemptId);
+        Assert.Equal("tg-charge-unsupported-payload", paymentEvent.TelegramPaymentChargeId);
+        Assert.Equal("unsupported:payload", paymentEvent.InvoicePayload);
+    }
+
+    [Fact]
+    public async Task Telegram_Stars_SuccessfulPayment_For_Cancelled_Order_Should_Require_Reconciliation()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        await EnableTelegramStarsAsync(db);
+        var service = CreateBot(db);
+
+        await service.ProcessUpdateAsync(Update(441, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(442, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(443, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(444, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var order = await db.Orders.SingleAsync();
+        await service.ProcessUpdateAsync(CallbackUpdate(445, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var payment = await db.Payments.SingleAsync();
+        order.Status = OrderStatus.Cancelled;
+        await db.SaveChangesAsync();
+
+        var result = await service.ProcessUpdateAsync(
+            SuccessfulPaymentUpdate(446, payment.Id, "tg-charge-cancelled-order"),
+            new Dictionary<string, string>(),
+            null,
+            CancellationToken.None);
+
+        Assert.Contains("Оплата Telegram Stars получена", result.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ручной проверки", result.Value.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("transition", result.Value.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(PaymentStatus.Succeeded, (await db.Payments.SingleAsync()).Status);
+        Assert.Equal(OrderStatus.Cancelled, (await db.Orders.SingleAsync()).Status);
+        Assert.Empty(await db.Subscriptions.ToListAsync());
+        Assert.Single(await db.TelegramBotPayments.ToListAsync());
+        Assert.Contains("manual reconciliation", (await db.Payments.SingleAsync()).StatusReason, StringComparison.OrdinalIgnoreCase);
     }
 
 
@@ -500,6 +639,127 @@ public class TelegramBotPurchaseFlowTests
 
         Assert.True(result.IsSuccess, result.Error);
         Assert.True(result.Value!.PreCheckoutOk);
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Cancelled)]
+    [InlineData(OrderStatus.Expired)]
+    public async Task Telegram_Stars_PreCheckout_Should_Reject_NonPayable_Order(OrderStatus status)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        await EnableTelegramStarsAsync(db);
+        var invoiceProvider = new RecordingInvoiceProvider();
+        var service = CreateBot(db, invoiceProvider: invoiceProvider);
+
+        await service.ProcessUpdateAsync(Update(402, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(403, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(404, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(405, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var order = await db.Orders.SingleAsync();
+        await service.ProcessUpdateAsync(CallbackUpdate(406, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var payment = await db.Payments.SingleAsync(x => x.Provider == PaymentProvider.TelegramStars);
+        order.Status = status;
+        if (status == OrderStatus.Expired)
+        {
+            order.ExpiresAt = new FixedClock().UtcNow.AddMinutes(-1);
+        }
+        await db.SaveChangesAsync();
+
+        var result = await service.ProcessUpdateAsync(PreCheckoutUpdate(407 + (int)status, payment.Id, 490, "XTR"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.False(result.Value!.PreCheckoutOk);
+        Assert.Contains("no longer payable", result.Value.PreCheckoutError!, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(PaymentStatus.WaitingConfirmation, (await db.Payments.SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task Telegram_Stars_Duplicate_Callback_Should_Not_Send_Another_Invoice()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        await EnableTelegramStarsAsync(db);
+        var invoiceProvider = new RecordingInvoiceProvider();
+        var service = CreateBot(db, invoiceProvider: invoiceProvider);
+
+        await service.ProcessUpdateAsync(Update(417, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(418, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(419, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(420, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var order = await db.Orders.SingleAsync();
+
+        var first = await service.ProcessUpdateAsync(CallbackUpdate(421, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var duplicate = await service.ProcessUpdateAsync(CallbackUpdate(422, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.Contains("invoice отправлен", first.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("уже отправлен", duplicate.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, invoiceProvider.CreateCalls);
+        Assert.Single(await db.Payments.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Telegram_Stars_Ambiguous_Invoice_Failure_Should_Not_Retry_Automatically()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        await EnableTelegramStarsAsync(db);
+        var invoiceProvider = new AmbiguousFailureInvoiceProvider();
+        var service = CreateBot(db, invoiceProvider: invoiceProvider);
+
+        await service.ProcessUpdateAsync(Update(430, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(431, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(432, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(433, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var order = await db.Orders.SingleAsync();
+
+        var first = await service.ProcessUpdateAsync(CallbackUpdate(434, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var retry = await service.ProcessUpdateAsync(CallbackUpdate(435, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.Contains("Не повторяйте", first.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("transport outcome unknown", first.Value.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("уже отправлен", retry.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, invoiceProvider.CreateCalls);
+        var payment = await db.Payments.SingleAsync();
+        Assert.Equal(PaymentStatus.WaitingConfirmation, payment.Status);
+        Assert.Contains("outcome could not be confirmed", payment.StatusReason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Telegram_Stars_Callback_After_Success_Should_Not_Create_Another_Invoice()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        await EnableTelegramStarsAsync(db);
+        var invoiceProvider = new RecordingInvoiceProvider();
+        var service = CreateBot(db, invoiceProvider: invoiceProvider);
+
+        await service.ProcessUpdateAsync(Update(423, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(424, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(425, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(426, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var order = await db.Orders.SingleAsync();
+        await service.ProcessUpdateAsync(CallbackUpdate(427, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var payment = await db.Payments.SingleAsync();
+        await service.ProcessUpdateAsync(SuccessfulPaymentUpdate(428, payment.Id, "tg-charge-before-duplicate-callback"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        var duplicate = await service.ProcessUpdateAsync(CallbackUpdate(429, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.Contains("уже оплачен", duplicate.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, invoiceProvider.CreateCalls);
+        Assert.Single(await db.Payments.ToListAsync());
+        Assert.Equal(PaymentStatus.Succeeded, (await db.Payments.SingleAsync()).Status);
     }
 
     [Fact]
@@ -919,7 +1179,10 @@ public class TelegramBotPurchaseFlowTests
         Assert.Contains("Активных подписок пока нет", result.Value!.ResponseText);
     }
 
-    private static TelegramBotService CreateBot(ApplicationDbContext db, IReadOnlyCollection<IPaymentProvider>? paymentProviders = null)
+    private static TelegramBotService CreateBot(
+        ApplicationDbContext db,
+        IReadOnlyCollection<IPaymentProvider>? paymentProviders = null,
+        ITelegramInvoiceProvider? invoiceProvider = null)
     {
         var clock = new FixedClock();
         var orderService = new OrderService(db, clock);
@@ -933,7 +1196,7 @@ public class TelegramBotPurchaseFlowTests
         var paymentFactory = new PaymentProviderFactory(providers);
         var subscriptionService = new SubscriptionService(db, clock, new NodeAllocationService(db), new TestVpnProviderFactory());
         var orchestrator = new PaymentOrchestrator(db, paymentFactory, Array.Empty<IPaymentWebhookVerifier>(), providerAccounts, subscriptionService, clock);
-        return new TelegramBotService(db, clock, orderService, orchestrator, subscriptionService);
+        return new TelegramBotService(db, clock, orderService, orchestrator, subscriptionService, invoiceProvider);
     }
 
     private static ApplicationDbContext CreateDbContext()
@@ -1066,7 +1329,13 @@ public class TelegramBotPurchaseFlowTests
         }
         """;
 
-    private static string SuccessfulPaymentUpdate(long updateId, Guid paymentId, string telegramChargeId, long amount = 490, string currency = "XTR")
+    private static string SuccessfulPaymentUpdate(
+        long updateId,
+        Guid paymentId,
+        string telegramChargeId,
+        long amount = 490,
+        string currency = "XTR",
+        string? payload = null)
         => $$"""
         {
           "update_id": {{updateId}},
@@ -1078,7 +1347,7 @@ public class TelegramBotPurchaseFlowTests
             "successful_payment": {
               "currency": "{{currency}}",
               "total_amount": {{amount}},
-              "invoice_payload": "tgstars:{{paymentId:N}}",
+              "invoice_payload": "{{payload ?? $"tgstars:{paymentId:N}"}}",
               "telegram_payment_charge_id": "{{telegramChargeId}}",
               "provider_payment_charge_id": "provider-charge-1"
             }
@@ -1140,7 +1409,21 @@ public class TelegramBotPurchaseFlowTests
         public Task<TelegramInvoiceResult> CreateInvoiceAsync(TelegramInvoiceRequest request, CancellationToken cancellationToken)
         {
             CreateCalls++;
-            return Task.FromResult(new TelegramInvoiceResult(request.Payload, "{}"));
+            return Task.FromResult(new TelegramInvoiceResult(request.Payload, "{\"ok\":true}"));
+        }
+
+        public Task AnswerPreCheckoutQueryAsync(string preCheckoutQueryId, bool ok, string? errorMessage, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task SendMessageAsync(long chatId, string text, string? replyMarkupJson, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private sealed class AmbiguousFailureInvoiceProvider : ITelegramInvoiceProvider
+    {
+        public int CreateCalls { get; private set; }
+
+        public Task<TelegramInvoiceResult> CreateInvoiceAsync(TelegramInvoiceRequest request, CancellationToken cancellationToken)
+        {
+            CreateCalls++;
+            throw new HttpRequestException("transport outcome unknown");
         }
 
         public Task AnswerPreCheckoutQueryAsync(string preCheckoutQueryId, bool ok, string? errorMessage, CancellationToken cancellationToken) => Task.CompletedTask;

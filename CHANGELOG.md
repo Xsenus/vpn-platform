@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.657.0 - 2026-08-12
+
+Release entry: `2026-08-12-telegram-stars-charge-lifecycle`.
+
+### Исправлено
+
+- Telegram Stars не отправляет второй invoice после повторного callback, успешной оплаты или неопределённого transport outcome.
+- Pre-checkout отклоняет отменённые, истёкшие и оплаченные заказы; callback после successful_payment больше не создаёт конфликтующую payment attempt.
+- `successful_payment` сохраняет unknown payload и terminal-order charge для ручной сверки; второе списание фиксируется отдельно без повторной выдачи VPN.
+
+### Проверено
+
+- Telegram purchase flow `48/48`; backend Release `1296/1296`; frontend `142/142`; полный Playwright `226/226` за `12.3 min`; typecheck/build, bundle budget, dependency audit `0 vulnerabilities`, fresh SQLite и EF drift зелёные.
+- Roadmap `670/690` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные Telegram Stars/Bot API, provider/VPS/staging evidence локальными проверками не закрывались.
+
 ## 0.656.0 - 2026-08-12
 
 Release entry: `2026-08-12-telegram-payment-recovery-provider-lock`.
