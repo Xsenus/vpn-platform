@@ -15199,5 +15199,28 @@
         "text": "Roadmap progress is 658/678 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-provisioning-credential-preflight",
+    "version": "0.646.0",
+    "releasedAt": "2026-08-12T07:09:19+07:00",
+    "title": "Provisioning проверяет исполнимость SSH-учётных данных",
+    "summary": "API не сохраняет secret material в legacy SSH path, а queue отклоняет credential states, которые live runner не сможет материализовать.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Direct create/update принимает в SshPrivateKeyPath только absolute Unix filesystem path без control/quote-символов и отклоняет raw private key, protected marker и validation placeholder до node/audit mutation."
+      },
+      {
+        "type": "improved",
+        "text": "Queue до создания run проверяет protected payload и auth type; orphan reference, password credential и неисполняемый legacy payload завершаются controlled failure."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 659/679 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -20,6 +20,121 @@ namespace VpnPlatform.UnitTests;
 
 public class OwnVpsProvisioningMvpTests
 {
+    [Theory]
+    [InlineData("orphan-ref", "payload is missing")]
+    [InlineData("placeholder", "placeholder")]
+    [InlineData("password", "password")]
+    [InlineData("protected-legacy-path", "legacy")]
+    [InlineData("raw-key-path", "private key material")]
+    [InlineData("relative-path", "invalid")]
+    [InlineData("quoted-path", "invalid")]
+    public async Task QueueAsync_Should_Reject_NonExecutable_Ssh_Credential_State_On_Sqlite(string credentialState, string expectedError)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var node = new VpnNode
+        {
+            Name = $"invalid-credential-{credentialState}",
+            Host = "invalid-credential.example.test",
+            Provider = credentialState == "raw-key-path" ? "admin-vps" : "customer-vps",
+            SshUser = "root",
+            SshPort = 22,
+            Status = NodeStatus.New,
+            ProvisioningStatus = ProvisioningRunStatus.Requested,
+            TagsCsv = credentialState == "password"
+                ? "validation-mode:false,explicit-live-provisioning:true,ssh-auth:password"
+                : "validation-mode:false,explicit-live-provisioning:true,ssh-auth:ssh_key"
+        };
+        switch (credentialState)
+        {
+            case "orphan-ref":
+                node.SshCredentialRef = "secretref:ssh:missing";
+                break;
+            case "placeholder":
+                node.ProtectedSshCredential = "validation-placeholder:not-executable";
+                break;
+            case "password":
+                node.ProtectedSshCredential = "v1:cGFzc3dvcmQ=";
+                break;
+            case "protected-legacy-path":
+                node.SshPrivateKeyPath = "v1:legacy-protected-value";
+                break;
+            case "relative-path":
+                node.SshPrivateKeyPath = "secrets/id_ed25519";
+                break;
+            case "quoted-path":
+                node.SshPrivateKeyPath = "/run/secrets/id_ed25519\" --check";
+                break;
+            default:
+                node.SshPrivateKeyPath = "-----BEGIN OPENSSH PRIVATE KEY-----\nraw-secret\n-----END OPENSSH PRIVATE KEY-----";
+                break;
+        }
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        Assert.Equal(credentialState is "placeholder" or "password", ProvisioningService.CredentialsConfigured(node));
+
+        var result = await new ProvisioningService(db, new TestClock(), new TestSecretProtector())
+            .QueueAsync(node.Id, dryRun: false, requestedByUserId: Guid.NewGuid());
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(expectedError, result.Error, StringComparison.OrdinalIgnoreCase);
+        db.ChangeTracker.Clear();
+        var persisted = await db.VpnNodes.SingleAsync();
+        Assert.Equal(NodeStatus.New, persisted.Status);
+        Assert.Equal(ProvisioningRunStatus.Requested, persisted.ProvisioningStatus);
+        Assert.Empty(await db.ProvisioningRuns.ToListAsync());
+        Assert.Empty(await db.ProvisioningStepRuns.ToListAsync());
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData("protected-key")]
+    [InlineData("legacy-path")]
+    [InlineData("validation-placeholder")]
+    public async Task QueueAsync_Should_Accept_Executable_Or_Mocked_Ssh_Credential_State_On_Sqlite(string credentialState)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var validationMode = credentialState == "validation-placeholder";
+        var node = new VpnNode
+        {
+            Name = $"valid-credential-{credentialState}",
+            Host = "valid-credential.example.test",
+            Provider = "customer-vps",
+            SshUser = "root",
+            SshPort = 22,
+            TagsCsv = validationMode
+                ? "validation-mode:true,ssh-auth:ssh_key"
+                : "validation-mode:false,explicit-live-provisioning:true,ssh-auth:ssh_key",
+            ProtectedSshCredential = credentialState switch
+            {
+                "protected-key" => "v1:cHJpdmF0ZS1rZXk=",
+                "validation-placeholder" => "validation-placeholder:mock-only",
+                _ => string.Empty
+            },
+            SshPrivateKeyPath = credentialState == "legacy-path" ? "/run/secrets/vpn-platform/id_ed25519" : string.Empty
+        };
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+
+        var result = await new ProvisioningService(db, new TestClock(), new TestSecretProtector())
+            .QueueAsync(node.Id, dryRun: false, requestedByUserId: Guid.NewGuid());
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.True(ProvisioningService.CredentialsConfigured(node));
+        Assert.Single(await db.ProvisioningRuns.ToListAsync());
+        Assert.Single(await db.ProvisioningStepRuns.ToListAsync());
+        Assert.Single(await db.AuditLogs.Where(x => x.Action == "provisioning.queue").ToListAsync());
+    }
+
     [Fact]
     public async Task OwnVps_Request_Should_Protect_Credentials_And_Queue_Precheck()
     {

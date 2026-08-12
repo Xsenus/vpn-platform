@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-12-validation-deploy-executor-guard";
-    private const string CurrentVersion = "0.645.0";
+    private const string CurrentReleaseId = "2026-08-12-provisioning-credential-preflight";
+    private const string CurrentVersion = "0.646.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -17,7 +17,7 @@ public class RoadmapCurrentStateTests
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
 
         Assert.Contains("Дата актуализации: 2026-08-12", roadmap, StringComparison.Ordinal);
-        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1174/1174`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1196/1196`.", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-002` Frontend test suite проходит: `136/136`.", roadmap, StringComparison.Ordinal);
         Assert.Contains("11/11", roadmap, StringComparison.Ordinal);
         Assert.Contains(CurrentReleaseId, roadmap, StringComparison.OrdinalIgnoreCase);
@@ -305,9 +305,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("1174/1174", readme, StringComparison.Ordinal);
-        Assert.Contains("1174/1174", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("1174/1174", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("1196/1196", readme, StringComparison.Ordinal);
+        Assert.Contains("1196/1196", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("1196/1196", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,

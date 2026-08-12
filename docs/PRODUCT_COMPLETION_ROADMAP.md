@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-validation-deploy-executor-guard`, версия `0.645.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `658/678` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-provisioning-credential-preflight`, версия `0.646.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `659/679` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-12:
 
-- [x] `STATE-001` Backend test suite проходит: `1174/1174`.
+- [x] `STATE-001` Backend test suite проходит: `1196/1196`.
 - [x] `STATE-002` Frontend test suite проходит: `136/136`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2328,6 +2328,10 @@ git diff --check
   - Что сделать: `validation-mode:true` не должен запускать process/SSH/Ansible даже при обоих глобальных live-флагах; non-validation deploy с выключенным live execution не должен завершаться успешным mock result.
   - Что сделано: validation tag проверяется первым в executor и всегда ведёт в deterministic mock; non-validation deploy при `LiveExecutionEnabled=false` возвращает controlled failed step до workdir/process, а dry-run сохраняет безопасный mock fallback.
   - Доказательство: runtime fail-first `0/2` (canary runner стартовал, disabled live вернул success); после исправления executor `3/3`, provisioning/worker/sandbox `49/49`, backend `1174/1174`, frontend `136/136`, typecheck/build/audit зелёные. UI не менялся; актуальный browser inventory `218/218`. Реальный VPS/staging/3x-ui smoke не заменялся локальными тестами.
+- [x] `P11-ACC-369` Валидировать исполнимость provisioning SSH credential до записи и постановки в очередь. 2026-08-12.
+  - Что сделать: direct server API не должен сохранять key material/markers как legacy path, а queue не должна создавать run для orphan reference, placeholder, password credential или payload, который live materializer не поддерживает.
+  - Что сделано: server payload допускает в legacy-поле только абсолютный Unix filesystem path без control/quote-символов; общий queue preflight сверяет protected payload, auth type и legacy representation с materializer contract до node/run/step/audit mutations; readiness больше не опирается на пустой credential reference.
+  - Доказательство: SQLite fail-first `0/11`; после исправления negative/positive credential matrix `22/22`, provisioning/API/materializer/executor/coordinator `119/119`, backend `1196/1196`, frontend `136/136`, typecheck/build/audit и Release build `0` warnings/errors зелёные. UI не менялся; актуальный browser inventory `218/218`. Реальный VPS/staging/3x-ui smoke остаётся открытым.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2977,6 +2981,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-12-006` | P0 | Provisioning credentials | Direct API сохранял raw/protected/placeholder credential в legacy key path, а queue создавала run для orphan reference и credential states, не поддерживаемых materializer. | Исправлено локально | Absolute/path-argument validation и materializer-aligned queue preflight подтверждены SQLite `22/22`; реальный live VPS smoke остаётся открытым. |
 | `BUG-2026-08-12-005` | P0 | Provisioning executor | Validation node при включённых global live flags запускал реальный runner, а explicit live node при выключенном `LiveExecutionEnabled` получал ложный mock success. | Исправлено локально | Executor-level mode priority и два fail-closed runtime regression подтверждают отсутствие process start и ложного success; реальный live VPS smoke остаётся открытым. |
 | `BUG-2026-08-12-004` | P1 | Admin VPN server secrets | Без `ISecretProtector` create/update возвращал `200`, сохранял необратимый `validation-placeholder` и помечал SSH/panel credential как configured. | Исправлено локально | Единый ранний `503`, отсутствие node/secret-ref/audit mutations и сохранение metadata-only write подтверждены SQLite `6/6`. |
 | `BUG-2026-08-12-003` | P1 | Admin VPN server API | Direct create/update обходил UI semantic validation: пустое имя и невалидные capacity/priority/ports/inbound сохранялись или заменялись defaults, неизвестная node group давала FK/500. | Исправлено локально | Общий pre-mutation validator, controlled node-group lookup и SQLite create/update matrix `16/16` подтверждают отсутствие partial node/audit изменений и сохранение валидной привязки. |

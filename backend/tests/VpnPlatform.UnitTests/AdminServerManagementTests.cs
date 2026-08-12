@@ -21,6 +21,89 @@ namespace VpnPlatform.UnitTests;
 public class AdminServerManagementTests
 {
     [Theory]
+    [InlineData(false, "pem")]
+    [InlineData(false, "protected")]
+    [InlineData(false, "placeholder")]
+    [InlineData(false, "relative")]
+    [InlineData(false, "quoted")]
+    [InlineData(true, "pem")]
+    [InlineData(true, "protected")]
+    [InlineData(true, "placeholder")]
+    [InlineData(true, "relative")]
+    [InlineData(true, "quoted")]
+    public async Task Server_Write_Should_Reject_Secret_Material_In_Legacy_Ssh_Key_Path_On_Sqlite(bool update, string pathKind)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var node = NewNode($"legacy-path-guard-{update}-{pathKind}");
+        node.ProtectedSshCredential = "v1:existing-ssh-secret";
+        node.SshCredentialRef = "secretref:ssh:existing";
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        var unsafePath = pathKind switch
+        {
+            "pem" => "-----BEGIN OPENSSH PRIVATE KEY-----\nraw-secret\n-----END OPENSSH PRIVATE KEY-----",
+            "protected" => "v1:legacy-protected-value",
+            "placeholder" => "validation-placeholder:legacy-value",
+            "relative" => "secrets/id_ed25519",
+            _ => "/run/secrets/id_ed25519\" --check"
+        };
+        var request = UpdateRequest(node) with
+        {
+            Name = $"mutated-{node.Name}",
+            SshPrivateKeyPath = unsafePath,
+            SshCredential = null
+        };
+        var controller = CreateController(db);
+
+        var result = update
+            ? await controller.UpdateServer(node.Id, request, CancellationToken.None)
+            : await controller.AddServer(request, CancellationToken.None);
+
+        var invalid = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("SSH private key path", invalid.Value!.ToString(), StringComparison.OrdinalIgnoreCase);
+        db.ChangeTracker.Clear();
+        var persisted = await db.VpnNodes.SingleAsync();
+        Assert.Equal(node.Id, persisted.Id);
+        Assert.Equal(node.Name, persisted.Name);
+        Assert.Equal("v1:existing-ssh-secret", persisted.ProtectedSshCredential);
+        Assert.Equal("secretref:ssh:existing", persisted.SshCredentialRef);
+        Assert.DoesNotContain(await db.AuditLogs.ToListAsync(), x => x.Action is "server.create" or "server.update" or "server.secret.rotate");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Server_Write_Should_Accept_Legacy_Ssh_Key_Filesystem_Path_On_Sqlite(bool update)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var node = NewNode($"legacy-path-valid-{update}");
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        var request = UpdateRequest(node) with { SshPrivateKeyPath = "/run/secrets/vpn-platform/id_ed25519" };
+        var controller = CreateController(db);
+
+        var result = update
+            ? await controller.UpdateServer(node.Id, request, CancellationToken.None)
+            : await controller.AddServer(request, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        db.ChangeTracker.Clear();
+        var persisted = update
+            ? await db.VpnNodes.SingleAsync(x => x.Id == node.Id)
+            : await db.VpnNodes.SingleAsync(x => x.Id != node.Id);
+        Assert.Equal(request.SshPrivateKeyPath, persisted.SshPrivateKeyPath);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == (update ? "server.update" : "server.create"));
+    }
+
+    [Theory]
     [InlineData(false, "ssh")]
     [InlineData(false, "panel")]
     [InlineData(true, "ssh")]

@@ -12,6 +12,7 @@ Live provisioning разрешается только для одобренно�
 - У оператора есть root или sudo-доступ.
 - SSH credential сохранен в платформе как protected `ssh_key`.
 - Password-based live SSH не используется: текущий runner материализует только private key.
+- Legacy `SshPrivateKeyPath` может содержать только абсолютный Unix path к уже смонтированному key-файлу без control/quote-символов; raw key, protected marker и validation placeholder API отклоняет до записи.
 - Сервер не является production-сервером клиента без отдельного согласования.
 - В БД есть актуальный `VpnNode` с корректными `Host` или `IpAddress`, `SshUser`, `SshPort`, `PublicHostname`, `PublicPort`.
 - Для live deploy у ноды есть тег `explicit-live-provisioning:true`.
@@ -103,7 +104,7 @@ explicit-live-provisioning:true
 ## Порядок запуска через API
 
 1. Создать или обновить сервер в админке.
-2. Убедиться, что SSH credential задан и не возвращается в API.
+2. Убедиться, что protected SSH key задан и не возвращается в API. Queue дополнительно проверит наличие payload и поддерживаемый `ssh_key` auth type до создания run.
 3. Запустить precheck:
 
 ```http

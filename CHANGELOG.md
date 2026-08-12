@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.646.0 - 2026-08-12
+
+Release entry: `2026-08-12-provisioning-credential-preflight`.
+
+### Исправлено
+
+- Direct create/update VPN-сервера принимает в legacy `SshPrivateKeyPath` только абсолютный Unix filesystem path без control/quote-символов; raw private key, protected marker и validation placeholder отклоняются до записи node/audit.
+- Provisioning queue проверяет исполнимость SSH credential до создания run: orphan reference, non-validation placeholder, password credential и невалидный legacy payload завершаются controlled failure.
+- `credentialsConfigured` больше не считается истинным только из-за credential reference без protected payload; validation node сохраняет безопасный mock-контракт.
+
+### Проверено
+
+- SQLite fail-first `0/11`; после исправления negative/positive credential matrix `22/22`, расширенный provisioning/API/materializer/executor/coordinator контур `119/119`.
+- Backend `1196/1196`; Release build `0` warnings/errors; frontend `136/136`; typecheck/build всех приложений и audit `0 vulnerabilities` зелёные.
+- UI не менялся; актуальный полный browser inventory остаётся `218/218` (`52+62+98+6`) без failed/flaky/skipped.
+- EF drift отсутствует; fresh SQLite flow подтвердил latest release; seed содержит `645` записей, encoding/release guards `57/57`, secret scan `668` files/`0` findings.
+- Roadmap: `659/679` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked; real VPS/staging/3x-ui evidence не заменялся локальными проверками.
+
 ## 0.645.0 - 2026-08-12
 
 Release entry: `2026-08-12-validation-deploy-executor-guard`.

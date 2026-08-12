@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: provisioning credential preflight
+
+Scope:
+- Direct admin server writes must not persist raw/private/protected credential material in the legacy SSH key path field.
+- Provisioning queue must reject credential states that the live materializer cannot execute before creating a run, step or audit entry.
+
+Results:
+- Roadmap progress: `659/679` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-provisioning-credential-preflight`, version `0.646.0`.
+- Reproduction before fix: SQLite regression `0/11`; direct create/update accepted all unsafe legacy path values, while queueing accepted orphan references, placeholders, password credentials and raw/protected legacy payloads.
+- After fix: negative/positive credential matrix `22/22`, including relative/quoted path rejection; provisioning/API/materializer/executor/coordinator contour `119/119`. Failed preflight leaves node status, runs, steps and audit unchanged.
+- Backend full suite: `1196/1196`; Release build: `0` warnings/errors; EF model drift: none; fresh SQLite order/payment/subscription/access flow and latest release: OK; scoped formatter: OK.
+- Frontend tests: `136/136`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`. UI code did not change; the current full browser inventory remains `218/218` in isolated equivalent groups (`52` public, `62` cabinet, `98` admin, `6` all-screens), `0` failed/flaky/skipped.
+- Encoding/documentation/release guards: `57/57`; release seed: `645` entries with latest identity/version/order OK; secret scan: `668` files, `0` findings; artifact cleanup: OK. Real VPS/staging/3x-ui validation remains external and no live item was closed from local evidence.
+
 ## Check 2026-08-12: validation deploy executor guard
 
 Scope:

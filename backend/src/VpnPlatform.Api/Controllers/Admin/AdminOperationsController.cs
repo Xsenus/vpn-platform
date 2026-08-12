@@ -3216,6 +3216,12 @@ public class AdminOperationsController : ControllerBase
             return "Panel inbound ID must be greater than zero.";
         }
 
+        if (!string.IsNullOrWhiteSpace(request.SshPrivateKeyPath)
+            && !ProvisioningService.IsSafeLegacySshPrivateKeyPath(request.SshPrivateKeyPath))
+        {
+            return "SSH private key path must be an absolute Unix filesystem path without control or quote characters. Submit key material through the protected SSH credential field.";
+        }
+
         return null;
     }
 

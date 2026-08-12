@@ -109,6 +109,12 @@ public class ProvisioningService
             return Result<ProvisioningRun>.Failure("SSH username is required.");
         }
 
+        var credentialError = ValidateProvisioningSshCredential(node);
+        if (credentialError is not null)
+        {
+            return Result<ProvisioningRun>.Failure(credentialError);
+        }
+
         if (IsOwnVpsNode(node) && !CredentialsConfigured(node))
         {
             return Result<ProvisioningRun>.Failure("SSH credentials are required for own VPS provisioning.");
@@ -437,11 +443,7 @@ public class ProvisioningService
 
     public static bool CredentialsConfigured(VpnNode node)
         => IsProtectedCredential(node.ProtectedSshCredential)
-            || !string.IsNullOrWhiteSpace(node.SshCredentialRef)
-            || (!string.IsNullOrWhiteSpace(node.SshPrivateKeyPath)
-                && (node.SshPrivateKeyPath.StartsWith("v1:", StringComparison.Ordinal)
-                    || node.SshPrivateKeyPath.StartsWith("validation-placeholder:", StringComparison.Ordinal)
-                    || !node.SshPrivateKeyPath.Contains("PRIVATE KEY", StringComparison.OrdinalIgnoreCase)));
+            || IsSafeLegacySshPrivateKeyPath(node.SshPrivateKeyPath);
 
     public static bool PanelPasswordConfigured(VpnNode node)
         => IsProtectedCredential(node.ProtectedPanelPassword)
@@ -469,6 +471,88 @@ public class ProvisioningService
 
     public static bool IsProtectedCredential(string? credential)
         => !string.IsNullOrWhiteSpace(credential) && (credential.StartsWith("v1:", StringComparison.Ordinal) || credential.StartsWith("validation-placeholder:", StringComparison.Ordinal));
+
+    public static bool IsSafeLegacySshPrivateKeyPath(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var path = value.Trim();
+        if (path.Length > 4096 || path[0] != '/')
+        {
+            return false;
+        }
+
+        foreach (var character in path)
+        {
+            if (char.IsControl(character) || character == '"')
+            {
+                return false;
+            }
+        }
+
+        return !path.StartsWith("v1:", StringComparison.Ordinal)
+            && !path.StartsWith("validation-placeholder:", StringComparison.Ordinal)
+            && !path.Contains("PRIVATE KEY", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string? ValidateProvisioningSshCredential(VpnNode node)
+    {
+        if (IsValidationNode(node))
+        {
+            return null;
+        }
+
+        var protectedCredential = node.ProtectedSshCredential?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(protectedCredential))
+        {
+            if (!string.IsNullOrWhiteSpace(node.SshCredentialRef))
+            {
+                return "SSH credential reference is configured, but its protected payload is missing.";
+            }
+        }
+        else
+        {
+            if (protectedCredential.StartsWith("validation-placeholder:", StringComparison.Ordinal))
+            {
+                return "Validation placeholder SSH credentials cannot be queued for non-validation provisioning.";
+            }
+
+            if (!protectedCredential.StartsWith("v1:", StringComparison.Ordinal))
+            {
+                return "Protected SSH credential has an unsupported format.";
+            }
+
+            if (!string.Equals(GetSshAuthMethod(node), "ssh_key", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Live protected SSH password materialization is not supported. Use an ssh_key credential.";
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(node.SshPrivateKeyPath))
+        {
+            var path = node.SshPrivateKeyPath.Trim();
+            if (path.Contains("PRIVATE KEY", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Raw SSH private key material cannot be stored in SshPrivateKeyPath. Use a protected ssh_key credential.";
+            }
+
+            if (path.StartsWith("v1:", StringComparison.Ordinal)
+                || path.StartsWith("validation-placeholder:", StringComparison.Ordinal))
+            {
+                return "Legacy protected SSH credentials in SshPrivateKeyPath cannot be queued. Move the credential into ProtectedSshCredential.";
+            }
+
+            if (!IsSafeLegacySshPrivateKeyPath(path))
+            {
+                return "Legacy SSH private key path is invalid.";
+            }
+        }
+
+        return null;
+    }
 
     public string ProtectCredential(string credential)
     {
