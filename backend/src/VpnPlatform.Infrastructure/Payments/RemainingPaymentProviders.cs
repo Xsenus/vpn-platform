@@ -430,11 +430,26 @@ public sealed class StripePaymentProvider : IPaymentProvider, IPaymentWebhookVer
         static string Extract(string raw)
         {
             if (string.IsNullOrWhiteSpace(raw) || !raw.TrimStart().StartsWith('{')) return string.Empty;
-            using var doc = JsonDocument.Parse(raw);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("payment_intent", out var pi)) return pi.GetString() ?? string.Empty;
-            var obj = root.TryGetProperty("data", out var data) && data.TryGetProperty("object", out var objectElement) ? objectElement : root;
-            return obj.TryGetProperty("payment_intent", out var pi2) ? pi2.GetString() ?? string.Empty : string.Empty;
+            try
+            {
+                using var doc = JsonDocument.Parse(raw);
+                var root = doc.RootElement;
+                if (root.ValueKind != JsonValueKind.Object) return string.Empty;
+                if (root.TryGetProperty("payment_intent", out var pi) && pi.ValueKind == JsonValueKind.String) return pi.GetString() ?? string.Empty;
+                var obj = root.TryGetProperty("data", out var data)
+                    && data.ValueKind == JsonValueKind.Object
+                    && data.TryGetProperty("object", out var objectElement)
+                    && objectElement.ValueKind == JsonValueKind.Object
+                        ? objectElement
+                        : root;
+                return obj.TryGetProperty("payment_intent", out var pi2) && pi2.ValueKind == JsonValueKind.String
+                    ? pi2.GetString() ?? string.Empty
+                    : string.Empty;
+            }
+            catch (JsonException)
+            {
+                return string.Empty;
+            }
         }
 
         var fromStored = Extract(payment.WebhookPayload) is { Length: > 0 } stored ? stored : Extract(payment.RawResponse);
@@ -722,23 +737,43 @@ public sealed class PayPalPaymentProvider : IPaymentProvider, IPaymentWebhookVer
         static string Extract(string raw)
         {
             if (string.IsNullOrWhiteSpace(raw) || !raw.TrimStart().StartsWith('{')) return string.Empty;
-            using var doc = JsonDocument.Parse(raw);
-            var root = doc.RootElement.TryGetProperty("resource", out var resource) ? resource : doc.RootElement;
-            if (root.TryGetProperty("id", out var directId) && root.TryGetProperty("status", out var status) && string.Equals(status.GetString(), "COMPLETED", StringComparison.OrdinalIgnoreCase)) return directId.GetString() ?? string.Empty;
-            if (root.TryGetProperty("purchase_units", out var units))
+            try
             {
-                foreach (var unit in units.EnumerateArray())
+                using var doc = JsonDocument.Parse(raw);
+                if (doc.RootElement.ValueKind != JsonValueKind.Object) return string.Empty;
+                var root = doc.RootElement.TryGetProperty("resource", out var resource) && resource.ValueKind == JsonValueKind.Object
+                    ? resource
+                    : doc.RootElement;
+                if (root.TryGetProperty("id", out var directId)
+                    && directId.ValueKind == JsonValueKind.String
+                    && root.TryGetProperty("status", out var status)
+                    && status.ValueKind == JsonValueKind.String
+                    && string.Equals(status.GetString(), "COMPLETED", StringComparison.OrdinalIgnoreCase)) return directId.GetString() ?? string.Empty;
+                if (root.TryGetProperty("purchase_units", out var units) && units.ValueKind == JsonValueKind.Array)
                 {
-                    if (unit.TryGetProperty("payments", out var payments) && payments.TryGetProperty("captures", out var captures))
+                    foreach (var unit in units.EnumerateArray())
                     {
-                        foreach (var capture in captures.EnumerateArray())
+                        if (unit.ValueKind == JsonValueKind.Object
+                            && unit.TryGetProperty("payments", out var payments)
+                            && payments.ValueKind == JsonValueKind.Object
+                            && payments.TryGetProperty("captures", out var captures)
+                            && captures.ValueKind == JsonValueKind.Array)
                         {
-                            if (capture.TryGetProperty("id", out var id)) return id.GetString() ?? string.Empty;
+                            foreach (var capture in captures.EnumerateArray())
+                            {
+                                if (capture.ValueKind == JsonValueKind.Object
+                                    && capture.TryGetProperty("id", out var id)
+                                    && id.ValueKind == JsonValueKind.String) return id.GetString() ?? string.Empty;
+                            }
                         }
                     }
                 }
+                return string.Empty;
             }
-            return string.Empty;
+            catch (JsonException)
+            {
+                return string.Empty;
+            }
         }
 
         var fromStored = Extract(payment.WebhookPayload) is { Length: > 0 } stored ? stored : Extract(payment.RawResponse);

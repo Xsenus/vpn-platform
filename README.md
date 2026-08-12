@@ -209,12 +209,12 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-12 локально подтверждено:
 
-- backend на .NET 9: `1296/1296` unit tests;
+- backend на .NET 9: `1300/1300` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `142/142`;
+- frontend unit tests: `144/144`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `226/226`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `227/227`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
@@ -345,9 +345,10 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - административные sync/migration подписки, dashboard и user overview используют effective expiry; открытая админка обновляет команды и метрики без reload, а grace-period unblock согласован с backend state machine;
 - all-screens gate проверяет clipping контента, dialog bounds и перекрытия controls на 25 viewport-парах; VPN actions, referrals datetime fields и release editor исправлены на проблемных границах;
 - public/admin browser inventory использует typed production route/section sources и не допускает тихого выпадения нового экрана из аудита;
-- backend `1296/1296`, frontend `144/144`, полный Playwright `227/227` за `15.0 min`, dependency audit `0 vulnerabilities`;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-responsive-visual-oracle`, версия `0.658.0`;
+- Stripe/PayPal refund восстанавливает provider-specific ID через API, если сохранённый legacy payload повреждён, не создавая ложную ручную сверку до внешнего вызова;
+- backend `1300/1300`, frontend `144/144`, полный Playwright `227/227` за `15.0 min`, dependency audit `0 vulnerabilities`;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-provider-refund-payload-recovery`, версия `0.659.0`;
 - server API, own-VPS onboarding, queue и executor отклоняют inventory-breaking IP/SSH values; executor использует фиксированный alias и `ArgumentList`, а admin-форма показывает те же diagnostics до submit;
-- roadmap progress: `671/691` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- roadmap progress: `672/692` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

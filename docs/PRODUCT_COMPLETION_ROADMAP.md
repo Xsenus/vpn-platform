@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-responsive-visual-oracle`, версия `0.658.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `671/691` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-provider-refund-payload-recovery`, версия `0.659.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `672/692` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-12:
 
-- [x] `STATE-001` Backend test suite проходит: `1296/1296`.
+- [x] `STATE-001` Backend test suite проходит: `1300/1300`.
 - [x] `STATE-002` Frontend test suite проходит: `144/144`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2380,6 +2380,10 @@ git diff --check
   - Что сделать: проверять не только document overflow и clipping интерактивных элементов, но также обычный контент, dialog bounds и перекрытия реально видимых controls; browser inventory должен автоматически следовать production route/section inventory.
   - Что сделано: all-screens использует typed public/admin inventory, учитывает clipping ancestors и modal layer; исправлены VPN action-grid на 521 px, `datetime-local` поля referrals и release editor на 1280 px. Cabinet clock regression ждёт завершения post-retry reload до перевода времени.
   - Доказательство: fail-first обнаружил перекрытия `24x21`, `33x45` и `28x59`; targeted boundary E2E `1/1`, frontend `144/144`, backend Release `1296/1296`, полный Playwright `227/227` за `15.0 min`, typecheck/build, bundle budget, dependency audit `0 vulnerabilities` и fresh SQLite зелёные. Реальные VPS/staging/payment/3x-ui проверки остаются внешним evidence.
+- [x] `P11-ACC-381` Восстановить Stripe/PayPal refund после повреждённого сохранённого payload. 2026-08-12.
+  - Что сделать: malformed legacy `WebhookPayload` или `RawResponse` не должен останавливать provider-specific resolve до внешнего GET и создавать ложный `Unknown` refund reservation; реальная ошибка provider API обязана остаться fail-closed.
+  - Что сделано: Stripe payment-intent и PayPal capture extractors безопасно отклоняют повреждённый локальный JSON и продолжают resolve через checkout session/order endpoint. Provider/network failure по-прежнему сохраняется как неопределённый результат для ручной сверки.
+  - Доказательство: direct fail-first `0/2` падал до HTTP; после исправления direct adapters и SQLite orchestrator `4/4`, payment/refund regression `75/75`, backend Release `1300/1300`, fresh SQLite, EF drift, encoding и secret scan зелёные. Реальные Stripe/PayPal кабинеты и live refund остаются внешним evidence.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3029,6 +3033,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-12-021` | P1 | Stripe/PayPal refund recovery | Malformed legacy `WebhookPayload`/`RawResponse` выбрасывал `JsonException` до provider GET, после чего orchestrator сохранял refund как `Unknown`, ошибочно сообщая о неопределённом внешнем результате. | Исправлено локально | Безопасный extractor продолжает resolve через Stripe session/PayPal order; direct и SQLite regressions подтверждают успешный refund без ложной reconciliation. Live provider refund остаётся внешней проверкой. |
 | `BUG-2026-08-12-020` | P1 | Cabinet payment expiry E2E | Clock переводился сразу после появления локальной retry-карточки и сдвигал deadline незавершённого post-retry reload, превращая mock API requests в timeout. | Исправлено локально | Тест ждёт пользовательский статус завершённого reload до `fastForward`; targeted и полный browser suite зелёные. |
 | `BUG-2026-08-12-019` | P1 | Admin release editor responsive | На 1280 px textarea пункта релиза заходила под кнопку «Убрать» на `28x59`. | Исправлено локально | Команда вынесена в полноширинную строку базовой grid-схемы; boundary и полный responsive regression зелёные. |
 | `BUG-2026-08-12-018` | P1 | Admin referrals responsive | Native `datetime-local` сохранял intrinsic minimum и два поля перекрывались на `33x45` внутри двухколоночной формы. | Исправлено локально | Прямые элементы и controls `.form-grid` получили `min-width: 0`; boundary и полный responsive regression зелёные. |

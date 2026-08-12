@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -370,6 +371,60 @@ public class AdminRefundManagementTests
     }
 
     [Theory]
+    [InlineData(PaymentProvider.Stripe)]
+    [InlineData(PaymentProvider.PayPal)]
+    public async Task RefundPayment_Should_Recover_Malformed_Stored_Payload_On_Sqlite(PaymentProvider providerType)
+    {
+        await using var db = CreateDb();
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 12, 8, 0, 0, TimeSpan.Zero));
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
+        var handler = new ProviderRefundRecoveryHandler(providerType);
+        var factory = new StaticHttpClientFactory(new HttpClient(handler));
+        IPaymentProvider provider = providerType switch
+        {
+            PaymentProvider.Stripe => new StripePaymentProvider(factory, accounts, new TestHostEnvironment("Production")),
+            PaymentProvider.PayPal => new PayPalPaymentProvider(factory, accounts, new TestHostEnvironment("Production")),
+            _ => throw new ArgumentOutOfRangeException(nameof(providerType), providerType, null)
+        };
+        var orchestrator = new PaymentOrchestrator(
+            db,
+            new TestPaymentProviderFactory(provider),
+            Array.Empty<IPaymentWebhookVerifier>(),
+            accounts,
+            null!,
+            clock,
+            new TestRuntimeEnvironment("Production"));
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(providerType, secret: "protected-secret");
+        account.Mode = PaymentProviderMode.Production;
+        account.ShopId = providerType == PaymentProvider.PayPal ? "client-id" : "stripe-account";
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        payment.ProviderPaymentId = providerType == PaymentProvider.Stripe ? "cs_test_1" : "ORDER-1";
+        payment.WebhookPayload = "{malformed";
+        payment.RawResponse = """{"payment_intent":123,"purchase_units":"invalid"}""";
+
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.PaymentProviderAccounts.Add(account);
+        db.Orders.Add(payment.Order!);
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+
+        var result = await orchestrator.RefundPaymentAsync(payment.Id, 40m, "operator refund", CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(nameof(RefundStatus.Succeeded), result.Value!.Status);
+        await db.Entry(payment).ReloadAsync();
+        Assert.Equal(PaymentStatus.PartiallyRefunded, payment.Status);
+        Assert.Equal(40m, payment.RefundedAmount);
+        var refund = Assert.Single(await db.Refunds.AsNoTracking().ToListAsync());
+        Assert.Equal(RefundStatus.Succeeded, refund.Status);
+        Assert.Equal(providerType == PaymentProvider.Stripe ? "re_test_1" : "REFUND-1", refund.ProviderRefundId);
+        Assert.Equal(2 + (providerType == PaymentProvider.PayPal ? 1 : 0), handler.Requests.Count);
+    }
+
+    [Theory]
     [InlineData(RefundStatus.New)]
     [InlineData(RefundStatus.Pending)]
     [InlineData(RefundStatus.Unknown)]
@@ -550,6 +605,30 @@ public class AdminRefundManagementTests
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             => throw new Xunit.Sdk.XunitException($"Local sandbox refund attempted HTTP: {request.Method} {request.RequestUri}");
+    }
+
+    private sealed class ProviderRefundRecoveryHandler(PaymentProvider provider) : HttpMessageHandler
+    {
+        public List<(HttpMethod Method, string Path)> Requests { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            Requests.Add((request.Method, path));
+            var json = provider switch
+            {
+                PaymentProvider.Stripe when request.Method == HttpMethod.Get => """{"id":"cs_test_1","payment_status":"paid","payment_intent":"pi_test_1"}""",
+                PaymentProvider.Stripe => """{"id":"re_test_1","status":"succeeded"}""",
+                PaymentProvider.PayPal when path.Contains("oauth2/token", StringComparison.OrdinalIgnoreCase) => """{"access_token":"access-token","token_type":"Bearer"}""",
+                PaymentProvider.PayPal when request.Method == HttpMethod.Get => """{"id":"ORDER-1","status":"COMPLETED","purchase_units":[{"payments":{"captures":[{"id":"CAPTURE-1","status":"COMPLETED"}]}}]}""",
+                PaymentProvider.PayPal => """{"id":"REFUND-1","status":"COMPLETED"}""",
+                _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, null)
+            };
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+        }
     }
 
     private sealed class TestSecretProtector : ISecretProtector

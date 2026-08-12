@@ -15498,5 +15498,28 @@
         "text": "Roadmap progress is 671/691 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; Telegram Stars/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-provider-refund-payload-recovery",
+    "version": "0.659.0",
+    "releasedAt": "2026-08-12T16:20:00+07:00",
+    "title": "Возвраты восстанавливаются после повреждённой истории",
+    "summary": "Stripe и PayPal получают нужный идентификатор через API, если сохранённый provider payload нельзя разобрать.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Malformed legacy WebhookPayload или RawResponse больше не останавливает refund до обращения к Stripe или PayPal."
+      },
+      {
+        "type": "improved",
+        "text": "Payment-intent и capture ID восстанавливаются через provider API; реальные сетевые и provider-ошибки остаются fail-closed."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 672/692 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; live Stripe/PayPal refunds, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

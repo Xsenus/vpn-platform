@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: provider refund payload recovery
+
+Scope:
+- Повреждённый legacy `WebhookPayload`/`RawResponse` не должен останавливать Stripe/PayPal refund до provider resolve.
+- Локальная ошибка разбора не должна имитировать неопределённый внешний outcome; реальная provider/network ошибка обязана остаться fail-closed.
+
+Results:
+- Roadmap progress: `672/692` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-provider-refund-payload-recovery`, version `0.659.0`.
+- Fail-first: direct Stripe и PayPal adapter tests `0/2`; оба выбрасывали `JsonException` до первого provider GET.
+- After fix: malformed stored JSON считается недостоверным локальным evidence; Stripe session и PayPal order resolve продолжаются через API, а успешный refund атомарно фиксируется без `Unknown` reservation.
+- Direct adapters + SQLite orchestrator `4/4`; payment/refund regression `75/75`; backend Release `1300/1300`; frontend `144/144`; Playwright `227/227`; fresh SQLite, EF drift, encoding и secret scan зелёные. Реальные provider/VPS/staging/3x-ui evidence локально не закрывались.
+
 ## Check 2026-08-12: responsive visual oracle
 
 Scope:

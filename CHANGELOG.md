@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.659.0 - 2026-08-12
+
+Release entry: `2026-08-12-provider-refund-payload-recovery`.
+
+### Исправлено
+
+- Stripe и PayPal refund больше не падают на повреждённом legacy `WebhookPayload`/`RawResponse` до обращения к провайдеру.
+- Локальная порча истории не создаёт ложный `Unknown` refund reservation с сообщением о неопределённом внешнем результате.
+
+### Улучшено
+
+- Payment-intent Stripe и capture ID PayPal восстанавливаются через checkout session/order API, если сохранённый payload нельзя разобрать.
+- Ошибки provider API и сетевые неопределённости по-прежнему остаются fail-closed и требуют ручной сверки.
+
+### Проверено
+
+- Direct fail-first `0/2`; после исправления direct adapters и SQLite orchestrator `4/4`, payment/refund regression `75/75`, backend Release `1300/1300`, frontend `144/144`, Playwright `227/227`.
+- Roadmap `672/692` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные Stripe/PayPal refund, provider/VPS/staging/3x-ui evidence локальными проверками не закрывались.
+
 ## 0.658.0 - 2026-08-12
 
 Release entry: `2026-08-12-responsive-visual-oracle`.

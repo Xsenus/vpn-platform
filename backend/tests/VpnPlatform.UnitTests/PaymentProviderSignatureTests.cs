@@ -522,6 +522,51 @@ public class AdditionalPaymentProviderSignatureTests
         Assert.Equal("RUB", parsed.Currency);
     }
 
+    [Theory]
+    [InlineData(PaymentProvider.Stripe)]
+    [InlineData(PaymentProvider.PayPal)]
+    public async Task Refund_Should_Recover_From_Malformed_Stored_Provider_Payload(PaymentProvider providerType)
+    {
+        await using var db = CreateDbContext();
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), new FixedClock());
+        var handler = new RefundRecoveryStubHandler(providerType);
+        var factory = new StaticHttpClientFactory(new HttpClient(handler));
+        IPaymentProvider provider = providerType switch
+        {
+            PaymentProvider.Stripe => new StripePaymentProvider(factory, accounts, new TestHostEnvironment(Environments.Production)),
+            PaymentProvider.PayPal => new PayPalPaymentProvider(factory, accounts, new TestHostEnvironment(Environments.Production)),
+            _ => throw new ArgumentOutOfRangeException(nameof(providerType), providerType, null)
+        };
+        var account = new PaymentProviderAccount
+        {
+            Provider = providerType,
+            Mode = PaymentProviderMode.Production,
+            IsEnabled = true,
+            ShopId = providerType == PaymentProvider.PayPal ? "client-id" : "stripe-account",
+            SecretKeyProtected = "protected-secret"
+        };
+        var payment = new PaymentAttempt
+        {
+            Id = Guid.NewGuid(),
+            OrderId = Guid.NewGuid(),
+            Provider = providerType,
+            ProviderMode = PaymentProviderMode.Production,
+            ProviderPaymentId = providerType == PaymentProvider.Stripe ? "cs_test_1" : "ORDER-1",
+            Amount = 490m,
+            Currency = "RUB",
+            WebhookPayload = "{malformed",
+            RawResponse = """{"payment_intent":123,"purchase_units":"invalid"}"""
+        };
+
+        var result = await provider.RefundAsync(payment, account, 190m, "operator refund", CancellationToken.None);
+
+        Assert.Equal(RefundStatus.Succeeded, result.Status);
+        Assert.Equal(providerType == PaymentProvider.Stripe ? "re_test_1" : "REFUND-1", result.RefundId);
+        Assert.Equal(2 + (providerType == PaymentProvider.PayPal ? 1 : 0), handler.Requests.Count);
+        Assert.Contains(handler.Requests, request => request.Method == HttpMethod.Get);
+        Assert.Contains(handler.Requests, request => request.Method == HttpMethod.Post && request.Path.Contains("refund", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static string HmacSha256Hex(string secret, string payload)
     {
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
@@ -615,6 +660,30 @@ public class AdditionalPaymentProviderSignatureTests
             var json = path.Contains("/v1/oauth2/token", StringComparison.OrdinalIgnoreCase)
                 ? "{\"access_token\":\"access-token\",\"token_type\":\"Bearer\"}"
                 : $"{{\"verification_status\":\"{_verificationStatus}\"}}";
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
+    private sealed class RefundRecoveryStubHandler(PaymentProvider provider) : HttpMessageHandler
+    {
+        public List<(HttpMethod Method, string Path)> Requests { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            Requests.Add((request.Method, path));
+            var json = provider switch
+            {
+                PaymentProvider.Stripe when request.Method == HttpMethod.Get => """{"id":"cs_test_1","payment_status":"paid","payment_intent":"pi_test_1"}""",
+                PaymentProvider.Stripe => """{"id":"re_test_1","status":"succeeded"}""",
+                PaymentProvider.PayPal when path.Contains("oauth2/token", StringComparison.OrdinalIgnoreCase) => """{"access_token":"access-token","token_type":"Bearer"}""",
+                PaymentProvider.PayPal when request.Method == HttpMethod.Get => """{"id":"ORDER-1","status":"COMPLETED","purchase_units":[{"payments":{"captures":[{"id":"CAPTURE-1","status":"COMPLETED"}]}}]}""",
+                PaymentProvider.PayPal => """{"id":"REFUND-1","status":"COMPLETED"}""",
+                _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, null)
+            };
             return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
