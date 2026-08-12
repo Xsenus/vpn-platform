@@ -15429,5 +15429,28 @@
         "text": "Roadmap progress is 668/688 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-telegram-payment-recovery-provider-lock",
+    "version": "0.656.0",
+    "releasedAt": "2026-08-12T12:55:00+07:00",
+    "title": "Повтор оплаты в Telegram учитывает закреплённый способ",
+    "summary": "Recovery-клавиатура Telegram согласована с provider snapshot заказа и скрывает внутренние payment diagnostics.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "После первой payment attempt бот предлагает повтор только через закреплённый провайдер, а истёкший заказ не сохраняет кнопки оплаты."
+      },
+      {
+        "type": "improved",
+        "text": "Ошибки провайдера и Telegram Stars показываются безопасным русским сообщением без exception text, invoice payload и операторских настроек."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 669/689 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -1419,7 +1419,7 @@ public class TelegramBotService
             var providerSelection = await _orderService!.SelectPaymentProviderAsync(orderId, account.UserId.Value, provider, cancellationToken);
             if (!providerSelection.IsSuccess)
             {
-                return new RouteResult(providerSelection.Error ?? "Не удалось закрепить способ оплаты за заказом.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
+                return new RouteResult("Способ оплаты уже закреплён за заказом или заказ больше нельзя оплатить. Используйте доступную кнопку повтора.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
             }
         }
 
@@ -1436,7 +1436,7 @@ public class TelegramBotService
         var init = await _paymentOrchestrator.InitPaymentAsync(new PaymentInitCommand(orderId, provider), cancellationToken);
         if (!init.IsSuccess || init.Value is null)
         {
-            return new RouteResult(init.Error ?? "Не удалось создать платеж.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
+            return new RouteResult($"Не удалось создать платёж через {PaymentProviderDisplayName(provider)}. Повторите попытку позже или обратитесь в поддержку.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
         }
 
         var payment = await _db.Payments.AsNoTracking().Where(x => x.ProviderPaymentId == init.Value.PaymentId).OrderByDescending(x => x.CreatedAt).FirstOrDefaultAsync(cancellationToken);
@@ -1477,13 +1477,13 @@ public class TelegramBotService
         var payload = $"tgstars:{existing.Id:N}";
         if (_invoiceProvider is null || !chatId.HasValue)
         {
-            return new RouteResult($"Telegram Stars invoice не настроен. Платеж подготовлен без fake-success: payload {payload}. Настройте BotToken в админке или конфигурации API либо выберите внешний платежный провайдер.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
+            return new RouteResult("Не удалось отправить счёт Telegram Stars. Повторите попытку позже или обратитесь в поддержку.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
         }
 
         var amount = decimal.Round(existing.Amount, 0, MidpointRounding.AwayFromZero);
         if (amount != existing.Amount || amount <= 0 || amount > int.MaxValue)
         {
-            return new RouteResult("Telegram Stars требует положительную целую сумму XTR. Настройте отдельный Stars tariff/price mapping.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
+            return new RouteResult("Оплата Telegram Stars временно недоступна для этого тарифа. Обратитесь в поддержку.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
         }
 
         try
@@ -1504,7 +1504,7 @@ public class TelegramBotService
             existing.StatusReason = ex.Message;
             existing.UpdatedAt = _clock.UtcNow;
             await _db.SaveChangesAsync(cancellationToken);
-            return new RouteResult("Telegram Stars invoice не отправлен: " + ex.Message, chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
+            return new RouteResult("Не удалось отправить счёт Telegram Stars. Повторите попытку позже или обратитесь в поддержку.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
         }
     }
 
@@ -1803,7 +1803,23 @@ public class TelegramBotService
     }
 
     private async Task<string> BuildPaymentProvidersKeyboardAsync(Guid orderId, CancellationToken cancellationToken)
-        => BuildPaymentProvidersKeyboard(orderId, await GetAvailableBotPaymentProvidersAsync(cancellationToken));
+    {
+        var providers = await GetAvailableBotPaymentProvidersAsync(cancellationToken);
+        var order = await _db.Orders.AsNoTracking()
+            .Where(x => x.Id == orderId)
+            .Select(x => new { x.PaymentProvider, x.Status, x.ExpiresAt })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (order is null || order.Status != OrderStatus.PendingPayment || order.ExpiresAt <= _clock.UtcNow)
+        {
+            providers = Array.Empty<PaymentProvider>();
+        }
+        else if (await _db.Payments.AsNoTracking().AnyAsync(x => x.OrderId == orderId, cancellationToken))
+        {
+            providers = providers.Where(x => x == order.PaymentProvider).ToList();
+        }
+
+        return BuildPaymentProvidersKeyboard(orderId, providers);
+    }
 
     private static string BuildPaymentProvidersKeyboard(Guid orderId, IReadOnlyCollection<PaymentProvider> providers)
     {

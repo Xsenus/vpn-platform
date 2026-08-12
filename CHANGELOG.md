@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.656.0 - 2026-08-12
+
+Release entry: `2026-08-12-telegram-payment-recovery-provider-lock`.
+
+### Исправлено
+
+- Telegram recovery после первой payment attempt показывает только закреплённый способ оплаты; истёкший или закрытый заказ больше не получает ложные provider-кнопки.
+- Ошибки внешнего провайдера и Telegram Stars не раскрывают пользователю exception text, служебный invoice payload или инструкции по настройке `BotToken`.
+- Frontend source-contract test синхронизирован с уже действующим snapshot-aware blocker повторной оплаты продления.
+
+### Проверено
+
+- Telegram purchase flow `39/39`; backend Release `1287/1287`; frontend `142/142`; полный Playwright `226/226` за `12.4 min`; typecheck/build и dependency audit `0 vulnerabilities`.
+- Exhaustive admin responsive inventory сначала упёрся в старый `600 s` budget после `225/226`, изолированно прошёл за `8.1 min`; timeout повышен до `900 s` без ослабления viewport/WCAG проверок, после чего единый gate прошёл полностью. Fresh SQLite checkout/webhook/subscription/VPN, EF drift и secret scan `673/0` зелёные.
+- Roadmap `669/689` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные Telegram/provider/VPS/staging evidence локальными проверками не закрывались.
+
 ## 0.655.0 - 2026-08-12
 
 Release entry: `2026-08-12-payment-init-order-provider-snapshot`.

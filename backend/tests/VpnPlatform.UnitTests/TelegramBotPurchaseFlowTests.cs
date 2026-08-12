@@ -774,6 +774,109 @@ public class TelegramBotPurchaseFlowTests
     }
 
     [Fact]
+    public async Task Payment_Provider_Keyboard_Should_Keep_Only_Locked_Provider_After_First_Attempt()
+    {
+        await using var db = CreateDbContext();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        var service = CreateBot(db);
+
+        await service.ProcessUpdateAsync(Update(366, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(367, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(368, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(369, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var order = await db.Orders.SingleAsync();
+        await service.ProcessUpdateAsync(CallbackUpdate(370, $"pay:{order.Id}:RoboKassa"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        var result = await service.ProcessUpdateAsync(CallbackUpdate(371, $"pay:{order.Id}:YooKassa"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.Contains("закреплён", result.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(nameof(PaymentProvider.RoboKassa), result.Value.ReplyMarkupJson!, StringComparison.Ordinal);
+        Assert.DoesNotContain(nameof(PaymentProvider.YooKassa), result.Value.ReplyMarkupJson!, StringComparison.Ordinal);
+        Assert.DoesNotContain(nameof(PaymentProvider.YooMoney), result.Value.ReplyMarkupJson!, StringComparison.Ordinal);
+        Assert.Equal(PaymentProvider.RoboKassa, (await db.Orders.SingleAsync()).PaymentProvider);
+    }
+
+    [Fact]
+    public async Task Failed_Payment_Init_Should_Offer_Retry_Only_With_Locked_Provider()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        var service = CreateBot(db, new IPaymentProvider[]
+        {
+            new ThrowingPaymentProvider(PaymentProvider.YooKassa),
+            new FakePaymentProvider(PaymentProvider.RoboKassa),
+            new FakePaymentProvider(PaymentProvider.YooMoney)
+        });
+
+        await service.ProcessUpdateAsync(Update(372, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(373, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(374, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(375, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var order = await db.Orders.SingleAsync();
+
+        var result = await service.ProcessUpdateAsync(CallbackUpdate(376, $"pay:{order.Id}:YooKassa"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.Contains("Не удалось создать платёж", result.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("provider unavailable", result.Value.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(nameof(PaymentProvider.YooKassa), result.Value.ReplyMarkupJson!, StringComparison.Ordinal);
+        Assert.DoesNotContain(nameof(PaymentProvider.RoboKassa), result.Value.ReplyMarkupJson!, StringComparison.Ordinal);
+        Assert.DoesNotContain(nameof(PaymentProvider.YooMoney), result.Value.ReplyMarkupJson!, StringComparison.Ordinal);
+        Assert.Equal(1, await db.Payments.CountAsync(x => x.Provider == PaymentProvider.YooKassa));
+    }
+
+    [Fact]
+    public async Task Telegram_Stars_Invoice_Failure_Should_Not_Expose_Internal_Payload_Or_Configuration()
+    {
+        await using var db = CreateDbContext();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        await EnableTelegramStarsAsync(db);
+        var service = CreateBot(db);
+
+        await service.ProcessUpdateAsync(Update(377, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(378, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(379, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(380, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var order = await db.Orders.SingleAsync();
+
+        var result = await service.ProcessUpdateAsync(CallbackUpdate(381, $"pay:{order.Id}:TelegramStars"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.Contains("Не удалось отправить счёт", result.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("payload", result.Value.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("BotToken", result.Value.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(nameof(PaymentProvider.TelegramStars), result.Value.ReplyMarkupJson!, StringComparison.Ordinal);
+        Assert.DoesNotContain(nameof(PaymentProvider.YooKassa), result.Value.ReplyMarkupJson!, StringComparison.Ordinal);
+        Assert.DoesNotContain(nameof(PaymentProvider.RoboKassa), result.Value.ReplyMarkupJson!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Expired_Order_Payment_Failure_Should_Not_Offer_Provider_Buttons()
+    {
+        await using var db = CreateDbContext();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        var service = CreateBot(db);
+
+        await service.ProcessUpdateAsync(Update(382, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(383, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(384, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(385, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var order = await db.Orders.SingleAsync();
+        order.ExpiresAt = new FixedClock().UtcNow.AddMinutes(-1);
+        await db.SaveChangesAsync();
+
+        var result = await service.ProcessUpdateAsync(CallbackUpdate(386, $"pay:{order.Id}:YooKassa"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.Contains("Не удалось создать платёж", result.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Платежные методы временно недоступны", result.Value.ReplyMarkupJson!, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(nameof(PaymentProvider.YooKassa), result.Value.ReplyMarkupJson!, StringComparison.Ordinal);
+        Assert.DoesNotContain(nameof(PaymentProvider.RoboKassa), result.Value.ReplyMarkupJson!, StringComparison.Ordinal);
+        Assert.Equal(OrderStatus.Expired, (await db.Orders.SingleAsync()).Status);
+        Assert.Empty(await db.Payments.ToListAsync());
+    }
+
+    [Fact]
     public async Task Renewal_Flow_Should_Create_Renewal_Order_And_Respect_Provider_Filtering()
     {
         await using var db = CreateDbContext();
@@ -816,12 +919,12 @@ public class TelegramBotPurchaseFlowTests
         Assert.Contains("Активных подписок пока нет", result.Value!.ResponseText);
     }
 
-    private static TelegramBotService CreateBot(ApplicationDbContext db)
+    private static TelegramBotService CreateBot(ApplicationDbContext db, IReadOnlyCollection<IPaymentProvider>? paymentProviders = null)
     {
         var clock = new FixedClock();
         var orderService = new OrderService(db, clock);
         var providerAccounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
-        var providers = new IPaymentProvider[]
+        var providers = paymentProviders ?? new IPaymentProvider[]
         {
             new FakePaymentProvider(PaymentProvider.YooKassa),
             new FakePaymentProvider(PaymentProvider.RoboKassa),
@@ -1099,6 +1202,23 @@ public class TelegramBotPurchaseFlowTests
 
         public Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)
             => Task.FromResult(new PaymentRefundResult($"refund_{payment.Id:N}", RefundStatus.Pending, "{}"));
+    }
+
+    private sealed class ThrowingPaymentProvider(PaymentProvider provider) : IPaymentProvider
+    {
+        public PaymentProvider Provider { get; } = provider;
+
+        public Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken)
+            => throw new InvalidOperationException("provider unavailable");
+
+        public Task<PaymentWebhookParseResult> ParseWebhookAsync(string rawBody, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<PaymentStatusResult> GetStatusAsync(PaymentAttempt payment, PaymentProviderAccount account, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
     }
 
     private sealed class TestVpnProviderFactory : IVpnProviderFactory

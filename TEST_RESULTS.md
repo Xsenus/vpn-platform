@@ -2,6 +2,20 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: Telegram payment recovery provider lock
+
+Scope:
+- После первой payment attempt Telegram recovery не должен предлагать смену закреплённого провайдера или оплату истёкшего заказа.
+- Пользовательские ответы не должны раскрывать exception text, Stars payload и операторские настройки.
+
+Results:
+- Roadmap progress: `669/689` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-telegram-payment-recovery-provider-lock`, version `0.656.0`.
+- Reproduction before fix: backend запрещал provider switch после reservation, но recovery keyboard показывала YooKassa/RoboKassa/YooMoney одновременно; provider error и ненастроенный Stars flow возвращали internal exception/payload/configuration text.
+- After fix: helper проверяет live `PendingPayment`, наличие попытки и `Order.PaymentProvider`; recovery оставляет только валидную кнопку или empty state, а технические diagnostics не попадают в клиентский текст.
+- Telegram purchase flow: `39/39`; backend full suite: `1287/1287`; frontend: `142/142`; полный Playwright: `226/226` за `12.4 min`; typecheck/build, dependency audit `0 vulnerabilities`, fresh SQLite checkout/webhook/subscription/VPN, EF drift и secret scan `673/0` зелёные.
+- Exhaustive admin responsive inventory при первом полном запуске завершился `225/226` из-за старого `600 s` timeout, изолированно прошёл за `8.1 min`; после guarded timeout `900 s` единый повтор прошёл `226/226` без ослабления viewport/WCAG assertions. Live Telegram/provider/VPS evidence локально не закрывается.
+
 ## Check 2026-08-12: payment init order provider snapshot
 
 Scope:

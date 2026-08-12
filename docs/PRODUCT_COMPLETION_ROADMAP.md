@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-payment-init-order-provider-snapshot`, версия `0.655.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `668/688` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-telegram-payment-recovery-provider-lock`, версия `0.656.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `669/689` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-12:
 
-- [x] `STATE-001` Backend test suite проходит: `1283/1283`.
+- [x] `STATE-001` Backend test suite проходит: `1287/1287`.
 - [x] `STATE-002` Frontend test suite проходит: `142/142`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2368,6 +2368,10 @@ git diff --check
   - Что сделать: direct init не должен менять provider заказа; public/cabinet обязаны повторять оплату по фактическому snapshot, а Telegram — закреплять выбор только до первой попытки. Пустой provider payment ID должен завершаться fail-closed.
   - Что сделано: orchestrator отклоняет mismatch до account lookup/factory/provider и валидирует ID до status mutation; command DTO требует provider; public/cabinet используют `Order.PaymentProvider`; `OrderService.SelectPaymentProviderAsync` разрешает Telegram выбор только для live pending-заказа без попыток и блокирует смену после reservation.
   - Доказательство: fail-first `0/2`; targeted Order/Telegram/init `63/63`, payment/checkout browser `26/26`, backend `1283/1283`, frontend `142/142`, Playwright `226/226` за `12.3 min`, fresh SQLite checkout/webhook/subscription/VPN, EF drift, build/audit, encoding и secret scan `673/0` зелёные. Реальные provider кабинеты и live payment smoke остаются внешним evidence.
+- [x] `P11-ACC-379` Согласовать Telegram payment recovery с закреплённым provider snapshot. 2026-08-12.
+  - Что сделать: после первой payment attempt recovery-клавиатура не должна предлагать провайдеры, которые backend уже не разрешает выбрать; stale/expired заказ не должен сохранять кнопки оплаты, а клиентский ответ не должен раскрывать exception text, Stars payload или настройки бота.
+  - Что сделано: order-aware keyboard до первой попытки показывает все доступные способы, после reservation оставляет только доступный `Order.PaymentProvider`, а для закрытого/истёкшего заказа показывает безопасное пустое состояние; provider и Telegram Stars failures возвращают русское клиентское сообщение, сохраняя техническую причину в payment state.
+  - Доказательство: Telegram purchase flow `39/39`, backend Release `1287/1287`, frontend `142/142`, Playwright `226/226` за `12.4 min`, fresh SQLite checkout/webhook/subscription/VPN, EF drift, typecheck/build/audit и secret scan `673/0` зелёные. Exhaustive admin responsive inventory после timeout-budget guard прошёл в едином gate без ослабления viewport/WCAG assertions. Реальная доставка Telegram invoice и live provider checkout остаются внешним evidence.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3017,6 +3021,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-12-016` | P1 | Telegram payment recovery UX | После первой reservation backend блокировал смену provider, но recovery-клавиатура продолжала предлагать все способы; provider/Stars failures раскрывали exception text, payload и операторские настройки, а stale order сохранял ложные кнопки оплаты. | Исправлено локально | Order-aware recovery keyboard, безопасные клиентские ошибки и `39/39` Telegram flow tests подтверждают provider lock/expired boundary; real Telegram Bot API и live payment evidence остаются открытыми. |
 | `BUG-2026-08-12-015` | P1 | Payment initialization provider snapshot | Direct init принимал provider, отличный от заказа, переписывал snapshot и создавал параллельную payable попытку; public/cabinet могли штатно отправить stale выбор, Telegram создавал заказ до выбора способа, а пустой provider ID считался успешным. | Исправлено локально | Immutable init boundary, обязательный command DTO provider, snapshot-aware UI и Telegram pre-attempt selection подтверждены SQLite/backend/browser; live provider evidence остаётся открытым. |
 | `BUG-2026-08-12-014` | P1 | Payment manual recheck readiness | Поддерживаемый provider обходил account/config readiness, UI разрешал команду только по capability, а orchestrator применял status response без сверки provider payment ID. | Исправлено локально | Общий operation preflight, DTO/UI blockers, SQLite `0/7 -> 7/7` и response-ID guard подтверждают отказ без provider call/state mutation; live provider evidence остаётся открытым. |
 | `BUG-2026-08-12-013` | P1 | Payment refund account readiness | Direct `PaymentOrchestrator` не проверял provider/mode snapshot, enabled state, provider payment ID и credentials: injected adapter успешно проводил refund в обход admin readiness. | Исправлено локально | Общий application rule, runtime environment DI и SQLite `0/7 -> 7/7` подтверждают отказ до reservation/factory/provider; live refunds остаются внешним evidence. |

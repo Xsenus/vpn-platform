@@ -27,7 +27,7 @@ test('all-screens keeps the automated WCAG A/AA desktop and mobile gate', () => 
   assert.match(allScreens, /expectWcagQuality\(page, 'cabinet dashboard'\)/)
   assert.match(allScreens, /expectWcagQuality\(page, `admin \$\{section\}`\)/)
   assert.match(allScreens, /viewport\.name === 'compact-mobile'.*expectWcagQuality/s)
-  assert.match(allScreens, /every admin section fits[\s\S]*test\.setTimeout\(600_000\)/)
+  assert.match(allScreens, /every admin section fits[\s\S]*test\.setTimeout\(900_000\)/)
   assert.doesNotMatch(allScreens, /disableRules|exclude\(/)
 })
 

@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-12",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `1283/1283`",
+                     "Backend full suite: `1287/1287`",
                      "Frontend unit tests: `142/142`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `226/226`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-12-payment-init-order-provider-snapshot",
-                     "0.655.0"
+                     "2026-08-12-telegram-payment-recovery-provider-lock",
+                     "0.656.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-12-payment-init-order-provider-snapshot", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-12-payment-init-order-provider-snapshot", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-12-telegram-payment-recovery-provider-lock", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-12-telegram-payment-recovery-provider-lock", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `1283/1283`",
+                     "Backend full suite: `1287/1287`",
                      "Frontend unit tests: `142/142`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-12-payment-init-order-provider-snapshot",
-                     "0.655.0",
+                     "2026-08-12-telegram-payment-recovery-provider-lock",
+                     "0.656.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",
