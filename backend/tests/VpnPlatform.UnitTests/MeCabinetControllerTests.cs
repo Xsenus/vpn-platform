@@ -246,11 +246,8 @@ public class MeCabinetControllerTests
         Assert.Null(subscriptionDto.GetType().GetProperty("AccessUri")!.GetValue(subscriptionDto));
         Assert.Null(subscriptionDto.GetType().GetProperty("QrCodePath"));
         Assert.Null(subscriptionDto.GetType().GetProperty("ConfigPath"));
-        Assert.Equal(string.Empty, Read<string>(accessDto, "ProviderAccessId"));
         Assert.Equal(string.Empty, Read<string>(accessDto, "AccessUri"));
-        Assert.Equal(string.Empty, Read<string>(accessDto, "QrCodePayload"));
-        Assert.Equal(string.Empty, Read<string>(accessDto, "QrCodePath"));
-        Assert.Equal(string.Empty, Read<string>(accessDto, "ConfigPath"));
+        AssertCabinetAccessInternalFieldsAbsent(accessDto);
         Assert.IsType<BadRequestObjectResult>(await meController.GetAccessQr(access.Id, CancellationToken.None));
 
         var cabinetController = new CabinetAccessController(db, new SvgQrCodeGenerator(new TestClock()))
@@ -314,11 +311,8 @@ public class MeCabinetControllerTests
         Assert.Null(subscriptionDto.GetType().GetProperty("ConfigPath"));
         Assert.Equal("Cancelled", Read<string>(accessDto, "SubscriptionStatus"));
         Assert.True(Read<bool>(accessDto, "IsTerminal"));
-        Assert.Equal(string.Empty, Read<string>(accessDto, "ProviderAccessId"));
         Assert.Equal(string.Empty, Read<string>(accessDto, "AccessUri"));
-        Assert.Equal(string.Empty, Read<string>(accessDto, "QrCodePayload"));
-        Assert.Equal(string.Empty, Read<string>(accessDto, "QrCodePath"));
-        Assert.Equal(string.Empty, Read<string>(accessDto, "ConfigPath"));
+        AssertCabinetAccessInternalFieldsAbsent(accessDto);
         Assert.IsType<BadRequestObjectResult>(await meController.GetAccessQr(access.Id, CancellationToken.None));
 
         var cabinetController = new CabinetAccessController(db, qrGenerator)
@@ -382,11 +376,8 @@ public class MeCabinetControllerTests
         Assert.Null(subscriptionDto.GetType().GetProperty("QrCodePath"));
         Assert.Null(subscriptionDto.GetType().GetProperty("ConfigPath"));
         Assert.True(Read<bool>(accessDto, "IsTerminal"));
-        Assert.Equal(string.Empty, Read<string>(accessDto, "ProviderAccessId"));
         Assert.Equal(string.Empty, Read<string>(accessDto, "AccessUri"));
-        Assert.Equal(string.Empty, Read<string>(accessDto, "QrCodePayload"));
-        Assert.Equal(string.Empty, Read<string>(accessDto, "QrCodePath"));
-        Assert.Equal(string.Empty, Read<string>(accessDto, "ConfigPath"));
+        AssertCabinetAccessInternalFieldsAbsent(accessDto);
         Assert.Equal(clock.UtcNow, Read<DateTimeOffset>(accessDto, "ExpiryDate"));
         Assert.IsType<BadRequestObjectResult>(await meController.GetAccessQr(access.Id, CancellationToken.None));
 
@@ -610,14 +601,15 @@ public class MeCabinetControllerTests
 
         var accessDto = Assert.Single(accesses);
         Assert.Equal(access.Id, Read<Guid>(accessDto, "Id"));
-        Assert.Equal(userId, Read<Guid>(accessDto, "UserId"));
         Assert.Equal(subscription.Id, Read<Guid>(accessDto, "SubscriptionId"));
         Assert.Equal(node.Name, Read<string>(accessDto, "ServerName"));
         Assert.Equal("Active", Read<string>(accessDto, "Status"));
         Assert.Equal(subscription.EndAt, Read<DateTimeOffset>(accessDto, "ExpiryDate"));
         Assert.Equal(access.AccessUri, Read<string>(accessDto, "AccessUri"));
-        Assert.Equal(access.QrCodePath, Read<string>(accessDto, "QrCodePayload"));
-        Assert.Equal(2, Read<int>(accessDto, "Revision"));
+        AssertCabinetAccessInternalFieldsAbsent(accessDto);
+        var accessJson = System.Text.Json.JsonSerializer.Serialize(accessDto);
+        Assert.DoesNotContain("client-active", accessJson);
+        Assert.DoesNotContain("/configs/active-user.json", accessJson);
     }
 
     [Fact]
@@ -654,6 +646,54 @@ public class MeCabinetControllerTests
         Assert.Contains(interceptor.Commands, command => command.Contains("LIMIT", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task Cabinet_Accesses_Should_Apply_User_History_Limit_In_Sqlite_Query()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new CommandCaptureInterceptor();
+        await using var db = CreateSqliteDbContext(connection, interceptor);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        var subscriptionId = Guid.NewGuid();
+        var serverId = Guid.NewGuid();
+        var now = new TestClock().UtcNow;
+        db.Users.Add(User(userId, "access-limit@example.test"));
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Limit", Slug = "access-limit", DurationDays = 30, Price = 100, Currency = "RUB", IsActive = true });
+        db.VpnNodes.Add(new VpnNode { Id = serverId, Name = "limit-node", Host = "limit.example.test", IpAddress = "192.0.2.40", Provider = "x3ui", Region = "eu", Country = "NL" });
+        db.Subscriptions.Add(new Subscription
+        {
+            Id = subscriptionId,
+            UserId = userId,
+            TariffId = tariffId,
+            Status = SubscriptionStatus.Expired,
+            StartAt = now.AddDays(-60),
+            EndAt = now.AddDays(-30)
+        });
+        db.AccessCredentials.AddRange(Enumerable.Range(0, 105).Select(index => new AccessCredential
+        {
+            Id = Guid.NewGuid(),
+            SubscriptionId = subscriptionId,
+            ServerId = serverId,
+            ProviderType = "x3ui",
+            ProviderAccessId = $"limit-client-{index}",
+            AccessUri = $"vless://limit-{index}@example.test",
+            Status = AccessCredentialStatus.Revoked,
+            IssuedAt = now.AddMinutes(index),
+            CreatedAt = now.AddMinutes(index),
+            UpdatedAt = now.AddMinutes(index)
+        }));
+        await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
+
+        var result = await CreateController(db, userId).GetAccesses(CancellationToken.None);
+
+        Assert.Equal(100, AssertOkList(result).Count);
+        Assert.Contains(interceptor.Commands, command => command.Contains("LIMIT", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static User User(Guid id, string email)
         => new()
         {
@@ -676,6 +716,19 @@ public class MeCabinetControllerTests
         var property = value.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public);
         Assert.NotNull(property);
         return Assert.IsType<T>(property.GetValue(value));
+    }
+
+    private static void AssertCabinetAccessInternalFieldsAbsent(object value)
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(value);
+        foreach (var field in new[]
+                 {
+                     "UserId", "ProviderType", "ProviderAccessId", "ServerId", "QrCodePayload", "QrCodePath",
+                     "ConfigPath", "IssuedAt", "DisabledAt", "LastSyncedAt", "Revision", "History", "CreatedAt", "UpdatedAt"
+                 })
+        {
+            Assert.DoesNotContain($"\"{field}\"", json, StringComparison.Ordinal);
+        }
     }
 
     private static MeController CreateController(ApplicationDbContext db, Guid userId, SvgQrCodeGenerator? qrCodeGenerator = null)

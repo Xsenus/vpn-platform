@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { AccessCredentialDto, CabinetSubscriptionDto } from '../packages/api-client/src/index.ts'
+import { CabinetAccessCredentialDto, CabinetSubscriptionDto } from '../packages/api-client/src/index.ts'
 import { buildCabinetSummary, daysUntil, findAccessForSubscription, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getEffectiveSubscriptionStatus, getNextCabinetAccessExpiryDelay, getSubscriptionRenewalAvailability, selectCurrentSubscription } from '../apps/cabinet/src/cabinet-dashboard.ts'
 
 function subscription(overrides: Partial<CabinetSubscriptionDto>): CabinetSubscriptionDto {
@@ -16,19 +16,16 @@ function subscription(overrides: Partial<CabinetSubscriptionDto>): CabinetSubscr
   }
 }
 
-function access(overrides: Partial<AccessCredentialDto>): AccessCredentialDto {
+function access(overrides: Partial<CabinetAccessCredentialDto>): CabinetAccessCredentialDto {
   return {
     id: 'access-1',
     subscriptionId: 'sub-1',
-    providerType: 'x3ui',
-    providerAccessId: 'client-1',
-    serverId: 'node-1',
+    subscriptionStatus: 'Active',
+    isTerminal: false,
+    serverName: 'Sandbox node',
     accessUri: 'vless://client',
-    qrCodePath: 'vless://client',
-    configPath: '',
     status: 'Active',
-    issuedAt: '2026-05-01T00:00:00Z',
-    revision: 1,
+    expiryDate: '2099-06-01T00:00:00Z',
     ...overrides
   }
 }

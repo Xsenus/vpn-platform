@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.670.0 - 2026-08-12
+
+Release entry: `2026-08-12-cabinet-access-boundary`.
+
+### Исправлено
+
+- `/api/me/accesses` больше не раскрывает provider/client/server идентификаторы, служебные QR/config поля, revision и lifecycle timestamps.
+- Дублирующий раздел «Выданные доступы» удалён; VPN-ключ и QR доступны в единственном пользовательском представлении.
+
+### Улучшено
+
+- Для кабинета выделен минимальный `CabinetAccessCredentialDto`, а frontend fail-closed отклоняет расширенный ответ со служебными полями.
+- Последние 100 VPN-доступов сортируются и ограничиваются на стороне БД; административный DTO и защищённый QR endpoint сохранены.
+
+### Проверено
+
+- Fail-first backend `0/2`, frontend `0/1`; targeted backend `18/18`, frontend decoder/dashboard `11/11`, backend `1358/1358`, frontend `152/152`, typecheck/build, cabinet desktop/mobile Playwright `64/64`, targeted all-screens `2/2`, fresh SQLite, EF drift и dependency audit `0 vulnerabilities` зелёные.
+- Roadmap `683/703` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## 0.669.0 - 2026-08-12
 
 Release entry: `2026-08-12-cabinet-subscription-boundary`.

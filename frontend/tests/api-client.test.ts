@@ -605,6 +605,20 @@ function cabinetSubscriptionFixture(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function cabinetAccessFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'access-1',
+    subscriptionId: 'sub-1',
+    subscriptionStatus: 'Active',
+    isTerminal: false,
+    serverName: 'NL Amsterdam',
+    accessUri: 'vless://cabinet-safe',
+    status: 'Active',
+    expiryDate: '2026-09-09T00:00:00Z',
+    ...overrides
+  }
+}
+
 function adminPaymentProviderAccountFixture(overrides: Record<string, unknown> = {}) {
   return {
     id: 'provider-1',
@@ -1466,6 +1480,33 @@ test('ApiClient accepts only the safe cabinet subscription contract', async () =
   assert.equal(subscriptions[0]?.accessUri, 'vless://cabinet-safe')
   for (let index = 0; index < 4; index += 1) {
     await assert.rejects(() => client.getMySubscriptions('user-token'), (error: unknown) => error instanceof ApiClientError && error.status === 502)
+  }
+})
+
+test('ApiClient accepts only the safe cabinet access contract', async () => {
+  const responses = [
+    [cabinetAccessFixture()],
+    [{ ...cabinetAccessFixture(), providerAccessId: 'private-x3ui-client-id' }],
+    [{ ...cabinetAccessFixture(), serverId: 'private-node-id' }],
+    [{ ...cabinetAccessFixture(), qrCodePath: 'vless://private-qr-payload' }],
+    [{ ...cabinetAccessFixture(), configPath: '/private/config/path' }],
+    [{ ...cabinetAccessFixture(), lastSyncedAt: adminFixtureTimestamp }]
+  ]
+  globalThis.fetch = (async () => new Response(JSON.stringify(responses.shift()), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const accesses = await client.getMyAccesses('user-token')
+
+  assert.equal(accesses[0]?.serverName, 'NL Amsterdam')
+  assert.equal(accesses[0]?.accessUri, 'vless://cabinet-safe')
+  for (let index = 0; index < 5; index += 1) {
+    await assert.rejects(
+      () => client.getMyAccesses('user-token'),
+      (error: unknown) => error instanceof ApiClientError && error.status === 502
+    )
   }
 })
 
@@ -3096,23 +3137,10 @@ test('ApiClient covers sandbox E2E admin, cabinet and checkout endpoints', async
         subscriptionId: 'sub-1',
         subscriptionStatus: 'Active',
         isTerminal: false,
-        userId: 'user-1',
-        providerType: 'XUi',
-        providerAccessId: 'sandbox-client',
-        serverId: 'server-1',
         serverName: 'Sandbox node',
         accessUri: 'vless://sandbox/client',
-        qrCodePayload: 'vless://sandbox/client',
-        qrCodePath: '/api/cabinet/access/access-1/qr',
-        configPath: '/api/cabinet/access/access-1/config',
         status: 'Active',
-        issuedAt: '2026-08-05T00:00:00Z',
-        expiryDate: null,
-        disabledAt: null,
-        lastSyncedAt: '2026-08-05T00:00:00Z',
-        revision: 1,
-        createdAt: '2026-08-05T00:00:00Z',
-        updatedAt: '2026-08-05T00:00:00Z'
+        expiryDate: null
       }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/cabinet/access/access-1/qr')) {
@@ -3215,7 +3243,8 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(appVersionSource, /aria-describedby="app-version-summary"/)
   assert.match(appVersionSource, /aria-current=\{release\.releaseId === selectedRelease\.releaseId/)
   assert.match(appVersionSource, /aria-expanded=\{historyOpen\}/)
-  assert.match(cabinetSource, /Доступы не выдавались|Ключ ещё не готов/)
+  assert.match(cabinetSource, /VPN-ключи/)
+  assert.doesNotMatch(cabinetSource, /Выданные доступы/)
   assert.doesNotMatch(cabinetSource, /Перевыпуск ключа скоро/)
   assert.match(cabinetSource, /Заказ на продление.*создан, но ссылку оплаты подготовить не удалось/)
   assert.match(cabinetSource, /Повторить подготовку оплаты/)

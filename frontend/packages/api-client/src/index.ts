@@ -594,6 +594,17 @@ export type AccessCredentialDto = {
   updatedAt?: string
 }
 
+export type CabinetAccessCredentialDto = {
+  id: string
+  subscriptionId: string
+  subscriptionStatus: string
+  isTerminal: boolean
+  serverName?: string | null
+  accessUri: string
+  status: string
+  expiryDate?: string | null
+}
+
 export type RewardLedgerDto = {
   id: string
   type: string
@@ -1813,7 +1824,30 @@ function isAdminAccessHistoryDto(value: unknown): value is AccessCredentialHisto
 }
 
 function isAdminAccessCredentialDto(value: unknown): value is AccessCredentialDto {
-  if (!isCabinetAccessCredentialDto(value) || !isRecord(value)) return false
+  if (!isRecord(value)
+    || !hasString(value, 'id', true)
+    || !hasString(value, 'subscriptionId', true)
+    || !hasString(value, 'subscriptionStatus', true)
+    || !subscriptionStatusValues.has(value.subscriptionStatus as string)
+    || !hasBoolean(value, 'isTerminal')
+    || !hasNullableString(value, 'userId')
+    || !hasString(value, 'providerType', true)
+    || !hasString(value, 'providerAccessId')
+    || !hasString(value, 'serverId', true)
+    || !hasNullableString(value, 'serverName')
+    || !hasString(value, 'accessUri')
+    || !hasNullableString(value, 'qrCodePayload')
+    || !hasString(value, 'qrCodePath')
+    || !hasString(value, 'configPath')
+    || !hasString(value, 'status', true)
+    || !accessCredentialStatusValues.has(value.status as string)
+    || !hasDateString(value, 'issuedAt')
+    || !hasNullableDateString(value, 'expiryDate')
+    || !hasNullableDateString(value, 'disabledAt')
+    || !hasNullableDateString(value, 'lastSyncedAt')
+    || !hasInteger(value, 'revision', 0)
+    || !hasDateString(value, 'createdAt')
+    || !hasDateString(value, 'updatedAt')) return false
 
   return Array.isArray(value.history)
     && value.history.every(isAdminAccessHistoryDto)
@@ -2923,32 +2957,37 @@ function isCabinetPaymentAttemptDto(value: unknown): value is CabinetPaymentAtte
     && value.webhookPayload === undefined
 }
 
-function isCabinetAccessCredentialDto(value: unknown): value is AccessCredentialDto {
+function isCabinetAccessCredentialDto(value: unknown): value is CabinetAccessCredentialDto {
   if (!isRecord(value)) return false
+
+  const forbiddenFields = [
+    'userId',
+    'providerType',
+    'providerAccessId',
+    'serverId',
+    'qrCodePayload',
+    'qrCodePath',
+    'configPath',
+    'issuedAt',
+    'disabledAt',
+    'lastSyncedAt',
+    'revision',
+    'history',
+    'createdAt',
+    'updatedAt'
+  ]
 
   return hasString(value, 'id', true)
     && hasString(value, 'subscriptionId', true)
     && hasString(value, 'subscriptionStatus', true)
     && subscriptionStatusValues.has(value.subscriptionStatus as string)
     && hasBoolean(value, 'isTerminal')
-    && hasNullableString(value, 'userId')
-    && hasString(value, 'providerType', true)
-    && hasString(value, 'providerAccessId')
-    && hasString(value, 'serverId', true)
     && hasNullableString(value, 'serverName')
     && hasString(value, 'accessUri')
-    && hasNullableString(value, 'qrCodePayload')
-    && hasString(value, 'qrCodePath')
-    && hasString(value, 'configPath')
     && hasString(value, 'status', true)
     && accessCredentialStatusValues.has(value.status as string)
-    && hasDateString(value, 'issuedAt')
     && hasNullableDateString(value, 'expiryDate')
-    && hasNullableDateString(value, 'disabledAt')
-    && hasNullableDateString(value, 'lastSyncedAt')
-    && hasInteger(value, 'revision', 0)
-    && hasDateString(value, 'createdAt')
-    && hasDateString(value, 'updatedAt')
+    && forbiddenFields.every((field) => !(field in value))
 }
 
 function isRewardLedgerDto(value: unknown): value is RewardLedgerDto {
@@ -3421,8 +3460,8 @@ export class ApiClient {
     }, 'object', isTelegramStatusDto)
   }
 
-  getMyAccesses(token: string): Promise<AccessCredentialDto[]> {
-    return this.requestArray<AccessCredentialDto>('/api/me/accesses', { token, errorMessage: apiFallbackErrorMessage }, isCabinetAccessCredentialDto, (items) => hasUniqueStringKey(items, 'id'))
+  getMyAccesses(token: string): Promise<CabinetAccessCredentialDto[]> {
+    return this.requestArray<CabinetAccessCredentialDto>('/api/me/accesses', { token, errorMessage: apiFallbackErrorMessage }, isCabinetAccessCredentialDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getMyAccessQrSvg(token: string, id: string): Promise<string> {

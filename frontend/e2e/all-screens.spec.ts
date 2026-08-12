@@ -189,6 +189,17 @@ const access = {
   updatedAt: now
 }
 
+const cabinetAccess = {
+  id: access.id,
+  subscriptionId: access.subscriptionId,
+  subscriptionStatus: access.subscriptionStatus,
+  isTerminal: access.isTerminal,
+  serverName: access.serverName,
+  accessUri: access.accessUri,
+  status: access.status,
+  expiryDate: access.expiryDate
+}
+
 const providerAccount = {
   id: 'provider-yookassa',
   provider: 'YooKassa',
@@ -370,7 +381,7 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me/accesses') {
-      await fulfillJson(route, [access])
+      await fulfillJson(route, [cabinetAccess])
       return
     }
 

@@ -201,24 +201,10 @@ const access = {
   subscriptionId: subscription.id,
   subscriptionStatus: 'Active',
   isTerminal: false,
-  userId: user.id,
-  providerType: 'X3UI',
-  providerAccessId: 'x3ui-client-1',
-  serverId: 'server-eu',
   serverName: 'EU Sandbox',
   accessUri: subscription.accessUri,
-  qrCodePayload: subscription.accessUri,
-  qrCodePath: 'qr://cabinet-e2e',
-  configPath: 'config://cabinet-e2e',
   status: 'Active',
-  issuedAt: '2026-06-13T06:00:00Z',
   expiryDate: subscription.endAt,
-  disabledAt: null,
-  lastSyncedAt: '2026-06-13T06:05:00Z',
-  revision: 3,
-  history: [],
-  createdAt: now,
-  updatedAt: now
 }
 
 const pendingAccess = {
@@ -226,14 +212,9 @@ const pendingAccess = {
   id: 'access-pending',
   subscriptionId: blockedSubscription.id,
   subscriptionStatus: 'Blocked',
-  providerAccessId: 'x3ui-client-pending',
   serverName: 'Ожидает выдачи',
   accessUri: '',
-  qrCodePayload: null,
-  qrCodePath: '',
-  configPath: '',
-  status: 'Provisioning',
-  revision: 1
+  status: 'Provisioning'
 }
 
 const revokedAccess = {
@@ -242,14 +223,9 @@ const revokedAccess = {
   subscriptionId: cancelledSubscription.id,
   subscriptionStatus: 'Cancelled',
   isTerminal: true,
-  providerAccessId: 'x3ui-client-revoked',
   serverName: 'Отозванный доступ',
-  accessUri: 'vless://revoked-cabinet-secret@example.test',
-  qrCodePayload: 'vless://revoked-cabinet-secret@example.test',
-  qrCodePath: 'qr://revoked-cabinet-secret',
-  configPath: 'config://revoked-cabinet-secret',
-  status: 'Revoked',
-  revision: 2
+  accessUri: '',
+  status: 'Revoked'
 }
 
 const cancelledStaleAccess = {
@@ -258,14 +234,9 @@ const cancelledStaleAccess = {
   subscriptionId: cancelledStaleSubscription.id,
   subscriptionStatus: 'Cancelled',
   isTerminal: true,
-  providerAccessId: 'x3ui-client-cancelled-stale-secret',
   serverName: 'Отменённый stale доступ',
-  accessUri: 'vless://cancelled-cabinet-stale-secret@example.test',
-  qrCodePayload: 'vless://cancelled-cabinet-stale-secret@example.test',
-  qrCodePath: 'qr://cancelled-cabinet-stale-secret',
-  configPath: 'config://cancelled-cabinet-stale-secret',
-  status: 'Active',
-  revision: 4
+  accessUri: '',
+  status: 'Active'
 }
 
 const provider = {
@@ -1069,7 +1040,7 @@ test('cabinet hides subscription secrets when the grace period expires without a
 
   await expect(page.getByText(subscription.accessUri, { exact: true })).toHaveCount(0)
   await expect(page.locator('.qr-preview')).toHaveCount(0)
-  await expect(page.getByText('Срок VPN-доступа истёк. Ключ и QR-код больше недоступны.', { exact: true })).toHaveCount(3)
+  await expect(page.getByText('Срок VPN-доступа истёк. Ключ и QR-код больше недоступны.', { exact: true })).toHaveCount(2)
   const subscriptionCard = page.locator('.card-list .card').filter({ has: page.getByRole('heading', { name: subscription.tariffName }) })
   const accessCard = page.locator('.card-list .card').filter({ has: page.getByRole('heading', { name: access.serverName }) })
   await expect(subscriptionCard.getByRole('button', { name: 'Показать QR-код' })).toHaveCount(0)
@@ -1914,6 +1885,11 @@ test('cabinet covers register, login, payments, subscription access and support'
   const activeSubscriptionCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Pro 30 дней' }) }).first()
   await expect(activeSubscriptionCard).not.toContainText('qr://cabinet-e2e')
   await expect(activeSubscriptionCard).not.toContainText('config://cabinet-e2e')
+  await expect(page.getByRole('heading', { name: 'VPN-ключи', exact: true })).toHaveCount(1)
+  await expect(page.getByRole('heading', { name: 'Выданные доступы', exact: true })).toHaveCount(0)
+  await expect(page.getByText('X3UI', { exact: true })).toHaveCount(0)
+  await expect(page.getByText(/Версия:/)).toHaveCount(0)
+  await expect(page.getByText('x3ui-client-1', { exact: true })).toHaveCount(0)
   await expect(page.getByText('yk-paid-1')).toBeVisible()
   const paidPaymentCard = page.locator('.payment-record').filter({ hasText: 'yk-paid-1' })
   await expect(paidPaymentCard.getByText('Платёж подтверждён.')).toBeVisible()

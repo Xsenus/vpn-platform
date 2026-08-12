@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-12",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `1357/1357`",
-                     "Frontend unit tests: `151/151`",
+                     "Backend full suite: `1358/1358`",
+                     "Frontend unit tests: `152/152`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `227/227`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-12-cabinet-subscription-boundary",
-                     "0.669.0"
+                     "2026-08-12-cabinet-access-boundary",
+                     "0.670.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-12-cabinet-subscription-boundary", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-12-cabinet-subscription-boundary", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-12-cabinet-access-boundary", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-12-cabinet-access-boundary", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `1357/1357`",
-                     "Frontend unit tests: `151/151`",
+                     "Backend full suite: `1358/1358`",
+                     "Frontend unit tests: `152/152`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-12-cabinet-subscription-boundary",
-                     "0.669.0",
+                     "2026-08-12-cabinet-access-boundary",
+                     "0.670.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

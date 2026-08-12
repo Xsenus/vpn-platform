@@ -34,6 +34,15 @@ public sealed record CabinetSubscriptionDto(
     DateTimeOffset? CancelledAt,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
+public sealed record CabinetAccessCredentialDto(
+    Guid Id,
+    Guid SubscriptionId,
+    string SubscriptionStatus,
+    bool IsTerminal,
+    string? ServerName,
+    string AccessUri,
+    string Status,
+    DateTimeOffset? ExpiryDate);
 public sealed record CabinetPaymentAttemptDto(
     Guid Id,
     Guid OrderId,
@@ -604,44 +613,49 @@ public class MeController : ControllerBase
     {
         var userId = ResolveUserId();
         var now = _clock.UtcNow;
-        var accessEntities = await _db.AccessCredentials
+        IQueryable<AccessCredential> query;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            query = _db.AccessCredentials.FromSqlInterpolated($"""
+                SELECT a.*
+                FROM "AccessCredentials" AS a
+                INNER JOIN "Subscriptions" AS s ON s."Id" = a."SubscriptionId"
+                WHERE s."UserId" = {userId}
+                ORDER BY julianday(a."CreatedAt") DESC, julianday(a."UpdatedAt") DESC
+                LIMIT 100
+                """);
+        }
+        else
+        {
+            query = _db.AccessCredentials
+                .Where(x => x.Subscription != null && x.Subscription.UserId == userId)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.UpdatedAt)
+                .Take(100);
+        }
+
+        var accessEntities = await query
             .AsNoTracking()
             .Include(x => x.Subscription)
             .Include(x => x.Server)
-            .Where(x => x.Subscription != null && x.Subscription.UserId == userId)
             .ToListAsync(cancellationToken);
         var accesses = accessEntities.Select(x =>
         {
             var subscriptionAvailable = x.Subscription is not null
                 && BusinessRules.IsSubscriptionAccessAvailable(x.Subscription.Status, x.Subscription.EndAt, x.Subscription.GracePeriodEndAt, now);
             var accessAvailable = x.Status != AccessCredentialStatus.Revoked && subscriptionAvailable;
-            return new
-            {
+            return new CabinetAccessCredentialDto(
                 x.Id,
                 x.SubscriptionId,
-                UserId = x.Subscription != null ? x.Subscription.UserId : (Guid?)null,
-                SubscriptionStatus = x.Subscription != null ? x.Subscription.Status.ToString() : string.Empty,
-                IsTerminal = !accessAvailable,
-                x.ProviderType,
-                ProviderAccessId = accessAvailable ? x.ProviderAccessId : string.Empty,
-                x.ServerId,
-                ServerName = x.Server != null ? x.Server.Name : null,
-                AccessUri = accessAvailable ? x.AccessUri : string.Empty,
-                QrCodePayload = accessAvailable ? x.QrCodePath : string.Empty,
-                QrCodePath = accessAvailable ? x.QrCodePath : string.Empty,
-                ConfigPath = accessAvailable ? x.ConfigPath : string.Empty,
-                Status = x.Status.ToString(),
-                x.IssuedAt,
-                ExpiryDate = x.Subscription != null ? BusinessRules.GetSubscriptionAccessEnd(x.Subscription.EndAt, x.Subscription.GracePeriodEndAt) : (DateTimeOffset?)null,
-                x.DisabledAt,
-                x.LastSyncedAt,
-                x.Revision,
-                x.CreatedAt,
-                x.UpdatedAt
-            };
+                x.Subscription?.Status.ToString() ?? string.Empty,
+                !accessAvailable,
+                x.Server?.Name,
+                accessAvailable ? x.AccessUri : string.Empty,
+                x.Status.ToString(),
+                x.Subscription is not null ? BusinessRules.GetSubscriptionAccessEnd(x.Subscription.EndAt, x.Subscription.GracePeriodEndAt) : null);
         }).ToList();
 
-        return Ok(accesses.OrderByDescending(x => x.CreatedAt).ToList());
+        return Ok(accesses);
     }
 
     [HttpGet("accesses/{id:guid}/qr")]

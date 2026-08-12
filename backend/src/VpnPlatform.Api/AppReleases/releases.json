@@ -15751,5 +15751,28 @@
         "text": "Roadmap progress is 682/702 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-cabinet-access-boundary",
+    "version": "0.670.0",
+    "releasedAt": "2026-08-12T22:17:00+07:00",
+    "title": "VPN-доступы кабинета скрывают служебные данные",
+    "summary": "Кабинет получает минимальное пользовательское представление VPN-доступа, а QR загружает только отдельной защищённой операцией.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "API VPN-доступов кабинета больше не передаёт provider/client/server идентификаторы, служебные QR/config поля, revision и lifecycle timestamps."
+      },
+      {
+        "type": "improved",
+        "text": "Последние 100 доступов ограничиваются базой данных, frontend отклоняет расширенный контракт, а дублирующий список доступов удалён без изменения защищённой выдачи QR."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 683/703 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

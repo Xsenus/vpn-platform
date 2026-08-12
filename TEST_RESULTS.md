@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: cabinet VPN access boundary
+
+Scope:
+- Cabinet VPN access API не должен раскрывать provider/client/server идентификаторы, служебные QR/config поля, revision и lifecycle timestamps.
+- Последние 100 пользовательских доступов должны ограничиваться на стороне БД; административный контракт и защищённая выдача QR должны сохраниться.
+
+Results:
+- Roadmap progress: `683/703` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-cabinet-access-boundary`, version `0.670.0`.
+- Fail-first: backend `0/2`, frontend `0/1`; API возвращал служебные access fields и materialize-ил 105 записей без SQL limit, а клиент требовал широкий административный DTO.
+- After fix: отдельный `CabinetAccessCredentialDto` содержит восемь пользовательских полей; frontend fail-closed отклоняет diagnostics, UI показывает один список VPN-ключей, а SQLite/PostgreSQL ветки выполняют DB-side top-100. Полный admin DTO и защищённый QR endpoint не изменены.
+- Targeted backend `18/18`, frontend decoder/dashboard `11/11`; backend `1358/1358`; frontend `152/152`; typecheck/build; cabinet desktop/mobile Playwright `64/64`; targeted all-screens cabinet desktop/responsive `2/2`; fresh SQLite, EF drift и dependency audit `0 vulnerabilities` зелёные. Реальные provider кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## Check 2026-08-12: cabinet subscription boundary
 
 Scope:

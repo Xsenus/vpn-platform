@@ -176,8 +176,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-12 локально подтверждено:
 
-- backend full suite: 1357/1357;
-- frontend tests: 151/151;
+- backend full suite: 1358/1358;
+- frontend tests: 152/152;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-12-cabinet-subscription-boundary`, версия `0.669.0`; кабинет получает минимальный контракт подписки без технической причины блокировки, внутренних идентификаторов и путей конфигурации, а история ограничивается на стороне БД.
-- roadmap progress: `682/702` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-12-cabinet-access-boundary`, версия `0.670.0`; кабинет получает минимальный контракт VPN-доступа без provider/client/server идентификаторов и служебных QR/config полей, а история ограничивается на стороне БД.
+- roadmap progress: `683/703` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

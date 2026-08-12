@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AccessCredentialDto,
+  CabinetAccessCredentialDto,
   ApiClient,
   ApiClientError,
   AuthResponse,
@@ -122,7 +122,7 @@ export function App() {
   const [subscriptions, setSubscriptions] = useState<CabinetSubscriptionDto[]>([])
   const [orders, setOrders] = useState<OrderDto[]>([])
   const [payments, setPayments] = useState<CabinetPaymentAttemptDto[]>([])
-  const [accesses, setAccesses] = useState<AccessCredentialDto[]>([])
+  const [accesses, setAccesses] = useState<CabinetAccessCredentialDto[]>([])
   const [referrals, setReferrals] = useState<RewardLedgerDto[]>([])
   const [supportConversations, setSupportConversations] = useState<SupportConversationDto[]>([])
   const [supportMessages, setSupportMessages] = useState<SupportMessageDto[]>([])
@@ -1510,8 +1510,8 @@ export function App() {
                 return <Card key={access.id}>
                   <div className="card-head">
                     <div>
-                      <h3>{access.serverName || access.providerType}</h3>
-                      <p className="muted">Действует до {access.expiryDate ? new Date(access.expiryDate).toLocaleString() : '—'} · revision {access.revision}</p>
+                      <h3>{access.serverName || 'VPN-доступ'}</h3>
+                      <p className="muted">Действует до {access.expiryDate ? new Date(access.expiryDate).toLocaleString() : '—'}</p>
                     </div>
                     <StatusBadge value={access.status} />
                   </div>
@@ -1749,40 +1749,7 @@ export function App() {
         </div>
       )}
 
-      <div className="section card-list-two">
-        <Card>
-          <h3>Выданные доступы</h3>
-          {hasCabinetLoadError('accesses')
-            ? renderCabinetLoadError('Не удалось загрузить выданные доступы.', ['accesses'])
-            : <div className="list-stack">
-            {accesses.length === 0 && <EmptyState title="Доступы не выдавались" description="Когда подписка будет активирована, здесь появятся ключи и QR-коды." />}
-            {accesses.map((access) => {
-              const qrAvailability = getAccessQrAvailability(access, cabinetNow)
-              const terminalReason = getCabinetAccessTerminalReason(access, undefined, cabinetNow)
-              const isTerminal = Boolean(terminalReason)
-              return <div key={access.id} className="list-item-vertical">
-                <div className="card-head">
-                  <div>
-                    <strong>{access.providerType}</strong>
-                    <div className="muted">Версия: {access.revision}</div>
-                  </div>
-                  <StatusBadge value={access.status} />
-                </div>
-                {isTerminal
-                  ? <p className="safe-note" role="status">{terminalReason}</p>
-                  : access.accessUri ? <CodeBlock>{access.accessUri}</CodeBlock> : <EmptyState title="Ключ ещё не готов" description="Доступ появится после обработки оплаты или синхронизации." />}
-                {!isTerminal && access.qrCodePath && <CodeBlock>QR-содержимое: {access.qrCodePath}</CodeBlock>}
-                {!isTerminal && <div className="toolbar">
-                  <CopyButton value={access.accessUri} label="Скопировать ссылку" />
-                  <PrimaryButton disabled={busy || !qrAvailability.canGenerate} title={qrAvailability.reason ?? undefined} aria-busy={busy} onClick={() => void handleLoadQr(access.id)}>Показать QR-код</PrimaryButton>
-                </div>}
-                {!isTerminal && qrSvgs[access.id] && <QrCodePreview svg={qrSvgs[access.id]} />}
-                {!isTerminal && <p className="muted">Подключение: импортируйте строку выше в VLESS/Xray клиент или используйте QR-код.</p>}
-              </div>
-            })}
-            </div>}
-        </Card>
-
+      <div className="section">
         <Card>
           <h3>Реферальные начисления</h3>
           {hasCabinetLoadError('referrals')

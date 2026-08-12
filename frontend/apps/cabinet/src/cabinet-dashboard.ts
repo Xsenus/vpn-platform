@@ -1,4 +1,4 @@
-import { AccessCredentialDto, CabinetSubscriptionDto } from '@vpn-platform/api-client'
+import { CabinetAccessCredentialDto, CabinetSubscriptionDto } from '@vpn-platform/api-client'
 
 export function getSubscriptionAccessExpiry(subscription: Pick<CabinetSubscriptionDto, 'endAt' | 'gracePeriodEndAt'>) {
   return subscription.gracePeriodEndAt ?? subscription.endAt
@@ -48,7 +48,7 @@ export function getSubscriptionRenewalAvailability(subscription: CabinetSubscrip
 }
 
 export function getCabinetAccessTerminalReason(
-  access: Pick<AccessCredentialDto, 'status' | 'subscriptionStatus' | 'isTerminal' | 'expiryDate'> | null | undefined,
+  access: Pick<CabinetAccessCredentialDto, 'status' | 'subscriptionStatus' | 'isTerminal' | 'expiryDate'> | null | undefined,
   subscriptionStatus?: string | null,
   now = new Date()
 ) {
@@ -75,7 +75,7 @@ export function getCabinetAccessTerminalReason(
 }
 
 export function getAccessQrAvailability(
-  access: Pick<AccessCredentialDto, 'accessUri' | 'status' | 'subscriptionStatus' | 'isTerminal' | 'expiryDate'> | null | undefined,
+  access: Pick<CabinetAccessCredentialDto, 'accessUri' | 'status' | 'subscriptionStatus' | 'isTerminal' | 'expiryDate'> | null | undefined,
   now = new Date()
 ) {
   if (access?.status === 'Revoked') {
@@ -105,7 +105,7 @@ export function selectCurrentSubscription(subscriptions: CabinetSubscriptionDto[
   return sorted[0] ?? null
 }
 
-export function findAccessForSubscription(subscription: CabinetSubscriptionDto | null, accesses: AccessCredentialDto[], now = new Date()) {
+export function findAccessForSubscription(subscription: CabinetSubscriptionDto | null, accesses: CabinetAccessCredentialDto[], now = new Date()) {
   if (!subscription) return null
 
   if (subscription.currentAccessId) {
@@ -126,7 +126,7 @@ export function daysUntil(dateValue?: string | null, now = new Date()) {
   return Math.ceil((target - now.getTime()) / 86_400_000)
 }
 
-export function buildCabinetSummary(subscriptions: CabinetSubscriptionDto[], accesses: AccessCredentialDto[], now = new Date()) {
+export function buildCabinetSummary(subscriptions: CabinetSubscriptionDto[], accesses: CabinetAccessCredentialDto[], now = new Date()) {
   const currentSubscription = selectCurrentSubscription(subscriptions, now)
   const currentAccess = findAccessForSubscription(currentSubscription, accesses, now)
   const linkedCurrentAccess = currentSubscription?.currentAccessId
@@ -145,7 +145,7 @@ export function buildCabinetSummary(subscriptions: CabinetSubscriptionDto[], acc
 
 export function getNextCabinetAccessExpiryDelay(
   subscriptions: CabinetSubscriptionDto[],
-  accesses: AccessCredentialDto[],
+  accesses: CabinetAccessCredentialDto[],
   now = new Date()
 ) {
   const nowTime = now.getTime()
