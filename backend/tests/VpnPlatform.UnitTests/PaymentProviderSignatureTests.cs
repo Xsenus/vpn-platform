@@ -407,6 +407,19 @@ public class AdditionalPaymentProviderSignatureTests
     }
 
     [Fact]
+    public async Task TBank_Confirmed_Status_Should_Not_Map_To_Success_When_Provider_Reports_Failure()
+    {
+        await using var db = CreateDbContext();
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), new FixedClock());
+        var provider = new TBankAcquiringPaymentProvider(new StaticHttpClientFactory(new HttpClient()), accounts, new TestHostEnvironment(Environments.Production));
+
+        var parsed = await provider.ParseWebhookAsync("TerminalKey=terminal&PaymentId=pay_1&OrderId=order_1&Amount=49000&Status=CONFIRMED&Success=false", new Dictionary<string, string>(), CancellationToken.None);
+
+        Assert.Equal(PaymentStatus.Unknown, parsed.Status);
+        Assert.False(parsed.Paid.GetValueOrDefault());
+    }
+
+    [Fact]
     public async Task Prodamus_Invalid_Signature_Should_Reject()
     {
         await using var db = CreateDbContext();
@@ -479,6 +492,57 @@ public class AdditionalPaymentProviderSignatureTests
         var parsed = await provider.ParseWebhookAsync(raw, new Dictionary<string, string>(), CancellationToken.None);
 
         Assert.Equal(PaymentStatus.Unknown, parsed.Status);
+    }
+
+    [Fact]
+    public async Task Stripe_Completed_Without_Paid_Status_Should_Not_Map_To_Success()
+    {
+        await using var db = CreateDbContext();
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), new FixedClock());
+        var provider = new StripePaymentProvider(new StaticHttpClientFactory(new HttpClient()), accounts, new TestHostEnvironment(Environments.Production));
+        var raw = "{\"id\":\"evt_1\",\"type\":\"checkout.session.completed\",\"data\":{\"object\":{\"id\":\"cs_test_1\",\"amount_total\":49000,\"currency\":\"rub\"}}}";
+
+        var parsed = await provider.ParseWebhookAsync(raw, new Dictionary<string, string>(), CancellationToken.None);
+
+        Assert.Equal(PaymentStatus.Unknown, parsed.Status);
+        Assert.False(parsed.Paid);
+    }
+
+    [Fact]
+    public async Task YooKassa_Status_Recheck_Should_Reject_Webhook_Amount_Mismatch()
+    {
+        await using var db = CreateDbContext();
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), new FixedClock());
+        var provider = new YooKassaPaymentProvider(
+            new StaticHttpClientFactory(new HttpClient(new YooKassaStatusStubHandler())),
+            accounts,
+            NullLogger<YooKassaPaymentProvider>.Instance,
+            new TestHostEnvironment(Environments.Production));
+        var account = new PaymentProviderAccount
+        {
+            Provider = PaymentProvider.YooKassa,
+            Mode = PaymentProviderMode.Production,
+            IsEnabled = true,
+            ShopId = "merchant-account",
+            SecretKeyProtected = "provider-secret",
+            ApiBaseUrl = "https://provider.test",
+            UseWebhookIpAllowList = false
+        };
+        var parsed = new PaymentWebhookParseResult(
+            "payment.succeeded:PAYMENT-1",
+            "payment.succeeded",
+            "PAYMENT-1",
+            PaymentStatus.Succeeded,
+            "{}",
+            false,
+            490m,
+            "RUB",
+            true);
+
+        var verification = await provider.VerifyAsync(account, parsed, "{}", new Dictionary<string, string>(), CancellationToken.None);
+
+        Assert.False(verification.IsValid);
+        Assert.Contains("amount", verification.Error, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -770,6 +834,18 @@ public class AdditionalPaymentProviderSignatureTests
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             => throw new Xunit.Sdk.XunitException($"Local sandbox refund attempted HTTP: {request.Method} {request.RequestUri}");
+    }
+
+    private sealed class YooKassaStatusStubHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    "{\"id\":\"PAYMENT-1\",\"status\":\"succeeded\",\"paid\":true,\"amount\":{\"value\":\"489.00\",\"currency\":\"RUB\"},\"metadata\":{\"orderId\":\"11111111-1111-1111-1111-111111111111\"}}",
+                    Encoding.UTF8,
+                    "application/json")
+            });
     }
 
     private sealed class PayPalStubHandler : HttpMessageHandler

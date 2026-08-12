@@ -126,7 +126,16 @@ public sealed record PaymentCreateRequest(Order Order, PaymentAttempt Payment, P
 public sealed record PaymentWebhookParseResult(string ExternalEventId, string EventType, string PaymentId, PaymentStatus Status, string RawPayload, bool SignatureValidated, decimal? Amount = null, string? Currency = null, bool? Paid = null, string? ProviderAccountExternalId = null, string? InternalOrderId = null);
 public sealed record PaymentWebhookVerificationResult(bool IsValid, string Method, string? Error);
 public sealed record PaymentRefundResult(string RefundId, RefundStatus Status, string RawResponse);
-public sealed record PaymentStatusResult(string PaymentId, PaymentStatus Status, string RawResponse, string? StatusReason = null);
+public sealed record PaymentStatusResult(
+    string PaymentId,
+    PaymentStatus Status,
+    string RawResponse,
+    string? StatusReason = null,
+    decimal? Amount = null,
+    string? Currency = null,
+    string? InternalOrderId = null,
+    string? ProviderAccountExternalId = null,
+    bool? Paid = null);
 
 public sealed record PaymentProviderAccountDto(
     Guid Id,

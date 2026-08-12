@@ -252,6 +252,11 @@ public sealed class YooKassaPaymentProvider : IPaymentProvider, IPaymentWebhookV
         }
 
         var paymentStatus = await RecheckPaymentStatusAsync(parsed.PaymentId, account, cancellationToken);
+        if (!string.Equals(paymentStatus.PaymentId, parsed.PaymentId, StringComparison.Ordinal))
+        {
+            return new PaymentWebhookVerificationResult(false, "status-recheck", "YooKassa status response payment id does not match webhook payment id.");
+        }
+
         if (paymentStatus.Status == PaymentStatus.Unknown)
         {
             return new PaymentWebhookVerificationResult(false, "status-recheck", "Unable to verify YooKassa payment status.");
@@ -260,6 +265,18 @@ public sealed class YooKassaPaymentProvider : IPaymentProvider, IPaymentWebhookV
         if (paymentStatus.Status != parsed.Status)
         {
             return new PaymentWebhookVerificationResult(false, "status-recheck", $"Webhook status {parsed.Status} does not match YooKassa status {paymentStatus.Status}.");
+        }
+
+        if (parsed.Amount.HasValue && paymentStatus.Amount.HasValue
+            && decimal.Round(parsed.Amount.Value, 2) != decimal.Round(paymentStatus.Amount.Value, 2))
+        {
+            return new PaymentWebhookVerificationResult(false, "status-recheck", "Webhook amount does not match YooKassa status response.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(parsed.Currency) && !string.IsNullOrWhiteSpace(paymentStatus.Currency)
+            && !string.Equals(parsed.Currency.Trim(), paymentStatus.Currency.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            return new PaymentWebhookVerificationResult(false, "status-recheck", "Webhook currency does not match YooKassa status response.");
         }
 
         return new PaymentWebhookVerificationResult(true, account.UseWebhookIpAllowList ? "ip-allow-list+status-recheck" : "status-recheck", null);
@@ -351,9 +368,21 @@ public sealed class YooKassaPaymentProvider : IPaymentProvider, IPaymentWebhookV
 
         using var document = JsonDocument.Parse(rawResponse);
         var root = document.RootElement;
+        var responsePaymentId = root.TryGetProperty("id", out var idElement) ? idElement.GetString() ?? string.Empty : string.Empty;
         var providerStatus = root.TryGetProperty("status", out var statusElement) ? statusElement.GetString() ?? string.Empty : string.Empty;
         var paid = root.TryGetProperty("paid", out var paidElement) && paidElement.ValueKind == JsonValueKind.True;
-        return new PaymentStatusResult(paymentId, MapPaymentStatus(providerStatus, paid), rawResponse, providerStatus);
+        var amount = TryReadAmount(root, out var currency);
+        var orderId = TryReadMetadata(root, "orderId");
+        var status = MapPaymentStatus(providerStatus, paid);
+        var statusReason = status == PaymentStatus.Succeeded
+            && (string.IsNullOrWhiteSpace(responsePaymentId) || !amount.HasValue || string.IsNullOrWhiteSpace(currency) || string.IsNullOrWhiteSpace(orderId))
+                ? "yookassa_payment_proof_incomplete"
+                : providerStatus;
+        if (statusReason == "yookassa_payment_proof_incomplete")
+        {
+            status = PaymentStatus.Unknown;
+        }
+        return new PaymentStatusResult(responsePaymentId, status, rawResponse, statusReason, amount, currency, orderId, Paid: paid);
     }
 
     private async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -406,6 +435,18 @@ public sealed class YooKassaPaymentProvider : IPaymentProvider, IPaymentWebhookV
         currency = amountObj.TryGetProperty("currency", out var currencyElement) ? currencyElement.GetString() : null;
         var amountText = amountObj.TryGetProperty("value", out var valueElement) ? valueElement.GetString() : null;
         return decimal.TryParse(amountText, NumberStyles.Number, CultureInfo.InvariantCulture, out var amount) ? amount : null;
+    }
+
+    private static string? TryReadMetadata(JsonElement obj, string key)
+    {
+        if (obj.TryGetProperty("metadata", out var metadata)
+            && metadata.ValueKind == JsonValueKind.Object
+            && metadata.TryGetProperty(key, out var value))
+        {
+            return value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString();
+        }
+
+        return null;
     }
 
     private static string ResolveSourceIp(IReadOnlyDictionary<string, string> headers)

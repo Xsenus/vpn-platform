@@ -673,9 +673,10 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         {
             var provider = _paymentProviderFactory.Get(payment.Provider);
             var statusResult = await provider.GetStatusAsync(payment, payment.PaymentProviderAccount!, cancellationToken);
-            if (!string.Equals(statusResult.PaymentId, payment.ProviderPaymentId, StringComparison.Ordinal))
+            var validation = ValidatePaymentStatusResult(payment, statusResult);
+            if (!validation.IsSuccess)
             {
-                return Result<PaymentStatusResult>.Failure("Payment provider returned a mismatched payment identifier.");
+                return Result<PaymentStatusResult>.Failure(validation.Error ?? "Payment provider status does not match payment attempt.");
             }
 
             if (statusResult.Status == PaymentStatus.Unknown)
@@ -1127,6 +1128,47 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         }
 
         return Result<string>.Success("Webhook matches payment attempt.");
+    }
+
+    private Result<string> ValidatePaymentStatusResult(PaymentAttempt payment, PaymentStatusResult statusResult)
+    {
+        if (!string.Equals(statusResult.PaymentId, payment.ProviderPaymentId, StringComparison.Ordinal))
+        {
+            return Result<string>.Failure("Payment provider returned a mismatched payment identifier.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(statusResult.ProviderAccountExternalId)
+            && !string.Equals(statusResult.ProviderAccountExternalId, payment.PaymentProviderAccount?.ShopId, StringComparison.Ordinal))
+        {
+            return Result<string>.Failure("Payment provider returned a mismatched provider account.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(statusResult.InternalOrderId)
+            && !string.Equals(statusResult.InternalOrderId, payment.OrderId.ToString("N"), StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(statusResult.InternalOrderId, payment.OrderId.ToString(), StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(statusResult.InternalOrderId, payment.Id.ToString("N"), StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(statusResult.InternalOrderId, payment.Id.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<string>.Failure("Payment provider returned a mismatched order identifier.");
+        }
+
+        if (statusResult.Amount.HasValue && decimal.Round(statusResult.Amount.Value, 2) != decimal.Round(payment.Amount, 2))
+        {
+            return Result<string>.Failure("Payment provider returned a mismatched payment amount.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(statusResult.Currency)
+            && !string.Equals(NormalizeCurrency(statusResult.Currency), NormalizeCurrency(payment.Currency), StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<string>.Failure("Payment provider returned a mismatched payment currency.");
+        }
+
+        if (statusResult.Status == PaymentStatus.Succeeded && statusResult.Paid.HasValue && !statusResult.Paid.Value)
+        {
+            return Result<string>.Failure("Payment provider returned succeeded status without paid confirmation.");
+        }
+
+        return Result<string>.Success("Payment provider status matches payment attempt.");
     }
 
     private async Task SaveRejectedWebhookAsync(PaymentProvider provider, string providerPaymentId, string externalEventId, string eventType, string rawBody, IReadOnlyDictionary<string, string> headers, string error, CancellationToken cancellationToken)

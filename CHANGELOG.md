@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.662.0 - 2026-08-12
+
+Release entry: `2026-08-12-payment-status-proof-boundary`.
+
+### Исправлено
+
+- Manual recheck Stripe, YooKassa и Т-Банка больше не маскирует чужой provider payment ID сохранённым локальным значением и не активирует заказ при несовпадении ID, суммы, валюты, merchant account или internal order reference.
+- Stripe `checkout.session.completed` без подтверждённого paid status и Т-Банк `CONFIRMED` при `Success=false` остаются неопределёнными, а не успешными платежами.
+
+### Улучшено
+
+- Успешный production status response обязан содержать доступное провайдеру payment proof; YooKassa status recheck сверяет сумму и валюту webhook со своим API.
+
+### Проверено
+
+- Fail-first `0/4`; после исправления direct/SQLite `12/12`, payment regression `99/99`, backend Release `1316/1316`, frontend `144/144`, responsive `7/7` за `9.2 min`, полный Playwright `227/227` за `12.9 min`.
+- Roadmap `675/695` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider кабинеты и VPS/staging/live payment/3x-ui evidence локально не закрывались.
+
 ## 0.661.0 - 2026-08-12
 
 Release entry: `2026-08-12-paypal-approved-order-capture`.

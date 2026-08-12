@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-paypal-approved-order-capture`, версия `0.661.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `674/694` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-payment-status-proof-boundary`, версия `0.662.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `675/695` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-12:
 
-- [x] `STATE-001` Backend test suite проходит: `1304/1304`.
+- [x] `STATE-001` Backend test suite проходит: `1316/1316`.
 - [x] `STATE-002` Frontend test suite проходит: `144/144`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2392,6 +2392,10 @@ git diff --check
   - Что сделать: после верифицированного `CHECKOUT.ORDER.APPROVED` backend должен вызвать `/v2/checkout/orders/{orderId}/capture`, использовать стабильный `PayPal-Request-Id`, не активировать VPN по одному approval и восстанавливать неопределённый исход без двойного списания.
   - Что сделано: добавлен узкий capture contract для provider adapter; PayPal capture проверяет order ID, capture ID, payment/order reference, сумму и валюту. HTTP/transport uncertainty оставляет webhook retryable и выполняет GET-reconciliation; повтор использует тот же idempotency key. Manual recheck больше не принимает `COMPLETED` order без подтверждённого capture.
   - Доказательство: fail-first SQLite `0/1` оставлял payment в `WaitingConfirmation` без capture POST; после исправления direct/SQLite payment regression `87/87`, backend Release `1304/1304`, frontend `144/144`, Playwright `227/227` за `12.3 min`, fresh SQLite, EF drift, build, audit и secret scan `673/0` зелёные. Реальный PayPal sandbox order/capture и `P0-PAY-009` остаются внешним evidence.
+- [x] `P11-ACC-384` Проверять payment proof при manual recheck Stripe, YooKassa и Т-Банка. 2026-08-12.
+  - Что сделать: production adapter не должен подменять ID из status response сохранённым ID локальной попытки или активировать VPN по успешному статусу без суммы, валюты и внутренней ссылки, доступных в provider API; `checkout.session.completed` без `payment_status=paid` и `CONFIRMED` при `Success=false` не являются доказательством оплаты.
+  - Что сделано: `PaymentStatusResult` передаёт фактические ID, сумму, валюту, internal order, merchant account и paid marker; orchestrator сверяет их до любой state mutation. Stripe, YooKassa и Т-Банк fail-closed возвращают `Unknown` при неполном successful proof; YooKassa status recheck дополнительно сверяет webhook amount/currency со своим API.
+  - Доказательство: fail-first `0/4` активировал чужие успешные ответы и выводил Stripe success только из event type; после исправления direct/SQLite `12/12`, payment/admin/concurrency regression `99/99`, backend Release `1316/1316`, frontend `144/144`, responsive all-screens `7/7` за `9.2 min`, полный Playwright `227/227` за `12.9 min`, fresh SQLite checkout/webhook/subscription/VPN access, EF drift, typecheck/build, audit `0 vulnerabilities`, UTF-8 и secret scan `673/0` зелёные. Реальные provider кабинеты и live payment smoke остаются внешним evidence.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

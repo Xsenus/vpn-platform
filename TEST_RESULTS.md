@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: payment status proof boundary
+
+Scope:
+- Manual recheck Stripe, YooKassa и Т-Банка должен применять только ответ по сохранённому provider payment ID с совпадающими payment proof полями.
+- Успешный статус без доступных провайдеру amount/currency/internal order/account/paid подтверждений должен оставаться fail-closed; Stripe event type и Т-Банк `Status` не заменяют фактический paid/success marker.
+
+Results:
+- Roadmap progress: `675/695` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-payment-status-proof-boundary`, version `0.662.0`.
+- Fail-first: `0/4`; все три production adapter подменяли чужой ID ответа сохранённым ID и активировали SQLite order/subscription/VPN, а Stripe выводил `Succeeded` из одного `checkout.session.completed` при наличии суммы.
+- After fix: реальные response ID/amount/currency/internal order/account/paid поля проходят общий orchestrator validation; incomplete proof даёт retryable `Unknown`; YooKassa status recheck отклоняет mismatch webhook/API amount и currency.
+- Direct/SQLite `12/12`; payment/admin/concurrency regression `99/99`; backend Release `1316/1316`; frontend `144/144`; responsive all-screens `7/7` за `9.2 min`; полный Playwright `227/227` за `12.9 min`; fresh SQLite, EF drift, typecheck/build, dependency audit `0 vulnerabilities`, UTF-8 и secret scan `673/0` зелёные. Реальные provider кабинеты и VPS/staging/live payment/3x-ui evidence локально не закрывались.
+
 ## Check 2026-08-12: PayPal approved order capture
 
 Scope:

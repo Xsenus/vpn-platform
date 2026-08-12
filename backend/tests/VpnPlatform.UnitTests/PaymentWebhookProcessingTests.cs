@@ -393,6 +393,85 @@ public class PaymentWebhookProcessingTests
         Assert.All(captures, capture => Assert.Equal($"capture-{payment.Id:N}", capture.PayPalRequestId));
     }
 
+    [Theory]
+    [InlineData(PaymentProvider.YooKassa, "foreign-id")]
+    [InlineData(PaymentProvider.Stripe, "foreign-id")]
+    [InlineData(PaymentProvider.TBankAcquiring, "foreign-id")]
+    [InlineData(PaymentProvider.YooKassa, "wrong-amount")]
+    [InlineData(PaymentProvider.Stripe, "wrong-amount")]
+    [InlineData(PaymentProvider.TBankAcquiring, "wrong-amount")]
+    [InlineData(PaymentProvider.YooKassa, "missing-proof")]
+    [InlineData(PaymentProvider.Stripe, "missing-proof")]
+    [InlineData(PaymentProvider.TBankAcquiring, "missing-proof")]
+    public async Task Manual_Recheck_Should_Reject_Mismatched_Succeeded_Payment_Response_On_Sqlite(PaymentProvider providerType, string mismatch)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock(new DateTimeOffset(2026, 8, 12, 9, 0, 0, TimeSpan.Zero));
+        var order = await SeedOrderGraphAsync(db, clock.UtcNow);
+        order.PaymentProvider = providerType;
+        var account = await db.PaymentProviderAccounts.SingleAsync();
+        account.Provider = providerType;
+        account.Mode = PaymentProviderMode.Production;
+        account.Name = $"production-{providerType}";
+        account.ShopId = providerType == PaymentProvider.Stripe ? "stripe-account" : "merchant-account";
+        account.SecretKeyProtected = "provider-secret";
+        account.ApiBaseUrl = "https://provider.test";
+        var payment = new PaymentAttempt
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            PaymentProviderAccountId = account.Id,
+            Provider = providerType,
+            ProviderMode = PaymentProviderMode.Production,
+            ProviderPaymentId = "LOCAL-PAYMENT-1",
+            Amount = order.Amount,
+            Currency = order.Currency,
+            Status = PaymentStatus.Pending,
+            IdempotencyKey = $"recheck-{Guid.NewGuid():N}"
+        };
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
+        var httpFactory = new StaticHttpClientFactory(new HttpClient(new MismatchedPaymentStatusStubHandler(providerType, payment.Id, order.Id, mismatch)));
+        var hostEnvironment = new TestHostEnvironment { EnvironmentName = Environments.Production };
+        IPaymentProvider provider = providerType switch
+        {
+            PaymentProvider.YooKassa => new YooKassaPaymentProvider(httpFactory, accounts, NullLogger<YooKassaPaymentProvider>.Instance, hostEnvironment),
+            PaymentProvider.Stripe => new StripePaymentProvider(httpFactory, accounts, hostEnvironment),
+            PaymentProvider.TBankAcquiring => new TBankAcquiringPaymentProvider(httpFactory, accounts, hostEnvironment),
+            _ => throw new ArgumentOutOfRangeException(nameof(providerType), providerType, null)
+        };
+        var subscriptionService = new SubscriptionService(db, clock, new NodeAllocationService(db), new TestVpnProviderFactory());
+        var orchestrator = new PaymentOrchestrator(
+            db,
+            new PaymentProviderFactory(new[] { provider }),
+            provider is IPaymentWebhookVerifier verifier ? new[] { verifier } : Array.Empty<IPaymentWebhookVerifier>(),
+            accounts,
+            subscriptionService,
+            clock,
+            new TestRuntimeEnvironment(Environments.Production));
+
+        var result = await orchestrator.RecheckPaymentAsync(payment.Id, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        var expectedError = mismatch switch
+        {
+            "foreign-id" => "identifier",
+            "wrong-amount" => "amount",
+            _ => "proof"
+        };
+        Assert.Contains(expectedError, result.Error, StringComparison.OrdinalIgnoreCase);
+        db.ChangeTracker.Clear();
+        Assert.Equal(PaymentStatus.Pending, (await db.Payments.SingleAsync()).Status);
+        Assert.Equal(OrderStatus.PendingPayment, (await db.Orders.SingleAsync()).Status);
+        Assert.Equal(0, await db.Subscriptions.CountAsync());
+        Assert.Equal(0, await db.AccessCredentials.CountAsync());
+    }
+
     private static PaymentOrchestrator CreateOrchestrator(ApplicationDbContext db, FixedClock clock)
     {
         var orderService = new OrderService(db, clock);
@@ -513,6 +592,57 @@ public class PaymentWebhookProcessingTests
                     }
                     """,
                 _ => throw new Xunit.Sdk.XunitException($"Unexpected PayPal request: {request.Method} {path}")
+            };
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
+    private sealed class MismatchedPaymentStatusStubHandler(PaymentProvider provider, Guid paymentId, Guid orderId, string mismatch) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var responsePaymentId = mismatch == "foreign-id" ? "FOREIGN-PAYMENT-1" : "LOCAL-PAYMENT-1";
+            var amount = mismatch == "wrong-amount" ? "489.00" : "490.00";
+            var amountMinor = mismatch == "wrong-amount" ? 48900 : 49000;
+            var metadata = mismatch == "missing-proof"
+                ? string.Empty
+                : $$"""
+                  ,"metadata":{"orderId":"{{orderId}}","paymentAttemptId":"{{paymentId}}"}
+                  """;
+            var tbankProof = mismatch == "missing-proof"
+                ? string.Empty
+                : $$"""
+                  ,"OrderId":"{{paymentId:N}}","Amount":{{amountMinor}},"TerminalKey":"merchant-account"
+                  """;
+            var json = provider switch
+            {
+                PaymentProvider.YooKassa => $$"""
+                    {
+                      "id":"{{responsePaymentId}}",
+                      "status":"succeeded",
+                      "paid":true,
+                      "amount":{"value":"{{amount}}","currency":"RUB"}{{metadata}}
+                    }
+                    """,
+                PaymentProvider.Stripe => $$"""
+                    {
+                      "id":"{{responsePaymentId}}",
+                      "payment_status":"paid",
+                      "amount_total":{{amountMinor}},
+                      "currency":"rub"{{metadata}}
+                    }
+                    """,
+                PaymentProvider.TBankAcquiring => $$"""
+                    {
+                      "Success":true,
+                      "Status":"CONFIRMED",
+                      "PaymentId":"{{responsePaymentId}}"{{tbankProof}}
+                    }
+                    """,
+                _ => throw new Xunit.Sdk.XunitException($"Unexpected provider status request: {provider}")
             };
             return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
             {

@@ -278,7 +278,6 @@ public sealed class StripePaymentProvider : IPaymentProvider, IPaymentWebhookVer
         var paymentStatus = obj.TryGetProperty("payment_status", out var paymentStatusElement) ? paymentStatusElement.GetString() ?? string.Empty : string.Empty;
         var status = MapPaymentStatus(paymentStatus, string.Equals(paymentStatus, "paid", StringComparison.OrdinalIgnoreCase));
         if (eventType is "checkout.session.expired") status = PaymentStatus.Cancelled;
-        if (eventType is "checkout.session.completed" && status == PaymentStatus.Unknown) status = PaymentStatus.Succeeded;
         var amountMinor = obj.TryGetProperty("amount_total", out var amountElement) && amountElement.TryGetInt64(out var parsedMinor) ? parsedMinor : 0L;
         var currency = obj.TryGetProperty("currency", out var currencyElement) ? currencyElement.GetString()?.ToUpperInvariant() : null;
         decimal? amount = amountMinor > 0 && !string.IsNullOrWhiteSpace(currency) ? RemainingPaymentProviderShared.FromMinorUnits(amountMinor, currency) : null;
@@ -358,8 +357,34 @@ public sealed class StripePaymentProvider : IPaymentProvider, IPaymentWebhookVer
 
         using var document = JsonDocument.Parse(raw);
         var root = document.RootElement;
+        var responsePaymentId = root.TryGetProperty("id", out var id) ? id.GetString() ?? string.Empty : string.Empty;
         var paymentStatus = root.TryGetProperty("payment_status", out var ps) ? ps.GetString() ?? string.Empty : string.Empty;
-        return new PaymentStatusResult(payment.ProviderPaymentId, MapPaymentStatus(paymentStatus, paymentStatus == "paid"), raw, paymentStatus);
+        var paid = string.Equals(paymentStatus, "paid", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(paymentStatus, "no_payment_required", StringComparison.OrdinalIgnoreCase);
+        var currency = root.TryGetProperty("currency", out var currencyElement) ? currencyElement.GetString()?.ToUpperInvariant() : null;
+        var amount = root.TryGetProperty("amount_total", out var amountElement) && amountElement.TryGetInt64(out var amountMinor)
+            && !string.IsNullOrWhiteSpace(currency)
+                ? RemainingPaymentProviderShared.FromMinorUnits(amountMinor, currency)
+                : (decimal?)null;
+        var status = MapPaymentStatus(paymentStatus, paid);
+        var orderId = TryGetMetadata(root, "orderId");
+        var statusReason = status == PaymentStatus.Succeeded
+            && (string.IsNullOrWhiteSpace(responsePaymentId) || !amount.HasValue || string.IsNullOrWhiteSpace(currency) || string.IsNullOrWhiteSpace(orderId))
+                ? "stripe_payment_proof_incomplete"
+                : paymentStatus;
+        if (statusReason == "stripe_payment_proof_incomplete")
+        {
+            status = PaymentStatus.Unknown;
+        }
+        return new PaymentStatusResult(
+            responsePaymentId,
+            status,
+            raw,
+            statusReason,
+            amount,
+            currency,
+            orderId,
+            Paid: paid);
     }
 
     public async Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)
@@ -1220,9 +1245,33 @@ public sealed class TBankAcquiringPaymentProvider : IPaymentProvider, IPaymentWe
 
         using var document = JsonDocument.Parse(raw);
         var root = document.RootElement;
+        var responsePaymentId = root.TryGetProperty("PaymentId", out var paymentIdElement) ? paymentIdElement.ToString() : string.Empty;
         var statusText = root.TryGetProperty("Status", out var statusElement) ? statusElement.GetString() ?? string.Empty : string.Empty;
         var success = root.TryGetProperty("Success", out var successElement) && successElement.ValueKind == JsonValueKind.True;
-        return new PaymentStatusResult(payment.ProviderPaymentId, MapPaymentStatus(statusText, success), raw, statusText);
+        var amount = root.TryGetProperty("Amount", out var amountElement) && amountElement.TryGetInt64(out var amountMinor)
+            ? RemainingPaymentProviderShared.FromMinorUnits(amountMinor, payment.Currency)
+            : (decimal?)null;
+        var orderId = root.TryGetProperty("OrderId", out var orderIdElement) ? orderIdElement.ToString() : null;
+        var terminalKey = root.TryGetProperty("TerminalKey", out var terminalElement) ? terminalElement.GetString() : null;
+        var status = MapPaymentStatus(statusText, success);
+        var statusReason = status == PaymentStatus.Succeeded
+            && (string.IsNullOrWhiteSpace(responsePaymentId) || !amount.HasValue || string.IsNullOrWhiteSpace(orderId) || string.IsNullOrWhiteSpace(terminalKey))
+                ? "tbank_payment_proof_incomplete"
+                : statusText;
+        if (statusReason == "tbank_payment_proof_incomplete")
+        {
+            status = PaymentStatus.Unknown;
+        }
+        return new PaymentStatusResult(
+            responsePaymentId,
+            status,
+            raw,
+            statusReason,
+            amount,
+            null,
+            orderId,
+            terminalKey,
+            success);
     }
 
     public async Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)
@@ -1263,13 +1312,14 @@ public sealed class TBankAcquiringPaymentProvider : IPaymentProvider, IPaymentWe
     }
 
     public PaymentStatus MapPaymentStatus(string providerStatus, bool paid)
-        => providerStatus.Trim().ToUpperInvariant() switch
+        => (providerStatus.Trim().ToUpperInvariant(), paid) switch
         {
-            "CONFIRMED" => PaymentStatus.Succeeded,
-            "AUTHORIZED" => PaymentStatus.WaitingConfirmation,
-            "NEW" or "FORM_SHOWED" or "3DS_CHECKING" => PaymentStatus.Pending,
-            "DEADLINE_EXPIRED" or "CANCELED" => PaymentStatus.Cancelled,
-            "REJECTED" => PaymentStatus.Failed,
+            ("CONFIRMED", true) => PaymentStatus.Succeeded,
+            ("CONFIRMED", false) => PaymentStatus.Unknown,
+            ("AUTHORIZED", _) => PaymentStatus.WaitingConfirmation,
+            ("NEW" or "FORM_SHOWED" or "3DS_CHECKING", _) => PaymentStatus.Pending,
+            ("DEADLINE_EXPIRED" or "CANCELED", _) => PaymentStatus.Cancelled,
+            ("REJECTED", _) => PaymentStatus.Failed,
             _ => PaymentStatus.Unknown
         };
 

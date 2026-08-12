@@ -15567,5 +15567,28 @@
         "text": "Roadmap progress is 674/694 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; PayPal sandbox order/capture, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-payment-status-proof-boundary",
+    "version": "0.662.0",
+    "releasedAt": "2026-08-12T18:00:00+07:00",
+    "title": "Перепроверка платежа требует совпадающее подтверждение",
+    "summary": "Stripe, YooKassa и Т-Банк больше не завершают локальный заказ по чужому или неполному успешному ответу провайдера.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Manual recheck сверяет фактический provider payment ID, сумму, валюту, внутреннюю ссылку заказа и аккаунт до изменения платежа и выдачи VPN."
+      },
+      {
+        "type": "improved",
+        "text": "Stripe event без paid status, Т-Банк CONFIRMED при Success=false и successful response без полного payment proof остаются неопределёнными и допускают безопасный повтор."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 675/695 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

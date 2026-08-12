@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `674/694` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `675/695` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,7 +85,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1304/1304`.
+- [x] Backend full suite: `1316/1316`.
 - [x] Frontend unit tests: `144/144`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -167,7 +167,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-12-paypal-approved-order-capture`, версия `0.661.0`; verified approval выполняет idempotent PayPal capture, direct/SQLite payment regression `87/87`, browser suite `227/227`.
+- [x] Latest "Что нового": `2026-08-12-payment-status-proof-boundary`, версия `0.662.0`; manual recheck Stripe/YooKassa/Т-Банк проверяет полный payment proof, direct/SQLite `12/12`, browser suite `227/227`.
 
 ## Как вести дальше
 
