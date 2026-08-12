@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.652.0 - 2026-08-12
+
+Release entry: `2026-08-12-payment-local-sandbox-refund-contract`.
+
+### Исправлено
+
+- Credentialless local sandbox аккаунты Stripe, PayPal и TBank теперь завершают refund детерминированно и без внешнего HTTP, как уже делали checkout и manual recheck.
+- Admin refund readiness использует тот же environment-aware контракт и больше не требует реальные provider secrets для локальных seed-аккаунтов; в Production и для sandbox с credentials требования не ослаблены.
+
+### Проверено
+
+- Fail-first: `0/6` provider/readiness cases с ошибками обязательных credentials; после исправления targeted SQLite/provider/rules `21/21`, payment regression `92/92`.
+- Backend `1255/1255`; Release build `0` warnings/errors. Актуальные frontend `141/141` и полный Playwright `220/220` за `13.6 min` остаются применимыми, UI/DTO не менялись.
+- Roadmap: `665/685` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked; реальные provider/VPS/staging evidence локальными sandbox-проверками не закрывались.
+
 ## 0.651.0 - 2026-08-12
 
 Release entry: `2026-08-12-payment-refund-capability-preflight`.

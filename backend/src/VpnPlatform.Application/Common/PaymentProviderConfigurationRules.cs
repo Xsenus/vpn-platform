@@ -23,6 +23,16 @@ public static class PaymentProviderConfigurationRules
     public static bool SupportsRefund(PaymentProvider provider)
         => provider is PaymentProvider.YooKassa or PaymentProvider.TBankAcquiring or PaymentProvider.Stripe or PaymentProvider.PayPal;
 
+    public static bool IsCredentiallessLocalSandbox(PaymentProviderAccount account, string? environmentName)
+        => account.Mode == PaymentProviderMode.Sandbox
+           && string.IsNullOrWhiteSpace(account.SecretKeyProtected)
+           && environmentName is not null
+           && (environmentName.Equals("Development", StringComparison.OrdinalIgnoreCase)
+               || environmentName.Equals("Local", StringComparison.OrdinalIgnoreCase)
+               || environmentName.Equals("Test", StringComparison.OrdinalIgnoreCase)
+               || environmentName.Equals("Testing", StringComparison.OrdinalIgnoreCase)
+               || environmentName.Equals("Sandbox", StringComparison.OrdinalIgnoreCase));
+
     public static bool IsCheckoutConfigured(PaymentProviderAccount account)
         => GetCheckoutConfigurationIssue(account) is null;
 

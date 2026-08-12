@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: payment local sandbox refund contract
+
+Scope:
+- Credentialless Local/Test sandbox для refund-capable Stripe, PayPal и TBank должен поддерживать полный refund flow без provider credentials и внешнего HTTP.
+- Admin readiness и adapters должны использовать один environment-aware контракт, который остается fail-closed в Production.
+
+Results:
+- Roadmap progress: `665/685` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-payment-local-sandbox-refund-contract`, version `0.652.0`.
+- Reproduction before fix: provider/readiness fail-first `0/6`; Stripe, PayPal и TBank требовали реальные credentials, а admin API возвращал `CanRefund=false` для локальных seed-аккаунтов.
+- After fix: общий local-sandbox predicate ограничен разрешенными environment; три adapter cases не выполняют HTTP, а три SQLite admin -> orchestrator -> adapter flow создают успешный durable refund и переводят платеж в `PartiallyRefunded`.
+- Targeted SQLite/provider/rules: `21/21`; payment regression: `92/92`; backend full suite: `1255/1255`; Release build: `0` warnings/errors. UI/DTO не менялись: актуальные frontend `141/141`, typecheck/build и Playwright `220/220` за `13.6 min` остаются применимыми.
+
 ## Check 2026-08-12: payment refund capability preflight
 
 Scope:

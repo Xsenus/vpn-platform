@@ -132,4 +132,41 @@ public class PaymentProviderConfigurationRulesTests
         Assert.False(PaymentProviderConfigurationRules.SupportsManualRecheck(PaymentProvider.RoboKassa));
         Assert.True(PaymentProviderConfigurationRules.SupportsManualRecheck(PaymentProvider.YooKassa));
     }
+
+    [Theory]
+    [InlineData("Development")]
+    [InlineData("Local")]
+    [InlineData("Test")]
+    [InlineData("Testing")]
+    [InlineData("Sandbox")]
+    public void Credentialless_Sandbox_Should_Be_Local_Only_In_Allowed_Environments(string environmentName)
+    {
+        var account = new PaymentProviderAccount
+        {
+            Provider = PaymentProvider.Stripe,
+            Mode = PaymentProviderMode.Sandbox,
+            IsEnabled = true,
+            ShopId = "local-stripe-account"
+        };
+
+        Assert.True(PaymentProviderConfigurationRules.IsCredentiallessLocalSandbox(account, environmentName));
+    }
+
+    [Fact]
+    public void Credentialless_LocalSandbox_Rule_Should_Fail_Closed_In_Production_Or_With_Secret()
+    {
+        var account = new PaymentProviderAccount
+        {
+            Provider = PaymentProvider.Stripe,
+            Mode = PaymentProviderMode.Sandbox,
+            IsEnabled = true,
+            ShopId = "local-stripe-account"
+        };
+
+        Assert.False(PaymentProviderConfigurationRules.IsCredentiallessLocalSandbox(account, "Production"));
+        Assert.False(PaymentProviderConfigurationRules.IsCredentiallessLocalSandbox(account, null));
+
+        account.SecretKeyProtected = "protected-secret";
+        Assert.False(PaymentProviderConfigurationRules.IsCredentiallessLocalSandbox(account, "Local"));
+    }
 }

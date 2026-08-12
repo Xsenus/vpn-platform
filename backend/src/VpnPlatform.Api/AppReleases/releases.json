@@ -15337,5 +15337,28 @@
         "text": "Roadmap progress is 664/684 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-payment-local-sandbox-refund-contract",
+    "version": "0.652.0",
+    "releasedAt": "2026-08-12T10:52:43+07:00",
+    "title": "Локальные возвраты Stripe, PayPal и TBank работают без внешней сети",
+    "summary": "Credentialless local sandbox теперь поддерживает полный refund flow, а admin readiness использует тот же environment-aware контракт.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Stripe, PayPal и TBank больше не требуют реальные provider secrets и HTTP для возврата через локальные seed-аккаунты."
+      },
+      {
+        "type": "improved",
+        "text": "Admin readiness разрешает local sandbox refund по единому правилу; Production и sandbox-аккаунты с credentials сохраняют реальный provider path."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 665/685 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

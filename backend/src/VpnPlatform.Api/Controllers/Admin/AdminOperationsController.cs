@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
@@ -146,6 +147,7 @@ public class AdminOperationsController : ControllerBase
     private readonly IVpnProviderFactory? _vpnProviderFactory;
     private readonly IClock _clock;
     private readonly X3UiPanelService? _x3UiPanelService;
+    private readonly IHostEnvironment? _hostEnvironment;
 
     public AdminOperationsController(
         IApplicationDbContext db,
@@ -157,7 +159,8 @@ public class AdminOperationsController : ControllerBase
         IQrCodeGenerator? qrCodeGenerator = null,
         IVpnProviderFactory? vpnProviderFactory = null,
         IClock? clock = null,
-        X3UiPanelService? x3UiPanelService = null)
+        X3UiPanelService? x3UiPanelService = null,
+        IHostEnvironment? hostEnvironment = null)
     {
         _db = db;
         _provisioningService = provisioningService;
@@ -169,6 +172,7 @@ public class AdminOperationsController : ControllerBase
         _vpnProviderFactory = vpnProviderFactory;
         _clock = clock ?? new SystemClock();
         _x3UiPanelService = x3UiPanelService;
+        _hostEnvironment = hostEnvironment;
     }
 
     [HttpGet("audit-logs")]
@@ -2795,7 +2799,7 @@ public class AdminOperationsController : ControllerBase
                 || payment.ProviderPaymentId.Contains(searchText, StringComparison.OrdinalIgnoreCase)
                 || payment.Status.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase));
 
-    private static RefundReadinessDto BuildRefundReadiness(PaymentAttempt payment)
+    private RefundReadinessDto BuildRefundReadiness(PaymentAttempt payment)
     {
         var blockers = new List<string>();
         var refundableAmount = Math.Max(0m, payment.Amount - payment.RefundedAmount);
@@ -2854,10 +2858,15 @@ public class AdminOperationsController : ControllerBase
         return new RefundReadinessDto(isSupported, blockers.Count == 0, refundableAmount, blockers);
     }
 
-    private static void AddProviderSpecificRefundBlockers(PaymentAttempt payment, PaymentProviderAccount account, List<string> blockers)
+    private void AddProviderSpecificRefundBlockers(PaymentAttempt payment, PaymentProviderAccount account, List<string> blockers)
     {
         static bool Missing(string? value) => string.IsNullOrWhiteSpace(value);
         var hasSecret = !Missing(account.SecretKeyProtected);
+
+        if (PaymentProviderConfigurationRules.IsCredentiallessLocalSandbox(account, _hostEnvironment?.EnvironmentName))
+        {
+            return;
+        }
 
         switch (payment.Provider)
         {

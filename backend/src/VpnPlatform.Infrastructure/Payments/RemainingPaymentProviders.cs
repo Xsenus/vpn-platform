@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Hosting;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
@@ -21,9 +22,7 @@ internal static class RemainingPaymentProviderShared
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { WriteIndented = false };
 
     public static bool IsLocalSandbox(IHostEnvironment environment, PaymentProviderAccount account)
-        => account.Mode == PaymentProviderMode.Sandbox
-           && string.IsNullOrWhiteSpace(account.SecretKeyProtected)
-           && (environment.IsDevelopment() || environment.IsEnvironment("Local") || environment.IsEnvironment("Test") || environment.IsEnvironment("Testing") || environment.IsEnvironment("Sandbox"));
+        => PaymentProviderConfigurationRules.IsCredentiallessLocalSandbox(account, environment.EnvironmentName);
 
     public static PaymentWebhookVerificationResult VerifyLocalSandboxHeader(IHostEnvironment environment, PaymentProviderAccount account, IReadOnlyDictionary<string, string> headers, string headerName)
     {
@@ -119,6 +118,22 @@ internal static class RemainingPaymentProviderShared
             redirectUrl
         });
         return new PaymentInitResult(providerPaymentId, redirectUrl, raw);
+    }
+
+    public static PaymentRefundResult LocalSandboxRefund(PaymentAttempt payment, decimal amount, string reason, string prefix)
+    {
+        var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            $"{payment.Id:N}:{amount.ToString("0.00", CultureInfo.InvariantCulture)}:{reason}"))).ToLowerInvariant();
+        var refundId = $"{prefix}_refund_sandbox_{fingerprint[..24]}";
+        var raw = SerializeRaw(new
+        {
+            id = refundId,
+            status = "succeeded",
+            amount,
+            currency = payment.Currency,
+            reason
+        });
+        return new PaymentRefundResult(refundId, RefundStatus.Succeeded, raw);
     }
 
     public static bool FixedEqualsBase64(string provided, byte[] expectedBytes)
@@ -349,6 +364,11 @@ public sealed class StripePaymentProvider : IPaymentProvider, IPaymentWebhookVer
 
     public async Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)
     {
+        if (RemainingPaymentProviderShared.IsLocalSandbox(_environment, account))
+        {
+            return RemainingPaymentProviderShared.LocalSandboxRefund(payment, amount, reason, "stripe");
+        }
+
         var secret = _accounts.GetSecretKey(account);
         if (string.IsNullOrWhiteSpace(secret))
         {
@@ -615,6 +635,11 @@ public sealed class PayPalPaymentProvider : IPaymentProvider, IPaymentWebhookVer
 
     public async Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)
     {
+        if (RemainingPaymentProviderShared.IsLocalSandbox(_environment, account))
+        {
+            return RemainingPaymentProviderShared.LocalSandboxRefund(payment, amount, reason, "paypal");
+        }
+
         var token = await GetAccessTokenAsync(account, cancellationToken);
         var captureId = await ResolveCaptureIdAsync(payment, account, token, cancellationToken);
         if (string.IsNullOrWhiteSpace(captureId))
@@ -916,6 +941,11 @@ public sealed class TBankAcquiringPaymentProvider : IPaymentProvider, IPaymentWe
 
     public async Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)
     {
+        if (RemainingPaymentProviderShared.IsLocalSandbox(_environment, account))
+        {
+            return RemainingPaymentProviderShared.LocalSandboxRefund(payment, amount, reason, "tbank");
+        }
+
         var password = _accounts.GetSecretKey(account);
         if (string.IsNullOrWhiteSpace(account.ShopId) || string.IsNullOrWhiteSpace(password))
         {

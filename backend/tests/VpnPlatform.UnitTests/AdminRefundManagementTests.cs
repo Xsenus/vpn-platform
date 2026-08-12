@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
@@ -11,6 +13,7 @@ using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
+using VpnPlatform.Infrastructure.Payments;
 using VpnPlatform.Infrastructure.Persistence;
 using Xunit;
 
@@ -117,6 +120,85 @@ public class AdminRefundManagementTests
     }
 
     [Theory]
+    [InlineData(PaymentProvider.Stripe)]
+    [InlineData(PaymentProvider.PayPal)]
+    [InlineData(PaymentProvider.TBankAcquiring)]
+    public async Task GetPayments_Should_Allow_Credentialless_LocalSandbox_Refund(PaymentProvider provider)
+    {
+        await using var db = CreateDb();
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(provider, secret: string.Empty);
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.PaymentProviderAccounts.Add(account);
+        db.Orders.Add(payment.Order!);
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, environmentName: "Local");
+        var ok = Assert.IsType<OkObjectResult>(await controller.GetPayments(CancellationToken.None));
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(ok.Value));
+        var paymentJson = json.RootElement.EnumerateArray().Single();
+
+        Assert.True(paymentJson.GetProperty("CanRefund").GetBoolean());
+        Assert.Empty(paymentJson.GetProperty("RefundBlockers").EnumerateArray());
+    }
+
+    [Theory]
+    [InlineData(PaymentProvider.Stripe)]
+    [InlineData(PaymentProvider.PayPal)]
+    [InlineData(PaymentProvider.TBankAcquiring)]
+    public async Task RefundPayment_Should_Complete_Credentialless_LocalSandbox_Flow_On_Sqlite(PaymentProvider providerType)
+    {
+        await using var db = CreateDb();
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 12, 4, 0, 0, TimeSpan.Zero));
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
+        var factory = new StaticHttpClientFactory(new HttpClient(new RejectHttpHandler()));
+        IPaymentProvider provider = providerType switch
+        {
+            PaymentProvider.Stripe => new StripePaymentProvider(factory, accounts, new TestHostEnvironment("Local")),
+            PaymentProvider.PayPal => new PayPalPaymentProvider(factory, accounts, new TestHostEnvironment("Local")),
+            PaymentProvider.TBankAcquiring => new TBankAcquiringPaymentProvider(factory, accounts, new TestHostEnvironment("Local")),
+            _ => throw new ArgumentOutOfRangeException(nameof(providerType), providerType, null)
+        };
+        var orchestrator = new PaymentOrchestrator(
+            db,
+            new TestPaymentProviderFactory(provider),
+            Array.Empty<IPaymentWebhookVerifier>(),
+            accounts,
+            null!,
+            clock);
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(providerType, secret: string.Empty);
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.PaymentProviderAccounts.Add(account);
+        db.Orders.Add(payment.Order!);
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, orchestrator, "Local");
+        var result = await controller.RefundPayment(
+            payment.Id,
+            new RefundPaymentHttpRequest(40m, "local sandbox integration"),
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        await db.Entry(payment).ReloadAsync();
+        Assert.Equal(PaymentStatus.PartiallyRefunded, payment.Status);
+        Assert.Equal(40m, payment.RefundedAmount);
+        var refund = Assert.Single(await db.Refunds.AsNoTracking().ToListAsync());
+        Assert.Equal(RefundStatus.Succeeded, refund.Status);
+        Assert.Contains("sandbox", refund.ProviderRefundId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
     [InlineData(RefundStatus.New)]
     [InlineData(RefundStatus.Pending)]
     [InlineData(RefundStatus.Unknown)]
@@ -164,7 +246,10 @@ public class AdminRefundManagementTests
         return new PaymentOrchestrator(db, new TestPaymentProviderFactory(provider), Array.Empty<IPaymentWebhookVerifier>(), providerAccounts, null!, clock);
     }
 
-    private static AdminOperationsController CreateController(ApplicationDbContext db, PaymentOrchestrator? orchestrator = null)
+    private static AdminOperationsController CreateController(
+        ApplicationDbContext db,
+        PaymentOrchestrator? orchestrator = null,
+        string environmentName = "Production")
     {
         var identity = new ClaimsIdentity(new[]
         {
@@ -172,7 +257,7 @@ public class AdminRefundManagementTests
             new Claim(ClaimTypes.Role, UserRoles.Admin)
         }, "Test");
 
-        return new AdminOperationsController(db, null!, orchestrator!, null!)
+        return new AdminOperationsController(db, null!, orchestrator!, null!, hostEnvironment: new TestHostEnvironment(environmentName))
         {
             ControllerContext = new ControllerContext
             {
@@ -260,6 +345,25 @@ public class AdminRefundManagementTests
     private sealed class TestClock(DateTimeOffset utcNow) : IClock
     {
         public DateTimeOffset UtcNow { get; } = utcNow;
+    }
+
+    private sealed class TestHostEnvironment(string environmentName) : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = environmentName;
+        public string ApplicationName { get; set; } = "VpnPlatform.UnitTests";
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+    }
+
+    private sealed class StaticHttpClientFactory(HttpClient client) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => client;
+    }
+
+    private sealed class RejectHttpHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => throw new Xunit.Sdk.XunitException($"Local sandbox refund attempted HTTP: {request.Method} {request.RequestUri}");
     }
 
     private sealed class TestSecretProtector : ISecretProtector

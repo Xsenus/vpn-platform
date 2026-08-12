@@ -165,6 +165,48 @@ public class PaymentProviderSignatureTests
 
 public class AdditionalPaymentProviderSignatureTests
 {
+    [Theory]
+    [InlineData(PaymentProvider.Stripe)]
+    [InlineData(PaymentProvider.PayPal)]
+    [InlineData(PaymentProvider.TBankAcquiring)]
+    public async Task Credentialless_LocalSandbox_Refund_Should_Succeed_Without_Http(PaymentProvider providerType)
+    {
+        await using var db = CreateDbContext();
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), new FixedClock());
+        var http = new HttpClient(new RejectHttpHandler());
+        var factory = new StaticHttpClientFactory(http);
+        IPaymentProvider provider = providerType switch
+        {
+            PaymentProvider.Stripe => new StripePaymentProvider(factory, accounts, new TestHostEnvironment("Local")),
+            PaymentProvider.PayPal => new PayPalPaymentProvider(factory, accounts, new TestHostEnvironment("Local")),
+            PaymentProvider.TBankAcquiring => new TBankAcquiringPaymentProvider(factory, accounts, new TestHostEnvironment("Local")),
+            _ => throw new ArgumentOutOfRangeException(nameof(providerType), providerType, null)
+        };
+        var account = new PaymentProviderAccount
+        {
+            Id = Guid.NewGuid(),
+            Provider = providerType,
+            Mode = PaymentProviderMode.Sandbox,
+            IsEnabled = true,
+            ShopId = $"local-{providerType.ToString().ToLowerInvariant()}"
+        };
+        var payment = new PaymentAttempt
+        {
+            Id = Guid.NewGuid(),
+            Provider = providerType,
+            ProviderPaymentId = $"payment-{Guid.NewGuid():N}",
+            Amount = 490m,
+            Currency = "RUB",
+            Status = PaymentStatus.Succeeded
+        };
+
+        var result = await provider.RefundAsync(payment, account, 120m, "local sandbox refund", CancellationToken.None);
+
+        Assert.Equal(RefundStatus.Succeeded, result.Status);
+        Assert.Contains("sandbox", result.RefundId, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"status\":\"succeeded\"", result.RawResponse, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Stripe_Webhook_Signature_Should_Verify()
     {
@@ -554,6 +596,12 @@ public class AdditionalPaymentProviderSignatureTests
         private readonly HttpClient _client;
         public StaticHttpClientFactory(HttpClient client) => _client = client;
         public HttpClient CreateClient(string name) => _client;
+    }
+
+    private sealed class RejectHttpHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => throw new Xunit.Sdk.XunitException($"Local sandbox refund attempted HTTP: {request.Method} {request.RequestUri}");
     }
 
     private sealed class PayPalStubHandler : HttpMessageHandler
