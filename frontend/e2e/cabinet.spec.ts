@@ -184,32 +184,20 @@ const paidPayment = {
   id: 'payment-paid',
   orderId: paidOrder.id,
   userId: user.id,
-  userDisplayName: user.displayName,
   provider: 'YooKassa',
-  paymentProviderAccountId: 'provider-yookassa',
   providerMode: 'Sandbox',
   providerPaymentId: 'yk-paid-1',
-  externalEventId: 'evt-paid-1',
-  idempotencyKey: 'idem-paid',
   confirmationUrl: 'https://pay.example.test/paid',
-  returnUrl: 'http://127.0.0.1:5294',
   amount: 490,
   currency: 'RUB',
   status: 'Succeeded',
-  signatureValidated: true,
   isActivationProcessed: true,
   activationProcessedAt: '2026-06-13T06:01:00Z',
   paidAt: '2026-06-13T06:00:00Z',
   failedAt: null,
   refundedAt: null,
   refundedAmount: 0,
-  statusReason: null,
-  webhookEventsCount: 1,
-  refundsCount: 0,
-  refundSupported: true,
-  canRefund: false,
-  refundableAmount: 0,
-  refundBlockers: [],
+  statusMessage: 'Платёж подтверждён.',
   createdAt: now,
   updatedAt: now
 }
@@ -221,11 +209,10 @@ const unsafeLinkPayment = {
   providerPaymentId: 'unsafe-link-attempt',
   confirmationUrl: 'javascript:alert(1)',
   status: 'Pending',
-  signatureValidated: false,
+  statusMessage: 'Ожидаем подтверждение платежа.',
   isActivationProcessed: false,
   activationProcessedAt: null,
-  paidAt: null,
-  webhookEventsCount: 0
+  paidAt: null
 }
 
 const access = {
@@ -777,15 +764,12 @@ async function mockCabinetApi(page: Page) {
         id: 'payment-retry-local',
         orderId: retryableOrder.id,
         providerPaymentId: 'payment-retry',
-        externalEventId: 'evt-payment-retry',
-        idempotencyKey: 'idem-payment-retry',
         confirmationUrl: 'https://pay.example.test/retry',
         status: 'Pending',
-        signatureValidated: false,
+        statusMessage: 'Ожидаем подтверждение платежа.',
         isActivationProcessed: false,
         activationProcessedAt: null,
         paidAt: null,
-        webhookEventsCount: 0,
         createdAt: now,
         updatedAt: now
       }
@@ -974,11 +958,10 @@ async function mockCabinetApi(page: Page) {
         retryPaymentAttempt = {
           ...retryPaymentAttempt,
           status: 'Succeeded',
-          signatureValidated: true,
+          statusMessage: 'Платёж подтверждён.',
           isActivationProcessed: true,
           activationProcessedAt: '2026-06-13T08:00:00Z',
           paidAt: '2026-06-13T08:00:00Z',
-          webhookEventsCount: 1,
           updatedAt: '2026-06-13T08:00:00Z'
         }
       }
@@ -1479,7 +1462,7 @@ test('cabinet removes terminal payment links after retry status refresh', async 
   await expect(retryCard.getByText('Оплата подтверждена', { exact: false })).toBeVisible()
   await expect(retryCard.getByRole('link', { name: 'Открыть повторную оплату в новой вкладке' })).toHaveCount(0)
   const retryPaymentHistoryCard = page.locator('.payment-record').filter({ hasText: 'payment-retry' })
-  await expect(retryPaymentHistoryCard.getByText('Платеж успешно подтвержден', { exact: false })).toBeVisible()
+  await expect(retryPaymentHistoryCard.getByText('Платёж подтверждён.')).toBeVisible()
   await expect(retryPaymentHistoryCard.getByRole('link', { name: 'Открыть оплату' })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
@@ -1948,6 +1931,9 @@ test('cabinet covers register, login, payments, subscription access and support'
   await expect(page.getByText('Pro 30 дней').first()).toBeVisible()
   await expect(page.locator('.code-block').filter({ hasText: 'vless://cabinet-e2e@example.com:443' }).first()).toBeVisible()
   await expect(page.getByText('yk-paid-1')).toBeVisible()
+  const paidPaymentCard = page.locator('.payment-record').filter({ hasText: 'yk-paid-1' })
+  await expect(paidPaymentCard.getByText('Платёж подтверждён.')).toBeVisible()
+  await expect(paidPaymentCard).not.toContainText('private-provider-exception')
   await expect(page.getByRole('heading', { name: 'EU Sandbox' })).toBeVisible()
   const unsafeLinkPaymentCard = page.locator('.payment-record').filter({ hasText: 'order-unsafe-link' })
   await expect(unsafeLinkPaymentCard.getByRole('alert')).toContainText('Сохраненная ссылка оплаты отклонена как некорректная')

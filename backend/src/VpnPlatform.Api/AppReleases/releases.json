@@ -15705,5 +15705,28 @@
         "text": "Roadmap progress is 680/700 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; live webhooks, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-cabinet-payment-boundary",
+    "version": "0.668.0",
+    "releasedAt": "2026-08-12T21:15:00+07:00",
+    "title": "История платежей защищает внутренние данные",
+    "summary": "Кабинет показывает понятное состояние платежа без технических ошибок и служебных данных провайдера.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "История платежей и JSON-экспорт больше не содержат внутренние причины ошибок, webhook/event/idempotency данные или административные признаки платежа."
+      },
+      {
+        "type": "improved",
+        "text": "Кабинет получает отдельный безопасный контракт со статусным сообщением, а последние 100 платежей ограничиваются на стороне базы данных."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 681/701 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

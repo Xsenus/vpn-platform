@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import type { OrderDto, PaymentAttemptDto } from '../packages/api-client/src/index.ts'
+import type { CabinetPaymentAttemptDto, OrderDto } from '../packages/api-client/src/index.ts'
 import {
   buildOrderExportText,
   canOpenOrderPaymentConfirmation,
@@ -35,17 +35,19 @@ function order(overrides: Partial<OrderDto> = {}): OrderDto {
   }
 }
 
-function payment(overrides: Partial<PaymentAttemptDto> = {}): PaymentAttemptDto {
+function payment(overrides: Partial<CabinetPaymentAttemptDto> = {}): CabinetPaymentAttemptDto {
   return {
     id: 'payment-1',
     orderId: 'order-1',
-    provider: 'yookassa',
+    provider: 'YooKassa',
+    providerMode: 'Sandbox',
     providerPaymentId: 'provider-payment-1',
-    externalEventId: 'event-1',
     amount: 499,
     currency: 'RUB',
     status: 'Pending',
-    signatureValidated: true,
+    isActivationProcessed: false,
+    refundedAmount: 0,
+    statusMessage: 'Ожидаем подтверждение платежа.',
     createdAt: '2026-05-27T10:01:00Z',
     updatedAt: '2026-05-27T10:01:00Z',
     ...overrides
@@ -157,9 +159,7 @@ test('cabinet payments exports safe order details without raw provider payloads'
     payment({
       id: 'payment-failed',
       status: 'Failed',
-      rawRequest: '{"secret":"request"}',
-      rawResponse: '{"secret":"response"}',
-      webhookPayload: '{"secret":"webhook"}'
+      statusMessage: 'Платёж не завершён. Повторите оплату или обратитесь в поддержку.'
     })
   ])
 
@@ -171,5 +171,7 @@ test('cabinet payments exports safe order details without raw provider payloads'
   assert.equal(parsed.payments[0].rawRequest, undefined)
   assert.equal(parsed.payments[0].rawResponse, undefined)
   assert.equal(parsed.payments[0].webhookPayload, undefined)
+  assert.equal(parsed.payments[0].statusReason, undefined)
+  assert.equal(parsed.payments[0].statusMessage, 'Платёж не завершён. Повторите оплату или обратитесь в поддержку.')
   assert.equal(formatPaymentMoney(1499.5, 'RUB'), '1 499,5 RUB')
 })

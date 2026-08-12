@@ -548,6 +548,43 @@ function adminPaymentFixture(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function adminOverviewPaymentFixture(overrides: Record<string, unknown> = {}) {
+  const payment = adminPaymentFixture(overrides)
+  delete payment.recheckSupported
+  delete payment.canRecheck
+  delete payment.recheckBlockers
+  delete payment.refundSupported
+  delete payment.canRefund
+  delete payment.refundableAmount
+  delete payment.refundBlockers
+  return payment
+}
+
+function cabinetPaymentFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'payment-1',
+    orderId: 'order-1',
+    userId: 'user-1',
+    provider: 'YooKassa',
+    providerMode: 'Sandbox',
+    providerPaymentId: 'provider-payment-1',
+    confirmationUrl: null,
+    amount: 100,
+    currency: 'RUB',
+    status: 'Failed',
+    isActivationProcessed: false,
+    activationProcessedAt: null,
+    paidAt: null,
+    failedAt: adminFixtureTimestamp,
+    refundedAt: null,
+    refundedAmount: 0,
+    statusMessage: 'Платёж не завершён. Повторите оплату или обратитесь в поддержку.',
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
 function adminPaymentProviderAccountFixture(overrides: Record<string, unknown> = {}) {
   return {
     id: 'provider-1',
@@ -1364,6 +1401,32 @@ test('ApiClient.claimCheckoutSession binds session through authenticated endpoin
   assert.equal(headers.get('Authorization'), 'Bearer jwt-token')
 })
 
+test('ApiClient accepts only the safe cabinet payment contract', async () => {
+  const responses = [
+    [cabinetPaymentFixture()],
+    [{ ...cabinetPaymentFixture(), statusReason: 'private-provider-exception' }],
+    [{ ...cabinetPaymentFixture(), externalEventId: 'private-event-id' }],
+    [{ ...cabinetPaymentFixture(), signatureValidated: true }],
+    [{ ...cabinetPaymentFixture(), rawResponse: '{"private":true}' }]
+  ]
+  globalThis.fetch = (async () => new Response(JSON.stringify(responses.shift()), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const payments = await client.getMyPayments('user-token')
+
+  assert.equal(payments[0]?.statusMessage, 'Платёж не завершён. Повторите оплату или обратитесь в поддержку.')
+  await assert.rejects(
+    () => client.getMyPayments('user-token'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502
+  )
+  await assert.rejects(() => client.getMyPayments('user-token'), (error: unknown) => error instanceof ApiClientError && error.status === 502)
+  await assert.rejects(() => client.getMyPayments('user-token'), (error: unknown) => error instanceof ApiClientError && error.status === 502)
+  await assert.rejects(() => client.getMyPayments('user-token'), (error: unknown) => error instanceof ApiClientError && error.status === 502)
+})
+
 test('ApiClient admin support reply and note endpoints are tokenized', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
@@ -1521,7 +1584,7 @@ test('ApiClient admin dashboard and user overview endpoints are tokenized', asyn
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     if (String(url).includes('/overview')) {
-      return new Response(JSON.stringify(adminUserOverviewFixture()), {
+      return new Response(JSON.stringify(adminUserOverviewFixture({ payments: [adminOverviewPaymentFixture()] })), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       })
@@ -1541,13 +1604,14 @@ test('ApiClient admin dashboard and user overview endpoints are tokenized', asyn
 
   const client = new ApiClient('http://localhost:8080')
   const dashboard = await client.getAdminDashboardSummary('admin-token')
-  await client.getAdminUserOverview('admin-token', 'user-1')
+  const overview = await client.getAdminUserOverview('admin-token', 'user-1')
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/dashboard/summary')
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/users/user-1/overview')
   assert.equal(new Headers(calls[1]?.init?.headers).get('Authorization'), 'Bearer admin-token')
   assert.equal(dashboard.productionReadiness?.checks[0]?.actionHref, '#payments')
   assert.equal(dashboard.productionReadiness?.checks[0]?.category, 'Платежи')
+  assert.equal(overview.payments[0]?.providerPaymentId, 'provider-payment-1')
 })
 
 test('ApiClient admin audit logs endpoint sends filters and auth token', async () => {

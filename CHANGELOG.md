@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.668.0 - 2026-08-12
+
+Release entry: `2026-08-12-cabinet-payment-boundary`.
+
+### Исправлено
+
+- История платежей кабинета больше не получает внутренний `StatusReason`, exception провайдера, webhook/event/idempotency данные и другие административные поля.
+- JSON-экспорт заказа использует безопасное пользовательское сообщение о статусе и не содержит return URL или признаков проверки подписи.
+
+### Улучшено
+
+- Cabinet API возвращает отдельный минимальный DTO; frontend fail-closed отклоняет служебные поля. Последние 100 платежей сортируются и ограничиваются на стороне БД, включая SQLite.
+
+### Проверено
+
+- Fail-first backend/frontend `0/3`; targeted backend `2/2`, API/payment regression `75/75`, backend `1356/1356`, frontend `150/150`, typecheck/build, cabinet Playwright `32/32`, targeted desktop/mobile `2/2`, fresh SQLite purchase/VPN access, EF drift и dependency audit `0 vulnerabilities` зелёные.
+- Roadmap `681/701` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## 0.667.0 - 2026-08-12
 
 Release entry: `2026-08-12-admin-webhook-event-boundary`.

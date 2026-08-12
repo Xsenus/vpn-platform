@@ -264,6 +264,28 @@ export type SubscriptionDto = {
   updatedAt?: string
 }
 
+export type CabinetPaymentAttemptDto = {
+  id: string
+  orderId: string
+  userId?: string | null
+  provider: string
+  providerMode: string
+  providerPaymentId: string
+  confirmationUrl?: string | null
+  amount: number
+  currency: string
+  status: string
+  isActivationProcessed: boolean
+  activationProcessedAt?: string | null
+  paidAt?: string | null
+  failedAt?: string | null
+  refundedAt?: string | null
+  refundedAmount: number
+  statusMessage: string
+  createdAt: string
+  updatedAt: string
+}
+
 export type PaymentAttemptDto = {
   id: string
   orderId: string
@@ -1782,7 +1804,7 @@ function isAdminAccessCredentialDto(value: unknown): value is AccessCredentialDt
 }
 
 function isAdminPaymentAttemptDto(value: unknown): value is PaymentAttemptDto {
-  if (!isCabinetPaymentAttemptDto(value) || !isRecord(value)) return false
+  if (!isAdminOverviewPaymentAttemptDto(value)) return false
 
   return hasBoolean(value, 'recheckSupported')
     && hasBoolean(value, 'canRecheck')
@@ -1791,6 +1813,19 @@ function isAdminPaymentAttemptDto(value: unknown): value is PaymentAttemptDto {
     && hasBoolean(value, 'canRefund')
     && hasFiniteNumber(value, 'refundableAmount', 0)
     && hasStringArray(value, 'refundBlockers')
+}
+
+function isAdminOverviewPaymentAttemptDto(value: unknown): value is PaymentAttemptDto {
+  if (!isPaymentAttemptCore(value)) return false
+
+  return hasNullableString(value, 'paymentProviderAccountId')
+    && hasString(value, 'externalEventId')
+    && hasNullableString(value, 'idempotencyKey')
+    && hasNullableString(value, 'returnUrl')
+    && hasBoolean(value, 'signatureValidated')
+    && hasNullableString(value, 'statusReason')
+    && hasInteger(value, 'webhookEventsCount', 0)
+    && hasInteger(value, 'refundsCount', 0)
 }
 
 function isAdminAuditLogDto(value: unknown): value is AdminAuditLogDto {
@@ -2655,7 +2690,7 @@ function isAdminUserOverviewDto(value: unknown): value is AdminUserOverviewDto {
 
   return value.telegramAccounts.every(isAdminTelegramAccountDto)
     && value.orders.every(isCabinetOrderDto)
-    && value.payments.every(isCabinetPaymentAttemptDto)
+    && value.payments.every(isAdminOverviewPaymentAttemptDto)
     && value.subscriptions.every(isAdminOverviewSubscriptionDto)
     && value.accessCredentials.every(isAdminOverviewAccessDto)
     && value.supportConversations.every(isSupportConversationDto)
@@ -2820,7 +2855,7 @@ function isCabinetOrderDto(value: unknown): value is OrderDto {
     && hasDateString(value, 'updatedAt')
 }
 
-function isCabinetPaymentAttemptDto(value: unknown): value is PaymentAttemptDto {
+function isPaymentAttemptCore(value: unknown): value is Record<string, unknown> {
   if (!isRecord(value)) return false
 
   return hasString(value, 'id', true)
@@ -2828,30 +2863,39 @@ function isCabinetPaymentAttemptDto(value: unknown): value is PaymentAttemptDto 
     && hasNullableString(value, 'userId')
     && hasString(value, 'provider', true)
     && paymentProviderValues.has(value.provider as PaymentProvider)
-    && hasNullableString(value, 'paymentProviderAccountId')
     && hasString(value, 'providerMode', true)
     && paymentProviderModeValues.has(value.providerMode as PaymentProviderMode)
     && hasString(value, 'providerPaymentId')
-    && hasString(value, 'externalEventId')
-    && hasNullableString(value, 'idempotencyKey')
     && hasNullableString(value, 'confirmationUrl')
-    && hasNullableString(value, 'returnUrl')
     && hasFiniteNumber(value, 'amount', 0)
     && hasString(value, 'currency', true)
     && hasString(value, 'status', true)
     && paymentStatusValues.has(value.status as string)
-    && hasBoolean(value, 'signatureValidated')
     && hasBoolean(value, 'isActivationProcessed')
     && hasNullableDateString(value, 'activationProcessedAt')
     && hasNullableDateString(value, 'paidAt')
     && hasNullableDateString(value, 'failedAt')
     && hasNullableDateString(value, 'refundedAt')
     && hasFiniteNumber(value, 'refundedAmount', 0)
-    && hasNullableString(value, 'statusReason')
-    && hasInteger(value, 'webhookEventsCount', 0)
-    && hasInteger(value, 'refundsCount', 0)
     && hasDateString(value, 'createdAt')
     && hasDateString(value, 'updatedAt')
+}
+
+function isCabinetPaymentAttemptDto(value: unknown): value is CabinetPaymentAttemptDto {
+  if (!isPaymentAttemptCore(value)) return false
+
+  return hasString(value, 'statusMessage', true)
+    && value.paymentProviderAccountId === undefined
+    && value.externalEventId === undefined
+    && value.idempotencyKey === undefined
+    && value.returnUrl === undefined
+    && value.signatureValidated === undefined
+    && value.statusReason === undefined
+    && value.webhookEventsCount === undefined
+    && value.refundsCount === undefined
+    && value.rawRequest === undefined
+    && value.rawResponse === undefined
+    && value.webhookPayload === undefined
 }
 
 function isCabinetAccessCredentialDto(value: unknown): value is AccessCredentialDto {
@@ -3280,12 +3324,12 @@ export class ApiClient {
     return this.requestArray<OrderDto>('/api/me/orders', { token, errorMessage: apiFallbackErrorMessage }, isCabinetOrderDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
-  getMyPayments(token: string): Promise<PaymentAttemptDto[]> {
-    return this.requestArray<PaymentAttemptDto>('/api/me/payments', { token, errorMessage: apiFallbackErrorMessage }, isCabinetPaymentAttemptDto, (items) => hasUniqueStringKey(items, 'id'))
+  getMyPayments(token: string): Promise<CabinetPaymentAttemptDto[]> {
+    return this.requestArray<CabinetPaymentAttemptDto>('/api/me/payments', { token, errorMessage: apiFallbackErrorMessage }, isCabinetPaymentAttemptDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
-  getMyPayment(token: string, paymentId: string): Promise<PaymentAttemptDto> {
-    return this.request<PaymentAttemptDto>(`/api/me/payments/${paymentId}`, { token, errorMessage: apiFallbackErrorMessage }, 'object', isCabinetPaymentAttemptDto)
+  getMyPayment(token: string, paymentId: string): Promise<CabinetPaymentAttemptDto> {
+    return this.request<CabinetPaymentAttemptDto>(`/api/me/payments/${paymentId}`, { token, errorMessage: apiFallbackErrorMessage }, 'object', isCabinetPaymentAttemptDto)
   }
 
   getMySupportConversations(token: string): Promise<SupportConversationDto[]> {

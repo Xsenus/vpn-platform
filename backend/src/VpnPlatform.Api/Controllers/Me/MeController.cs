@@ -19,6 +19,26 @@ public sealed record InitMePaymentHttpRequest(string? ReturnUrl);
 public sealed record CreateMeSupportConversationHttpRequest(string Subject, string Text, Guid? OrderId, Guid? SubscriptionId);
 public sealed record MeSupportReplyHttpRequest(string Text, int? Revision = null);
 public sealed record MeSupportStatusHttpRequest(string Status, int? Revision = null);
+public sealed record CabinetPaymentAttemptDto(
+    Guid Id,
+    Guid OrderId,
+    Guid UserId,
+    string Provider,
+    string ProviderMode,
+    string ProviderPaymentId,
+    string? ConfirmationUrl,
+    decimal Amount,
+    string Currency,
+    string Status,
+    bool IsActivationProcessed,
+    DateTimeOffset? ActivationProcessedAt,
+    DateTimeOffset? PaidAt,
+    DateTimeOffset? FailedAt,
+    DateTimeOffset? RefundedAt,
+    decimal RefundedAmount,
+    string StatusMessage,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
 
 [ApiController]
 [Authorize]
@@ -236,40 +256,33 @@ public class MeController : ControllerBase
     public async Task<IActionResult> GetPayments(CancellationToken cancellationToken)
     {
         var userId = ResolveUserId();
-        var payments = await _db.Payments
-            .AsNoTracking()
-            .Where(x => x.Order != null && x.Order.UserId == userId)
-            .Select(x => new
-            {
-                x.Id,
-                x.OrderId,
-                UserId = x.Order != null ? x.Order.UserId : (Guid?)null,
-                Provider = x.Provider.ToString(),
-                x.PaymentProviderAccountId,
-                ProviderMode = x.ProviderMode.ToString(),
-                x.ProviderPaymentId,
-                x.ExternalEventId,
-                x.IdempotencyKey,
-                x.ConfirmationUrl,
-                x.ReturnUrl,
-                x.Amount,
-                x.Currency,
-                Status = x.Status.ToString(),
-                x.SignatureValidated,
-                x.IsActivationProcessed,
-                x.ActivationProcessedAt,
-                x.PaidAt,
-                x.FailedAt,
-                x.RefundedAt,
-                x.RefundedAmount,
-                x.StatusReason,
-                WebhookEventsCount = _db.PaymentWebhookEvents.Count(evt => evt.PaymentAttemptId == x.Id),
-                RefundsCount = _db.Refunds.Count(refund => refund.PaymentAttemptId == x.Id),
-                x.CreatedAt,
-                x.UpdatedAt
-            })
-            .ToListAsync(cancellationToken);
-        return Ok(payments.OrderByDescending(x => x.CreatedAt).Take(100).ToList());
+        List<PaymentAttempt> payments;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            payments = await _db.Payments
+                .FromSqlInterpolated($"""
+                    SELECT p.*
+                    FROM "Payments" AS p
+                    INNER JOIN "Orders" AS o ON o."Id" = p."OrderId"
+                    WHERE o."UserId" = {userId}
+                    ORDER BY julianday(p."CreatedAt") DESC, julianday(p."UpdatedAt") DESC
+                    LIMIT 100
+                    """)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+        else
+        {
+            payments = await _db.Payments
+                .AsNoTracking()
+                .Where(x => x.Order != null && x.Order.UserId == userId)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.UpdatedAt)
+                .Take(100)
+                .ToListAsync(cancellationToken);
+        }
+
+        return Ok(payments.Select(payment => ToCabinetPayment(payment, userId)).ToList());
     }
 
     [HttpGet("payments/{id:guid}")]
@@ -282,36 +295,43 @@ public class MeController : ControllerBase
             .FirstOrDefaultAsync(x => x.Id == id && x.Order != null && x.Order.UserId == userId, cancellationToken);
         return payment is null
             ? NotFound()
-            : Ok(new
-            {
-                payment.Id,
-                payment.OrderId,
-                UserId = payment.Order != null ? payment.Order.UserId : (Guid?)null,
-                Provider = payment.Provider.ToString(),
-                payment.PaymentProviderAccountId,
-                ProviderMode = payment.ProviderMode.ToString(),
-                payment.ProviderPaymentId,
-                payment.ExternalEventId,
-                payment.IdempotencyKey,
-                payment.ConfirmationUrl,
-                payment.ReturnUrl,
-                payment.Amount,
-                payment.Currency,
-                Status = payment.Status.ToString(),
-                payment.SignatureValidated,
-                payment.IsActivationProcessed,
-                payment.ActivationProcessedAt,
-                payment.PaidAt,
-                payment.FailedAt,
-                payment.RefundedAt,
-                payment.RefundedAmount,
-                payment.StatusReason,
-                WebhookEventsCount = await _db.PaymentWebhookEvents.CountAsync(evt => evt.PaymentAttemptId == payment.Id, cancellationToken),
-                RefundsCount = await _db.Refunds.CountAsync(refund => refund.PaymentAttemptId == payment.Id, cancellationToken),
-                payment.CreatedAt,
-                payment.UpdatedAt
-            });
+            : Ok(ToCabinetPayment(payment, userId));
     }
+
+    private static CabinetPaymentAttemptDto ToCabinetPayment(PaymentAttempt payment, Guid userId)
+        => new(
+            payment.Id,
+            payment.OrderId,
+            userId,
+            payment.Provider.ToString(),
+            payment.ProviderMode.ToString(),
+            payment.ProviderPaymentId,
+            payment.ConfirmationUrl,
+            payment.Amount,
+            payment.Currency,
+            payment.Status.ToString(),
+            payment.IsActivationProcessed,
+            payment.ActivationProcessedAt,
+            payment.PaidAt,
+            payment.FailedAt,
+            payment.RefundedAt,
+            payment.RefundedAmount,
+            GetCabinetPaymentStatusMessage(payment.Status),
+            payment.CreatedAt,
+            payment.UpdatedAt);
+
+    private static string GetCabinetPaymentStatusMessage(PaymentStatus status)
+        => status switch
+        {
+            PaymentStatus.New => "Платёж создан.",
+            PaymentStatus.Pending or PaymentStatus.WaitingConfirmation => "Ожидаем подтверждение платежа.",
+            PaymentStatus.Succeeded => "Платёж подтверждён.",
+            PaymentStatus.Failed => "Платёж не завершён. Повторите оплату или обратитесь в поддержку.",
+            PaymentStatus.Cancelled => "Платёж отменён.",
+            PaymentStatus.Refunded => "Средства возвращены.",
+            PaymentStatus.PartiallyRefunded => "Часть суммы возвращена.",
+            _ => "Статус платежа уточняется. Повторите проверку позже."
+        };
 
     [HttpGet("support/conversations")]
     public async Task<IActionResult> GetSupportConversations(CancellationToken cancellationToken)

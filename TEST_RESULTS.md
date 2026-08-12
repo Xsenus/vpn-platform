@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: cabinet payment boundary
+
+Scope:
+- Cabinet payment API, UI и JSON-экспорт не должны раскрывать внутреннюю причину ошибки или служебные provider/webhook поля.
+- Последние 100 пользовательских платежей должны ограничиваться на стороне БД, включая SQLite.
+
+Results:
+- Roadmap progress: `681/701` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-cabinet-payment-boundary`, version `0.668.0`.
+- Fail-first: backend `0/2` и frontend `0/1`; API возвращал `StatusReason=private-provider-exception`, materialize-ил всю историю до `Take(100)`, а клиент требовал и экспортировал служебные поля.
+- After fix: отдельный `CabinetPaymentAttemptDto` содержит только пользовательские поля и безопасный `StatusMessage`; API client отклоняет diagnostics, UI и экспорт используют безопасное сообщение. SQLite и PostgreSQL ветки выполняют DB-side order/limit.
+- Targeted backend `2/2`, API/payment regression `75/75`; backend `1356/1356`; frontend `150/150`; typecheck/build; cabinet Playwright `32/32`; targeted desktop/mobile `2/2`; fresh SQLite подтвердил checkout/payment/subscription/VPN access; EF drift отсутствует; dependency audit `0 vulnerabilities`. Реальные provider кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## Check 2026-08-12: admin webhook event boundary
 
 Scope:

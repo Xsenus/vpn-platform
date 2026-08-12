@@ -1,4 +1,4 @@
-import type { OrderDto, PaymentAttemptDto, PaymentProvider, PublicPaymentProviderDto } from '@vpn-platform/api-client'
+import type { CabinetPaymentAttemptDto, OrderDto, PaymentProvider, PublicPaymentProviderDto } from '@vpn-platform/api-client'
 
 export type PaymentStatusTone = 'pending' | 'success' | 'failed' | 'neutral'
 
@@ -135,8 +135,8 @@ export function getPaymentStatusMessage(status: string) {
   }
 }
 
-export function groupPaymentsByOrderId(payments: PaymentAttemptDto[]) {
-  const grouped = new Map<string, PaymentAttemptDto[]>()
+export function groupPaymentsByOrderId(payments: CabinetPaymentAttemptDto[]) {
+  const grouped = new Map<string, CabinetPaymentAttemptDto[]>()
 
   for (const payment of payments) {
     const list = grouped.get(payment.orderId) ?? []
@@ -151,14 +151,14 @@ export function groupPaymentsByOrderId(payments: PaymentAttemptDto[]) {
   return grouped
 }
 
-export function getLatestPaymentForOrder(order: OrderDto, payments: PaymentAttemptDto[]) {
+export function getLatestPaymentForOrder(order: OrderDto, payments: CabinetPaymentAttemptDto[]) {
   const orderPayments = payments.filter((payment) => payment.orderId === order.id)
   orderPayments.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
 
   return orderPayments[0] ?? null
 }
 
-export function buildOrderExportText(order: OrderDto, payments: PaymentAttemptDto[]) {
+export function buildOrderExportText(order: OrderDto, payments: CabinetPaymentAttemptDto[]) {
   const safePayments = payments.map((payment) => ({
     id: payment.id,
     orderId: payment.orderId,
@@ -168,10 +168,8 @@ export function buildOrderExportText(order: OrderDto, payments: PaymentAttemptDt
     amount: payment.amount,
     currency: payment.currency,
     status: payment.status,
-    statusReason: payment.statusReason ?? null,
+    statusMessage: payment.statusMessage,
     confirmationUrl: payment.confirmationUrl ?? null,
-    returnUrl: payment.returnUrl ?? null,
-    signatureValidated: payment.signatureValidated,
     isActivationProcessed: payment.isActivationProcessed ?? false,
     paidAt: payment.paidAt ?? null,
     failedAt: payment.failedAt ?? null,

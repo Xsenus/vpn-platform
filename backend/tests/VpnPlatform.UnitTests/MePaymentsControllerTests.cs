@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Controllers.Me;
 using VpnPlatform.Domain.Entities;
@@ -46,7 +48,7 @@ public class MePaymentsControllerTests
 
         var succeeded = Payment(ownOrders[0].Id, PaymentStatus.Succeeded, now.AddMinutes(11), paidAt: now.AddMinutes(12), rawResponse: """{"secret":"paid"}""");
         var pending = Payment(ownOrders[1].Id, PaymentStatus.Pending, now.AddMinutes(10), rawResponse: """{"secret":"pending"}""");
-        var failed = Payment(ownOrders[2].Id, PaymentStatus.Failed, now.AddMinutes(9), failedAt: now.AddMinutes(9), rawResponse: """{"secret":"failed"}""");
+        var failed = Payment(ownOrders[2].Id, PaymentStatus.Failed, now.AddMinutes(9), failedAt: now.AddMinutes(9), rawResponse: """{"secret":"failed"}""", statusReason: "private-provider-exception");
         var refunded = Payment(ownOrders[3].Id, PaymentStatus.Refunded, now.AddMinutes(8), paidAt: now.AddMinutes(7), refundedAt: now.AddMinutes(8), refundedAmount: 100, rawResponse: """{"secret":"refund"}""");
         var foreign = Payment(foreignOrder.Id, PaymentStatus.Succeeded, now.AddMinutes(13), rawResponse: """{"secret":"foreign"}""");
         db.Payments.AddRange(succeeded, pending, failed, refunded, foreign);
@@ -63,20 +65,58 @@ public class MePaymentsControllerTests
         Assert.Equal(4, payments.Count);
         Assert.Equal(new[] { "Succeeded", "Pending", "Failed", "Refunded" }, payments.Select(x => Read<string>(x, "Status")).OrderBy(StatusOrder));
         Assert.DoesNotContain(payments, x => Read<Guid>(x, "OrderId") == foreignOrder.Id);
-        Assert.Equal(1, Read<int>(payments.Single(x => Read<Guid>(x, "Id") == succeeded.Id), "WebhookEventsCount"));
-        Assert.Equal(1, Read<int>(payments.Single(x => Read<Guid>(x, "Id") == refunded.Id), "RefundsCount"));
+        Assert.Equal("Платёж подтверждён.", Read<string>(payments.Single(x => Read<Guid>(x, "Id") == succeeded.Id), "StatusMessage"));
+        Assert.Equal("Платёж не завершён. Повторите оплату или обратитесь в поддержку.", Read<string>(payments.Single(x => Read<Guid>(x, "Id") == failed.Id), "StatusMessage"));
         Assert.DoesNotContain("RawResponse", JsonSerializer.Serialize(listOk.Value));
         Assert.DoesNotContain("RawRequest", JsonSerializer.Serialize(listOk.Value));
         Assert.DoesNotContain("WebhookPayload", JsonSerializer.Serialize(listOk.Value));
+        Assert.DoesNotContain("StatusReason", JsonSerializer.Serialize(listOk.Value));
+        Assert.DoesNotContain("ExternalEventId", JsonSerializer.Serialize(listOk.Value));
+        Assert.DoesNotContain("IdempotencyKey", JsonSerializer.Serialize(listOk.Value));
+        Assert.DoesNotContain("PaymentProviderAccountId", JsonSerializer.Serialize(listOk.Value));
+        Assert.DoesNotContain("ReturnUrl", JsonSerializer.Serialize(listOk.Value));
+        Assert.DoesNotContain("SignatureValidated", JsonSerializer.Serialize(listOk.Value));
+        Assert.DoesNotContain("WebhookEventsCount", JsonSerializer.Serialize(listOk.Value));
+        Assert.DoesNotContain("RefundsCount", JsonSerializer.Serialize(listOk.Value));
         Assert.DoesNotContain("secret", JsonSerializer.Serialize(listOk.Value));
+        Assert.DoesNotContain("private-provider-exception", JsonSerializer.Serialize(listOk.Value));
 
-        var singleResult = await controller.GetPayment(succeeded.Id, CancellationToken.None);
+        var singleResult = await controller.GetPayment(failed.Id, CancellationToken.None);
         var singleOk = Assert.IsType<OkObjectResult>(singleResult);
-        Assert.Equal("Succeeded", Read<string>(singleOk.Value!, "Status"));
-        Assert.Equal(1, Read<int>(singleOk.Value!, "WebhookEventsCount"));
+        Assert.Equal("Failed", Read<string>(singleOk.Value!, "Status"));
+        Assert.Equal("Платёж не завершён. Повторите оплату или обратитесь в поддержку.", Read<string>(singleOk.Value!, "StatusMessage"));
         Assert.DoesNotContain("RawResponse", JsonSerializer.Serialize(singleOk.Value));
+        Assert.DoesNotContain("StatusReason", JsonSerializer.Serialize(singleOk.Value));
+        Assert.DoesNotContain("private-provider-exception", JsonSerializer.Serialize(singleOk.Value));
 
         Assert.IsType<NotFoundResult>(await controller.GetPayment(foreign.Id, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetPayments_Should_Apply_User_History_Limit_In_Sqlite_Query()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new CommandCaptureInterceptor();
+        await using var db = CreateSqliteDbContext(connection, interceptor);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        var now = new DateTimeOffset(2026, 6, 10, 9, 0, 0, TimeSpan.Zero);
+        var order = Order(userId, tariffId, OrderStatus.Completed, now);
+        db.Users.Add(new User { Id = userId, Email = "payments-limit@example.test", DisplayName = "Payments limit", PasswordHash = "hash", ReferralCode = "payments-limit" });
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Payments limit", Slug = "payments-limit", DurationDays = 30, Price = 100, Currency = "RUB", IsActive = true });
+        db.Orders.Add(order);
+        db.Payments.AddRange(Enumerable.Range(0, 105).Select(index => Payment(order.Id, PaymentStatus.Succeeded, now.AddMinutes(index))));
+        await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
+
+        var result = await CreateController(db, userId).GetPayments(CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(100, Assert.IsAssignableFrom<IEnumerable<object>>(ok.Value).Count());
+        Assert.Contains(interceptor.Commands, command => command.Contains("LIMIT", StringComparison.OrdinalIgnoreCase));
     }
 
     private static Order Order(Guid userId, Guid tariffId, OrderStatus status, DateTimeOffset createdAt)
@@ -104,7 +144,8 @@ public class MePaymentsControllerTests
         DateTimeOffset? failedAt = null,
         DateTimeOffset? refundedAt = null,
         decimal refundedAmount = 0,
-        string rawResponse = "{}")
+        string rawResponse = "{}",
+        string? statusReason = null)
         => new()
         {
             Id = Guid.NewGuid(),
@@ -128,7 +169,7 @@ public class MePaymentsControllerTests
             FailedAt = failedAt,
             RefundedAt = refundedAt,
             RefundedAmount = refundedAmount,
-            StatusReason = status.ToString(),
+            StatusReason = statusReason ?? status.ToString(),
             CreatedAt = createdAt,
             UpdatedAt = createdAt
         };
@@ -168,11 +209,31 @@ public class MePaymentsControllerTests
         };
     }
 
-    private static ApplicationDbContext CreateSqliteDbContext(SqliteConnection connection)
+    private static ApplicationDbContext CreateSqliteDbContext(SqliteConnection connection, IInterceptor? interceptor = null)
     {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseSqlite(connection)
-            .Options;
+        var builder = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection);
+        if (interceptor is not null)
+        {
+            builder.AddInterceptors(interceptor);
+        }
+
+        var options = builder.Options;
         return new ApplicationDbContext(options);
+    }
+
+    private sealed class CommandCaptureInterceptor : DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+        }
     }
 }

@@ -4,8 +4,8 @@ import {
   ApiClient,
   ApiClientError,
   AuthResponse,
+  CabinetPaymentAttemptDto,
   OrderDto,
-  PaymentAttemptDto,
   PaymentInitResult,
   PaymentProvider,
   PublicPaymentProviderDto,
@@ -121,7 +121,7 @@ export function App() {
   const [profile, setProfile] = useState<UserProfileDto | null>(null)
   const [subscriptions, setSubscriptions] = useState<SubscriptionDto[]>([])
   const [orders, setOrders] = useState<OrderDto[]>([])
-  const [payments, setPayments] = useState<PaymentAttemptDto[]>([])
+  const [payments, setPayments] = useState<CabinetPaymentAttemptDto[]>([])
   const [accesses, setAccesses] = useState<AccessCredentialDto[]>([])
   const [referrals, setReferrals] = useState<RewardLedgerDto[]>([])
   const [supportConversations, setSupportConversations] = useState<SupportConversationDto[]>([])
@@ -1606,13 +1606,13 @@ export function App() {
                   </div>
                   <StatusBadge value={payment.status} />
                 </div>
-                <p className="muted no-margin-bottom">{getPaymentStatusMessage(payment.status)}</p>
+                <p className="muted no-margin-bottom">{payment.statusMessage}</p>
                 <dl className="payment-meta-grid">
                   <div><dt>ID у провайдера</dt><dd>{payment.providerPaymentId || '—'}</dd></div>
                   <div><dt>Режим</dt><dd>{payment.providerMode ?? '—'}</dd></div>
                   <div><dt>Создан</dt><dd>{new Date(payment.createdAt).toLocaleString()}</dd></div>
                   <div><dt>Оплачен</dt><dd>{payment.paidAt ? new Date(payment.paidAt).toLocaleString() : '—'}</dd></div>
-                  <div><dt>Ошибка</dt><dd>{payment.failedAt ? new Date(payment.failedAt).toLocaleString() : payment.statusReason ?? '—'}</dd></div>
+                  <div><dt>Ошибка</dt><dd>{payment.failedAt ? new Date(payment.failedAt).toLocaleString() : '—'}</dd></div>
                   <div><dt>Активация</dt><dd>{payment.isActivationProcessed ? 'обработана' : 'ожидает'}</dd></div>
                 </dl>
                 {payment.confirmationUrl && canOpenOrderPaymentConfirmation(ordersById.get(payment.orderId), payment.status, paymentNow) && (
