@@ -318,6 +318,81 @@ public class PaymentWebhookProcessingTests
         Assert.Equal(1, await db.Refunds.CountAsync());
     }
 
+    [Fact]
+    public async Task PayPal_Approved_Order_Should_Retry_Unknown_Capture_And_Activate_Once_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock(new DateTimeOffset(2026, 8, 12, 8, 0, 0, TimeSpan.Zero));
+        var order = await SeedOrderGraphAsync(db, clock.UtcNow);
+        order.PaymentProvider = PaymentProvider.PayPal;
+        var account = await db.PaymentProviderAccounts.SingleAsync();
+        account.Provider = PaymentProvider.PayPal;
+        account.Mode = PaymentProviderMode.Production;
+        account.ShopId = "paypal-client-id";
+        account.SecretKeyProtected = "paypal-client-secret";
+        account.WebhookSecretProtected = "paypal-webhook-id";
+        account.ApiBaseUrl = "https://api-m.paypal.test";
+        var payment = new PaymentAttempt
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            PaymentProviderAccountId = account.Id,
+            Provider = PaymentProvider.PayPal,
+            ProviderMode = PaymentProviderMode.Production,
+            ProviderPaymentId = "ORDER-1",
+            Amount = order.Amount,
+            Currency = order.Currency,
+            Status = PaymentStatus.Pending,
+            IdempotencyKey = $"paypal-{Guid.NewGuid():N}"
+        };
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+
+        var handler = new PayPalCaptureStubHandler(payment.Id, order.Id);
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
+        var provider = new PayPalPaymentProvider(
+            new StaticHttpClientFactory(new HttpClient(handler)),
+            accounts,
+            new TestHostEnvironment { EnvironmentName = Environments.Production });
+        var orchestrator = new PaymentOrchestrator(
+            db,
+            new PaymentProviderFactory(new IPaymentProvider[] { provider }),
+            new IPaymentWebhookVerifier[] { provider },
+            accounts,
+            new SubscriptionService(db, clock, new NodeAllocationService(db), new TestVpnProviderFactory()),
+            clock,
+            new TestRuntimeEnvironment(Environments.Production));
+        var rawWebhook = $$"""
+        {
+          "id":"WH-APPROVED-1",
+          "event_type":"CHECKOUT.ORDER.APPROVED",
+          "resource":{"id":"ORDER-1","status":"APPROVED"}
+        }
+        """;
+
+        var unknownCapture = await orchestrator.ProcessAsync(PaymentProvider.PayPal, rawWebhook, PayPalHeaders(), CancellationToken.None);
+        Assert.False(unknownCapture.IsSuccess);
+        Assert.True(unknownCapture.IsRetryable);
+        Assert.Equal(PaymentWebhookEventStatus.Failed, (await db.PaymentWebhookEvents.SingleAsync()).Status);
+        Assert.Equal(PaymentStatus.Pending, (await db.Payments.SingleAsync()).Status);
+
+        var retry = await orchestrator.ProcessAsync(PaymentProvider.PayPal, rawWebhook, PayPalHeaders(), CancellationToken.None);
+        var duplicate = await orchestrator.ProcessAsync(PaymentProvider.PayPal, rawWebhook, PayPalHeaders(), CancellationToken.None);
+
+        Assert.True(retry.IsSuccess, retry.Error);
+        Assert.True(duplicate.IsSuccess, duplicate.Error);
+        Assert.Equal("Webhook already processed.", duplicate.Value);
+        Assert.Equal(PaymentStatus.Succeeded, (await db.Payments.SingleAsync()).Status);
+        Assert.Equal(OrderStatus.Completed, (await db.Orders.SingleAsync()).Status);
+        Assert.Equal(1, await db.Subscriptions.CountAsync());
+        var captures = handler.Requests.Where(x => x.Method == HttpMethod.Post && x.Path == "/v2/checkout/orders/ORDER-1/capture").ToList();
+        Assert.Equal(2, captures.Count);
+        Assert.All(captures, capture => Assert.Equal($"capture-{payment.Id:N}", capture.PayPalRequestId));
+    }
+
     private static PaymentOrchestrator CreateOrchestrator(ApplicationDbContext db, FixedClock clock)
     {
         var orderService = new OrderService(db, clock);
@@ -380,6 +455,70 @@ public class PaymentWebhookProcessingTests
         public string Protect(string plaintext) => plaintext;
         public string Unprotect(string protectedValue) => protectedValue;
         public string Mask(string? value, int visibleTail = 4) => string.IsNullOrEmpty(value) ? string.Empty : new string('*', Math.Max(0, value.Length - visibleTail)) + value[^Math.Min(visibleTail, value.Length)..];
+    }
+
+    private static Dictionary<string, string> PayPalHeaders()
+        => new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["PAYPAL-AUTH-ALGO"] = "SHA256withRSA",
+            ["PAYPAL-CERT-URL"] = "https://api-m.paypal.test/cert.pem",
+            ["PAYPAL-TRANSMISSION-ID"] = "transmission-id",
+            ["PAYPAL-TRANSMISSION-SIG"] = "signature",
+            ["PAYPAL-TRANSMISSION-TIME"] = "2026-08-12T08:00:00Z"
+        };
+
+    private sealed class StaticHttpClientFactory(HttpClient client) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => client;
+    }
+
+    private sealed class PayPalCaptureStubHandler(Guid paymentId, Guid orderId) : HttpMessageHandler
+    {
+        public List<(HttpMethod Method, string Path, string? PayPalRequestId)> Requests { get; } = [];
+        public int CaptureFailuresRemaining { get; set; } = 1;
+        public string CaptureAmount { get; set; } = "490.00";
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            var requestId = request.Headers.TryGetValues("PayPal-Request-Id", out var values) ? values.Single() : null;
+            Requests.Add((request.Method, path, requestId));
+            if (path == "/v2/checkout/orders/ORDER-1/capture" && CaptureFailuresRemaining > 0)
+            {
+                CaptureFailuresRemaining--;
+                return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent("{\"name\":\"INTERNAL_SERVER_ERROR\"}", System.Text.Encoding.UTF8, "application/json")
+                });
+            }
+
+            var json = path switch
+            {
+                "/v1/oauth2/token" => """{"access_token":"access-token","token_type":"Bearer"}""",
+                "/v1/notifications/verify-webhook-signature" => """{"verification_status":"SUCCESS"}""",
+                "/v2/checkout/orders/ORDER-1" => """{"id":"ORDER-1","status":"APPROVED"}""",
+                "/v2/checkout/orders/ORDER-1/capture" => $$"""
+                    {
+                      "id":"ORDER-1",
+                      "status":"COMPLETED",
+                      "purchase_units":[{
+                        "reference_id":"{{paymentId:N}}",
+                        "custom_id":"{{orderId:N}}",
+                        "payments":{"captures":[{
+                          "id":"CAPTURE-1",
+                          "status":"COMPLETED",
+                          "amount":{"value":"{{CaptureAmount}}","currency_code":"RUB"}
+                        }]}
+                      }]
+                    }
+                    """,
+                _ => throw new Xunit.Sdk.XunitException($"Unexpected PayPal request: {request.Method} {path}")
+            };
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            });
+        }
     }
 
     private sealed class TestVpnProviderFactory : IVpnProviderFactory

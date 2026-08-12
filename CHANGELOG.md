@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.661.0 - 2026-08-12
+
+Release entry: `2026-08-12-paypal-approved-order-capture`.
+
+### Исправлено
+
+- Верифицированный `CHECKOUT.ORDER.APPROVED` теперь запускает server-side PayPal order capture вместо окончательного сохранения `WaitingConfirmation` без списания.
+- Capture response проверяется по order/capture ID, payment/order reference, сумме и валюте; один `COMPLETED` order без capture proof больше не считается оплатой.
+
+### Улучшено
+
+- Повтор после неопределённого capture outcome использует стабильный `PayPal-Request-Id` и GET-reconciliation, а webhook остаётся retryable до подтверждённого результата.
+
+### Проверено
+
+- Fail-first SQLite `0/1`; после исправления direct/SQLite payment regression `87/87`, backend Release `1304/1304`, frontend `144/144`, Playwright `227/227` за `12.3 min`.
+- Roadmap `674/694` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальный PayPal sandbox order/capture и provider/VPS/staging/3x-ui evidence локально не закрывались.
+
 ## 0.660.0 - 2026-08-12
 
 Release entry: `2026-08-12-paypal-capture-id-refund`.

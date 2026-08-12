@@ -481,7 +481,7 @@ public sealed class StripePaymentProvider : IPaymentProvider, IPaymentWebhookVer
     }
 }
 
-public sealed class PayPalPaymentProvider : IPaymentProvider, IPaymentWebhookVerifier, IPaymentStatusMapper
+public sealed class PayPalPaymentProvider : IPaymentProvider, IPaymentWebhookVerifier, IPaymentStatusMapper, IPaymentApprovedOrderCaptureProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly PaymentProviderAccountService _accounts;
@@ -643,9 +643,113 @@ public sealed class PayPalPaymentProvider : IPaymentProvider, IPaymentWebhookVer
             return new PaymentStatusResult(payment.ProviderPaymentId, PaymentStatus.Unknown, raw, $"http_{(int)response.StatusCode}");
         }
 
-        using var document = JsonDocument.Parse(raw);
-        var statusText = document.RootElement.TryGetProperty("status", out var statusElement) ? statusElement.GetString() ?? string.Empty : string.Empty;
-        return new PaymentStatusResult(payment.ProviderPaymentId, MapPaymentStatus(statusText, statusText == "COMPLETED"), raw, statusText);
+        var parsed = ParseOrderStatus(payment, raw);
+        return parsed.IsSuccess && parsed.Value is not null
+            ? parsed.Value
+            : new PaymentStatusResult(payment.ProviderPaymentId, PaymentStatus.Unknown, raw, parsed.Error);
+    }
+
+    public bool RequiresCapture(PaymentWebhookParseResult webhook)
+        => string.Equals(webhook.EventType, "CHECKOUT.ORDER.APPROVED", StringComparison.OrdinalIgnoreCase)
+            && webhook.Status == PaymentStatus.WaitingConfirmation;
+
+    public async Task<Result<PaymentStatusResult>> CaptureApprovedOrderAsync(PaymentAttempt payment, PaymentProviderAccount account, CancellationToken cancellationToken)
+    {
+        if (RemainingPaymentProviderShared.IsLocalSandbox(_environment, account))
+        {
+            var raw = new JsonObject
+            {
+                ["id"] = payment.ProviderPaymentId,
+                ["status"] = "COMPLETED",
+                ["purchase_units"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["reference_id"] = payment.Id.ToString("N"),
+                        ["custom_id"] = payment.OrderId.ToString("N"),
+                        ["payments"] = new JsonObject
+                        {
+                            ["captures"] = new JsonArray
+                            {
+                                new JsonObject
+                                {
+                                    ["id"] = $"local-paypal-capture-{payment.Id:N}",
+                                    ["status"] = "COMPLETED",
+                                    ["amount"] = new JsonObject
+                                    {
+                                        ["value"] = payment.Amount.ToString("0.00", CultureInfo.InvariantCulture),
+                                        ["currency_code"] = payment.Currency.ToUpperInvariant()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }.ToJsonString(new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            return ParseOrderStatus(payment, raw);
+        }
+
+        var token = await GetAccessTokenAsync(account, cancellationToken);
+        string? captureFailure = null;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, BuildPayPalUri(account, $"/v2/checkout/orders/{WebUtility.UrlEncode(payment.ProviderPaymentId)}/capture"));
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            request.Headers.Add("PayPal-Request-Id", $"capture-{payment.Id:N}");
+            request.Headers.TryAddWithoutValidation("Prefer", "return=representation");
+            request.Content = new StringContent("{}", Encoding.UTF8, "application/json");
+            using var response = await SendPayPalAsync(request, cancellationToken);
+            var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                var parsed = ParseOrderStatus(payment, raw);
+                if (!parsed.IsSuccess || parsed.Value is null)
+                {
+                    if (!parsed.IsRetryable)
+                    {
+                        return parsed;
+                    }
+
+                    captureFailure = parsed.Error;
+                }
+                else if (parsed.Value.Status != PaymentStatus.WaitingConfirmation
+                    || string.Equals(parsed.Value.StatusReason, "PENDING", StringComparison.OrdinalIgnoreCase))
+                {
+                    return parsed;
+                }
+                else
+                {
+                    captureFailure = "PayPal accepted the capture request but did not return capture proof.";
+                }
+            }
+            else
+            {
+                captureFailure = $"PayPal order capture failed with HTTP {(int)response.StatusCode}.";
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            captureFailure = $"PayPal order capture outcome is unknown: {ex.Message}";
+        }
+
+        var reconciliation = await GetOrderStatusWithTokenAsync(payment, account, token, cancellationToken);
+        if (reconciliation.IsSuccess && reconciliation.Value is not null)
+        {
+            if (reconciliation.Value.Status is PaymentStatus.Succeeded or PaymentStatus.Failed or PaymentStatus.Cancelled)
+            {
+                return reconciliation;
+            }
+        }
+        else if (!reconciliation.IsRetryable)
+        {
+            return reconciliation;
+        }
+
+        return Result<PaymentStatusResult>.Failure(captureFailure ?? reconciliation.Error ?? "PayPal order capture could not be confirmed.", isRetryable: true);
     }
 
     public async Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)
@@ -730,6 +834,153 @@ public sealed class PayPalPaymentProvider : IPaymentProvider, IPaymentWebhookVer
 
         using var document = JsonDocument.Parse(raw);
         return document.RootElement.TryGetProperty("access_token", out var tokenElement) ? tokenElement.GetString() ?? string.Empty : string.Empty;
+    }
+
+    private async Task<Result<PaymentStatusResult>> GetOrderStatusWithTokenAsync(PaymentAttempt payment, PaymentProviderAccount account, string token, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, BuildPayPalUri(account, $"/v2/checkout/orders/{WebUtility.UrlEncode(payment.ProviderPaymentId)}"));
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var response = await SendPayPalAsync(request, cancellationToken);
+            var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+            return response.IsSuccessStatusCode
+                ? ParseOrderStatus(payment, raw)
+                : Result<PaymentStatusResult>.Failure($"PayPal order reconciliation failed with HTTP {(int)response.StatusCode}.", isRetryable: true);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return Result<PaymentStatusResult>.Failure($"PayPal order reconciliation failed: {ex.Message}", isRetryable: true);
+        }
+    }
+
+    private static Result<PaymentStatusResult> ParseOrderStatus(PaymentAttempt payment, string raw)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(raw);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return Result<PaymentStatusResult>.Failure("PayPal order response is not an object.", isRetryable: true);
+            }
+
+            var orderId = root.TryGetProperty("id", out var idElement) && idElement.ValueKind == JsonValueKind.String
+                ? idElement.GetString() ?? string.Empty
+                : string.Empty;
+            if (!string.Equals(orderId, payment.ProviderPaymentId, StringComparison.Ordinal))
+            {
+                return Result<PaymentStatusResult>.Failure("PayPal order id does not match payment attempt.");
+            }
+
+            var orderStatus = root.TryGetProperty("status", out var orderStatusElement) && orderStatusElement.ValueKind == JsonValueKind.String
+                ? orderStatusElement.GetString() ?? string.Empty
+                : string.Empty;
+            var captures = new List<(string Id, string Status, decimal Amount, string Currency)>();
+            if (root.TryGetProperty("purchase_units", out var units) && units.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var unit in units.EnumerateArray())
+                {
+                    if (unit.ValueKind != JsonValueKind.Object)
+                    {
+                        continue;
+                    }
+
+                    if (unit.TryGetProperty("reference_id", out var referenceId)
+                        && referenceId.ValueKind == JsonValueKind.String
+                        && !string.IsNullOrWhiteSpace(referenceId.GetString())
+                        && !string.Equals(referenceId.GetString(), payment.Id.ToString("N"), StringComparison.OrdinalIgnoreCase))
+                    {
+                        return Result<PaymentStatusResult>.Failure("PayPal capture reference id does not match payment attempt.");
+                    }
+
+                    if (unit.TryGetProperty("custom_id", out var customId)
+                        && customId.ValueKind == JsonValueKind.String
+                        && !string.IsNullOrWhiteSpace(customId.GetString())
+                        && !string.Equals(customId.GetString(), payment.OrderId.ToString("N"), StringComparison.OrdinalIgnoreCase))
+                    {
+                        return Result<PaymentStatusResult>.Failure("PayPal capture custom id does not match order.");
+                    }
+
+                    if (!unit.TryGetProperty("payments", out var payments)
+                        || payments.ValueKind != JsonValueKind.Object
+                        || !payments.TryGetProperty("captures", out var captureArray)
+                        || captureArray.ValueKind != JsonValueKind.Array)
+                    {
+                        continue;
+                    }
+
+                    foreach (var capture in captureArray.EnumerateArray())
+                    {
+                        if (capture.ValueKind != JsonValueKind.Object
+                            || !capture.TryGetProperty("id", out var captureIdElement)
+                            || captureIdElement.ValueKind != JsonValueKind.String
+                            || string.IsNullOrWhiteSpace(captureIdElement.GetString())
+                            || !capture.TryGetProperty("status", out var statusElement)
+                            || statusElement.ValueKind != JsonValueKind.String
+                            || !capture.TryGetProperty("amount", out var amountElement)
+                            || amountElement.ValueKind != JsonValueKind.Object
+                            || !amountElement.TryGetProperty("value", out var valueElement)
+                            || valueElement.ValueKind != JsonValueKind.String
+                            || !decimal.TryParse(valueElement.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var amount)
+                            || !amountElement.TryGetProperty("currency_code", out var currencyElement)
+                            || currencyElement.ValueKind != JsonValueKind.String)
+                        {
+                            continue;
+                        }
+
+                        captures.Add((captureIdElement.GetString() ?? string.Empty, statusElement.GetString() ?? string.Empty, amount, currencyElement.GetString() ?? string.Empty));
+                    }
+                }
+            }
+
+            var completedCaptures = captures.Where(x => string.Equals(x.Status, "COMPLETED", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (completedCaptures.Count > 0)
+            {
+                var currencyMatches = completedCaptures.All(x => string.Equals(x.Currency, payment.Currency, StringComparison.OrdinalIgnoreCase));
+                var total = completedCaptures.Sum(x => x.Amount);
+                if (!currencyMatches || decimal.Round(total, 2) != decimal.Round(payment.Amount, 2))
+                {
+                    return Result<PaymentStatusResult>.Failure("PayPal completed capture amount or currency does not match payment attempt.");
+                }
+
+                return Result<PaymentStatusResult>.Success(new PaymentStatusResult(payment.ProviderPaymentId, PaymentStatus.Succeeded, raw, "COMPLETED"));
+            }
+
+            var pendingCaptures = captures.Where(x => string.Equals(x.Status, "PENDING", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (pendingCaptures.Count > 0)
+            {
+                var currencyMatches = pendingCaptures.All(x => string.Equals(x.Currency, payment.Currency, StringComparison.OrdinalIgnoreCase));
+                var total = pendingCaptures.Sum(x => x.Amount);
+                if (!currencyMatches || decimal.Round(total, 2) != decimal.Round(payment.Amount, 2))
+                {
+                    return Result<PaymentStatusResult>.Failure("PayPal pending capture amount or currency does not match payment attempt.");
+                }
+
+                return Result<PaymentStatusResult>.Success(new PaymentStatusResult(payment.ProviderPaymentId, PaymentStatus.WaitingConfirmation, raw, "PENDING"));
+            }
+
+            var mapped = orderStatus.Equals("COMPLETED", StringComparison.OrdinalIgnoreCase)
+                ? PaymentStatus.Unknown
+                : orderStatus.Equals("APPROVED", StringComparison.OrdinalIgnoreCase)
+                    ? PaymentStatus.WaitingConfirmation
+                    : orderStatus.Equals("CREATED", StringComparison.OrdinalIgnoreCase)
+                        ? PaymentStatus.Pending
+                        : orderStatus.Equals("VOIDED", StringComparison.OrdinalIgnoreCase)
+                            ? PaymentStatus.Cancelled
+                            : PaymentStatus.Unknown;
+            return mapped == PaymentStatus.Unknown
+                ? Result<PaymentStatusResult>.Failure($"PayPal order status {orderStatus} has no confirmed capture.", isRetryable: true)
+                : Result<PaymentStatusResult>.Success(new PaymentStatusResult(payment.ProviderPaymentId, mapped, raw, orderStatus));
+        }
+        catch (JsonException ex)
+        {
+            return Result<PaymentStatusResult>.Failure($"PayPal order response is malformed: {ex.Message}", isRetryable: true);
+        }
     }
 
     private async Task<string> ResolveCaptureIdAsync(PaymentAttempt payment, PaymentProviderAccount account, string token, CancellationToken cancellationToken)

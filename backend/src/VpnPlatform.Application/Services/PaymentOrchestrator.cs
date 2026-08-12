@@ -509,7 +509,34 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         Result<string> result;
         try
         {
-            result = await ApplyPaymentStatusAsync(payment, parsed.Status, rawBody, webhookEventId, cancellationToken);
+            var effectiveStatus = parsed.Status;
+            var effectivePayload = rawBody;
+            if (provider is IPaymentApprovedOrderCaptureProvider captureProvider && captureProvider.RequiresCapture(parsed))
+            {
+                var capture = await captureProvider.CaptureApprovedOrderAsync(payment, payment.PaymentProviderAccount, cancellationToken);
+                if (!capture.IsSuccess || capture.Value is null)
+                {
+                    result = Result<string>.Failure(capture.Error ?? "Approved payment capture failed.", capture.IsRetryable);
+                }
+                else if (!string.Equals(capture.Value.PaymentId, payment.ProviderPaymentId, StringComparison.Ordinal))
+                {
+                    result = Result<string>.Failure("Captured payment id does not match payment attempt.");
+                }
+                else if (capture.Value.Status == PaymentStatus.Unknown)
+                {
+                    result = Result<string>.Failure(capture.Value.StatusReason ?? "Captured payment status is unknown.", isRetryable: true);
+                }
+                else
+                {
+                    effectiveStatus = capture.Value.Status;
+                    effectivePayload = capture.Value.RawResponse;
+                    result = await ApplyPaymentStatusAsync(payment, effectiveStatus, effectivePayload, webhookEventId, cancellationToken);
+                }
+            }
+            else
+            {
+                result = await ApplyPaymentStatusAsync(payment, effectiveStatus, effectivePayload, webhookEventId, cancellationToken);
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -649,6 +676,11 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             if (!string.Equals(statusResult.PaymentId, payment.ProviderPaymentId, StringComparison.Ordinal))
             {
                 return Result<PaymentStatusResult>.Failure("Payment provider returned a mismatched payment identifier.");
+            }
+
+            if (statusResult.Status == PaymentStatus.Unknown)
+            {
+                return Result<PaymentStatusResult>.Failure(statusResult.StatusReason ?? "Payment provider status is unknown.", isRetryable: true);
             }
 
             var apply = await ApplyPaymentStatusAsync(payment, statusResult.Status, statusResult.RawResponse, $"manual-recheck:{payment.Id}:{statusResult.Status}", cancellationToken);

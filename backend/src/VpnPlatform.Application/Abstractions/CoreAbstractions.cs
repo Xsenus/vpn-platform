@@ -43,6 +43,12 @@ public interface IPaymentProvider
     Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken);
 }
 
+public interface IPaymentApprovedOrderCaptureProvider
+{
+    bool RequiresCapture(PaymentWebhookParseResult webhook);
+    Task<Result<PaymentStatusResult>> CaptureApprovedOrderAsync(PaymentAttempt payment, PaymentProviderAccount account, CancellationToken cancellationToken);
+}
+
 public interface IPaymentProviderFactory
 {
     IPaymentProvider Get(PaymentProvider provider);

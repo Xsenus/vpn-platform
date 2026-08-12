@@ -522,6 +522,117 @@ public class AdditionalPaymentProviderSignatureTests
         Assert.Equal("RUB", parsed.Currency);
     }
 
+    [Fact]
+    public async Task PayPal_Approved_Order_Capture_Should_Reject_Mismatched_Amount()
+    {
+        await using var db = CreateDbContext();
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), new FixedClock());
+        var handler = new PayPalCaptureValidationStubHandler();
+        var provider = new PayPalPaymentProvider(
+            new StaticHttpClientFactory(new HttpClient(handler)),
+            accounts,
+            new TestHostEnvironment(Environments.Production));
+        var account = new PaymentProviderAccount
+        {
+            Provider = PaymentProvider.PayPal,
+            Mode = PaymentProviderMode.Production,
+            IsEnabled = true,
+            ShopId = "client-id",
+            SecretKeyProtected = "client-secret",
+            ApiBaseUrl = "https://api-m.paypal.test"
+        };
+        var payment = new PaymentAttempt
+        {
+            Id = Guid.NewGuid(),
+            OrderId = Guid.NewGuid(),
+            Provider = PaymentProvider.PayPal,
+            ProviderMode = PaymentProviderMode.Production,
+            ProviderPaymentId = "ORDER-1",
+            Amount = 490m,
+            Currency = "RUB"
+        };
+
+        var result = await ((IPaymentApprovedOrderCaptureProvider)provider)
+            .CaptureApprovedOrderAsync(payment, account, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.False(result.IsRetryable);
+        Assert.Contains("amount or currency", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal($"capture-{payment.Id:N}", handler.CaptureRequestId);
+    }
+
+    [Fact]
+    public async Task PayPal_Recheck_Should_Not_Trust_Completed_Order_Without_Capture_Proof()
+    {
+        await using var db = CreateDbContext();
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), new FixedClock());
+        var provider = new PayPalPaymentProvider(
+            new StaticHttpClientFactory(new HttpClient(new PayPalOrderWithoutCaptureStubHandler())),
+            accounts,
+            new TestHostEnvironment(Environments.Production));
+        var account = new PaymentProviderAccount
+        {
+            Provider = PaymentProvider.PayPal,
+            Mode = PaymentProviderMode.Production,
+            IsEnabled = true,
+            ShopId = "client-id",
+            SecretKeyProtected = "client-secret",
+            ApiBaseUrl = "https://api-m.paypal.test"
+        };
+        var payment = new PaymentAttempt
+        {
+            Id = Guid.NewGuid(),
+            OrderId = Guid.NewGuid(),
+            Provider = PaymentProvider.PayPal,
+            ProviderMode = PaymentProviderMode.Production,
+            ProviderPaymentId = "ORDER-1",
+            Amount = 490m,
+            Currency = "RUB"
+        };
+
+        var result = await provider.GetStatusAsync(payment, account, CancellationToken.None);
+
+        Assert.Equal(PaymentStatus.Unknown, result.Status);
+        Assert.Contains("no confirmed capture", result.StatusReason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task PayPal_Capture_Should_Remain_Retryable_When_Success_Response_Has_No_Capture_Proof()
+    {
+        await using var db = CreateDbContext();
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), new FixedClock());
+        var provider = new PayPalPaymentProvider(
+            new StaticHttpClientFactory(new HttpClient(new PayPalApprovedWithoutCaptureStubHandler())),
+            accounts,
+            new TestHostEnvironment(Environments.Production));
+        var account = new PaymentProviderAccount
+        {
+            Provider = PaymentProvider.PayPal,
+            Mode = PaymentProviderMode.Production,
+            IsEnabled = true,
+            ShopId = "client-id",
+            SecretKeyProtected = "client-secret",
+            ApiBaseUrl = "https://api-m.paypal.test"
+        };
+        var payment = new PaymentAttempt
+        {
+            Id = Guid.NewGuid(),
+            OrderId = Guid.NewGuid(),
+            Provider = PaymentProvider.PayPal,
+            ProviderMode = PaymentProviderMode.Production,
+            ProviderPaymentId = "ORDER-1",
+            Amount = 490m,
+            Currency = "RUB"
+        };
+
+        var result = await ((IPaymentApprovedOrderCaptureProvider)provider)
+            .CaptureApprovedOrderAsync(payment, account, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.True(result.IsRetryable);
+        Assert.Contains("did not return capture proof", result.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
     [InlineData(PaymentProvider.Stripe)]
     [InlineData(PaymentProvider.PayPal)]
@@ -672,6 +783,68 @@ public class AdditionalPaymentProviderSignatureTests
             var json = path.Contains("/v1/oauth2/token", StringComparison.OrdinalIgnoreCase)
                 ? "{\"access_token\":\"access-token\",\"token_type\":\"Bearer\"}"
                 : $"{{\"verification_status\":\"{_verificationStatus}\"}}";
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
+    private sealed class PayPalCaptureValidationStubHandler : HttpMessageHandler
+    {
+        public string? CaptureRequestId { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            var json = path switch
+            {
+                "/v1/oauth2/token" => """{"access_token":"access-token","token_type":"Bearer"}""",
+                "/v2/checkout/orders/ORDER-1/capture" => """{"id":"ORDER-1","status":"COMPLETED","purchase_units":[{"payments":{"captures":[{"id":"CAPTURE-1","status":"COMPLETED","amount":{"value":"489.00","currency_code":"RUB"}}]}}]}""",
+                _ => throw new Xunit.Sdk.XunitException($"Unexpected PayPal request: {request.Method} {path}")
+            };
+            if (path.EndsWith("/capture", StringComparison.OrdinalIgnoreCase))
+            {
+                CaptureRequestId = request.Headers.GetValues("PayPal-Request-Id").Single();
+            }
+
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
+    private sealed class PayPalOrderWithoutCaptureStubHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            var json = path switch
+            {
+                "/v1/oauth2/token" => """{"access_token":"access-token","token_type":"Bearer"}""",
+                "/v2/checkout/orders/ORDER-1" => """{"id":"ORDER-1","status":"COMPLETED","purchase_units":[{"payments":{"captures":[]}}]}""",
+                _ => throw new Xunit.Sdk.XunitException($"Unexpected PayPal request: {request.Method} {path}")
+            };
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
+    private sealed class PayPalApprovedWithoutCaptureStubHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            var json = path switch
+            {
+                "/v1/oauth2/token" => """{"access_token":"access-token","token_type":"Bearer"}""",
+                "/v2/checkout/orders/ORDER-1/capture" => """{"id":"ORDER-1","status":"APPROVED"}""",
+                "/v2/checkout/orders/ORDER-1" => """{"id":"ORDER-1","status":"APPROVED"}""",
+                _ => throw new Xunit.Sdk.XunitException($"Unexpected PayPal request: {request.Method} {path}")
+            };
             return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")

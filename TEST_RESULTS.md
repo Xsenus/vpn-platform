@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: PayPal approved order capture
+
+Scope:
+- Верифицированный `CHECKOUT.ORDER.APPROVED` должен выполнять `/v2/checkout/orders/{orderId}/capture`, а не оставлять платеж навсегда в `WaitingConfirmation`.
+- Capture должен быть idempotent/retryable при неопределённом исходе и fail-closed проверять order ID, capture ID, reference, сумму и валюту до VPN activation.
+
+Results:
+- Roadmap progress: `674/694` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-paypal-approved-order-capture`, version `0.661.0`.
+- Fail-first: SQLite `0/1`; verified approval завершался как обработанный, payment оставался `WaitingConfirmation`, capture POST отсутствовал.
+- After fix: первый HTTP 500 выполняет GET-reconciliation и оставляет event `Failed`; retry повторяет capture с тем же `capture-{paymentId}` и только подтверждённый capture завершает order/subscription/VPN lifecycle. Mismatched amount/currency и `COMPLETED` order без capture proof отклоняются.
+- Direct/SQLite payment regression `87/87`; backend Release `1304/1304`; frontend `144/144`; Playwright `227/227` за `12.3 min`; fresh SQLite, EF drift, typecheck/build, dependency audit `0 vulnerabilities` и secret scan `673/0` зелёные. Реальный PayPal sandbox order/capture и provider/VPS/staging/3x-ui evidence локально не закрывались.
+
 ## Check 2026-08-12: PayPal capture ID refund
 
 Scope:

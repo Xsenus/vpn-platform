@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-09 локально подтверждено:
 
-- backend full suite: 1300/1300;
+- backend full suite: 1304/1304;
 - frontend tests: 142/142;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-12-paypal-capture-id-refund`, версия `0.660.0`; PayPal refund использует capture ID из `purchase_units`, а direct capture webhook остаётся безопасным fallback.
-- roadmap progress: `673/693` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-12-paypal-approved-order-capture`, версия `0.661.0`; PayPal approval выполняет idempotent server capture, а payment success требует подтверждённый capture ID, сумму и валюту.
+- roadmap progress: `674/694` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

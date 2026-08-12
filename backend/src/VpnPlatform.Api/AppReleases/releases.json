@@ -15544,5 +15544,28 @@
         "text": "Roadmap progress is 673/693 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; live PayPal refund, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-paypal-approved-order-capture",
+    "version": "0.661.0",
+    "releasedAt": "2026-08-12T17:15:00+07:00",
+    "title": "PayPal подтверждение завершает оплату",
+    "summary": "После подтверждения заказа PayPal платформа серверно захватывает средства и активирует доступ только по проверенному capture.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Webhook CHECKOUT.ORDER.APPROVED теперь выполняет idempotent order capture вместо сохранения промежуточного статуса без списания."
+      },
+      {
+        "type": "improved",
+        "text": "Повтор после неопределённого ответа использует тот же PayPal-Request-Id; сумма, валюта, order ID и capture ID проверяются до активации VPN."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 674/694 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; PayPal sandbox order/capture, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

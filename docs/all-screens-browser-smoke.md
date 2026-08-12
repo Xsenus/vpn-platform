@@ -99,4 +99,4 @@ PNG создаются только при явном флаге внутри `f
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
 - Visual oracle проверяет clipping обычного контента, границы dialog и overlap реально видимых controls с учётом clipping ancestors и active modal layer.
 - Public routes и admin sections берутся из production typed inventory; быстрый boundary test закрывает `vpn@521`, `referrals@1280` и `releases@1280`.
-- Latest "Что нового": `2026-08-12-paypal-capture-id-refund`, версия `0.660.0`; полный browser inventory остаётся `227/227` за `15.0 min` без failed/flaky/skipped.
+- Latest "Что нового": `2026-08-12-paypal-approved-order-capture`, версия `0.661.0`; полный browser inventory остаётся `227/227` за `12.3 min` без failed/flaky/skipped.

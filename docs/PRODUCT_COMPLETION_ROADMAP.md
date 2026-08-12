@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-paypal-capture-id-refund`, версия `0.660.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `673/693` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-paypal-approved-order-capture`, версия `0.661.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `674/694` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-12:
 
-- [x] `STATE-001` Backend test suite проходит: `1300/1300`.
+- [x] `STATE-001` Backend test suite проходит: `1304/1304`.
 - [x] `STATE-002` Frontend test suite проходит: `144/144`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2388,6 +2388,10 @@ git diff --check
   - Что сделать: PayPal order response со статусом `COMPLETED` и вложенным `purchase_units[].payments.captures[].id` должен вызывать `/v2/payments/captures/{captureId}/refund`; direct capture webhook должен оставаться допустимым fallback без лишнего order GET.
   - Что сделано: resolver сначала извлекает вложенный capture ID и только затем принимает прямой `resource.id`; HTTP stubs fail-closed возвращают `404` для любого refund URL не по ожидаемому capture.
   - Доказательство: fail-first direct + SQLite `2/4` показал `/captures/ORDER-1/refund`; после исправления `4/4`, payment/refund regression `75/75`, backend Release `1300/1300`, fresh SQLite, EF drift, encoding и secret scan зелёные. Реальный PayPal sandbox/live refund остаётся внешним evidence.
+- [x] `P11-ACC-383` Завершить PayPal approved order серверным capture. 2026-08-12.
+  - Что сделать: после верифицированного `CHECKOUT.ORDER.APPROVED` backend должен вызвать `/v2/checkout/orders/{orderId}/capture`, использовать стабильный `PayPal-Request-Id`, не активировать VPN по одному approval и восстанавливать неопределённый исход без двойного списания.
+  - Что сделано: добавлен узкий capture contract для provider adapter; PayPal capture проверяет order ID, capture ID, payment/order reference, сумму и валюту. HTTP/transport uncertainty оставляет webhook retryable и выполняет GET-reconciliation; повтор использует тот же idempotency key. Manual recheck больше не принимает `COMPLETED` order без подтверждённого capture.
+  - Доказательство: fail-first SQLite `0/1` оставлял payment в `WaitingConfirmation` без capture POST; после исправления direct/SQLite payment regression `87/87`, backend Release `1304/1304`, frontend `144/144`, Playwright `227/227` за `12.3 min`, fresh SQLite, EF drift, build, audit и secret scan `673/0` зелёные. Реальный PayPal sandbox order/capture и `P0-PAY-009` остаются внешним evidence.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3037,6 +3041,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-12-023` | P0 | PayPal capture lifecycle | После `CHECKOUT.ORDER.APPROVED` webhook применял только `WaitingConfirmation` и помечался обработанным, но `/v2/checkout/orders/{id}/capture` не вызывался, поэтому средства не захватывались. | Исправлено локально | Verified approval вызывает idempotent server capture; неопределённость retryable с GET-reconciliation, а сумма/валюта/order/capture proof валидируются fail-closed. Реальный PayPal sandbox smoke остаётся открытым. |
 | `BUG-2026-08-12-022` | P0 | PayPal refund identifier | Resolver принимал `COMPLETED` order `id` до вложенного capture и отправлял refund на `/captures/{orderId}/refund`, который PayPal не может обработать. | Исправлено локально | Вложенный capture имеет приоритет; direct и SQLite stubs требуют точный `/captures/CAPTURE-1/refund`, capture webhook fallback не выполняет order GET. Реальный PayPal refund остаётся внешней проверкой. |
 | `BUG-2026-08-12-021` | P1 | Stripe/PayPal refund recovery | Malformed legacy `WebhookPayload`/`RawResponse` выбрасывал `JsonException` до provider GET, после чего orchestrator сохранял refund как `Unknown`, ошибочно сообщая о неопределённом внешнем результате. | Исправлено локально | Безопасный extractor продолжает resolve через Stripe session/PayPal order; direct и SQLite regressions подтверждают успешный refund без ложной reconciliation. Live provider refund остаётся внешней проверкой. |
 | `BUG-2026-08-12-020` | P1 | Cabinet payment expiry E2E | Clock переводился сразу после появления локальной retry-карточки и сдвигал deadline незавершённого post-retry reload, превращая mock API requests в timeout. | Исправлено локально | Тест ждёт пользовательский статус завершённого reload до `fastForward`; targeted и полный browser suite зелёные. |
