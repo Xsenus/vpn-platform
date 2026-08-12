@@ -52,6 +52,7 @@ function adminTariffFixture(overrides: Record<string, unknown> = {}) {
 function adminReferralProgramFixture(overrides: Record<string, unknown> = {}) {
   return {
     id: 'program-1',
+    revision: 0,
     name: 'Welcome',
     status: 'active',
     startAt: null,
@@ -1121,12 +1122,13 @@ test('ApiClient admin referral endpoints cover programs and rewards', async () =
   await client.getAdminReferralPrograms('admin-token')
   await client.getAdminReferralRewards('admin-token')
   await client.createAdminReferralProgram('admin-token', payload)
-  await client.updateAdminReferralProgram('admin-token', 'program-1', payload)
+  await client.updateAdminReferralProgram('admin-token', 'program-1', payload, 0)
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/referral-programs')
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/referrals')
   assert.equal(calls[2]?.init?.method, 'POST')
   assert.equal(calls[3]?.init?.method, 'PATCH')
+  assert.match(String(calls[3]?.init?.body), /"revision":0/)
   assert.match(String(calls[2]?.init?.body), /rewardDefinition/)
   assert.equal(new Headers(calls[3]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
@@ -2635,7 +2637,7 @@ test('ApiClient rejects malformed admin content and app release DTOs', async () 
     () => client.getAdminReferralPrograms('admin-token'),
     () => client.getAdminReferralRewards('admin-token'),
     () => client.createAdminReferralProgram('admin-token', referralPayload),
-    () => client.updateAdminReferralProgram('admin-token', 'program-1', referralPayload),
+    () => client.updateAdminReferralProgram('admin-token', 'program-1', referralPayload, 0),
     () => client.getAdminAppReleases('admin-token'),
     () => client.getAdminAppReleaseOverview('admin-token'),
     () => client.createAdminAppRelease('admin-token', releasePayload),
@@ -3150,6 +3152,7 @@ test('admin source includes referral program operations', () => {
   assert.match(adminSource, /createAdminReferralProgram/)
   assert.match(adminSource, /updateAdminReferralProgram/)
   assert.match(adminSource, /Реферальная программа/)
+  assert.match(adminSource, /уже изменена другим администратором/)
 })
 
 test('ApiClient exposes safe notification delivery monitoring and retry', async () => {

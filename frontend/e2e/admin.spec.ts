@@ -65,6 +65,7 @@ function tariff(overrides: Record<string, unknown> = {}) {
 function referralProgram(overrides: Record<string, unknown> = {}) {
   return {
     id: 'referral-program-e2e',
+    revision: 0,
     name: 'Welcome E2E',
     status: 'active',
     startAt: null,
@@ -1326,7 +1327,7 @@ async function mockAdminApi(page: Page) {
     const referralProgramMutationMatch = path.match(/^\/api\/admin\/referral-programs\/([^/]+)$/)
     if (referralProgramMutationMatch && method === 'PATCH') {
       const index = referralPrograms.findIndex((item) => item.id === referralProgramMutationMatch[1])
-      const updated = referralProgram({ ...referralPrograms[index], ...(body as Record<string, unknown>), id: referralProgramMutationMatch[1], updatedAt: now })
+      const updated = referralProgram({ ...referralPrograms[index], ...(body as Record<string, unknown>), id: referralProgramMutationMatch[1], revision: Number((body as Record<string, unknown>).revision) + 1, updatedAt: now })
       if (index >= 0) referralPrograms[index] = updated
       await fulfillJson(route, updated)
       return
@@ -4447,7 +4448,7 @@ test('admin managed configuration supports complete CRUD lifecycle', async ({ pa
   await expect(page.getByText('Реферальная программа обновлена.')).toBeVisible()
   referralRow = referralsPanel.locator('.list-item-vertical').filter({ hasText: 'CRUD Referral Updated' })
   await expect(referralRow).toBeVisible()
-  expect(api.getLastRequest('/api/admin/referral-programs/referral-program-created-e2e', 'PATCH')?.body).toMatchObject({ name: 'CRUD Referral Updated' })
+  expect(api.getLastRequest('/api/admin/referral-programs/referral-program-created-e2e', 'PATCH')?.body).toMatchObject({ name: 'CRUD Referral Updated', revision: 0 })
 
   await openAdminSection(page, 'Сценарии', 'scenarios')
   const scenariosPanel = page.locator('#scenarios')

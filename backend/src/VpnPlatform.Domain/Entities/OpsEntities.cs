@@ -5,6 +5,7 @@ namespace VpnPlatform.Domain.Entities;
 
 public class ReferralProgram : AuditableEntity
 {
+    public int Revision { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Status { get; set; } = "draft";
     public DateTimeOffset? StartAt { get; set; }

@@ -15843,5 +15843,28 @@
         "text": "Roadmap progress is 686/706 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-admin-referral-program-boundary",
+    "version": "0.674.0",
+    "releasedAt": "2026-08-13T00:50:00+07:00",
+    "title": "Редактирование реферальных программ защищено",
+    "summary": "Админка сохраняет расширенные настройки программ, ограничивает историю и не перезаписывает параллельные изменения.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Обычное редактирование больше не стирает дополнительные правила, параметры наград и anti-fraud настройки реферальной программы."
+      },
+      {
+        "type": "improved",
+        "text": "Параллельные изменения защищены версией записи, а список программ ограничен последними 200 записями на стороне базы данных."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 687/707 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

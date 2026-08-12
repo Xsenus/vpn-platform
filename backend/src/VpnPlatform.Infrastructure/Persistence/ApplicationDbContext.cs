@@ -94,6 +94,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<WorkScenario>().HasIndex(x => x.Key).IsUnique();
         modelBuilder.Entity<WorkScenario>().HasIndex(x => new { x.IsActive, x.SortOrder });
         modelBuilder.Entity<PromoCode>().HasIndex(x => x.Code).IsUnique();
+        modelBuilder.Entity<ReferralProgram>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<CheckoutSession>().HasIndex(x => x.TokenHash).IsUnique();
         modelBuilder.Entity<Order>()
             .HasIndex(x => x.PendingIntentKey)

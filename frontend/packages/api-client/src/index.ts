@@ -662,6 +662,7 @@ export type RewardLedgerDto = {
 
 export type AdminReferralProgramDto = {
   id: string
+  revision: number
   name: string
   status: string
   startAt?: string | null
@@ -2142,6 +2143,7 @@ function isAdminReferralProgramDto(value: unknown): value is AdminReferralProgra
   if (!isRecord(value)) return false
 
   return hasString(value, 'id', true)
+    && hasInteger(value, 'revision', 0)
     && hasString(value, 'name', true)
     && hasString(value, 'status', true)
     && referralProgramStatusValues.has(value.status as string)
@@ -4231,11 +4233,11 @@ export class ApiClient {
     }, 'object', isAdminReferralProgramDto)
   }
 
-  updateAdminReferralProgram(token: string, id: string, payload: ReferralProgramUpsertPayload): Promise<AdminReferralProgramDto> {
+  updateAdminReferralProgram(token: string, id: string, payload: ReferralProgramUpsertPayload, revision: number): Promise<AdminReferralProgramDto> {
     return this.request<AdminReferralProgramDto>(`/api/admin/referral-programs/${id}`, {
       method: 'PATCH',
       token,
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, revision }),
       errorMessage: apiFallbackErrorMessage
     }, 'object', isAdminReferralProgramDto)
   }

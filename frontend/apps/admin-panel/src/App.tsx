@@ -31,7 +31,6 @@ import {
   PaymentWebhookEventDto,
   ProvisioningRunDto,
   RefundDto,
-  ReferralProgramUpsertPayload,
   SiteContentBlockUpsertPayload,
   SiteContentBlockDto,
   SiteContentReadinessDto,
@@ -63,6 +62,7 @@ import { adminAccessDeniedMessage, adminSessionEndedMessage, isAdminAccessTokenE
 import { isOptionalSafeAdminHttpUrl, validateTelegramBotUrlFields } from './admin-url-validation'
 import { validateServerForm } from './admin-server-validation'
 import { getAdminOrderPaymentRecheckBlocker, getAdminPaymentRecheckBlocker } from './admin-payments'
+import { buildReferralProgramPayload, defaultReferralProgramForm, referralProgramToForm, validateReferralProgramForm, type ReferralProgramFormState } from './admin-referrals'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-admin-token'
@@ -643,26 +643,6 @@ type AdminActionContext = {
   isCurrent: () => boolean
   reloadAll: () => Promise<boolean>
 }
-type ReferralProgramFormState = {
-  name: string
-  status: 'draft' | 'active' | 'paused' | 'archived'
-  startAt: string
-  endAt: string
-  firstPurchaseOnly: boolean
-  minimumOrderAmount: number
-  allowedChannels: string[]
-  referrerEnabled: boolean
-  referrerType: string
-  referrerValue: number
-  referrerUnit: string
-  referrerAutoApprove: boolean
-  referredEnabled: boolean
-  referredType: string
-  referredValue: number
-  referredUnit: string
-  referredAutoApprove: boolean
-}
-
 function readTagValue(tagsCsv: string | null | undefined, key: string): string | null {
   const normalizedKey = key.toLowerCase()
   for (const rawTag of (tagsCsv ?? '').split(',')) {
@@ -765,81 +745,6 @@ const defaultTariffForm: UpdateTariffPayload = {
   isReferralEligible: true,
   provisioningScenario: 'auto',
   afterPaymentText: ''
-}
-
-const defaultReferralProgramForm: ReferralProgramFormState = {
-  name: '',
-  status: 'draft',
-  startAt: '',
-  endAt: '',
-  firstPurchaseOnly: true,
-  minimumOrderAmount: 0,
-  allowedChannels: ['Web'],
-  referrerEnabled: true,
-  referrerType: 'bonus-days',
-  referrerValue: 7,
-  referrerUnit: 'days',
-  referrerAutoApprove: true,
-  referredEnabled: true,
-  referredType: 'bonus-days',
-  referredValue: 3,
-  referredUnit: 'days',
-  referredAutoApprove: true
-}
-
-function referralProgramToForm(program: AdminReferralProgramDto): ReferralProgramFormState {
-  let rules: Record<string, unknown> = {}
-  let rewards: Record<string, unknown> = {}
-  try { rules = JSON.parse(program.ruleDefinition) as Record<string, unknown> } catch { /* Server validation prevents this for new data. */ }
-  try { rewards = JSON.parse(program.rewardDefinition) as Record<string, unknown> } catch { /* Keep editable defaults for legacy data. */ }
-  const referrer = typeof rewards.referrer === 'object' && rewards.referrer ? rewards.referrer as Record<string, unknown> : null
-  const referred = typeof rewards.referred === 'object' && rewards.referred ? rewards.referred as Record<string, unknown> : null
-  return {
-    ...defaultReferralProgramForm,
-    name: program.name,
-    status: ['draft', 'active', 'paused', 'archived'].includes(program.status) ? program.status as ReferralProgramFormState['status'] : 'draft',
-    startAt: program.startAt ? toDateTimeLocalValue(program.startAt) : '',
-    endAt: program.endAt ? toDateTimeLocalValue(program.endAt) : '',
-    firstPurchaseOnly: rules.firstPurchaseOnly !== false,
-    minimumOrderAmount: Number(rules.minimumOrderAmount) || 0,
-    allowedChannels: Array.isArray(rules.allowedChannels) ? rules.allowedChannels.map(String) : [],
-    referrerEnabled: Boolean(referrer),
-    referrerType: String(referrer?.type ?? 'bonus-days'),
-    referrerValue: Number(referrer?.value) || 0,
-    referrerUnit: String(referrer?.unit ?? 'days'),
-    referrerAutoApprove: referrer?.autoApprove === true,
-    referredEnabled: Boolean(referred),
-    referredType: String(referred?.type ?? 'bonus-days'),
-    referredValue: Number(referred?.value) || 0,
-    referredUnit: String(referred?.unit ?? 'days'),
-    referredAutoApprove: referred?.autoApprove === true
-  }
-}
-
-function buildReferralProgramPayload(form: ReferralProgramFormState): ReferralProgramUpsertPayload {
-  const rewardDefinition: Record<string, unknown> = {}
-  if (form.referrerEnabled) rewardDefinition.referrer = { type: form.referrerType.trim(), value: form.referrerValue, unit: form.referrerUnit.trim(), autoApprove: form.referrerAutoApprove }
-  if (form.referredEnabled) rewardDefinition.referred = { type: form.referredType.trim(), value: form.referredValue, unit: form.referredUnit.trim(), autoApprove: form.referredAutoApprove }
-  return {
-    name: form.name.trim(),
-    status: form.status,
-    startAt: form.startAt ? new Date(form.startAt).toISOString() : null,
-    endAt: form.endAt ? new Date(form.endAt).toISOString() : null,
-    ruleDefinition: JSON.stringify({ firstPurchaseOnly: form.firstPurchaseOnly, minimumOrderAmount: form.minimumOrderAmount, allowedChannels: form.allowedChannels }),
-    rewardDefinition: JSON.stringify(rewardDefinition),
-    antiFraudSettings: '{}'
-  }
-}
-
-function validateReferralProgramForm(form: ReferralProgramFormState) {
-  const errors: string[] = []
-  if (!form.name.trim()) errors.push('Укажите название программы.')
-  if (form.minimumOrderAmount < 0) errors.push('Минимальная сумма заказа не может быть отрицательной.')
-  if (!form.referrerEnabled && !form.referredEnabled) errors.push('Выберите хотя бы одного получателя вознаграждения.')
-  if (form.referrerEnabled && (form.referrerValue <= 0 || !form.referrerType.trim() || !form.referrerUnit.trim())) errors.push('Заполните вознаграждение пригласившему пользователю.')
-  if (form.referredEnabled && (form.referredValue <= 0 || !form.referredType.trim() || !form.referredUnit.trim())) errors.push('Заполните вознаграждение приглашенному пользователю.')
-  if (form.startAt && form.endAt && new Date(form.endAt) <= new Date(form.startAt)) errors.push('Дата окончания должна быть позже даты начала.')
-  return errors
 }
 
 const defaultReleaseForm: AppReleaseUpsertPayload = {
@@ -2716,7 +2621,16 @@ export function App() {
     await runAction('referrals', 'referral-program-save', async (action) => {
       const payload = buildReferralProgramPayload(submittedForm)
       if (editingId) {
-        await api.updateAdminReferralProgram(token, editingId, payload)
+        try {
+          await api.updateAdminReferralProgram(token, editingId, payload, submittedForm.revision)
+        } catch (error) {
+          if (error instanceof ApiClientError && error.status === 409) {
+            await action.reloadAll()
+            if (action.isCurrent() && referralProgramFormRef.current === submittedForm && editingReferralProgramIdRef.current === editingId) resetReferralProgramForm()
+            throw new ApiClientError('Реферальная программа уже изменена другим администратором. Список обновлен: откройте актуальную версию и повторите правку.', 409, error.payload)
+          }
+          throw error
+        }
       } else {
         await api.createAdminReferralProgram(token, payload)
       }
@@ -4576,11 +4490,11 @@ export function App() {
             <fieldset className="form-section">
               <legend>Публикация</legend>
               <div className="form-grid">
-                <label><span>Название</span><input value={referralProgramForm.name} onChange={(event) => updateReferralProgramForm('name', event.target.value)} required /></label>
+                <label><span>Название</span><input value={referralProgramForm.name} maxLength={160} onChange={(event) => updateReferralProgramForm('name', event.target.value)} required /></label>
                 <label><span>Статус</span><select value={referralProgramForm.status} onChange={(event) => updateReferralProgramForm('status', event.target.value as ReferralProgramFormState['status'])}><option value="draft">Черновик</option><option value="active">Активна</option><option value="paused">Приостановлена</option><option value="archived">Архив</option></select></label>
                 <label><span>Начало</span><input type="datetime-local" value={referralProgramForm.startAt} onChange={(event) => updateReferralProgramForm('startAt', event.target.value)} /></label>
                 <label><span>Окончание</span><input type="datetime-local" value={referralProgramForm.endAt} onChange={(event) => updateReferralProgramForm('endAt', event.target.value)} /></label>
-                <label><span>Минимальная сумма заказа</span><input type="number" min={0} step="1" value={referralProgramForm.minimumOrderAmount} onChange={(event) => updateReferralProgramForm('minimumOrderAmount', Number(event.target.value) || 0)} /></label>
+                <label><span>Минимальная сумма заказа</span><input type="number" min={0} step="0.01" value={referralProgramForm.minimumOrderAmount} onChange={(event) => updateReferralProgramForm('minimumOrderAmount', Number(event.target.value) || 0)} /></label>
               </div>
               <label className="checkbox-row"><input type="checkbox" checked={referralProgramForm.firstPurchaseOnly} onChange={(event) => updateReferralProgramForm('firstPurchaseOnly', event.target.checked)} /> Только первая покупка подписки</label>
               <div className="checkbox-grid" role="group" aria-label="Каналы продаж">
@@ -4591,9 +4505,9 @@ export function App() {
               <legend>Пригласивший пользователь</legend>
               <label className="checkbox-row"><input type="checkbox" checked={referralProgramForm.referrerEnabled} onChange={(event) => updateReferralProgramForm('referrerEnabled', event.target.checked)} /> Начислять вознаграждение</label>
               <div className="form-grid" hidden={!referralProgramForm.referrerEnabled}>
-                <label><span>Тип</span><select value={referralProgramForm.referrerType} onChange={(event) => updateReferralProgramForm('referrerType', event.target.value)}><option value="bonus-days">Бонусные дни</option><option value="cashback">Кэшбэк</option><option value="discount">Скидка</option></select></label>
-                <label><span>Значение</span><input type="number" min={0.01} step="0.01" value={referralProgramForm.referrerValue} onChange={(event) => updateReferralProgramForm('referrerValue', Number(event.target.value) || 0)} /></label>
-                <label><span>Единица</span><input value={referralProgramForm.referrerUnit} onChange={(event) => updateReferralProgramForm('referrerUnit', event.target.value)} /></label>
+                <label><span>Тип</span><select value={referralProgramForm.referrerType} onChange={(event) => updateReferralProgramForm('referrerType', event.target.value)}>{!['bonus-days', 'cashback', 'discount'].includes(referralProgramForm.referrerType) && <option value={referralProgramForm.referrerType}>{referralProgramForm.referrerType}</option>}<option value="bonus-days">Бонусные дни</option><option value="cashback">Кэшбэк</option><option value="discount">Скидка</option></select></label>
+                <label><span>Значение</span><input type="number" min={0.01} max={1_000_000} step="0.01" value={referralProgramForm.referrerValue} onChange={(event) => updateReferralProgramForm('referrerValue', Number(event.target.value) || 0)} /></label>
+                <label><span>Единица</span><input value={referralProgramForm.referrerUnit} maxLength={32} onChange={(event) => updateReferralProgramForm('referrerUnit', event.target.value)} /></label>
               </div>
               <label className="checkbox-row" hidden={!referralProgramForm.referrerEnabled}><input type="checkbox" checked={referralProgramForm.referrerAutoApprove} onChange={(event) => updateReferralProgramForm('referrerAutoApprove', event.target.checked)} /> Подтверждать автоматически</label>
             </fieldset>
@@ -4601,9 +4515,9 @@ export function App() {
               <legend>Приглашенный пользователь</legend>
               <label className="checkbox-row"><input type="checkbox" checked={referralProgramForm.referredEnabled} onChange={(event) => updateReferralProgramForm('referredEnabled', event.target.checked)} /> Начислять вознаграждение</label>
               <div className="form-grid" hidden={!referralProgramForm.referredEnabled}>
-                <label><span>Тип</span><select value={referralProgramForm.referredType} onChange={(event) => updateReferralProgramForm('referredType', event.target.value)}><option value="bonus-days">Бонусные дни</option><option value="cashback">Кэшбэк</option><option value="discount">Скидка</option></select></label>
-                <label><span>Значение</span><input type="number" min={0.01} step="0.01" value={referralProgramForm.referredValue} onChange={(event) => updateReferralProgramForm('referredValue', Number(event.target.value) || 0)} /></label>
-                <label><span>Единица</span><input value={referralProgramForm.referredUnit} onChange={(event) => updateReferralProgramForm('referredUnit', event.target.value)} /></label>
+                <label><span>Тип</span><select value={referralProgramForm.referredType} onChange={(event) => updateReferralProgramForm('referredType', event.target.value)}>{!['bonus-days', 'cashback', 'discount'].includes(referralProgramForm.referredType) && <option value={referralProgramForm.referredType}>{referralProgramForm.referredType}</option>}<option value="bonus-days">Бонусные дни</option><option value="cashback">Кэшбэк</option><option value="discount">Скидка</option></select></label>
+                <label><span>Значение</span><input type="number" min={0.01} max={1_000_000} step="0.01" value={referralProgramForm.referredValue} onChange={(event) => updateReferralProgramForm('referredValue', Number(event.target.value) || 0)} /></label>
+                <label><span>Единица</span><input value={referralProgramForm.referredUnit} maxLength={32} onChange={(event) => updateReferralProgramForm('referredUnit', event.target.value)} /></label>
               </div>
               <label className="checkbox-row" hidden={!referralProgramForm.referredEnabled}><input type="checkbox" checked={referralProgramForm.referredAutoApprove} onChange={(event) => updateReferralProgramForm('referredAutoApprove', event.target.checked)} /> Подтверждать автоматически</label>
             </fieldset>

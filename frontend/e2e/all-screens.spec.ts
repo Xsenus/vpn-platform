@@ -531,7 +531,7 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/referral-programs') {
-      await fulfillJson(route, [{ id: 'referral-program-all-screens', name: 'Welcome', status: 'active', startAt: null, endAt: null, ruleDefinition: '{"firstPurchaseOnly":true}', rewardDefinition: '{"referrer":{"type":"bonus-days","value":7,"unit":"days","autoApprove":true}}', antiFraudSettings: '{}', createdAt: now, updatedAt: now }])
+      await fulfillJson(route, [{ id: 'referral-program-all-screens', revision: 0, name: 'Welcome', status: 'active', startAt: null, endAt: null, ruleDefinition: '{"firstPurchaseOnly":true}', rewardDefinition: '{"referrer":{"type":"bonus-days","value":7,"unit":"days","autoApprove":true}}', antiFraudSettings: '{}', createdAt: now, updatedAt: now }])
       return
     }
 
@@ -1157,6 +1157,31 @@ test('admin controls do not overlap at dense layout boundaries', async ({ page }
     await page.setViewportSize({ width: boundaryCase.width, height: 900 })
     await page.goto(`http://127.0.0.1:5295/#${boundaryCase.section}`)
     await expectResponsiveLayout(page, `admin ${boundaryCase.section} at ${boundaryCase.width}px regression boundary`)
+  }
+
+  expect(browserErrors).toEqual([])
+})
+
+test('admin referrals fit focused mobile and desktop viewports', async ({ page }) => {
+  const browserErrors = collectBrowserErrors(page)
+  await installApiMock(page)
+
+  for (const viewport of [
+    { name: 'compact-mobile', width: 320, height: 568 },
+    { name: 'large-mobile', width: 390, height: 844 },
+    { name: 'wide-layout-boundary', width: 1280, height: 900 }
+  ]) {
+    await page.setViewportSize(viewport)
+    await page.goto('http://127.0.0.1:5295/#referrals')
+    const hasStoredAdminSession = await page.evaluate(() => Boolean(sessionStorage.getItem('vpn-platform-admin-token')))
+    if (!hasStoredAdminSession) {
+      await page.locator('input[type="email"]').fill('admin@example.test')
+      await page.locator('input[type="password"]').fill('Password123!')
+      await page.locator('form').locator('button[type="submit"]').click()
+    }
+    await expect(page.locator('#referrals')).toBeVisible()
+    await expectResponsiveLayout(page, `admin referrals at ${viewport.name}`)
+    if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin referrals at ${viewport.name}`)
   }
 
   expect(browserErrors).toEqual([])

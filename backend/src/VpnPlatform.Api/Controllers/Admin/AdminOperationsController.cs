@@ -81,6 +81,7 @@ public sealed record ReferralProgramUpsertHttpRequest(
     string? AntiFraudSettings = null);
 public sealed record ReferralProgramDto(
     Guid Id,
+    int Revision,
     string Name,
     string Status,
     DateTimeOffset? StartAt,
@@ -126,6 +127,18 @@ public class AdminOperationsController : ControllerBase
         nameof(SupportConversation),
         nameof(SupportMessage)
     ];
+
+    private static readonly HashSet<string> ReferralProgramPatchFields = new(StringComparer.Ordinal)
+    {
+        "revision",
+        "name",
+        "status",
+        "startAt",
+        "endAt",
+        "ruleDefinition",
+        "rewardDefinition",
+        "antiFraudSettings"
+    };
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -2633,12 +2646,26 @@ public class AdminOperationsController : ControllerBase
     [HttpGet("referral-programs")]
     public async Task<IActionResult> GetReferralPrograms(CancellationToken cancellationToken)
     {
-        var programs = await _db.ReferralPrograms.AsNoTracking().ToListAsync(cancellationToken);
-        return Ok(programs
-            .OrderByDescending(x => x.CreatedAt)
-            .ThenByDescending(x => x.Id)
-            .Select(MapReferralProgramDto)
-            .ToList());
+        IQueryable<ReferralProgram> query;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            query = _db.ReferralPrograms.FromSqlRaw("""
+                SELECT p.*
+                FROM "ReferralPrograms" AS p
+                ORDER BY julianday(p."CreatedAt") DESC, p."Id" DESC
+                LIMIT 200
+                """);
+        }
+        else
+        {
+            query = _db.ReferralPrograms
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(200);
+        }
+
+        var programs = await query.AsNoTracking().ToListAsync(cancellationToken);
+        return Ok(programs.Select(MapReferralProgramDto).ToList());
     }
 
     [HttpPost("referral-programs")]
@@ -2668,6 +2695,45 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "Referral program patch must be a JSON object." });
         }
 
+        string? invalidFieldError = null;
+        var seenFields = new HashSet<string>(StringComparer.Ordinal);
+        var hasMutationField = false;
+        foreach (var property in payload.EnumerateObject())
+        {
+            if (!ReferralProgramPatchFields.Contains(property.Name))
+            {
+                invalidFieldError = $"Unknown referral program field '{property.Name}'.";
+                break;
+            }
+            if (!seenFields.Add(property.Name))
+            {
+                invalidFieldError = $"Referral program field '{property.Name}' must not be duplicated.";
+                break;
+            }
+            if (property.Name != "revision") hasMutationField = true;
+        }
+        if (invalidFieldError is not null)
+        {
+            return BadRequest(new { error = invalidFieldError });
+        }
+        if (!hasMutationField)
+        {
+            return BadRequest(new { error = "Referral program patch must include at least one mutable field." });
+        }
+
+        if (!payload.TryGetProperty("revision", out var revisionProperty)
+            || revisionProperty.ValueKind != JsonValueKind.Number
+            || !revisionProperty.TryGetInt32(out var expectedRevision)
+            || expectedRevision < 0)
+        {
+            return BadRequest(new { error = "Referral program revision is required and must be a non-negative integer." });
+        }
+
+        if (expectedRevision != program.Revision)
+        {
+            return Conflict(new { error = "Referral program changed. Reload it and retry.", revision = program.Revision });
+        }
+
         if (!TryBuildReferralProgramPatch(payload, program, out var request, out var patchError))
         {
             return BadRequest(new { error = patchError });
@@ -2678,9 +2744,17 @@ public class AdminOperationsController : ControllerBase
 
         var before = SerializeReferralProgramAudit(program);
         CopyReferralProgramFields(request, program);
+        program.Revision = checked(program.Revision + 1);
         program.UpdatedAt = _clock.UtcNow;
         AddAuditLog("referral_program.update", "ReferralProgram", program.Id, before, SerializeReferralProgramAudit(program));
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Referral program changed. Reload it and retry." });
+        }
         return Ok(MapReferralProgramDto(program));
     }
 
@@ -3187,6 +3261,7 @@ public class AdminOperationsController : ControllerBase
         => JsonSerializer.Serialize(new
         {
             program.Name,
+            program.Revision,
             program.Status,
             program.StartAt,
             program.EndAt,
@@ -3312,6 +3387,7 @@ public class AdminOperationsController : ControllerBase
     private static ReferralProgramDto MapReferralProgramDto(ReferralProgram program)
         => new(
             program.Id,
+            program.Revision,
             program.Name,
             program.Status,
             program.StartAt,

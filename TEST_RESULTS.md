@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: admin referral program boundary
+
+Scope:
+- Admin referral program list должен ограничиваться на стороне БД; PATCH должен fail-closed отклонять unknown/duplicate/no-op поля и stale revision.
+- Structured editor не должен терять opaque rule/reward extensions и anti-fraud настройки при обычном редактировании.
+
+Results:
+- Roadmap progress: `687/707` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-admin-referral-program-boundary`, version `0.674.0`.
+- Fail-first: backend `0/2`, frontend `0/2`; список возвращал 205 записей, typo PATCH завершался success, editor сбрасывал anti-fraud и не имел тестируемого round-trip helper.
+- After fix: SQLite/PostgreSQL выполняют DB-side top-200; optimistic revision защищён EF concurrency token и migration, stale update возвращает `409`, unknown/duplicate/no-op patch не мутирует сущность и audit. Editor сохраняет opaque JSON extensions/anti-fraud и перезагружает актуальную версию при conflict.
+- Targeted backend `13/13`, frontend `159/159`; backend `1373/1373`; typecheck/build и bundle budget зелёные. Stateful admin CRUD `1/1`, all-screens render `1/1`, overlap `1/1`, focused responsive/WCAG `1/1` на 320/390/1280 px. Полная all-admin 25-viewport матрица дважды не завершилась в лимит процесса; targeted визуальная граница затронутого экрана пройдена. Fresh SQLite увидел latest release `2026-08-13-admin-referral-program-boundary`; EF migration/drift, strict UTF-8 guards `48/48`, secret scan `672/0` и dependency audit `0 vulnerabilities` зелёные. Real VPS/staging/live evidence remains open; provider/Telegram cabinets, Bot API, SMTP and production-like 3x-ui were not checked locally.
+
 ## Check 2026-08-13: cabinet referral boundary
 
 Scope:

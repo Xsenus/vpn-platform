@@ -207,11 +207,11 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 ## Текущий статус
 
-На 2026-08-12 локально подтверждено:
+На 2026-08-13 локально подтверждено:
 
-- backend на .NET 9: `1367/1367` unit tests;
+- backend на .NET 9: `1373/1373` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `157/157`;
+- frontend unit tests: `159/159`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `227/227`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
@@ -350,9 +350,9 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - verified `CHECKOUT.ORDER.APPROVED` запускает server-side PayPal capture с idempotency/reconciliation и не активирует VPN без capture proof;
 - manual recheck Stripe, YooKassa и Т-Банка сверяет фактические provider ID, сумму, валюту, internal order/account и paid marker до активации;
 - refund YooKassa/Stripe/PayPal/Т-Банка применяет результат только после совпадения provider source reference и доступных amount/currency/internal payment proof; последовательные partial refund Т-Банка имеют отдельные operation IDs;
-- backend `1367/1367`, frontend `157/157`, referral cabinet desktop/mobile Playwright `2/2`, admin full flow `1/1`, all-screens/responsive `7/7`, dependency audit `0 vulnerabilities`;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-13-cabinet-referral-boundary`, версия `0.673.0`;
+- backend `1373/1373`, frontend `159/159`, admin referral CRUD/render/overlap/focused responsive Playwright `4/4`, dependency audit `0 vulnerabilities`;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-13-admin-referral-program-boundary`, версия `0.674.0`;
 - server API, own-VPS onboarding, queue и executor отклоняют inventory-breaking IP/SSH values; executor использует фиксированный alias и `ArgumentList`, а admin-форма показывает те же diagnostics до submit;
-- roadmap progress: `686/706` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- roadmap progress: `687/707` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

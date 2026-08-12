@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-13.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-cabinet-referral-boundary`, версия `0.673.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `686/706` проверяемых пунктов, готовность `97.2%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-admin-referral-program-boundary`, версия `0.674.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `687/707` проверяемых пунктов, готовность `97.2%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -35,10 +35,10 @@ git diff --check
 
 ## Текущее резюме состояния
 
-Что подтверждено на 2026-08-12:
+Что подтверждено на 2026-08-13:
 
-- [x] `STATE-001` Backend test suite проходит: `1367/1367`.
-- [x] `STATE-002` Frontend test suite проходит: `157/157`.
+- [x] `STATE-001` Backend test suite проходит: `1373/1373`.
+- [x] `STATE-002` Frontend test suite проходит: `159/159`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2440,6 +2440,10 @@ git diff --check
   - Что сделать: `/api/me/referrals` не должен раскрывать user/source/program/metadata поля; последние 100 пользовательских и 200 административных начислений должны ограничиваться БД. Cabinet/admin должны показывать тип и величину начисления по-русски.
   - Что сделано: добавлен минимальный `CabinetRewardLedgerDto`; SQLite применяет `LIMIT 100/200`, PostgreSQL-ветки — `Take` до materialization. Frontend fail-closed отклоняет служебные поля только в cabinet-контракте, полный admin DTO сохранён. Общий formatter для cabinet/admin склоняет дни и форматирует валюты.
   - Доказательство: fail-first backend `0/1`, frontend `0/2`; targeted backend `11/11`, frontend `90/90`, backend `1367/1367`, frontend `157/157`, typecheck/build, cabinet desktop/mobile `2/2`, admin full flow `1/1`, all-screens/responsive `7/7`, fresh SQLite, EF drift и dependency audit `0 vulnerabilities`. Реальные provider/Telegram кабинеты и VPS/staging/payment/3x-ui evidence остаются внешней проверкой.
+- [x] `P11-ACC-396` Закрыть границу управления реферальными программами в админке. 2026-08-13.
+  - Что сделать: список программ не должен materialize-ить всю таблицу; PATCH обязан отклонять неизвестные, дублированные и no-op поля, а параллельное редактирование не должно перезаписывать чужую версию. Structured editor должен сохранять opaque extensions rules/rewards и `antiFraudSettings`, а frontend-границы должны совпадать с backend.
+  - Что сделано: SQLite/PostgreSQL возвращают DB-side top-200 программ; сущность и DTO получили optimistic `Revision`, EF concurrency token и миграцию, stale update возвращает controlled `409`. Форма вынесена в тестируемый helper, сохраняет неизвестные JSON-поля/anti-fraud, поддерживает legacy reward type и показывает русское conflict-восстановление после reload.
+  - Доказательство: fail-first backend `0/2`, frontend `0/2`; targeted backend `13/13`, frontend `159/159`, backend `1373/1373`, typecheck/build и bundle budget зелёные. Stateful admin CRUD `1/1`, all-screens render `1/1`, overlap `1/1`, focused responsive/WCAG `1/1` на 320/390/1280 px; полная 25-viewport all-admin матрица дважды не завершилась в лимит процесса. Fresh SQLite concurrency, EF migration/drift, encoding и secret scan проверены локально; реальные provider/Telegram кабинеты и VPS/staging/payment/3x-ui evidence остаются внешней проверкой.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3089,6 +3093,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-13-036` | P1 | Admin referral programs | Structured editor сбрасывал anti-fraud и неизвестные rule/reward extensions, список materialize-ил всю таблицу, PATCH игнорировал опечатки и позволял stale overwrite. | Исправлено локально | Lossless helper, DB-side top-200, strict PATCH allowlist/no-op/duplicate guard и EF optimistic revision проверены SQLite/backend/frontend/stateful CRUD/focused responsive regressions. Live provider/VPS outcome остаётся внешним evidence. |
 | `BUG-2026-08-13-035` | P1 | Referral reward boundary | Cabinet/admin API materialize-или всю историю начислений до сортировки, cabinet validator принимал внутренние поля, а русские интерфейсы показывали техническое `days`. | Исправлено локально | Minimal cabinet DTO, DB-side top-100/top-200, fail-closed cabinet decoder и общий русский formatter проверены SQLite/backend/frontend/desktop/mobile/all-screens regressions. Live provider/VPS outcome остаётся внешним evidence. |
 | `BUG-2026-08-12-034` | P0 | Cabinet support boundary | Cabinet API использовал административные conversation/message DTO с user/Telegram/assignment/internal-note/attachment полями; обращения ограничивались после materialization, сообщения не имели лимита. | Исправлено локально | Minimal read/create/reply DTO, DB-side top-100/top-200, internal-note filtering, fail-closed frontend и desktop/mobile/responsive regressions проверены. Live Telegram/provider delivery остаётся внешним evidence. |
 | `BUG-2026-08-12-033` | P1 | Playwright web servers | Один helper запускал три Vite-процесса, но readiness проверял только public SPA; повторное использование оставшегося процесса могло скрыть недоступные cabinet/admin и дать `ERR_CONNECTION_REFUSED`. | Исправлено локально | Три независимых webServer/readiness URL и fail-fast unknown app подтверждены source guard и финальным admin responsive прогоном. |

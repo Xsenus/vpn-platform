@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.674.0 - 2026-08-13
+
+Release entry: `2026-08-13-admin-referral-program-boundary`.
+
+### Исправлено
+
+- Редактирование реферальной программы больше не стирает скрытые расширения правил, наград и anti-fraud настройки.
+- Неизвестные, дублированные и пустые PATCH-команды отклоняются без мутации и ложной audit-записи; stale версия получает controlled conflict вместо перезаписи чужих изменений.
+
+### Улучшено
+
+- Список программ ограничен последними 200 записями на стороне SQLite/PostgreSQL; admin DTO и frontend используют optimistic revision.
+- Границы названия, суммы, типа и единицы награды согласованы с backend, а legacy reward type сохраняется при редактировании.
+
+### Проверено
+
+- Fail-first backend/frontend `0/2`; targeted backend `13/13`, frontend `159/159`, backend `1373/1373`, typecheck/build, bundle budget, stateful CRUD и focused responsive/WCAG зелёные. Полная 25-viewport all-admin матрица не завершилась в лимит процесса; render/overlap и targeted 320/390/1280 px прошли.
+- Roadmap `687/707` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider/Telegram кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались; статус остается staging-ready baseline, not production-ready.
+
 ## 0.673.0 - 2026-08-13
 
 Release entry: `2026-08-13-cabinet-referral-boundary`.
