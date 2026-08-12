@@ -46,6 +46,7 @@ public class AdminOrderManagementTests
         Assert.Equal(matchingOrder.Id, orders[0].GetProperty("Id").GetGuid());
         Assert.Equal(lastPayment.Id, orders[0].GetProperty("LastPaymentId").GetGuid());
         Assert.Equal("WaitingConfirmation", orders[0].GetProperty("LastPaymentStatus").GetString());
+        Assert.True(orders[0].GetProperty("LastPaymentRecheckSupported").GetBoolean());
 
         Assert.IsType<BadRequestObjectResult>(await controller.GetOrders("NotAStatus", null, CancellationToken.None));
     }
@@ -101,6 +102,44 @@ public class AdminOrderManagementTests
         var result = await controller.RecheckOrderPayment(Guid.NewGuid(), CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task RecheckOrderPayment_Should_Reject_Unsupported_Provider_Before_Adapter_Call()
+    {
+        await using var db = CreateDb();
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 12, 10, 0, 0, TimeSpan.Zero));
+        var user = new User { Id = Guid.NewGuid(), Email = "unsupported-recheck@test.local", DisplayName = "Unsupported Recheck", PasswordHash = "hash" };
+        var tariff = Tariff("unsupported-recheck");
+        var order = Order(user.Id, tariff.Id, OrderStatus.PendingPayment, clock.UtcNow.AddMinutes(-10));
+        order.PaymentProvider = PaymentProvider.RoboKassa;
+        var account = new PaymentProviderAccount
+        {
+            Id = Guid.NewGuid(),
+            Provider = PaymentProvider.RoboKassa,
+            Mode = PaymentProviderMode.Sandbox,
+            Name = "robokassa",
+            PublicName = "RoboKassa",
+            IsEnabled = true,
+            ShopId = "merchant"
+        };
+        var payment = Payment(order.Id, PaymentStatus.Pending, clock.UtcNow.AddMinutes(-1), account.Id, PaymentProvider.RoboKassa);
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.Orders.Add(order);
+        db.PaymentProviderAccounts.Add(account);
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+        var provider = new TrackingPaymentProvider(PaymentStatus.Succeeded, PaymentProvider.RoboKassa);
+
+        var result = await CreateController(db, CreateOrchestrator(db, provider, clock))
+            .RecheckOrderPayment(order.Id, CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("not support", JsonSerializer.Serialize(badRequest.Value), StringComparison.OrdinalIgnoreCase);
+        Assert.Null(provider.LastStatusPaymentId);
+        await db.Entry(payment).ReloadAsync();
+        Assert.Equal(PaymentStatus.Pending, payment.Status);
     }
 
     private static PaymentOrchestrator CreateOrchestrator(ApplicationDbContext db, IPaymentProvider provider, TestClock clock)
@@ -170,13 +209,13 @@ public class AdminOrderManagementTests
             PaymentProvider = PaymentProvider.YooKassa
         };
 
-    private static PaymentAttempt Payment(Guid orderId, PaymentStatus status, DateTimeOffset createdAt, Guid? accountId = null)
+    private static PaymentAttempt Payment(Guid orderId, PaymentStatus status, DateTimeOffset createdAt, Guid? accountId = null, PaymentProvider provider = PaymentProvider.YooKassa)
         => new()
         {
             Id = Guid.NewGuid(),
             OrderId = orderId,
             PaymentProviderAccountId = accountId,
-            Provider = PaymentProvider.YooKassa,
+            Provider = provider,
             ProviderMode = PaymentProviderMode.Sandbox,
             ProviderPaymentId = $"payment-{Guid.NewGuid():N}",
             IdempotencyKey = $"idem-{Guid.NewGuid():N}",
@@ -203,9 +242,9 @@ public class AdminOrderManagementTests
         public IPaymentProvider Get(PaymentProvider _) => provider;
     }
 
-    private sealed class TrackingPaymentProvider(PaymentStatus status) : IPaymentProvider
+    private sealed class TrackingPaymentProvider(PaymentStatus status, PaymentProvider provider = PaymentProvider.YooKassa) : IPaymentProvider
     {
-        public PaymentProvider Provider => PaymentProvider.YooKassa;
+        public PaymentProvider Provider => provider;
         public Guid? LastStatusPaymentId { get; private set; }
 
         public Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken)

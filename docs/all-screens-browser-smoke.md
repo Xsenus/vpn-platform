@@ -97,4 +97,4 @@ PNG создаются только при явном флаге внутри `f
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-12-payment-checkout-url-readiness-guard`, версия `0.649.0`; public/cabinet payment empty/error/retry и checkout lifecycle подтверждены desktop/mobile, полный browser inventory проходит `218/218` за `11.5 min` без failed/flaky/skipped.
+- Latest "Что нового": `2026-08-12-payment-manual-recheck-capability-guard`, версия `0.650.0`; unsupported admin payment recheck заблокирован на desktop/mobile, capability handler и cabinet refresh single-flight подтверждены, полный browser inventory проходит `220/220` за `13.6 min` без failed/flaky/skipped.

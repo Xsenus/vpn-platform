@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-payment-checkout-url-readiness-guard`, версия `0.649.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `662/682` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-payment-manual-recheck-capability-guard`, версия `0.650.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `663/683` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,8 +37,8 @@ git diff --check
 
 Что подтверждено на 2026-08-12:
 
-- [x] `STATE-001` Backend test suite проходит: `1238/1238`.
-- [x] `STATE-002` Frontend test suite проходит: `140/140`.
+- [x] `STATE-001` Backend test suite проходит: `1239/1239`.
+- [x] `STATE-002` Frontend test suite проходит: `141/141`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2344,6 +2344,10 @@ git diff --check
   - Что сделать: legacy payment account с credential-bearing или non-HTTP API/return/webhook/hosted URL не должен считаться готовым, публиковаться или создавать checkout session; публичный return URL должен проверяться и сохраняться как корректный JSON до любой записи.
   - Что сделано: единый `PaymentProviderConfigurationRules` проверяет все checkout URL через `SafeHttpUrl`, поэтому admin readiness, public provider list, checkout service и payment init используют один fail-closed контракт; checkout return URL нормализуется до persistence и сериализуется через `JsonSerializer`.
   - Доказательство: первый fail-first `5/30`, второй fail-first `4/4`; после исправления payment regression `76/76`, targeted public/cabinet desktop/mobile `8/8`, backend `1238/1238`, frontend `140/140`, полный Playwright `218/218` за `11.5 min`, typecheck/build, EF drift и fresh SQLite зелёные. Реальные provider кабинеты и live payment smoke остаются открытыми.
+- [x] `P11-ACC-373` Закрыть capability boundary ручной перепроверки платежей. 2026-08-12.
+  - Что сделать: admin API/UI не должны предлагать или выполнять ручную перепроверку статуса для провайдеров, чьи adapters ее не поддерживают; direct API обязан остановиться до adapter resolution и внешнего вызова.
+  - Что сделано: `PaymentProviderConfigurationRules` стал единым источником manual-recheck/refund capabilities; orchestrator выполняет ранний preflight; admin orders/payments DTO и strict TypeScript guards передают capability; общий UI action blocker управляет disabled/title и повторной проверкой handler.
+  - Доказательство: unsupported RoboKassa controller regression подтверждает controlled `400`, отсутствие provider call и сохранение `Pending`; backend targeted `56/56`, backend `1239/1239`, frontend `141/141`, admin desktop/mobile `2/2` без POST, Release build `0` warnings/errors, typecheck/build, EF drift и fresh SQLite зелёные. Реальные provider кабинеты и live payment smoke остаются открытыми.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -2993,6 +2997,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-12-010` | P1 | Admin payment operations | Админка активировала ручную перепроверку всех платежей, хотя adapters RoboKassa, YooMoney, CloudPayments и Prodamus ее не поддерживают; backend доходил до adapter вместо раннего capability preflight. | Исправлено локально | Единый capability contract, DTO/UI blocker и ранний orchestrator guard подтверждены unit/controller и desktop/mobile browser regression; live provider evidence остается открытым. |
 | `BUG-2026-08-12-009` | P1 | Public payment checkout | Legacy payment account с credential-bearing/non-HTTP URL считался готовым, публиковался и позволял создать заведомо тупиковую checkout session; произвольный public return URL сохранялся до validation ручной JSON-вставкой. | Исправлено локально | Единый readiness URL guard и pre-persistence return URL validation/структурная JSON-сериализация подтверждены fail-first, SQLite/unit и desktop/mobile browser матрицей; live provider evidence остаётся открытым. |
 | `BUG-2026-08-12-008` | P0 | VPN endpoint/protocol boundary | Server/scenario API принимал произвольный protocol/public host, allocator сопоставлял protocol подстрокой, sandbox URI доверял config host/port, а Ansible вставлял metadata в JSON без escaping. | Исправлено локально | Единый allow-list/exact CSV preflight, endpoint guards, IPv6-safe sandbox authority и `to_json` подтверждены fail-first SQLite/unit/browser/runner матрицей; реальный live 3x-ui/VPS smoke остаётся открытым. |
 | `BUG-2026-08-12-007` | P0 | Provisioning process boundary | Невалидный `IpAddress` обходил проверенный Host, SSH username попадал в Ansible inventory без semantic validation, а ручной `Arguments` quoting терял кавычки и допускал расщепление process arguments. | Исправлено локально | Общий API/queue/executor preflight, fixed inventory alias и `ProcessStartInfo.ArgumentList` подтверждены fail-first canary и SQLite/browser матрицей; реальный live VPS smoke остаётся открытым. |

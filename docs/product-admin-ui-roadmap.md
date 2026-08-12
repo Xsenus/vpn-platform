@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `662/682` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `663/683` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,12 +85,12 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1238/1238`.
-- [x] Frontend unit tests: `140/140`.
+- [x] Backend full suite: `1239/1239`.
+- [x] Frontend unit tests: `141/141`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `218/218`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `220/220`.
 - [x] Responsive matrix: 25 viewport-конфигураций `305x568..2560x1440`, точные пары `N/N+1` для всех CSS-breakpoints, same-origin decode локальных WebP и representative screenshot review.
 - [x] Fresh local SQLite smoke: OK.
 - [x] Local SQLite VPS smoke dry-run: OK.
@@ -167,7 +167,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-12-payment-checkout-url-readiness-guard`, версия `0.649.0`; payment readiness/public list/checkout используют единый safe URL guard, полный browser inventory `218/218` зелёный.
+- [x] Latest "Что нового": `2026-08-12-payment-manual-recheck-capability-guard`, версия `0.650.0`; admin orders/payments используют единый manual-recheck capability contract и fail-closed UI, полный browser inventory `220/220` зелёный.
 
 ## Как вести дальше
 

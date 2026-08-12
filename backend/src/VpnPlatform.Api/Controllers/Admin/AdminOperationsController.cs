@@ -1120,6 +1120,7 @@ public class AdminOperationsController : ControllerBase
                     LastPaymentId = lastPayment?.Id,
                     LastPaymentStatus = lastPayment?.Status.ToString(),
                     LastPaymentProvider = lastPayment?.Provider.ToString(),
+                    LastPaymentRecheckSupported = lastPayment is not null && PaymentProviderConfigurationRules.SupportsManualRecheck(lastPayment.Provider),
                     LinkedSubscriptionId = OrderService.GetRenewalSubscriptionId(x),
                     x.CreatedAt,
                     x.UpdatedAt
@@ -1207,6 +1208,7 @@ public class AdminOperationsController : ControllerBase
                     x.StatusReason,
                     WebhookEventsCount = webhookCounts.GetValueOrDefault(x.Id),
                     RefundsCount = x.Refunds.Count,
+                    RecheckSupported = PaymentProviderConfigurationRules.SupportsManualRecheck(x.Provider),
                     RefundSupported = refund.IsSupported,
                     CanRefund = refund.CanRefund,
                     RefundableAmount = refund.RefundableAmount,
@@ -2797,8 +2799,7 @@ public class AdminOperationsController : ControllerBase
     {
         var blockers = new List<string>();
         var refundableAmount = Math.Max(0m, payment.Amount - payment.RefundedAmount);
-        var isSupported = PaymentProviderConfigurationRules.GetCapabilityRules(payment.Provider)
-            .Any(x => x.Key == "refund" && x.Supported);
+        var isSupported = PaymentProviderConfigurationRules.SupportsRefund(payment.Provider);
 
         if (!isSupported)
         {

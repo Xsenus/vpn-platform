@@ -129,5 +129,7 @@ public class PaymentProviderConfigurationRulesTests
         Assert.Contains(robokassa, x => x.Key == "createPayment" && x.Supported);
         Assert.Contains(robokassa, x => x.Key == "refund" && !x.Supported);
         Assert.Contains(robokassa, x => x.Key == "recheck" && !x.Supported);
+        Assert.False(PaymentProviderConfigurationRules.SupportsManualRecheck(PaymentProvider.RoboKassa));
+        Assert.True(PaymentProviderConfigurationRules.SupportsManualRecheck(PaymentProvider.YooKassa));
     }
 }

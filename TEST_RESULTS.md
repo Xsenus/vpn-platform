@@ -2,6 +2,20 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: payment manual recheck capability guard
+
+Scope:
+- Admin UI и API не должны предлагать или выполнять ручную перепроверку для provider adapters без такого контракта.
+- Capability должен быть единым для backend preflight, admin DTO, strict API parsing, disabled/title UI и programmatic handler guard.
+
+Results:
+- Roadmap progress: `663/683` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-payment-manual-recheck-capability-guard`, version `0.650.0`.
+- Reproduction before fix: admin orders/payments DTO не передавали capability, UI активировал обе recheck-команды для всех провайдеров, а orchestrator разрешал adapter до отказа.
+- After fix: payment/admin targeted backend `56/56`; capability UI policy unit; admin desktop/mobile `2/2` без POST; конкурентный cabinet refresh regression после явного ожидания первого reload `3/3`.
+- Backend full suite: `1239/1239`; frontend tests: `141/141`; typecheck/build all apps and Release build `0` warnings/errors: OK. EF drift: clean; fresh SQLite smoke: OK; dependency audit: `0` vulnerabilities.
+- Первый полный Playwright после функционального исправления: `219/220`; единственный cabinet test наблюдал незавершенный reload предыдущей команды. После детерминированной синхронизации targeted `3/3`; финальный полный inventory: `220/220` за `13.6 min`, `0` failed/flaky/skipped. Real provider cabinets, VPS/staging and live payment evidence remain external.
+
 ## Check 2026-08-12: payment checkout URL readiness guard
 
 Scope:

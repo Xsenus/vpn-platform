@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.650.0 - 2026-08-12
+
+Release entry: `2026-08-12-payment-manual-recheck-capability-guard`.
+
+### Исправлено
+
+- Ручная перепроверка платежа теперь использует единый provider capability contract: неподдерживаемые RoboKassa, YooMoney, CloudPayments и Prodamus отклоняются до разрешения адаптера и внешнего вызова.
+- Admin orders/payments DTO явно передают доступность перепроверки; строгий API client и UI fail-closed блокируют команду с точной причиной, а поддерживаемые YooKassa, TBank, Stripe и PayPal сохраняют прежний flow.
+- Cabinet browser regression дожидается завершения reload после создания продления до снимка счетчика следующего ручного refresh, исключая ложный duplicate-GET результат.
+
+### Проверено
+
+- Payment/admin targeted backend `56/56`, frontend `141/141`, capability policy unit, admin desktop/mobile `2/2`; конкурентный cabinet refresh после уточнения синхронизации `3/3`.
+- Backend `1239/1239`; Release build `0` warnings/errors; frontend typecheck/build зелёные; полный Playwright `220/220` за `13.6 min` без failed/flaky/skipped; EF drift отсутствует, fresh SQLite smoke зелёный, audit `0` уязвимостей.
+- Roadmap: `663/683` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked; реальные provider/VPS/staging evidence локальными проверками не закрывались.
+
 ## 0.649.0 - 2026-08-12
 
 Release entry: `2026-08-12-payment-checkout-url-readiness-guard`.

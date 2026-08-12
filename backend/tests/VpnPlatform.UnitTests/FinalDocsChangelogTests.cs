@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1238/1238", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-12-payment-checkout-url-readiness-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1239/1239", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-12-payment-manual-recheck-capability-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "1238/1238",
-                     "2026-08-12-payment-checkout-url-readiness-guard",
-                     "0.649.0",
+                     "1239/1239",
+                     "2026-08-12-payment-manual-recheck-capability-guard",
+                     "0.650.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -104,15 +104,15 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-12-payment-checkout-url-readiness-guard",
-                     "0.649.0",
+                     "2026-08-12-payment-manual-recheck-capability-guard",
+                     "0.650.0",
                      "522/542",
                      "96.3%",
                      "20",
                      "19",
                      "1",
                      "0 blockers",
-                     "Backend full suite: `1238/1238`",
+                     "Backend full suite: `1239/1239`",
                      "Local SQLite smoke: OK",
                      "Secret scan: OK, `639` files, `0` findings",
                      "Artifact cleanup: OK",
@@ -154,8 +154,8 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "2026-08-12-payment-checkout-url-readiness-guard",
-                     "0.649.0",
+                     "2026-08-12-payment-manual-recheck-capability-guard",
+                     "0.650.0",
                      "522/542",
                      "96.3%",
                      "20",
@@ -166,7 +166,7 @@ public class FinalDocsChangelogTests
                      "not production-ready",
                      "FinalDocsChangelogTests",
                      "targeted X3Ui/panel/SQLite suite `52/52`",
-                     "Backend `1238/1238`",
+                     "Backend `1239/1239`",
                      "PostgreSQL SQL",
                      "secret scan `639` files, `0` findings"
                  })

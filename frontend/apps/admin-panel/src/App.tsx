@@ -62,6 +62,7 @@ import { canCancelProvisioningRun, canRetryProvisioningRun, isProvisioningStateC
 import { adminAccessDeniedMessage, adminSessionEndedMessage, isAdminAccessTokenExpired, isAdminSessionRejected } from './admin-session'
 import { isOptionalSafeAdminHttpUrl, validateTelegramBotUrlFields } from './admin-url-validation'
 import { validateServerForm } from './admin-server-validation'
+import { getAdminOrderPaymentRecheckBlocker, getAdminPaymentRecheckBlocker } from './admin-payments'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-admin-token'
@@ -2487,6 +2488,12 @@ export function App() {
   }
 
   const handleRecheckPayment = async (paymentId: string) => runAction('payments', paymentId, async (action) => {
+    const target = payments.find((payment) => payment.id === paymentId)
+    const blocker = target ? getAdminPaymentRecheckBlocker(target) : 'Платеж не найден в текущем списке.'
+    if (blocker) {
+      setError(blocker)
+      return
+    }
     const payment = await api.recheckAdminPayment(token, paymentId)
     if (!action.isCurrent()) return
     setNotice(`Платеж ${shortId(payment.paymentId)} проверен: ${payment.status}`)
@@ -2494,6 +2501,11 @@ export function App() {
   }, paymentActionResourceKeys(paymentId, payments.find((payment) => payment.id === paymentId)?.orderId))
 
   const handleRecheckOrderPayment = async (order: OrderDto) => runAction('payments', `order-recheck-${order.id}`, async (action) => {
+    const blocker = getAdminOrderPaymentRecheckBlocker(order)
+    if (blocker) {
+      setError(blocker)
+      return
+    }
     const payment = await api.recheckAdminOrderPayment(token, order.id)
     if (!action.isCurrent()) return
     setNotice(`Заказ ${shortId(order.id)}: последний платеж ${shortId(payment.paymentId)} проверен, статус ${payment.status}.`)
@@ -4365,7 +4377,7 @@ export function App() {
                   <PrimaryButton className="button-secondary" onClick={() => openOrderUser(order)}>К пользователю</PrimaryButton>
                   <PrimaryButton className="button-secondary" disabled={!order.lastPaymentId} title={order.lastPaymentId ? undefined : 'У заказа нет платежной попытки'} onClick={() => openOrderPayment(order)}>К платежу</PrimaryButton>
                   <PrimaryButton className="button-secondary" disabled={!order.linkedSubscriptionId} title={order.linkedSubscriptionId ? undefined : 'У заказа нет связанной подписки'} onClick={() => openOrderSubscription(order)}>К подписке</PrimaryButton>
-                  <PrimaryButton hidden={!canWriteSection('payments')} disabled={!order.lastPaymentId || isActionResourceBusy(orderActionResourceKey(order.id), ...(order.lastPaymentId ? [paymentActionResourceKey(order.lastPaymentId)] : []))} title={order.lastPaymentId ? undefined : 'Сначала нужна платежная попытка'} onClick={() => void handleRecheckOrderPayment(order)}>Проверить оплату</PrimaryButton>
+                  <PrimaryButton hidden={!canWriteSection('payments')} disabled={Boolean(getAdminOrderPaymentRecheckBlocker(order)) || isActionResourceBusy(orderActionResourceKey(order.id), ...(order.lastPaymentId ? [paymentActionResourceKey(order.lastPaymentId)] : []))} title={getAdminOrderPaymentRecheckBlocker(order) ?? undefined} onClick={() => void handleRecheckOrderPayment(order)}>Проверить оплату</PrimaryButton>
                 </div>
               </div>
             ))}
@@ -4397,7 +4409,7 @@ export function App() {
                     </div>
                   </div>
                   <div className="toolbar" hidden={!canWriteSection('payments')}>
-                    <PrimaryButton disabled={paymentActionBusy} onClick={() => void handleRecheckPayment(payment.id)}>Проверить статус</PrimaryButton>
+                    <PrimaryButton disabled={paymentActionBusy || Boolean(getAdminPaymentRecheckBlocker(payment))} title={getAdminPaymentRecheckBlocker(payment) ?? undefined} onClick={() => void handleRecheckPayment(payment.id)}>Проверить статус</PrimaryButton>
                     <label className="inline-number-field">
                       <span>Сумма</span>
                       <input value={refundAmount} onChange={(e) => setRefundAmounts((current) => ({ ...current, [payment.id]: Number(e.target.value) || 0 }))} type="number" min={0} max={refundableAmount} step="0.01" inputMode="decimal" disabled={!refundAllowed || paymentActionBusy} />

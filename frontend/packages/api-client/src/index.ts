@@ -208,6 +208,7 @@ export type OrderDto = {
   lastPaymentId?: string | null
   lastPaymentStatus?: string | null
   lastPaymentProvider?: string | null
+  lastPaymentRecheckSupported?: boolean
   linkedSubscriptionId: string | null
   createdAt?: string
   updatedAt?: string
@@ -289,6 +290,7 @@ export type PaymentAttemptDto = {
   statusReason?: string | null
   webhookEventsCount?: number
   refundsCount?: number
+  recheckSupported?: boolean
   refundSupported?: boolean
   canRefund?: boolean
   refundableAmount?: number
@@ -1770,7 +1772,8 @@ function isAdminAccessCredentialDto(value: unknown): value is AccessCredentialDt
 function isAdminPaymentAttemptDto(value: unknown): value is PaymentAttemptDto {
   if (!isCabinetPaymentAttemptDto(value) || !isRecord(value)) return false
 
-  return hasBoolean(value, 'refundSupported')
+  return hasBoolean(value, 'recheckSupported')
+    && hasBoolean(value, 'refundSupported')
     && hasBoolean(value, 'canRefund')
     && hasFiniteNumber(value, 'refundableAmount', 0)
     && hasStringArray(value, 'refundBlockers')
@@ -3480,7 +3483,7 @@ export class ApiClient {
     if (filters.status) params.set('status', filters.status)
     if (filters.search) params.set('search', filters.search)
     const query = params.toString()
-    return this.requestArray<OrderDto>(`/api/admin/orders${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage }, isCabinetOrderDto, (items) => hasUniqueStringKey(items, 'id'))
+    return this.requestArray<OrderDto>(`/api/admin/orders${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage }, (value): value is OrderDto => isCabinetOrderDto(value) && hasBoolean(value, 'lastPaymentRecheckSupported'), (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminPayments(token: string): Promise<PaymentAttemptDto[]> {

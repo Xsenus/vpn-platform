@@ -17,6 +17,12 @@ public static class PaymentProviderConfigurationRules
     public static bool SupportsTelegramCheckout(PaymentProvider provider)
         => provider == PaymentProvider.TelegramStars;
 
+    public static bool SupportsManualRecheck(PaymentProvider provider)
+        => provider is PaymentProvider.YooKassa or PaymentProvider.TBankAcquiring or PaymentProvider.Stripe or PaymentProvider.PayPal;
+
+    public static bool SupportsRefund(PaymentProvider provider)
+        => provider is PaymentProvider.YooKassa or PaymentProvider.TBankAcquiring or PaymentProvider.Stripe or PaymentProvider.PayPal;
+
     public static bool IsCheckoutConfigured(PaymentProviderAccount account)
         => GetCheckoutConfigurationIssue(account) is null;
 
@@ -147,8 +153,8 @@ public static class PaymentProviderConfigurationRules
     public static IReadOnlyCollection<PaymentProviderCapabilityRule> GetCapabilityRules(PaymentProvider provider)
     {
         var supportsWebCheckout = SupportsWebCheckout(provider);
-        var supportsRefund = provider is PaymentProvider.YooKassa or PaymentProvider.TBankAcquiring or PaymentProvider.Stripe or PaymentProvider.PayPal;
-        var supportsRecheck = provider is PaymentProvider.YooKassa or PaymentProvider.TBankAcquiring or PaymentProvider.Stripe or PaymentProvider.PayPal;
+        var supportsRefund = SupportsRefund(provider);
+        var supportsRecheck = SupportsManualRecheck(provider);
         var supportsSandbox = provider != PaymentProvider.TelegramStars;
 
         return new[]

@@ -45,12 +45,14 @@ public class AdminRefundManagementTests
         var readyJson = payments.Single(x => x.GetProperty("Id").GetGuid() == refundable.Id);
         Assert.True(readyJson.GetProperty("CanRefund").GetBoolean());
         Assert.True(readyJson.GetProperty("RefundSupported").GetBoolean());
+        Assert.True(readyJson.GetProperty("RecheckSupported").GetBoolean());
         Assert.Equal(70m, readyJson.GetProperty("RefundableAmount").GetDecimal());
         Assert.Empty(readyJson.GetProperty("RefundBlockers").EnumerateArray());
 
         var unsupportedJson = payments.Single(x => x.GetProperty("Id").GetGuid() == unsupported.Id);
         Assert.False(unsupportedJson.GetProperty("CanRefund").GetBoolean());
         Assert.False(unsupportedJson.GetProperty("RefundSupported").GetBoolean());
+        Assert.False(unsupportedJson.GetProperty("RecheckSupported").GetBoolean());
         Assert.Contains("не поддерживает", unsupportedJson.GetProperty("RefundBlockers").EnumerateArray().First().GetString());
 
         var pendingJson = payments.Single(x => x.GetProperty("Id").GetGuid() == pending.Id);

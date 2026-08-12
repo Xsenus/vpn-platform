@@ -176,12 +176,12 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-09 локально подтверждено:
 
-- backend full suite: 1238/1238;
-- frontend tests: 140/140;
+- backend full suite: 1239/1239;
+- frontend tests: 141/141;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
-- browser console smoke: 218/218; responsive all-screens: 6/6 на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints;
+- browser console smoke: 220/220; responsive all-screens: 6/6 на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints;
 - visual assets: local same-origin WebP decode/dimensions OK; representative desktop/mobile screenshots reviewed;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - API operation boundary regression: malformed enum/JSON returns 400 without partial database mutations; payment webhooks cover all 8 provider routes; VPN provisioning remains fail-closed.
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-12-payment-checkout-url-readiness-guard`, версия `0.649.0`; payment readiness отклоняет небезопасные legacy URL до public list/checkout, а public return URL валидируется и JSON-сериализуется до записи.
-- roadmap progress: `662/682` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-12-payment-manual-recheck-capability-guard`, версия `0.650.0`; ручная перепроверка платежа доступна только для провайдеров с явной capability, а backend и admin UI отклоняют неподдерживаемую команду до adapter/API call.
+- roadmap progress: `663/683` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

@@ -609,6 +609,11 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             return Result<PaymentStatusResult>.Failure("Payment attempt not found.");
         }
 
+        if (!PaymentProviderConfigurationRules.SupportsManualRecheck(payment.Provider))
+        {
+            return Result<PaymentStatusResult>.Failure($"Payment provider {payment.Provider} does not support manual status recheck.");
+        }
+
         try
         {
             var provider = _paymentProviderFactory.Get(payment.Provider);

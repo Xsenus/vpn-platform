@@ -1545,6 +1545,7 @@ test('cabinet removes the renewal payment link after completed order refresh', a
 
   const renewalCard = page.getByRole('heading', { name: 'Последнее продление' }).locator('..')
   await expect(renewalCard.getByRole('link', { name: 'Открыть оплату в новой вкладке' })).toHaveAttribute('href', 'https://pay.example.test/renewal')
+  await expect(page.getByRole('status').filter({ hasText: 'Продление создано' })).toBeVisible()
 
   api.completeRenewalOrder()
   const orderLoadsBeforeRefresh = api.getRequestCount('/api/me/orders')

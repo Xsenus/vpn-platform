@@ -15291,5 +15291,28 @@
         "text": "Roadmap progress is 662/682 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-payment-manual-recheck-capability-guard",
+    "version": "0.650.0",
+    "releasedAt": "2026-08-12T10:12:53+07:00",
+    "title": "Админка не запускает неподдерживаемую перепроверку платежа",
+    "summary": "Единый capability-контракт согласует backend preflight, admin DTO и интерфейс для ручного обновления статуса платежей.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "RoboKassa, YooMoney, CloudPayments и Prodamus отклоняют ручную перепроверку до разрешения адаптера и внешнего вызова."
+      },
+      {
+        "type": "improved",
+        "text": "Заказы и платежи передают явную capability в строгий API client; admin UI блокирует недоступную команду и показывает точную причину."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 663/683 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
