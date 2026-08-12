@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-12 локально подтверждено:
 
-- backend на .NET 9: `1328/1328` unit tests;
+- backend на .NET 9: `1342/1342` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `144/144`;
 - frontend typecheck и production build: OK;
@@ -350,9 +350,9 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - verified `CHECKOUT.ORDER.APPROVED` запускает server-side PayPal capture с idempotency/reconciliation и не активирует VPN без capture proof;
 - manual recheck Stripe, YooKassa и Т-Банка сверяет фактические provider ID, сумму, валюту, internal order/account и paid marker до активации;
 - refund YooKassa/Stripe/PayPal/Т-Банка применяет результат только после совпадения provider source reference и доступных amount/currency/internal payment proof; последовательные partial refund Т-Банка имеют отдельные operation IDs;
-- backend `1328/1328`, frontend `144/144`, полный Playwright `227/227` за `12.9 min`, dependency audit `0 vulnerabilities`;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-refund-proof-boundary`, версия `0.663.0`;
+- backend `1342/1342`, frontend `144/144`, полный Playwright `227/227` за `12.9 min`, targeted refund reconciliation desktop/mobile `2/2`, dependency audit `0 vulnerabilities`;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-refund-status-reconciliation`, версия `0.664.0`;
 - server API, own-VPS onboarding, queue и executor отклоняют inventory-breaking IP/SSH values; executor использует фиксированный alias и `ArgumentList`, а admin-форма показывает те же diagnostics до submit;
-- roadmap progress: `676/696` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- roadmap progress: `677/697` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

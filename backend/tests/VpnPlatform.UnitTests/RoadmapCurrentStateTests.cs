@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-12-refund-proof-boundary";
-    private const string CurrentVersion = "0.663.0";
+    private const string CurrentReleaseId = "2026-08-12-refund-status-reconciliation";
+    private const string CurrentVersion = "0.664.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -17,7 +17,8 @@ public class RoadmapCurrentStateTests
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
 
         Assert.Contains("Дата актуализации: 2026-08-12", roadmap, StringComparison.Ordinal);
-        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1328/1328`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1342/1342`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `P11-ACC-386`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-385`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-002` Frontend test suite проходит: `144/144`.", roadmap, StringComparison.Ordinal);
         Assert.Contains("11/11", roadmap, StringComparison.Ordinal);
@@ -317,9 +318,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("1328/1328", readme, StringComparison.Ordinal);
-        Assert.Contains("1328/1328", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("1328/1328", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("1342/1342", readme, StringComparison.Ordinal);
+        Assert.Contains("1342/1342", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("1342/1342", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,

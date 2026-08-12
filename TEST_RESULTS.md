@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: refund status reconciliation
+
+Scope:
+- Незавершённый provider refund должен иметь безопасную ручную сверку, не блокировать платеж навсегда после terminal failure/cancellation и не применять успешную сумму повторно.
+- Admin API/UI должны показывать provider-specific readiness, выполнять сверку конкретного refund ID и оставлять redacted audit без raw provider payload.
+
+Results:
+- Roadmap progress: `677/697` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-refund-status-reconciliation`, version `0.664.0`.
+- Fail-first: `0/5`; список возвратов не содержал readiness, а подтверждённое UI действие refund не оставляло audit record.
+- After fix: YooKassa/Stripe/PayPal получают отдельный refund по provider ID; proof проходит общий refund validator и дополнительное совпадение refund ID. `Succeeded` применяется один раз, `Failed/Cancelled` не меняют сумму, `Pending` остаётся открытым, malformed/mismatched proof сохраняется как `Unknown`; TBank fail-closed помечен unsupported.
+- Targeted SQLite/provider/controller `52/52`; production adapter GET matrix `3/3`; backend Release `1342/1342`; frontend `144/144`; typecheck/build; desktop/mobile Playwright `2/2`; fresh SQLite, EF drift, dependency audit `0 vulnerabilities`, UTF-8 и secret scan `673/0` зелёные. Live provider refund кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## Check 2026-08-12: refund proof boundary
 
 Scope:

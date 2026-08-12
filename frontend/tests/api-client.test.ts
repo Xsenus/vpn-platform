@@ -1643,6 +1643,7 @@ test('ApiClient admin payments expose refund readiness and send refund payload',
   const client = new ApiClient('http://localhost:8080')
   const payments = await client.getAdminPayments('admin-token')
   const refund = await client.refundAdminPayment('admin-token', 'payment-1', 50, 'manual')
+  const recheckedRefund = await client.recheckAdminRefund('admin-token', 'refund-1')
 
   assert.equal(payments[0]?.canRefund, true)
   assert.equal(payments[0]?.refundableAmount, 75)
@@ -1652,6 +1653,9 @@ test('ApiClient admin payments expose refund readiness and send refund payload',
   assert.match(String(calls[1]?.init?.body), /"amount":50/)
   assert.match(String(calls[1]?.init?.body), /manual/)
   assert.equal(refund.status, 'Succeeded')
+  assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/refunds/refund-1/recheck')
+  assert.equal(calls[2]?.init?.method, 'POST')
+  assert.equal(recheckedRefund.status, 'Succeeded')
 })
 
 test('admin source serializes finance commands by provider, order and payment resources', () => {
@@ -2077,6 +2081,7 @@ test('ApiClient rejects malformed admin finance, audit, notification and support
     '{}',
     '{}',
     '{}',
+    '{}',
     '[{}]',
     '{}',
     '{}',
@@ -2122,6 +2127,7 @@ test('ApiClient rejects malformed admin finance, audit, notification and support
     () => client.recheckAdminPayment('admin-token', 'payment-1'),
     () => client.recheckAdminOrderPayment('admin-token', 'order-1'),
     () => client.refundAdminPayment('admin-token', 'payment-1', 50),
+    () => client.recheckAdminRefund('admin-token', 'refund-1'),
     () => client.getAdminPaymentProviderAccounts('admin-token'),
     () => client.createAdminPaymentProviderAccount('admin-token', providerPayload),
     () => client.updateAdminPaymentProviderAccount('admin-token', 'provider-1', providerPayload),

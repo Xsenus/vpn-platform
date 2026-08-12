@@ -198,7 +198,7 @@ internal static class RemainingPaymentProviderShared
     }
 }
 
-public sealed class StripePaymentProvider : IPaymentProvider, IPaymentWebhookVerifier, IPaymentStatusMapper
+public sealed class StripePaymentProvider : IPaymentProvider, IPaymentWebhookVerifier, IPaymentStatusMapper, IPaymentRefundStatusProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly PaymentProviderAccountService _accounts;
@@ -424,36 +424,37 @@ public sealed class StripePaymentProvider : IPaymentProvider, IPaymentWebhookVer
             throw new InvalidOperationException($"Stripe refund failed with HTTP {(int)response.StatusCode}.");
         }
 
-        using var document = JsonDocument.Parse(raw);
-        var root = document.RootElement;
-        var refundId = root.TryGetProperty("id", out var id) ? id.GetString() ?? string.Empty : string.Empty;
-        var status = root.TryGetProperty("status", out var statusElement) ? MapRefundStatus(statusElement.GetString() ?? string.Empty) : RefundStatus.Unknown;
-        var paymentIntentId = root.TryGetProperty("payment_intent", out var paymentIntentElement) ? paymentIntentElement.GetString() : null;
-        var currency = root.TryGetProperty("currency", out var currencyElement) ? currencyElement.GetString()?.ToUpperInvariant() : null;
-        var refundAmount = root.TryGetProperty("amount", out var amountElement) && amountElement.TryGetInt64(out var amountMinor)
-            && !string.IsNullOrWhiteSpace(currency)
-                ? RemainingPaymentProviderShared.FromMinorUnits(amountMinor, currency)
-                : (decimal?)null;
-        var paymentAttemptId = TryGetMetadata(root, "paymentAttemptId");
-        var proofStatusReason = status == RefundStatus.Succeeded
-            && (string.IsNullOrWhiteSpace(refundId) || string.IsNullOrWhiteSpace(paymentIntentId) || !refundAmount.HasValue
-                || string.IsNullOrWhiteSpace(currency) || string.IsNullOrWhiteSpace(paymentAttemptId))
-                ? "stripe_refund_proof_incomplete"
-                : null;
-        if (proofStatusReason is not null)
+        return ParseRefundResult(raw, paymentIntent);
+    }
+
+    public async Task<PaymentRefundResult> GetRefundStatusAsync(
+        PaymentAttempt payment,
+        PaymentProviderAccount account,
+        Refund refund,
+        CancellationToken cancellationToken)
+    {
+        if (RemainingPaymentProviderShared.IsLocalSandbox(_environment, account))
         {
-            status = RefundStatus.Unknown;
+            return new PaymentRefundResult(refund.ProviderRefundId, refund.Status, refund.RawResponse, Amount: refund.Amount, Currency: refund.Currency);
         }
-        return new PaymentRefundResult(
-            refundId,
-            status,
-            raw,
-            ProviderPaymentId: paymentIntentId,
-            Amount: refundAmount,
-            Currency: currency,
-            InternalPaymentAttemptId: paymentAttemptId,
-            StatusReason: proofStatusReason,
-            ExpectedProviderPaymentId: paymentIntent);
+
+        var secret = _accounts.GetSecretKey(account);
+        if (string.IsNullOrWhiteSpace(secret))
+        {
+            return new PaymentRefundResult(refund.ProviderRefundId, RefundStatus.Unknown, "{}", StatusReason: "stripe_secret_key_missing");
+        }
+
+        var paymentIntent = await ResolveStripePaymentIntentAsync(payment, account, secret, cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, BuildStripeUri(account, $"/v1/refunds/{WebUtility.UrlEncode(refund.ProviderRefundId)}"));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", secret);
+        using var response = await SendStripeAsync(request, cancellationToken);
+        var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            return new PaymentRefundResult(refund.ProviderRefundId, RefundStatus.Unknown, raw, StatusReason: $"http_{(int)response.StatusCode}");
+        }
+
+        return ParseRefundResult(raw, paymentIntent);
     }
 
     public PaymentStatus MapPaymentStatus(string providerStatus, bool paid)
@@ -474,6 +475,41 @@ public sealed class StripePaymentProvider : IPaymentProvider, IPaymentWebhookVer
             "canceled" => RefundStatus.Cancelled,
             _ => RefundStatus.Unknown
         };
+
+    private PaymentRefundResult ParseRefundResult(string raw, string expectedPaymentIntent)
+    {
+        using var document = JsonDocument.Parse(raw);
+        var root = document.RootElement;
+        var refundId = root.TryGetProperty("id", out var id) ? id.GetString() ?? string.Empty : string.Empty;
+        var status = root.TryGetProperty("status", out var statusElement) ? MapRefundStatus(statusElement.GetString() ?? string.Empty) : RefundStatus.Unknown;
+        var paymentIntentId = root.TryGetProperty("payment_intent", out var paymentIntentElement) ? paymentIntentElement.GetString() : null;
+        var currency = root.TryGetProperty("currency", out var currencyElement) ? currencyElement.GetString()?.ToUpperInvariant() : null;
+        var refundAmount = root.TryGetProperty("amount", out var amountElement) && amountElement.TryGetInt64(out var amountMinor)
+            && !string.IsNullOrWhiteSpace(currency)
+                ? RemainingPaymentProviderShared.FromMinorUnits(amountMinor, currency)
+                : (decimal?)null;
+        var paymentAttemptId = TryGetMetadata(root, "paymentAttemptId");
+        var proofStatusReason = status != RefundStatus.Unknown
+            && (string.IsNullOrWhiteSpace(refundId) || string.IsNullOrWhiteSpace(paymentIntentId) || !refundAmount.HasValue
+                || string.IsNullOrWhiteSpace(currency) || string.IsNullOrWhiteSpace(paymentAttemptId))
+                ? "stripe_refund_proof_incomplete"
+                : null;
+        if (proofStatusReason is not null)
+        {
+            status = RefundStatus.Unknown;
+        }
+
+        return new PaymentRefundResult(
+            refundId,
+            status,
+            raw,
+            ProviderPaymentId: paymentIntentId,
+            Amount: refundAmount,
+            Currency: currency,
+            InternalPaymentAttemptId: paymentAttemptId,
+            StatusReason: proofStatusReason,
+            ExpectedProviderPaymentId: expectedPaymentIntent);
+    }
 
     private async Task<string> ResolveStripePaymentIntentAsync(PaymentAttempt payment, PaymentProviderAccount account, string secret, CancellationToken cancellationToken)
     {
@@ -531,7 +567,7 @@ public sealed class StripePaymentProvider : IPaymentProvider, IPaymentWebhookVer
     }
 }
 
-public sealed class PayPalPaymentProvider : IPaymentProvider, IPaymentWebhookVerifier, IPaymentStatusMapper, IPaymentApprovedOrderCaptureProvider
+public sealed class PayPalPaymentProvider : IPaymentProvider, IPaymentWebhookVerifier, IPaymentStatusMapper, IPaymentApprovedOrderCaptureProvider, IPaymentRefundStatusProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly PaymentProviderAccountService _accounts;
@@ -837,29 +873,32 @@ public sealed class PayPalPaymentProvider : IPaymentProvider, IPaymentWebhookVer
             throw new InvalidOperationException($"PayPal refund failed with HTTP {(int)response.StatusCode}.");
         }
 
-        using var document = JsonDocument.Parse(raw);
-        var root = document.RootElement;
-        var id = root.TryGetProperty("id", out var idElement) ? idElement.GetString() ?? string.Empty : string.Empty;
-        var status = root.TryGetProperty("status", out var statusElement) ? MapRefundStatus(statusElement.GetString() ?? string.Empty) : RefundStatus.Unknown;
-        var refundAmount = TryReadPayPalMoney(root, "amount", out var currency);
-        var responseCaptureId = TryGetPayPalUpCaptureId(root);
-        var statusReason = status == RefundStatus.Succeeded
-            && (string.IsNullOrWhiteSpace(id) || !refundAmount.HasValue || string.IsNullOrWhiteSpace(currency) || string.IsNullOrWhiteSpace(responseCaptureId))
-                ? "paypal_refund_proof_incomplete"
-                : null;
-        if (statusReason is not null)
+        return ParseRefundResult(raw, captureId);
+    }
+
+    public async Task<PaymentRefundResult> GetRefundStatusAsync(
+        PaymentAttempt payment,
+        PaymentProviderAccount account,
+        Refund refund,
+        CancellationToken cancellationToken)
+    {
+        if (RemainingPaymentProviderShared.IsLocalSandbox(_environment, account))
         {
-            status = RefundStatus.Unknown;
+            return new PaymentRefundResult(refund.ProviderRefundId, refund.Status, refund.RawResponse, Amount: refund.Amount, Currency: refund.Currency);
         }
-        return new PaymentRefundResult(
-            id,
-            status,
-            raw,
-            ProviderPaymentId: responseCaptureId,
-            Amount: refundAmount,
-            Currency: currency,
-            StatusReason: statusReason,
-            ExpectedProviderPaymentId: captureId);
+
+        var token = await GetAccessTokenAsync(account, cancellationToken);
+        var captureId = await ResolveCaptureIdAsync(payment, account, token, cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, BuildPayPalUri(account, $"/v2/payments/refunds/{WebUtility.UrlEncode(refund.ProviderRefundId)}"));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var response = await SendPayPalAsync(request, cancellationToken);
+        var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            return new PaymentRefundResult(refund.ProviderRefundId, RefundStatus.Unknown, raw, StatusReason: $"http_{(int)response.StatusCode}");
+        }
+
+        return ParseRefundResult(raw, captureId);
     }
 
     public PaymentStatus MapPaymentStatus(string providerStatus, bool paid)
@@ -882,6 +921,34 @@ public sealed class PayPalPaymentProvider : IPaymentProvider, IPaymentWebhookVer
             "CANCELLED" => RefundStatus.Cancelled,
             _ => RefundStatus.Unknown
         };
+
+    private PaymentRefundResult ParseRefundResult(string raw, string expectedCaptureId)
+    {
+        using var document = JsonDocument.Parse(raw);
+        var root = document.RootElement;
+        var id = root.TryGetProperty("id", out var idElement) ? idElement.GetString() ?? string.Empty : string.Empty;
+        var status = root.TryGetProperty("status", out var statusElement) ? MapRefundStatus(statusElement.GetString() ?? string.Empty) : RefundStatus.Unknown;
+        var refundAmount = TryReadPayPalMoney(root, "amount", out var currency);
+        var responseCaptureId = TryGetPayPalUpCaptureId(root);
+        var statusReason = status != RefundStatus.Unknown
+            && (string.IsNullOrWhiteSpace(id) || !refundAmount.HasValue || string.IsNullOrWhiteSpace(currency) || string.IsNullOrWhiteSpace(responseCaptureId))
+                ? "paypal_refund_proof_incomplete"
+                : null;
+        if (statusReason is not null)
+        {
+            status = RefundStatus.Unknown;
+        }
+
+        return new PaymentRefundResult(
+            id,
+            status,
+            raw,
+            ProviderPaymentId: responseCaptureId,
+            Amount: refundAmount,
+            Currency: currency,
+            StatusReason: statusReason,
+            ExpectedProviderPaymentId: expectedCaptureId);
+    }
 
     private async Task<string> GetAccessTokenAsync(PaymentProviderAccount account, CancellationToken cancellationToken)
     {

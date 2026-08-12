@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.664.0 - 2026-08-12
+
+Release entry: `2026-08-12-refund-status-reconciliation`.
+
+### Исправлено
+
+- Незавершённые возвраты YooKassa, Stripe и PayPal теперь можно сверить по отдельному provider refund ID; terminal failure/cancellation снимает блокировку следующего возврата, а успешная сумма применяется идемпотентно.
+- Т-Банк не использует агрегированный payment `GetState` как ложное доказательство конкретного частичного возврата и явно сообщает, что такая сверка не поддерживается.
+
+### Улучшено
+
+- Admin API/UI показывают readiness и причины блокировки, предоставляют команду «Сверить возврат» и записывают create/recheck в аудит без raw provider payload и причины клиента.
+
+### Проверено
+
+- Fail-first `0/5`; targeted SQLite/provider/controller `52/52`, production adapter GET matrix `3/3`, backend Release `1342/1342`, frontend `144/144`, typecheck/build, desktop/mobile Playwright `2/2`, fresh SQLite, EF drift, audit `0 vulnerabilities`, UTF-8 и secret scan `673/0` зелёные.
+- Roadmap `677/697` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Live refund/provider cabinet и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## 0.663.0 - 2026-08-12
 
 Release entry: `2026-08-12-refund-proof-boundary`.

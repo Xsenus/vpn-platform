@@ -49,6 +49,15 @@ public interface IPaymentApprovedOrderCaptureProvider
     Task<Result<PaymentStatusResult>> CaptureApprovedOrderAsync(PaymentAttempt payment, PaymentProviderAccount account, CancellationToken cancellationToken);
 }
 
+public interface IPaymentRefundStatusProvider
+{
+    Task<PaymentRefundResult> GetRefundStatusAsync(
+        PaymentAttempt payment,
+        PaymentProviderAccount account,
+        Refund refund,
+        CancellationToken cancellationToken);
+}
+
 public interface IPaymentProviderFactory
 {
     IPaymentProvider Get(PaymentProvider provider);

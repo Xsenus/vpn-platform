@@ -873,6 +873,124 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         }
     }
 
+    public async Task<Result<RefundDto>> RecheckRefundAsync(Guid refundId, CancellationToken cancellationToken = default)
+    {
+        var snapshot = await _db.Refunds.AsNoTracking()
+            .Include(x => x.PaymentAttempt)
+            .FirstOrDefaultAsync(x => x.Id == refundId, cancellationToken);
+        if (snapshot?.PaymentAttempt is null)
+        {
+            return Result<RefundDto>.Failure("Refund not found.");
+        }
+
+        await using var processingGate = await PaymentProcessingGate.AcquireOrderAsync(snapshot.PaymentAttempt.OrderId, cancellationToken);
+        var refund = await _db.Refunds
+            .Include(x => x.PaymentAttempt)
+                .ThenInclude(x => x!.Order)
+            .Include(x => x.PaymentAttempt)
+                .ThenInclude(x => x!.PaymentProviderAccount)
+            .FirstOrDefaultAsync(x => x.Id == refundId, cancellationToken);
+        if (refund?.PaymentAttempt is null || refund.PaymentAttempt.PaymentProviderAccount is null)
+        {
+            return Result<RefundDto>.Failure("Refund not found.");
+        }
+
+        if (!UnresolvedRefundStatuses.Contains(refund.Status))
+        {
+            return Result<RefundDto>.Success(MapRefund(refund));
+        }
+
+        if (!PaymentProviderConfigurationRules.SupportsRefundStatusRecheck(refund.Provider))
+        {
+            return Result<RefundDto>.Failure($"Payment provider {refund.Provider} does not support refund status recheck.");
+        }
+
+        if (string.IsNullOrWhiteSpace(refund.ProviderRefundId)
+            || refund.ProviderRefundId.StartsWith("pending:", StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<RefundDto>.Failure("Refund does not have a provider identifier that can be rechecked.");
+        }
+
+        var payment = refund.PaymentAttempt;
+        var configurationIssues = PaymentProviderConfigurationRules.GetRefundConfigurationIssues(
+            payment,
+            payment.PaymentProviderAccount,
+            _runtimeEnvironment?.EnvironmentName);
+        if (configurationIssues.Count > 0)
+        {
+            return Result<RefundDto>.Failure(string.Join(" ", configurationIssues.Select(x => x.Message)));
+        }
+
+        try
+        {
+            if (_paymentProviderFactory.Get(refund.Provider) is not IPaymentRefundStatusProvider provider)
+            {
+                return Result<RefundDto>.Failure($"Payment provider {refund.Provider} does not support refund status recheck.");
+            }
+
+            var statusResult = await provider.GetRefundStatusAsync(
+                payment,
+                payment.PaymentProviderAccount,
+                refund,
+                cancellationToken);
+            refund.RawResponse = statusResult.RawResponse;
+
+            if (!string.Equals(statusResult.RefundId, refund.ProviderRefundId, StringComparison.Ordinal))
+            {
+                refund.Status = RefundStatus.Unknown;
+                refund.RefundedAt = null;
+                await _db.SaveChangesAsync(cancellationToken);
+                return Result<RefundDto>.Failure("Payment provider returned a mismatched refund identifier.");
+            }
+
+            var validation = ValidatePaymentRefundResult(payment, statusResult, refund.Amount);
+            if (!validation.IsSuccess)
+            {
+                refund.Status = RefundStatus.Unknown;
+                refund.RefundedAt = null;
+                await _db.SaveChangesAsync(cancellationToken);
+                return Result<RefundDto>.Failure(validation.Error ?? "Payment provider refund proof is invalid.");
+            }
+
+            refund.Status = statusResult.Status;
+            refund.RefundedAt = statusResult.Status == RefundStatus.Succeeded ? _clock.UtcNow : null;
+            if (statusResult.Status == RefundStatus.Succeeded)
+            {
+                var remaining = payment.Amount - payment.RefundedAmount;
+                if (refund.Amount <= 0 || refund.Amount > remaining)
+                {
+                    refund.Status = RefundStatus.Unknown;
+                    refund.RefundedAt = null;
+                    await _db.SaveChangesAsync(cancellationToken);
+                    return Result<RefundDto>.Failure("Refund amount cannot be applied to the current payment balance.");
+                }
+
+                payment.RefundedAmount += refund.Amount;
+                payment.RefundedAt = _clock.UtcNow;
+                StatusStateMachine.SetPaymentStatus(
+                    payment,
+                    payment.RefundedAmount >= payment.Amount ? PaymentStatus.Refunded : PaymentStatus.PartiallyRefunded,
+                    _clock.UtcNow);
+                if (payment.Order is not null && payment.Status == PaymentStatus.Refunded)
+                {
+                    StatusStateMachine.SetOrderStatus(payment.Order, OrderStatus.Refunded, _clock.UtcNow);
+                }
+            }
+
+            payment.UpdatedAt = _clock.UtcNow;
+            await _db.SaveChangesAsync(cancellationToken);
+            return Result<RefundDto>.Success(MapRefund(refund));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return Result<RefundDto>.Failure($"Refund status recheck failed: {ex.Message}", isRetryable: true);
+        }
+    }
+
     private async Task<bool> MarkRefundUnresolvedAsync(Refund refund, PaymentAttempt payment, PaymentAttempt currentPayment)
     {
         refund.Status = RefundStatus.Unknown;

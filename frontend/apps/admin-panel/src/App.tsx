@@ -586,6 +586,10 @@ function paymentActionResourceKeys(paymentId: string, orderId?: string | null) {
     : [paymentActionResourceKey(paymentId)]
 }
 
+function refundActionResourceKeys(refund: RefundDto) {
+  return [`refund:${refund.id}`, paymentActionResourceKey(refund.paymentAttemptId)]
+}
+
 function tariffActionResourceKey(tariffId: string) {
   return `tariff:${tariffId}`
 }
@@ -948,6 +952,13 @@ function refundBlockerText(payment: PaymentAttemptDto) {
   if (payment.refundSupported === false) return 'Провайдер не поддерживает возвраты.'
   if (getRefundableAmount(payment) <= 0) return 'Сумма уже возвращена.'
   if (payment.status !== 'Succeeded' && payment.status !== 'PartiallyRefunded') return 'Возврат доступен только после успешной оплаты.'
+  return ''
+}
+
+function refundRecheckBlockerText(refund: RefundDto) {
+  if (refund.recheckBlockers && refund.recheckBlockers.length > 0) return refund.recheckBlockers.join(' · ')
+  if (refund.recheckSupported === false) return 'Провайдер не поддерживает сверку отдельного возврата.'
+  if (refund.canRecheck !== true) return 'Возврат уже завершён или не имеет идентификатора провайдера.'
   return ''
 }
 
@@ -2534,6 +2545,20 @@ export function App() {
       setRefundReasons((current) => ({ ...current, [payment.id]: '' }))
       await action.reloadAll()
     }, paymentActionResourceKeys(payment.id, payment.orderId))
+  }
+
+  const handleRecheckRefund = async (refund: RefundDto) => {
+    await runAction('payments', `refund-recheck-${refund.id}`, async (action) => {
+      const blocker = refundRecheckBlockerText(refund)
+      if (blocker) {
+        setError(blocker)
+        return
+      }
+      const result = await api.recheckAdminRefund(token, refund.id)
+      if (!action.isCurrent()) return
+      setNotice(`Возврат ${result.providerRefundId || shortId(result.id)} проверен: ${result.status}`)
+      await action.reloadAll()
+    }, refundActionResourceKeys(refund))
   }
 
   const resetTariffForm = () => {
@@ -4406,7 +4431,21 @@ export function App() {
               )
             })}
             {paymentWebhookEvents.slice(0, 4).map((event) => <div key={event.id} className="list-item"><span>{event.provider} · {event.eventType} · подпись {event.signatureValidated ? 'проверена' : 'не проверена'}</span><StatusBadge value={event.status} /></div>)}
-            {refunds.slice(0, 4).map((refund) => <div key={refund.id} className="list-item"><span>Возврат {refund.amount} {refund.currency} · {refund.providerRefundId || shortId(refund.id)}</span><StatusBadge value={refund.status} /></div>)}
+            {refunds.slice(0, 4).map((refund) => {
+              const blocker = refundRecheckBlockerText(refund)
+              const refundBusy = isActionResourceBusy(...refundActionResourceKeys(refund))
+              return (
+                <div key={refund.id} className="list-item-vertical">
+                  <div className="item-head">
+                    <span>Возврат {refund.amount} {refund.currency} · {refund.providerRefundId || shortId(refund.id)}</span>
+                    <StatusBadge value={refund.status} />
+                  </div>
+                  <div className="toolbar" hidden={!canWriteSection('payments')}>
+                    <PrimaryButton disabled={refundBusy || Boolean(blocker)} title={blocker || undefined} onClick={() => void handleRecheckRefund(refund)}>Сверить возврат</PrimaryButton>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </Card>
         </div>

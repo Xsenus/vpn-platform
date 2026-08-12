@@ -1010,7 +1010,7 @@ async function mockAdminApi(page: Page) {
       const refundedAmount = Number(payments[0].refundedAmount ?? 0) + amount
       const refundableAmount = Math.max(0, 590 - refundedAmount)
       const refundNumber = refunds.length + 1
-      const refund = { id: `refund-e2e-${refundNumber}`, paymentAttemptId: 'payment-e2e', provider: 'YooKassa', providerRefundId: `rf-e2e-${refundNumber}`, status: 'Succeeded', amount, currency: 'RUB', reason: String((body as Record<string, unknown>)?.reason ?? ''), createdAt: now, refundedAt: now }
+      const refund = { id: `refund-e2e-${refundNumber}`, paymentAttemptId: 'payment-e2e', provider: 'YooKassa', providerRefundId: `rf-e2e-${refundNumber}`, status: 'Succeeded', amount, currency: 'RUB', reason: String((body as Record<string, unknown>)?.reason ?? ''), createdAt: now, refundedAt: now, recheckSupported: true, canRecheck: false, recheckBlockers: ['Возврат уже имеет окончательный статус.'] }
       refunds.push(refund)
       payments[0] = {
         ...payments[0],
@@ -1024,6 +1024,26 @@ async function mockAdminApi(page: Page) {
         updatedAt: now
       }
       orders[0] = { ...orders[0], lastPaymentStatus: payments[0].status, updatedAt: now }
+      await fulfillJson(route, refund)
+      return
+    }
+
+    const refundRecheckMatch = path.match(/^\/api\/admin\/refunds\/([^/]+)\/recheck$/)
+    if (method === 'POST' && refundRecheckMatch) {
+      const refundId = decodeURIComponent(refundRecheckMatch[1])
+      const index = refunds.findIndex((item) => item.id === refundId)
+      const refund = { ...refunds[index], status: 'Succeeded', refundedAt: now, canRecheck: false, recheckBlockers: ['Refund already has a terminal status.'] }
+      refunds[index] = refund
+      const refundedAmount = Number(payments[0].refundedAmount ?? 0) + Number(refund.amount ?? 0)
+      payments[0] = {
+        ...payments[0],
+        status: refundedAmount >= 590 ? 'Refunded' : 'PartiallyRefunded',
+        refundedAmount,
+        refundableAmount: Math.max(0, 590 - refundedAmount),
+        canRefund: refundedAmount < 590,
+        refundBlockers: [],
+        updatedAt: now
+      }
       await fulfillJson(route, refund)
       return
     }
@@ -2060,6 +2080,33 @@ async function mockAdminApi(page: Page) {
         updatedAt: now
       }
       refunds.splice(0)
+    },
+    preparePendingRefund: () => {
+      refunds.splice(0, refunds.length, {
+        id: 'refund-pending-e2e',
+        paymentAttemptId: 'payment-e2e',
+        provider: 'YooKassa',
+        providerRefundId: 'rf-pending-e2e',
+        status: 'Pending',
+        amount: 200,
+        currency: 'RUB',
+        reason: 'pending_refund_e2e',
+        createdAt: now,
+        refundedAt: null,
+        recheckSupported: true,
+        canRecheck: true,
+        recheckBlockers: []
+      })
+      payments[0] = {
+        ...payments[0],
+        status: 'Succeeded',
+        refundedAmount: 0,
+        refundsCount: 1,
+        canRefund: false,
+        refundableAmount: 590,
+        refundBlockers: ['Есть незавершённый возврат.'],
+        updatedAt: now
+      }
     },
     prepareSubscriptionLifecycle: () => {
       subscriptions[0] = {
@@ -3452,6 +3499,37 @@ test('admin payment recheck and refunds persist across reload', async ({ page })
   await expect(paymentRow).toContainText('Возврат недоступен: Сумма уже возвращена.')
   await expect(paymentsPanel.getByText(/Возврат (200|390) RUB · rf-e2e-/)).toHaveCount(2)
   expect(api.getAuthorizedRequestCount('/api/admin/payments/payment-e2e/refund', 'POST', 'Bearer admin-refund-token')).toBe(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(browserErrors).toEqual([])
+})
+
+test('admin reconciles a pending refund and applies its amount once', async ({ page }) => {
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
+  const api = await mockAdminApi(page)
+  api.preparePendingRefund()
+  await seedAdminSession(page, 'admin-refund-recheck-token', 'admin-refund-recheck-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Оплаты', 'payments')
+
+  const paymentsPanel = page.locator('#payments')
+  const refundRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: 'rf-pending-e2e' })
+  await expect(refundRow).toContainText('Ожидает')
+  await refundRow.getByRole('button', { name: 'Сверить возврат' }).click()
+  await expect(page.getByText('Возврат rf-pending-e2e проверен: Succeeded')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/refunds/refund-pending-e2e/recheck')?.authorization).toBe('Bearer admin-refund-recheck-token')
+
+  await expect(page.locator('#payment-payment-e2e')).toContainText('возвращено 200 RUB')
+  await expect(refundRow.getByRole('button', { name: 'Сверить возврат' })).toBeDisabled()
+  await page.reload()
+  await openAdminSection(page, 'Оплаты', 'payments')
+  await expect(page.locator('#payment-payment-e2e')).toContainText('возвращено 200 RUB')
+  expect(api.getAuthorizedRequestCount('/api/admin/refunds/refund-pending-e2e/recheck', 'POST', 'Bearer admin-refund-recheck-token')).toBe(1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
 })

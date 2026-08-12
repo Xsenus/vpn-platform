@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1328/1328`.
+- Backend full suite: `1342/1342`.
 - API Release build: OK.
 - Frontend unit tests: `144/144`.
 - Frontend typecheck/build: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-12-refund-proof-boundary`, версия `0.663.0`; refund YooKassa/Stripe/PayPal/Т-Банк проверяет source reference и доступные amount/currency/internal proof до изменения payment/order. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `676/696` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-12-refund-status-reconciliation`, версия `0.664.0`; YooKassa/Stripe/PayPal поддерживают доказательную сверку отдельного незавершённого возврата, а TBank не использует агрегированный payment status как доказательство partial refund. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `677/697` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

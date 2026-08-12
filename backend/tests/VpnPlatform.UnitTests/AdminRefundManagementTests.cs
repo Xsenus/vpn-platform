@@ -122,6 +122,7 @@ public class AdminRefundManagementTests
         Assert.Equal(PaymentStatus.PartiallyRefunded, payment.Status);
         Assert.Equal(40m, payment.RefundedAmount);
         Assert.Single(await db.Refunds.ToListAsync());
+        Assert.Contains(await db.AuditLogs.AsNoTracking().ToListAsync(), x => x.Action == "refund.create");
     }
 
     [Theory]
@@ -601,6 +602,230 @@ public class AdminRefundManagementTests
             item => item.GetString()?.Contains("заверш", StringComparison.OrdinalIgnoreCase) == true);
     }
 
+    [Theory]
+    [InlineData(PaymentProvider.YooKassa, true)]
+    [InlineData(PaymentProvider.Stripe, true)]
+    [InlineData(PaymentProvider.PayPal, true)]
+    [InlineData(PaymentProvider.TBankAcquiring, false)]
+    public async Task GetRefunds_Should_Expose_Provider_Specific_Recheck_Readiness(
+        PaymentProvider provider,
+        bool expectedSupported)
+    {
+        await using var db = CreateDb();
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(provider, secret: "secret");
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        payment.Refunds.Add(new Refund
+        {
+            PaymentAttemptId = payment.Id,
+            Provider = provider,
+            ProviderRefundId = $"provider-refund-{Guid.NewGuid():N}",
+            IdempotencyKey = $"refund-{Guid.NewGuid():N}",
+            Status = RefundStatus.Pending,
+            Amount = 40m,
+            Currency = payment.Currency,
+            Reason = "awaiting reconciliation"
+        });
+
+        db.AddRange(user, tariff, account, payment.Order!, payment);
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db);
+        var ok = Assert.IsType<OkObjectResult>(await controller.GetRefunds(CancellationToken.None));
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(ok.Value));
+        var refundJson = json.RootElement.EnumerateArray().Single();
+
+        Assert.Equal(expectedSupported, refundJson.GetProperty("RecheckSupported").GetBoolean());
+        Assert.Equal(expectedSupported, refundJson.GetProperty("CanRecheck").GetBoolean());
+        Assert.Equal(!expectedSupported, refundJson.GetProperty("RecheckBlockers").GetArrayLength() > 0);
+    }
+
+    [Theory]
+    [InlineData(RefundStatus.Succeeded, PaymentStatus.PartiallyRefunded, 40, true)]
+    [InlineData(RefundStatus.Pending, PaymentStatus.Succeeded, 0, true)]
+    [InlineData(RefundStatus.Failed, PaymentStatus.Succeeded, 0, true)]
+    [InlineData(RefundStatus.Cancelled, PaymentStatus.Succeeded, 0, true)]
+    [InlineData(RefundStatus.Unknown, PaymentStatus.Succeeded, 0, false)]
+    public async Task RecheckRefund_Should_Apply_Only_Validated_Succeeded_Amount(
+        RefundStatus providerStatus,
+        PaymentStatus expectedPaymentStatus,
+        decimal expectedRefundedAmount,
+        bool expectedSuccess)
+    {
+        await using var db = CreateDb();
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(PaymentProvider.YooKassa, secret: "secret");
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        var refund = new Refund
+        {
+            PaymentAttemptId = payment.Id,
+            Provider = payment.Provider,
+            ProviderRefundId = "provider-refund-1",
+            IdempotencyKey = "refund-1",
+            Status = RefundStatus.Pending,
+            Amount = 40m,
+            Currency = payment.Currency,
+            Reason = "recheck"
+        };
+        payment.Refunds.Add(refund);
+        db.AddRange(user, tariff, account, payment.Order!, payment);
+        await db.SaveChangesAsync();
+
+        var provider = new TrackingPaymentProvider(PaymentProvider.YooKassa, refundStatus: providerStatus);
+        var orchestrator = CreateOrchestrator(db, provider);
+        var result = await orchestrator.RecheckRefundAsync(refund.Id, CancellationToken.None);
+
+        Assert.Equal(expectedSuccess, result.IsSuccess);
+        db.ChangeTracker.Clear();
+        var persistedPayment = await db.Payments.SingleAsync();
+        var persistedRefund = await db.Refunds.SingleAsync();
+        Assert.Equal(expectedPaymentStatus, persistedPayment.Status);
+        Assert.Equal(expectedRefundedAmount, persistedPayment.RefundedAmount);
+        Assert.Equal(providerStatus, persistedRefund.Status);
+        Assert.Equal(1, provider.RefundStatusCalls);
+    }
+
+    [Fact]
+    public async Task RecheckRefund_Should_Be_Idempotent_After_Terminal_Status()
+    {
+        await using var db = CreateDb();
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(PaymentProvider.YooKassa, secret: "secret");
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        var refund = new Refund
+        {
+            PaymentAttemptId = payment.Id,
+            Provider = payment.Provider,
+            ProviderRefundId = "provider-refund-1",
+            IdempotencyKey = "refund-1",
+            Status = RefundStatus.Pending,
+            Amount = 40m,
+            Currency = payment.Currency,
+            Reason = "recheck"
+        };
+        payment.Refunds.Add(refund);
+        db.AddRange(user, tariff, account, payment.Order!, payment);
+        await db.SaveChangesAsync();
+
+        var provider = new TrackingPaymentProvider(PaymentProvider.YooKassa, refundStatus: RefundStatus.Succeeded);
+        var orchestrator = CreateOrchestrator(db, provider);
+        Assert.True((await orchestrator.RecheckRefundAsync(refund.Id)).IsSuccess);
+        Assert.True((await orchestrator.RecheckRefundAsync(refund.Id)).IsSuccess);
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(40m, (await db.Payments.SingleAsync()).RefundedAmount);
+        Assert.Equal(1, provider.RefundStatusCalls);
+    }
+
+    [Theory]
+    [InlineData(PaymentProvider.YooKassa)]
+    [InlineData(PaymentProvider.Stripe)]
+    [InlineData(PaymentProvider.PayPal)]
+    public async Task RecheckRefund_Should_Use_Production_Provider_Refund_Endpoint_On_Sqlite(PaymentProvider providerType)
+    {
+        await using var db = CreateDb();
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 12, 20, 0, 0, TimeSpan.Zero));
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(providerType, secret: "provider-secret");
+        account.Mode = PaymentProviderMode.Production;
+        account.ShopId = providerType == PaymentProvider.PayPal ? "paypal-client-id" : "merchant-account";
+        account.ApiBaseUrl = "https://provider.test";
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        payment.ProviderMode = PaymentProviderMode.Production;
+        payment.ProviderPaymentId = "PAYMENT-LOCAL";
+        payment.RawResponse = providerType == PaymentProvider.Stripe ? "{\"payment_intent\":\"PI-LOCAL\"}" : "{}";
+        payment.WebhookPayload = providerType == PaymentProvider.PayPal
+            ? "{\"resource\":{\"id\":\"CAPTURE-LOCAL\",\"status\":\"COMPLETED\"}}"
+            : "{}";
+        var refund = new Refund
+        {
+            PaymentAttemptId = payment.Id,
+            Provider = providerType,
+            ProviderRefundId = "REFUND-1",
+            IdempotencyKey = "refund-production-recheck",
+            Status = RefundStatus.Pending,
+            Amount = 40m,
+            Currency = payment.Currency,
+            Reason = "production recheck"
+        };
+        payment.Refunds.Add(refund);
+        db.AddRange(user, tariff, account, payment.Order!, payment);
+        await db.SaveChangesAsync();
+
+        var handler = new RefundProofHandler(providerType, "valid", payment.Id);
+        var httpFactory = new StaticHttpClientFactory(new HttpClient(handler));
+        var environment = new TestHostEnvironment("Production");
+        IPaymentProvider provider = providerType switch
+        {
+            PaymentProvider.YooKassa => new YooKassaPaymentProvider(httpFactory, accounts, Microsoft.Extensions.Logging.Abstractions.NullLogger<YooKassaPaymentProvider>.Instance, environment),
+            PaymentProvider.Stripe => new StripePaymentProvider(httpFactory, accounts, environment),
+            PaymentProvider.PayPal => new PayPalPaymentProvider(httpFactory, accounts, environment),
+            _ => throw new ArgumentOutOfRangeException(nameof(providerType), providerType, null)
+        };
+        var orchestrator = new PaymentOrchestrator(
+            db,
+            new TestPaymentProviderFactory(provider),
+            Array.Empty<IPaymentWebhookVerifier>(),
+            accounts,
+            null!,
+            clock,
+            new TestRuntimeEnvironment("Production"));
+
+        var result = await orchestrator.RecheckRefundAsync(refund.Id, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(nameof(RefundStatus.Succeeded), result.Value!.Status);
+        db.ChangeTracker.Clear();
+        Assert.Equal(40m, (await db.Payments.SingleAsync()).RefundedAmount);
+        Assert.Equal(RefundStatus.Succeeded, (await db.Refunds.SingleAsync()).Status);
+        var expectedPath = providerType switch
+        {
+            PaymentProvider.YooKassa => "/refunds/REFUND-1",
+            PaymentProvider.Stripe => "/v1/refunds/REFUND-1",
+            PaymentProvider.PayPal => "/v2/payments/refunds/REFUND-1",
+            _ => throw new ArgumentOutOfRangeException(nameof(providerType), providerType, null)
+        };
+        Assert.Contains(handler.Requests, request => request.Method == HttpMethod.Get && request.Path == expectedPath);
+    }
+
+    [Fact]
+    public async Task RecheckRefund_Controller_Should_Write_Redacted_Audit_Record()
+    {
+        await using var db = CreateDb();
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(PaymentProvider.YooKassa, secret: "secret");
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        var refund = new Refund
+        {
+            PaymentAttemptId = payment.Id,
+            Provider = payment.Provider,
+            ProviderRefundId = "provider-refund-audit",
+            IdempotencyKey = "refund-audit",
+            Status = RefundStatus.Pending,
+            Amount = 40m,
+            Currency = payment.Currency,
+            Reason = "secret customer note"
+        };
+        payment.Refunds.Add(refund);
+        db.AddRange(user, tariff, account, payment.Order!, payment);
+        await db.SaveChangesAsync();
+
+        var provider = new TrackingPaymentProvider(PaymentProvider.YooKassa, refundStatus: RefundStatus.Succeeded);
+        var controller = CreateController(db, CreateOrchestrator(db, provider));
+        Assert.IsType<OkObjectResult>(await controller.RecheckRefund(refund.Id, CancellationToken.None));
+
+        var audit = Assert.Single(await db.AuditLogs.AsNoTracking().Where(x => x.Action == "refund.recheck").ToListAsync());
+        Assert.DoesNotContain("secret customer note", audit.BeforeJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("secret customer note", audit.AfterJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("RawResponse", audit.AfterJson, StringComparison.Ordinal);
+    }
+
     private static PaymentOrchestrator CreateOrchestrator(
         ApplicationDbContext db,
         IPaymentProvider provider,
@@ -783,13 +1008,17 @@ public class AdminRefundManagementTests
 
     private sealed class RefundProofHandler(PaymentProvider provider, string proof, Guid paymentAttemptId) : HttpMessageHandler
     {
+        public List<(HttpMethod Method, string Path)> Requests { get; } = [];
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            Requests.Add((request.Method, path));
             var foreign = proof == "foreign-reference";
             var amount = proof == "wrong-amount" ? "39.00" : "40.00";
             var amountMinor = proof == "wrong-amount" ? 3900 : 4000;
             if (provider == PaymentProvider.PayPal
+                && request.Method == HttpMethod.Post
                 && !path.Contains("oauth2/token", StringComparison.OrdinalIgnoreCase)
                 && (!request.Headers.TryGetValues("Prefer", out var preferences)
                     || !preferences.Contains("return=representation", StringComparer.OrdinalIgnoreCase)))
@@ -852,11 +1081,13 @@ public class AdminRefundManagementTests
     private sealed class TrackingPaymentProvider(
         PaymentProvider provider,
         string? statusPaymentId = null,
-        PaymentStatus? status = null) : IPaymentProvider
+        PaymentStatus? status = null,
+        RefundStatus? refundStatus = null) : IPaymentProvider, IPaymentRefundStatusProvider
     {
         public PaymentProvider Provider { get; } = provider;
         public int StatusCalls { get; private set; }
         public int RefundCalls { get; private set; }
+        public int RefundStatusCalls { get; private set; }
         public decimal LastRefundAmount { get; private set; }
 
         public Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken)
@@ -876,6 +1107,21 @@ public class AdminRefundManagementTests
             RefundCalls++;
             LastRefundAmount = amount;
             return Task.FromResult(new PaymentRefundResult($"refund-{payment.Id:N}", RefundStatus.Succeeded, "{}"));
+        }
+
+        public Task<PaymentRefundResult> GetRefundStatusAsync(PaymentAttempt payment, PaymentProviderAccount account, Refund refund, CancellationToken cancellationToken)
+        {
+            RefundStatusCalls++;
+            var nextStatus = refundStatus ?? refund.Status;
+            return Task.FromResult(new PaymentRefundResult(
+                refund.ProviderRefundId,
+                nextStatus,
+                "{}",
+                payment.ProviderPaymentId,
+                refund.Amount,
+                refund.Currency,
+                payment.Id.ToString("N"),
+                nextStatus == RefundStatus.Unknown ? "provider_status_unknown" : null));
         }
     }
 }

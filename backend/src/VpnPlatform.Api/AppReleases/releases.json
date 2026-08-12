@@ -15613,5 +15613,28 @@
         "text": "Roadmap progress is 676/696 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; live refunds, provider cabinets, Telegram/Bot API and SMTP must be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-refund-status-reconciliation",
+    "version": "0.664.0",
+    "releasedAt": "2026-08-12T19:00:00+07:00",
+    "title": "Незавершённый возврат можно безопасно сверить",
+    "summary": "Администратор может получить актуальный статус конкретного возврата YooKassa, Stripe или PayPal без повторного списания и ручного изменения суммы.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Pending и Unknown возвраты больше не блокируют новые операции навсегда: успешный результат применяется один раз, а Failed или Cancelled безопасно снимает блокировку."
+      },
+      {
+        "type": "improved",
+        "text": "В админке появились readiness, причины недоступности и команда «Сверить возврат» с redacted audit; Т-Банк явно помечен как неподдерживаемый для сверки отдельного частичного возврата."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 677/697 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; live refunds, provider cabinets, Telegram/Bot API and SMTP must be confirmed externally."
+      }
+    ]
   }
 ]

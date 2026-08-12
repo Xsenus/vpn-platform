@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-refund-proof-boundary`, версия `0.663.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `676/696` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-refund-status-reconciliation`, версия `0.664.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `677/697` проверяемых пунктов, готовность `97.1%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-12:
 
-- [x] `STATE-001` Backend test suite проходит: `1328/1328`.
+- [x] `STATE-001` Backend test suite проходит: `1342/1342`.
 - [x] `STATE-002` Frontend test suite проходит: `144/144`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2400,6 +2400,10 @@ git diff --check
   - Что сделать: successful refund response должен относиться к исходной provider-транзакции и совпадать с запрошенными amount/currency/internal reference до изменения payment/order; Т-Банк не должен использовать исходный PaymentId как уникальный ID нескольких refund operations.
   - Что сделано: общий orchestrator валидирует source reference против adapter-specific expected reference, amount, currency и payment attempt metadata. YooKassa, Stripe и PayPal требуют полный доступный proof; Т-Банк принимает только terminal refund status и выдаёт детерминированный operation ID. PayPal запрашивает `return=representation`.
   - Доказательство: fail-first `0/7` применял чужой reference или другую сумму; после исправления production adapters + SQLite `14/14`, два последовательных partial refund Т-Банка проходят без unique conflict, backend `1328/1328`, fresh SQLite, EF drift и secret scan `673/0` зелёные. Live refund/provider cabinet evidence остаётся внешней проверкой.
+- [x] `P11-ACC-386` Завершить lifecycle незавершённого возврата ручной сверкой. 2026-08-12.
+  - Что сделать: `New/Pending/Unknown` возврат не должен навсегда блокировать следующий возврат; оператору нужна отдельная read-only сверка конкретного provider refund с идемпотентным применением результата и аудитом.
+  - Что сделано: YooKassa, Stripe и PayPal реализуют GET статуса отдельного возврата; orchestrator сериализует сверку по заказу, проверяет refund ID/source/amount/currency/internal reference и применяет `Succeeded` ровно один раз. `Failed/Cancelled` снимают блокировку без изменения суммы, `Pending` остаётся открытым, неполный proof остаётся `Unknown`. Т-Банк явно не поддерживается, потому что агрегированный `GetState` не доказывает конкретный частичный возврат. Admin API/UI показывают readiness/blockers, выполняют `POST /api/admin/refunds/{id}/recheck` и пишут redacted audit.
+  - Доказательство: fail-first `0/5`; targeted SQLite/provider/controller `52/52`, production adapter GET matrix YooKassa/Stripe/PayPal `3/3`, backend Release `1342/1342`, frontend `144/144`, typecheck/build, desktop/mobile Playwright `2/2`, fresh SQLite, EF drift, dependency audit `0 vulnerabilities`, strict UTF-8 и secret scan `673/0` зелёные. Live provider refund кабинеты и VPS/staging/payment/3x-ui evidence остаются внешней проверкой.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3049,6 +3053,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-12-025` | P0 | Refund reconciliation | `New/Pending/Unknown` возврат блокировал все следующие возвраты навсегда: API, worker и UI не умели получить статус конкретной операции у провайдера. | Исправлено локально | YooKassa/Stripe/PayPal GET reconciliation с полным proof, order gate, idempotent amount apply, admin readiness/UI/audit и SQLite/browser regressions. TBank остаётся явно unsupported без доказательства конкретного partial refund. |
 | `BUG-2026-08-12-024` | P0 | Payment refund proof | YooKassa, Stripe, PayPal и Т-Банк применяли successful refund без связи с исходной provider-транзакцией; первые три также не сверяли сумму/валюту, а повторный partial refund Т-Банка конфликтовал по исходному PaymentId. | Исправлено локально | Production adapter/SQLite matrix `0/7 -> 14/14` отклоняет чужой reference/amount, принимает полный proof и подтверждает два последовательных partial refund. Live provider refunds остаются внешним evidence. |
 | `BUG-2026-08-12-023` | P0 | PayPal capture lifecycle | После `CHECKOUT.ORDER.APPROVED` webhook применял только `WaitingConfirmation` и помечался обработанным, но `/v2/checkout/orders/{id}/capture` не вызывался, поэтому средства не захватывались. | Исправлено локально | Verified approval вызывает idempotent server capture; неопределённость retryable с GET-reconciliation, а сумма/валюта/order/capture proof валидируются fail-closed. Реальный PayPal sandbox smoke остаётся открытым. |
 | `BUG-2026-08-12-022` | P0 | PayPal refund identifier | Resolver принимал `COMPLETED` order `id` до вложенного capture и отправлял refund на `/captures/{orderId}/refund`, который PayPal не может обработать. | Исправлено локально | Вложенный capture имеет приоритет; direct и SQLite stubs требуют точный `/captures/CAPTURE-1/refund`, capture webhook fallback не выполняет order GET. Реальный PayPal refund остаётся внешней проверкой. |

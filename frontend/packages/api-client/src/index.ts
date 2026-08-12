@@ -408,6 +408,9 @@ export type RefundDto = {
   reason: string
   createdAt: string
   refundedAt?: string | null
+  recheckSupported?: boolean
+  canRecheck?: boolean
+  recheckBlockers?: string[]
 }
 
 
@@ -1944,6 +1947,18 @@ function isRefundDto(value: unknown): value is RefundDto {
     && hasString(value, 'reason')
     && hasDateString(value, 'createdAt')
     && hasNullableDateString(value, 'refundedAt')
+    && (value.recheckSupported === undefined || typeof value.recheckSupported === 'boolean')
+    && (value.canRecheck === undefined || typeof value.canRecheck === 'boolean')
+    && (value.recheckBlockers === undefined || (Array.isArray(value.recheckBlockers) && value.recheckBlockers.every((item) => typeof item === 'string' && item.trim().length > 0)))
+}
+
+function isAdminRefundDto(value: unknown): value is RefundDto {
+  return isRefundDto(value)
+    && isRecord(value)
+    && hasBoolean(value, 'recheckSupported')
+    && hasBoolean(value, 'canRecheck')
+    && Array.isArray(value.recheckBlockers)
+    && value.recheckBlockers.every((item) => typeof item === 'string' && item.trim().length > 0)
 }
 
 function isAdminSupportMessageDto(value: unknown): value is SupportMessageDto {
@@ -3525,6 +3540,15 @@ export class ApiClient {
     }, 'object', isRefundDto)
   }
 
+  recheckAdminRefund(token: string, refundId: string): Promise<RefundDto> {
+    return this.request<RefundDto>(`/api/admin/refunds/${refundId}/recheck`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({}),
+      errorMessage: apiFallbackErrorMessage
+    }, 'object', isRefundDto)
+  }
+
   getAdminPaymentProviderAccounts(token: string): Promise<PaymentProviderAccountDto[]> {
     return this.requestArray<PaymentProviderAccountDto>('/api/admin/payment-providers/accounts', { token, errorMessage: apiFallbackErrorMessage }, isPaymentProviderAccountDto, (items) => hasUniqueStringKey(items, 'id'))
   }
@@ -3569,7 +3593,7 @@ export class ApiClient {
   }
 
   getAdminRefunds(token: string): Promise<RefundDto[]> {
-    return this.requestArray<RefundDto>('/api/admin/refunds', { token, errorMessage: apiFallbackErrorMessage }, isRefundDto, (items) => hasUniqueStringKey(items, 'id'))
+    return this.requestArray<RefundDto>('/api/admin/refunds', { token, errorMessage: apiFallbackErrorMessage }, isAdminRefundDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
 

@@ -84,7 +84,7 @@ public static class YooMoneyPaymentStatusMapper
         => !codepro && !unaccepted ? PaymentStatus.Succeeded : PaymentStatus.Pending;
 }
 
-public sealed class YooKassaPaymentProvider : IPaymentProvider, IPaymentWebhookVerifier, IPaymentStatusMapper
+public sealed class YooKassaPaymentProvider : IPaymentProvider, IPaymentWebhookVerifier, IPaymentStatusMapper, IPaymentRefundStatusProvider
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { WriteIndented = false };
     private static readonly string[] DefaultWebhookCidrs =
@@ -337,14 +337,46 @@ public sealed class YooKassaPaymentProvider : IPaymentProvider, IPaymentWebhookV
             throw new InvalidOperationException($"YooKassa refund failed with HTTP {(int)response.StatusCode}.");
         }
 
-        using var document = JsonDocument.Parse(rawResponse);
+        return ParseRefundResult(rawResponse);
+    }
+
+    public async Task<PaymentRefundResult> GetRefundStatusAsync(
+        PaymentAttempt payment,
+        PaymentProviderAccount account,
+        Refund refund,
+        CancellationToken cancellationToken)
+    {
+        if (IsLocalSandboxEnvironment() && account.Mode == PaymentProviderMode.Sandbox && IsLocalSandboxWithoutCredentials(account))
+        {
+            return new PaymentRefundResult(refund.ProviderRefundId, refund.Status, refund.RawResponse, payment.ProviderPaymentId, refund.Amount, refund.Currency);
+        }
+
+        var secretKey = _accounts.GetSecretKey(account);
+        using var request = new HttpRequestMessage(HttpMethod.Get, BuildUri(account, $"refunds/{WebUtility.UrlEncode(refund.ProviderRefundId)}"));
+        request.Headers.Authorization = BuildBasicAuth(account.ShopId, secretKey);
+        using var response = await SendAsync(request, cancellationToken);
+        var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            return new PaymentRefundResult(refund.ProviderRefundId, RefundStatus.Unknown, raw, StatusReason: $"http_{(int)response.StatusCode}");
+        }
+
+        return ParseRefundResult(raw);
+    }
+
+    public PaymentStatus MapPaymentStatus(string providerStatus, bool paid) => YooKassaPaymentStatusMapper.MapPaymentStatus(providerStatus, paid);
+    public RefundStatus MapRefundStatus(string providerStatus) => YooKassaPaymentStatusMapper.MapRefundStatus(providerStatus);
+
+    private PaymentRefundResult ParseRefundResult(string raw)
+    {
+        using var document = JsonDocument.Parse(raw);
         var root = document.RootElement;
-        var refundId = root.GetProperty("id").GetString() ?? string.Empty;
+        var refundId = root.TryGetProperty("id", out var idElement) ? idElement.GetString() ?? string.Empty : string.Empty;
         var statusText = root.TryGetProperty("status", out var statusElement) ? statusElement.GetString() ?? string.Empty : string.Empty;
         var providerPaymentId = root.TryGetProperty("payment_id", out var paymentIdElement) ? paymentIdElement.GetString() : null;
         var refundAmount = TryReadAmount(root, out var currency);
         var status = MapRefundStatus(statusText);
-        var statusReason = status == RefundStatus.Succeeded
+        var statusReason = status != RefundStatus.Unknown
             && (string.IsNullOrWhiteSpace(refundId) || string.IsNullOrWhiteSpace(providerPaymentId) || !refundAmount.HasValue || string.IsNullOrWhiteSpace(currency))
                 ? "yookassa_refund_proof_incomplete"
                 : statusText;
@@ -352,11 +384,9 @@ public sealed class YooKassaPaymentProvider : IPaymentProvider, IPaymentWebhookV
         {
             status = RefundStatus.Unknown;
         }
-        return new PaymentRefundResult(refundId, status, rawResponse, providerPaymentId, refundAmount, currency, StatusReason: statusReason);
-    }
 
-    public PaymentStatus MapPaymentStatus(string providerStatus, bool paid) => YooKassaPaymentStatusMapper.MapPaymentStatus(providerStatus, paid);
-    public RefundStatus MapRefundStatus(string providerStatus) => YooKassaPaymentStatusMapper.MapRefundStatus(providerStatus);
+        return new PaymentRefundResult(refundId, status, raw, providerPaymentId, refundAmount, currency, StatusReason: statusReason);
+    }
 
     private async Task<PaymentStatusResult> RecheckPaymentStatusAsync(string paymentId, PaymentProviderAccount account, CancellationToken cancellationToken)
     {
