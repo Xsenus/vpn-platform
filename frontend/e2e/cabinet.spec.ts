@@ -746,6 +746,7 @@ async function mockCabinetApi(page: Page) {
         amount: renewalOrder.amount,
         currency: renewalOrder.currency,
         status: renewalOrder.status,
+        paymentProvider: renewalOrder.paymentProvider,
         expiresAt: renewalOrder.expiresAt,
         linkedSubscriptionId: renewalOrder.linkedSubscriptionId
       })
@@ -1387,6 +1388,24 @@ test('cabinet locks the selected payment provider while retry payment is pending
   api.releaseRetryPaymentRequest()
   await expect(page.getByRole('heading', { name: 'Последняя повторная оплата' })).toBeVisible()
   await expect(providerSelect).toBeEnabled()
+})
+
+test('cabinet retries an existing order with its provider snapshot instead of the renewal selection', async ({ page }) => {
+  const api = await mockCabinetApi(page)
+  api.useMultiplePaymentProviders()
+  await seedCabinetSession(page, 'access-token-provider-snapshot', 'refresh-token-provider-snapshot')
+
+  await page.goto('/')
+  const providerSelect = page.getByLabel('Способ оплаты для продления')
+  await providerSelect.selectOption('Stripe')
+  await expect(providerSelect).toHaveValue('Stripe')
+
+  const retryableOrderCard = page.locator('.payment-record').filter({ hasText: 'Повторная оплата' })
+  await retryableOrderCard.getByRole('button', { name: 'Повторить оплату' }).click()
+
+  await expect.poll(() => api.getRequestCount('/api/me/orders/order-retryable/payments/YooKassa/init', 'POST')).toBe(1)
+  expect(api.getRequestCount('/api/me/orders/order-retryable/payments/Stripe/init', 'POST')).toBe(0)
+  await expect(providerSelect).toHaveValue('Stripe')
 })
 
 test('cabinet disables renewal payment retry after providers become unavailable', async ({ page }) => {

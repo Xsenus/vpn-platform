@@ -27,7 +27,7 @@ import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, ExternalLinkAction
 import { AppVersionGate } from './AppVersion'
 import { buildCabinetSummary, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getEffectiveSubscriptionStatus, getNextCabinetAccessExpiryDelay, getSubscriptionAccessExpiry, getSubscriptionRenewalAvailability, isCurrentSubscription } from './cabinet-dashboard'
 import { cabinetSessionEndedMessage, isCabinetAccessTokenExpired, isCabinetSessionRejected } from './cabinet-session'
-import { buildOrderExportText, canOpenOrderPaymentConfirmation, formatPaymentMoney, getLatestPaymentForOrder, getNextOrderPaymentExpiryDelay, getOrderPaymentAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
+import { buildOrderExportText, canOpenOrderPaymentConfirmation, formatPaymentMoney, getLatestPaymentForOrder, getNextOrderPaymentExpiryDelay, getOrderPaymentAvailability, getOrderPaymentProviderAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
 import { resolveCabinetPublicWebUrl } from './cabinet-public-url'
 import { countOpenSupportConversations, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from './cabinet-support'
 
@@ -218,6 +218,9 @@ export function App() {
   const paymentNow = cabinetNow
   const renewalPaymentAvailability = renewalState
     ? getOrderPaymentAvailability(renewalState.order, paymentNow)
+    : null
+  const renewalProviderAvailability = renewalState
+    ? getOrderPaymentProviderAvailability(renewalState.order, paymentProviders)
     : null
   const renewalPaymentAttempt = renewalState?.payment
     ? payments.find((item) => item.orderId === renewalState.order.id && item.providerPaymentId === renewalState.payment?.paymentId) ?? null
@@ -996,13 +999,14 @@ export function App() {
       setError(paymentAvailability.reason ?? 'Этот заказ нельзя оплатить повторно. Создайте новый заказ.')
       return
     }
-    if (!provider) {
-      setError('Нет доступных платежных провайдеров для повторной оплаты.')
+    const providerAvailability = getOrderPaymentProviderAvailability(order, paymentProviders)
+    if (!providerAvailability.canInitialize) {
+      setError(providerAvailability.reason ?? 'Способ оплаты этого заказа сейчас недоступен.')
       return
     }
-    const selectedProvider = provider
+    const orderProvider = providerAvailability.provider
     await runSessionAction(`payment-retry-${order.id}`, 'Не удалось повторить оплату', async (action) => {
-      const payment = await api.initMyPayment(token, order.id, selectedProvider, window.location.origin)
+      const payment = await api.initMyPayment(token, order.id, orderProvider, window.location.origin)
       if (!action.isCurrent()) return
       setRetryPaymentState({ order, payment })
       if (!await action.reloadAll()) return
@@ -1037,7 +1041,11 @@ export function App() {
         createdOrder = order
         setOrders((current) => [order, ...current.filter((item) => item.id !== order.id)])
         setRenewalState({ subscriptionId: subscription.id, order, payment: null })
-        const payment = await api.initMyPayment(token, order.id, selectedProvider, window.location.origin)
+        const providerAvailability = getOrderPaymentProviderAvailability(order, paymentProviders)
+        if (!providerAvailability.canInitialize) {
+          throw new Error(providerAvailability.reason ?? 'Способ оплаты созданного заказа сейчас недоступен.')
+        }
+        const payment = await api.initMyPayment(token, order.id, providerAvailability.provider, window.location.origin)
         if (!action.isCurrent()) return
         setRenewalState({ subscriptionId: subscription.id, order, payment })
         if (!await action.reloadAll()) return
@@ -1056,7 +1064,7 @@ export function App() {
   }
 
   const handleRetryRenewalPayment = async () => {
-    if (!token || !provider || !renewalState || renewalPaymentLinkAvailable) return
+    if (!token || !renewalState || renewalPaymentLinkAvailable) return
     const paymentAvailability = getOrderPaymentAvailability(renewalState.order)
     if (!paymentAvailability.canRetry) {
       setError(paymentAvailability.reason ?? 'Этот заказ нельзя оплатить повторно. Создайте новый заказ.')
@@ -1064,10 +1072,15 @@ export function App() {
     }
 
     const renewal = renewalState
-    const selectedProvider = provider
+    const providerAvailability = getOrderPaymentProviderAvailability(renewal.order, paymentProviders)
+    if (!providerAvailability.canInitialize) {
+      setError(providerAvailability.reason ?? 'Способ оплаты этого заказа сейчас недоступен.')
+      return
+    }
+    const orderProvider = providerAvailability.provider
     await runSessionAction(`renewal-payment-${renewal.order.id}`, 'Не удалось подготовить оплату продления', async (action) => {
       try {
-        const payment = await api.initMyPayment(token, renewal.order.id, selectedProvider, window.location.origin)
+        const payment = await api.initMyPayment(token, renewal.order.id, orderProvider, window.location.origin)
         if (!action.isCurrent()) return
         setRenewalState((current) => current && current.order.id === renewal.order.id
         ? { ...current, payment }
@@ -1389,7 +1402,13 @@ export function App() {
               ) : renewalPaymentAvailability?.canRetry ? (
                 <>
                   <p className="safe-note">Заказ сохранён, но ссылка оплаты ещё не подготовлена. Повторная команда использует этот же заказ.</p>
-                  <PrimaryButton type="button" onClick={handleRetryRenewalPayment} disabled={busy || !provider} aria-busy={busy}>
+                  <PrimaryButton
+                    type="button"
+                    onClick={handleRetryRenewalPayment}
+                    disabled={busy || !renewalProviderAvailability?.canInitialize}
+                    title={renewalProviderAvailability?.reason ?? undefined}
+                    aria-busy={busy}
+                  >
                     Повторить подготовку оплаты
                   </PrimaryButton>
                 </>
@@ -1524,6 +1543,7 @@ export function App() {
               const orderPayments = paymentsByOrderId.get(order.id) ?? []
               const latestPayment = getLatestPaymentForOrder(order, orderPayments)
               const paymentAvailability = getOrderPaymentAvailability(order, paymentNow)
+              const providerAvailability = getOrderPaymentProviderAvailability(order, paymentProviders)
               const exportText = buildOrderExportText(order, orderPayments)
               const exportHref = `data:application/json;charset=utf-8,${encodeURIComponent(exportText)}`
 
@@ -1540,7 +1560,7 @@ export function App() {
                   <dl className="payment-meta-grid">
                     <div><dt>Тип</dt><dd>{order.type ?? '—'}</dd></div>
                     <div><dt>Канал</dt><dd>{order.channel ?? '—'}</dd></div>
-                    <div><dt>Провайдер</dt><dd>{(order.paymentProvider ?? provider) || '—'}</dd></div>
+                    <div><dt>Провайдер</dt><dd>{order.paymentProvider}</dd></div>
                     <div><dt>Истекает</dt><dd>{new Date(order.expiresAt).toLocaleString()}</dd></div>
                     <div><dt>Оплачен</dt><dd>{order.paidAt ? new Date(order.paidAt).toLocaleString() : '—'}</dd></div>
                     <div><dt>Попыток оплаты</dt><dd>{order.paymentAttemptsCount ?? orderPayments.length}</dd></div>
@@ -1554,7 +1574,12 @@ export function App() {
                   )}
                   <div className="toolbar compact">
                     {paymentAvailability.canRetry && (
-                      <PrimaryButton disabled={busy || !provider} aria-busy={busy} onClick={() => void handleRetryOrderPayment(order)}>Повторить оплату</PrimaryButton>
+                      <PrimaryButton
+                        disabled={busy || !providerAvailability.canInitialize}
+                        title={providerAvailability.reason ?? undefined}
+                        aria-busy={busy}
+                        onClick={() => void handleRetryOrderPayment(order)}
+                      >Повторить оплату</PrimaryButton>
                     )}
                     {paymentAvailability.shouldCreateNewOrder && <a className="button" href={`${publicWebUrl}/tariffs`}>Создать новый заказ</a>}
                     <CopyButton value={exportText} label="Скопировать данные" />

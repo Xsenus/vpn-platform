@@ -9,6 +9,7 @@ import {
   getLatestPaymentForOrder,
   getNextOrderPaymentExpiryDelay,
   getOrderPaymentAvailability,
+  getOrderPaymentProviderAvailability,
   getOrderStatusMessage,
   getPaymentStatusMessage,
   getPaymentStatusTone,
@@ -26,7 +27,7 @@ function order(overrides: Partial<OrderDto> = {}): OrderDto {
     status: 'PendingPayment',
     type: 'New',
     channel: 'Web',
-    paymentProvider: 'yookassa',
+    paymentProvider: 'YooKassa',
     expiresAt: '2026-05-28T00:00:00Z',
     createdAt: '2026-05-27T10:00:00Z',
     updatedAt: '2026-05-27T10:00:00Z',
@@ -72,6 +73,22 @@ test('cabinet payments treats a stale pending order as expired and offers a new 
     isExpired: true,
     reason: 'Срок оплаты заказа истёк. Создайте новый заказ с актуальным сроком оплаты.'
   })
+})
+
+test('cabinet payments initializes an existing order only with its provider snapshot', () => {
+  assert.deepEqual(getOrderPaymentProviderAvailability(order(), [
+    { provider: 'YooKassa' },
+    { provider: 'Stripe' }
+  ]), {
+    canInitialize: true,
+    provider: 'YooKassa',
+    reason: null
+  })
+
+  const unavailable = getOrderPaymentProviderAvailability(order(), [{ provider: 'Stripe' }])
+  assert.equal(unavailable.canInitialize, false)
+  assert.equal(unavailable.provider, 'YooKassa')
+  assert.match(unavailable.reason ?? '', /YooKassa.*недоступен/)
 })
 
 test('cabinet payments returns human messages and tones for important statuses', () => {

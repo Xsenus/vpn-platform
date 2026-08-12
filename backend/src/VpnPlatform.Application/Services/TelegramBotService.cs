@@ -1397,8 +1397,9 @@ public class TelegramBotService
             return new RouteResult("Некорректный способ оплаты. Выберите вариант из списка.", chatId, LinkedMenuReplyMarkupJson());
         }
 
-        var ownsOrder = await _db.Orders.AnyAsync(x => x.Id == orderId && x.UserId == account.UserId.Value, cancellationToken);
-        if (!ownsOrder)
+        var orderSnapshot = await _db.Orders.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == orderId && x.UserId == account.UserId.Value, cancellationToken);
+        if (orderSnapshot is null)
         {
             return new RouteResult("Заказ не найден.", chatId, LinkedMenuReplyMarkupJson());
         }
@@ -1406,6 +1407,20 @@ public class TelegramBotService
         if (!await IsPaymentProviderAvailableForBotAsync(provider, cancellationToken))
         {
             return new RouteResult("Этот способ оплаты сейчас отключен или не настроен. Я покажу только доступные варианты.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
+        }
+
+        if (orderSnapshot.PaymentProvider != provider && _orderService is null)
+        {
+            return new RouteResult("OrderService недоступен в текущем окружении.", chatId, LinkedMenuReplyMarkupJson());
+        }
+
+        if (orderSnapshot.PaymentProvider != provider)
+        {
+            var providerSelection = await _orderService!.SelectPaymentProviderAsync(orderId, account.UserId.Value, provider, cancellationToken);
+            if (!providerSelection.IsSuccess)
+            {
+                return new RouteResult(providerSelection.Error ?? "Не удалось закрепить способ оплаты за заказом.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
+            }
         }
 
         if (provider == PaymentProvider.TelegramStars)

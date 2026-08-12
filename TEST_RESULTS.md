@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: payment init order provider snapshot
+
+Scope:
+- Direct payment init не должен менять провайдера уже созданного заказа или принимать пустой provider payment ID.
+- Public, cabinet и Telegram должны использовать один явный lifecycle выбора: web snapshot задаётся при создании, Telegram может закрепить выбор только до первой попытки.
+
+Results:
+- Roadmap progress: `668/688` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-payment-init-order-provider-snapshot`, version `0.655.0`.
+- Reproduction before fix: SQLite fail-first `0/2`; mismatched provider создавал успешную попытку и переписывал order snapshot, пустой provider ID считался успешным. Полный backend дополнительно выявил штатный Telegram mismatch для RoboKassa/YooMoney.
+- After fix: orchestrator проверяет snapshot до account/factory/provider; command DTO требует `paymentProvider`; public/cabinet используют ответ заказа; Telegram меняет выбор только для live pending-заказа без попыток, затем snapshot блокируется.
+- Targeted Order/Telegram/init: `63/63`; payment/checkout browser regression: `26/26`; backend full suite: `1283/1283`; frontend: `142/142`; Playwright: `226/226` за `12.3 min`; Release build, typecheck/build, EF drift, fresh SQLite, dependency audit и strict UTF-8 зелёные; secret scan `673/0`.
+
 ## Check 2026-08-12: payment manual recheck account readiness preflight
 
 Scope:

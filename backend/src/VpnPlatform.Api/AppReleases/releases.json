@@ -15406,5 +15406,28 @@
         "text": "Roadmap progress is 667/687 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-payment-init-order-provider-snapshot",
+    "version": "0.655.0",
+    "releasedAt": "2026-08-12T12:25:00+07:00",
+    "title": "Оплата использует провайдера из заказа",
+    "summary": "Payment init, public, кабинет и Telegram согласованы с явным снимком провайдера заказа.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Direct init отклоняет provider mismatch и пустой provider payment ID до изменения статуса или раскрытия внешней ссылки."
+      },
+      {
+        "type": "improved",
+        "text": "Public и кабинет повторяют оплату по Order.PaymentProvider; Telegram может закрепить выбор только до первой payment attempt."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 668/688 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

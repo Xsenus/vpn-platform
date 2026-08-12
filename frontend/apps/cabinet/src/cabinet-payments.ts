@@ -1,4 +1,4 @@
-import type { OrderDto, PaymentAttemptDto } from '@vpn-platform/api-client'
+import type { OrderDto, PaymentAttemptDto, PaymentProvider, PublicPaymentProviderDto } from '@vpn-platform/api-client'
 
 export type PaymentStatusTone = 'pending' | 'success' | 'failed' | 'neutral'
 
@@ -32,6 +32,18 @@ export function getOrderPaymentAvailability(order: Pick<OrderDto, 'status' | 'ex
     shouldCreateNewOrder: order.status === 'Cancelled' || order.status === 'Canceled',
     isExpired: false,
     reason: null
+  }
+}
+
+export function getOrderPaymentProviderAvailability(
+  order: Pick<OrderDto, 'paymentProvider'>,
+  providers: ReadonlyArray<Pick<PublicPaymentProviderDto, 'provider'>>
+): { canInitialize: boolean; provider: PaymentProvider; reason: string | null } {
+  const canInitialize = providers.some((item) => item.provider === order.paymentProvider)
+  return {
+    canInitialize,
+    provider: order.paymentProvider,
+    reason: canInitialize ? null : `Способ оплаты ${order.paymentProvider} для этого заказа сейчас недоступен. Создайте новый заказ или повторите позже.`
   }
 }
 

@@ -1015,6 +1015,7 @@ test('ApiClient.createMyOrder sends auth header and payload', async () => {
       amount: 490,
       currency: 'RUB',
       status: 'PendingPayment',
+      paymentProvider: 'YooKassa',
       expiresAt: timestamp,
       linkedSubscriptionId: null
     }), {
@@ -1348,7 +1349,7 @@ test('ApiClient.claimCheckoutSession binds session through authenticated endpoin
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify({ id: 'order-1', userId: 'user-1', tariffId: 'tariff-1', amount: 490, currency: 'RUB', status: 'PendingPayment', expiresAt: new Date().toISOString(), linkedSubscriptionId: null }), {
+    return new Response(JSON.stringify({ id: 'order-1', userId: 'user-1', tariffId: 'tariff-1', amount: 490, currency: 'RUB', status: 'PendingPayment', paymentProvider: 'YooKassa', expiresAt: new Date().toISOString(), linkedSubscriptionId: null }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })

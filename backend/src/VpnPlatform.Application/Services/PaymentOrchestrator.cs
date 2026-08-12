@@ -100,6 +100,11 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             return Result<PaymentInitResult>.Failure("Order must be bound to a user before payment initialization.");
         }
 
+        if (currentOrder.PaymentProvider != command.Provider)
+        {
+            return Result<PaymentInitResult>.Failure("Payment provider does not match the order payment provider snapshot.");
+        }
+
         var accountResult = await _providerAccounts.GetWebCheckoutAccountEntityAsync(command.Provider, cancellationToken);
         if (!accountResult.IsSuccess || accountResult.Value is null)
         {
@@ -226,6 +231,18 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             return Result<PaymentInitResult>.Failure(ex.Message);
         }
 
+        if (string.IsNullOrWhiteSpace(init.PaymentId))
+        {
+            payment.RawResponse = init.RawResponse;
+            payment.ConfirmationUrl = string.Empty;
+            payment.StatusReason = "Payment provider returned an empty payment ID.";
+            payment.UpdatedAt = now;
+            await TrySavePaymentStateAsync();
+            return Result<PaymentInitResult>.Failure("Payment provider returned an empty payment ID; no external link was exposed.");
+        }
+
+        init = init with { PaymentId = init.PaymentId.Trim() };
+
         if (!TryNormalizeHttpUrl(init.RedirectUrl, out var redirectUrl))
         {
             payment.ProviderPaymentId = string.IsNullOrWhiteSpace(init.PaymentId) ? payment.ProviderPaymentId : init.PaymentId.Trim();
@@ -248,7 +265,6 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         payment.PaymentProviderAccountId = account.Id;
         RestoreTrackedOrder(order, currentOrder);
         StatusStateMachine.SetOrderStatus(order, OrderStatus.PendingPayment, now);
-        order.PaymentProvider = command.Provider;
 
         try
         {

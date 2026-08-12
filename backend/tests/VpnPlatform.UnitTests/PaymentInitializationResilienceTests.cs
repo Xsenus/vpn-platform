@@ -228,6 +228,46 @@ public class PaymentInitializationResilienceTests
         Assert.Contains("safety check", payment.StatusReason, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Provider_Different_From_Order_Snapshot_Should_Be_Rejected_Before_Account_Or_Provider_Call()
+    {
+        await using var fixture = await PaymentFixture.CreateAsync();
+        await fixture.AddCheckoutAccountAsync(PaymentProvider.Stripe);
+        var provider = new TrackingPaymentProvider();
+        var orchestrator = fixture.CreateOrchestrator(provider);
+
+        var result = await orchestrator.InitPaymentAsync(
+            new PaymentInitCommand(fixture.OrderId, PaymentProvider.Stripe, "https://example.test/return"),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("does not match", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, provider.InitCalls);
+        await using var verificationDb = fixture.CreateVerificationContext();
+        Assert.Empty(await verificationDb.Payments.ToListAsync());
+        Assert.Equal(PaymentProvider.YooKassa, (await verificationDb.Orders.SingleAsync(x => x.Id == fixture.OrderId)).PaymentProvider);
+    }
+
+    [Fact]
+    public async Task Empty_Provider_Payment_Id_Should_Keep_Reservation_And_Fail_Closed()
+    {
+        await using var fixture = await PaymentFixture.CreateAsync();
+        var provider = new TrackingPaymentProvider(paymentId: "   ");
+        var orchestrator = fixture.CreateOrchestrator(provider);
+
+        var result = await orchestrator.InitPaymentAsync(fixture.Command, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("payment ID", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, provider.InitCalls);
+        await using var verificationDb = fixture.CreateVerificationContext();
+        var payment = await verificationDb.Payments.SingleAsync();
+        Assert.Equal(PaymentStatus.New, payment.Status);
+        Assert.StartsWith("local_", payment.ProviderPaymentId, StringComparison.Ordinal);
+        Assert.Empty(payment.ConfirmationUrl);
+        Assert.Contains("payment ID", payment.StatusReason, StringComparison.OrdinalIgnoreCase);
+    }
+
     private sealed class PaymentFixture : IAsyncDisposable
     {
         private readonly SqliteConnection _connection;
@@ -269,6 +309,24 @@ public class PaymentInitializationResilienceTests
 
         public ApplicationDbContext CreateVerificationContext() => new(_options);
 
+        public async Task AddCheckoutAccountAsync(PaymentProvider provider)
+        {
+            Db.PaymentProviderAccounts.Add(new PaymentProviderAccount
+            {
+                Id = Guid.NewGuid(),
+                Provider = provider,
+                Mode = PaymentProviderMode.Sandbox,
+                Name = $"init-{provider}-{Guid.NewGuid():N}",
+                PublicName = provider.ToString(),
+                IsEnabled = true,
+                IsDefault = true,
+                ShopId = "shop",
+                SecretKeyProtected = "secret",
+                ReturnUrl = "https://example.test/return"
+            });
+            await Db.SaveChangesAsync();
+        }
+
         public async ValueTask DisposeAsync()
         {
             await Db.DisposeAsync();
@@ -307,11 +365,11 @@ public class PaymentInitializationResilienceTests
         }
     }
 
-    private sealed class TrackingPaymentProvider(Action? beforeReturn = null, string? redirectUrl = null) : IPaymentProvider
+    private sealed class TrackingPaymentProvider(Action? beforeReturn = null, string? redirectUrl = null, string? paymentId = null) : IPaymentProvider
     {
         public PaymentProvider Provider => PaymentProvider.YooKassa;
         public int InitCalls { get; private set; }
-        public string PaymentId { get; } = $"provider-{Guid.NewGuid():N}";
+        public string PaymentId { get; } = paymentId ?? $"provider-{Guid.NewGuid():N}";
         public string RedirectUrl { get; } = redirectUrl ?? "https://provider.example.test/checkout";
 
         public Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken)

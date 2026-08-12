@@ -1063,7 +1063,7 @@ function AccountPage({
                 ? (pendingCheckoutOrder ? 'Готовим оплату' : 'Привязываем покупку')
                 : pendingCheckoutOrderAvailability?.title ?? pendingCheckoutSessionAvailability?.title ?? 'Покупка ожидает привязки'}</h3>
               <p>Тариф: {pendingCheckout.tariffName}</p>
-              <p>Способ оплаты: {pendingCheckout.provider}</p>
+              <p>Способ оплаты: {pendingCheckoutOrder?.paymentProvider ?? pendingCheckout.provider}</p>
               {pendingCheckoutOrder && <p>ID заказа: {pendingCheckoutOrder.id}</p>}
               {claimBusy
                 ? <LoadingBlock label={pendingCheckoutOrder ? 'Повторно готовим ссылку оплаты...' : 'Создаём заказ и готовим оплату...'} />
@@ -1456,9 +1456,9 @@ export function App() {
           setCheckoutError('')
           return
         }
-        const payment = await api.initMyPayment(token, order.id, pendingCheckout.provider, `${window.location.origin}/account`)
+        const payment = await api.initMyPayment(token, order.id, order.paymentProvider, `${window.location.origin}/account`)
         if (requestId !== checkoutClaimRequestIdRef.current) return
-        const completed = { tariffName: pendingCheckout.tariffName, provider: pendingCheckout.provider, order, payment }
+        const completed = { tariffName: pendingCheckout.tariffName, provider: order.paymentProvider, order, payment }
         setLastCheckout(completed)
         setPendingCheckout(null)
         setPendingCheckoutOrder(null)

@@ -131,6 +131,8 @@ async function mockPublicApi(page: Page) {
   let expiredCheckoutOrder = false
   let expiringCheckoutOrder = false
   let claimedCheckoutOrderStatus = 'PendingPayment'
+  let claimedCheckoutPaymentProvider = 'YooKassa'
+  let lastPaymentInitProvider = ''
   let unsafePaymentLink = false
   let invalidCheckoutResponse = false
   let invalidAuthResponse = false
@@ -406,6 +408,7 @@ async function mockPublicApi(page: Page) {
       amount: 299,
       currency: 'RUB',
       status: claimedCheckoutOrderStatus,
+      paymentProvider: claimedCheckoutPaymentProvider,
       expiresAt: expiredCheckoutOrder
         ? '2026-06-12T00:00:00Z'
         : expiringCheckoutOrder
@@ -415,8 +418,9 @@ async function mockPublicApi(page: Page) {
     })
   })
 
-  await page.route('**/api/me/orders/public-order/payments/YooKassa/init', async (route) => {
+  await page.route('**/api/me/orders/public-order/payments/*/init', async (route) => {
     paymentInitRequestCount += 1
+    lastPaymentInitProvider = new URL(route.request().url()).pathname.split('/').at(-2) ?? ''
     if (paymentInitDelayMs > 0) {
       const delay = paymentInitDelayMs
       paymentInitDelayMs = 0
@@ -476,6 +480,8 @@ async function mockPublicApi(page: Page) {
     returnExpiredCheckoutOrder: () => { expiredCheckoutOrder = true },
     returnExpiringCheckoutOrder: () => { expiringCheckoutOrder = true },
     returnClaimedCheckoutOrderStatus: (status: string) => { claimedCheckoutOrderStatus = status },
+    returnClaimedCheckoutPaymentProvider: (provider: string) => { claimedCheckoutPaymentProvider = provider },
+    getLastPaymentInitProvider: () => lastPaymentInitProvider,
     delayNextPaymentInit: (delayMs: number) => { paymentInitDelayMs = delayMs },
     delayNextForgotPassword: () => { delayNextForgotPasswordRequest = true },
     releaseForgotPassword: () => { releaseDelayedForgotPassword?.() },
@@ -944,6 +950,28 @@ test('authenticated public checkout owns one claim and payment initialization', 
   await expect(page.getByRole('link', { name: 'Открыть оплату в новой вкладке' })).toBeVisible()
   await expect.poll(api.getCheckoutRequestCounts).toEqual({ checkout: 1, claim: 1, paymentInit: 2 })
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-pending-checkout'))).toBeNull()
+})
+
+test('public initializes a claimed order with its provider snapshot instead of persisted checkout selection', async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('vpn-platform-public-token', 'public-access-token')
+    sessionStorage.setItem('vpn-platform-public-refresh-token', 'public-refresh-token')
+    sessionStorage.setItem('vpn-platform-pending-checkout', JSON.stringify({
+      token: 'public_checkout_token_12345678901234567890',
+      tariffName: 'Start 30 дней',
+      provider: 'Stripe',
+      expiresAt: '2099-06-14T00:00:00Z'
+    }))
+  })
+  const api = await mockPublicApi(page)
+  api.returnClaimedCheckoutPaymentProvider('YooKassa')
+
+  await page.goto('/account')
+
+  await expect(page.getByRole('heading', { name: 'Последняя покупка' })).toBeVisible()
+  await expect(page.getByText('Способ оплаты: YooKassa')).toBeVisible()
+  await expect.poll(api.getCheckoutRequestCounts).toEqual({ checkout: 0, claim: 1, paymentInit: 1 })
+  expect(api.getLastPaymentInitProvider()).toBe('YooKassa')
 })
 
 test('public removes the payment link when the completed checkout order expires without a refresh', async ({ page }) => {

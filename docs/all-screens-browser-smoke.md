@@ -97,4 +97,4 @@ PNG создаются только при явном флаге внутри `f
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-12-payment-recheck-account-readiness-preflight`, версия `0.654.0`; admin orders/payments DTO и UI показывают фактическую recheck readiness, полный browser inventory проходит `222/222` за `13.2 min` без failed/flaky/skipped.
+- Latest "Что нового": `2026-08-12-payment-init-order-provider-snapshot`, версия `0.655.0`; public/cabinet используют provider snapshot заказа, а полный browser inventory проходит `226/226` за `12.3 min` без failed/flaky/skipped.

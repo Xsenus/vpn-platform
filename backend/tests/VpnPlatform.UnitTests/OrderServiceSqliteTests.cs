@@ -260,6 +260,73 @@ public class OrderServiceSqliteTests
     }
 
     [Fact]
+    public async Task SelectPaymentProviderAsync_Should_Lock_Snapshot_After_First_Attempt()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 12, 5, 0, 0, TimeSpan.Zero);
+        var userId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        db.Users.Add(new User { Id = userId, Email = "provider-snapshot@test.local", DisplayName = "Provider snapshot", PasswordHash = "hash" });
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Snapshot", Slug = "provider-snapshot", DurationDays = 30, Price = 100, Currency = "RUB", IsActive = true });
+        await db.SaveChangesAsync();
+        var service = new OrderService(db, new FixedClock(now));
+        var created = await service.CreateOrderAsync(new CreateOrderCommand(userId, tariffId, OrderType.NewSubscription, ChannelType.Telegram, PaymentProvider.YooKassa, null, false));
+        Assert.True(created.IsSuccess, created.Error);
+
+        var selected = await service.SelectPaymentProviderAsync(created.Value!.Id, userId, PaymentProvider.Stripe);
+        Assert.True(selected.IsSuccess, selected.Error);
+        Assert.Equal(PaymentProvider.Stripe, selected.Value!.PaymentProvider);
+
+        db.Payments.Add(new PaymentAttempt
+        {
+            OrderId = created.Value.Id,
+            Provider = PaymentProvider.Stripe,
+            ProviderPaymentId = "provider-locked",
+            IdempotencyKey = "provider-locked",
+            Amount = 100,
+            Currency = "RUB",
+            Status = PaymentStatus.New,
+            RawRequest = "{}",
+            RawResponse = "{}"
+        });
+        await db.SaveChangesAsync();
+
+        var changed = await service.SelectPaymentProviderAsync(created.Value.Id, userId, PaymentProvider.YooKassa);
+        Assert.False(changed.IsSuccess);
+        Assert.Contains("locked", changed.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(PaymentProvider.Stripe, (await db.Orders.SingleAsync(x => x.Id == created.Value.Id)).PaymentProvider);
+    }
+
+    [Fact]
+    public async Task SelectPaymentProviderAsync_Should_Not_Change_Web_Order_Snapshot()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 12, 5, 0, 0, TimeSpan.Zero);
+        var userId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        db.Users.Add(new User { Id = userId, Email = "web-provider-snapshot@test.local", DisplayName = "Web snapshot", PasswordHash = "hash" });
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Web snapshot", Slug = "web-provider-snapshot", DurationDays = 30, Price = 100, Currency = "RUB", IsActive = true });
+        await db.SaveChangesAsync();
+        var service = new OrderService(db, new FixedClock(now));
+        var created = await service.CreateOrderAsync(new CreateOrderCommand(userId, tariffId, OrderType.NewSubscription, ChannelType.Web, PaymentProvider.YooKassa, null, false));
+        Assert.True(created.IsSuccess, created.Error);
+
+        var changed = await service.SelectPaymentProviderAsync(created.Value!.Id, userId, PaymentProvider.Stripe);
+
+        Assert.False(changed.IsSuccess);
+        Assert.Contains("Telegram", changed.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(PaymentProvider.YooKassa, (await db.Orders.SingleAsync(x => x.Id == created.Value.Id)).PaymentProvider);
+    }
+
+    [Fact]
     public async Task ProcessSubscriptionLifecycle_Should_Work_With_Sqlite()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");

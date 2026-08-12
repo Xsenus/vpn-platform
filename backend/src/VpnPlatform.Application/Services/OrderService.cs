@@ -80,6 +80,46 @@ public class OrderService
         return await CreateOrderCoreAsync(command, tariff, promo, cancellationToken);
     }
 
+    public async Task<Result<OrderDto>> SelectPaymentProviderAsync(
+        Guid orderId,
+        Guid userId,
+        PaymentProvider provider,
+        CancellationToken cancellationToken = default)
+    {
+        await using var processingGate = await PaymentProcessingGate.AcquireOrderAsync(orderId, cancellationToken);
+        var order = await _db.Orders.FirstOrDefaultAsync(x => x.Id == orderId && x.UserId == userId, cancellationToken);
+        if (order is null)
+        {
+            return Result<OrderDto>.Failure("Order not found.");
+        }
+
+        if (order.Channel != ChannelType.Telegram)
+        {
+            return Result<OrderDto>.Failure("Payment provider selection is available only for Telegram orders.");
+        }
+
+        if (order.Status != OrderStatus.PendingPayment || order.ExpiresAt <= _clock.UtcNow)
+        {
+            return Result<OrderDto>.Failure("Payment provider can be selected only for a live pending order.");
+        }
+
+        if (await _db.Payments.AnyAsync(x => x.OrderId == orderId, cancellationToken))
+        {
+            return order.PaymentProvider == provider
+                ? Result<OrderDto>.Success(MapToDto(order))
+                : Result<OrderDto>.Failure("Payment provider is locked after the first payment attempt.");
+        }
+
+        if (order.PaymentProvider != provider)
+        {
+            order.PaymentProvider = provider;
+            order.UpdatedAt = _clock.UtcNow;
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        return Result<OrderDto>.Success(MapToDto(order));
+    }
+
     public async Task<Result<bool>> ValidatePromoForCheckoutAsync(
         string? promoCode,
         Guid tariffId,
@@ -426,7 +466,7 @@ public class OrderService
         => TryReadPromoFreeDays(order.ReferralContext);
 
     public static OrderDto MapToDto(Order order)
-        => new(order.Id, order.UserId, order.TariffId, order.Amount, order.Currency, order.Status.ToString(), order.ExpiresAt, GetRenewalSubscriptionId(order));
+        => new(order.Id, order.UserId, order.TariffId, order.Amount, order.Currency, order.Status.ToString(), order.ExpiresAt, order.PaymentProvider, GetRenewalSubscriptionId(order));
 
     private static string BuildReferralContext(Guid? renewalSubscriptionId, int? promoFreeDays)
     {

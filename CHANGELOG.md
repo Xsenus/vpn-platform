@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.655.0 - 2026-08-12
+
+Release entry: `2026-08-12-payment-init-order-provider-snapshot`.
+
+### Исправлено
+
+- Payment init теперь отклоняет провайдера, который не совпадает с неизменяемым снимком заказа, до account lookup, reservation и adapter call.
+- Public checkout и кабинет повторяют оплату по `Order.PaymentProvider`, даже если форма или сохранённая checkout session содержит другой выбранный провайдер; недоступный snapshot-провайдер блокирует кнопку точной причиной.
+- Telegram закрепляет выбранный способ оплаты за живым pending-заказом до первой попытки, после чего смена провайдера запрещена; пустой provider payment ID не переводит reservation в `Pending` и не раскрывает redirect URL.
+
+### Проверено
+
+- Fail-first init boundary `0/2`; после исправления targeted Order/Telegram/init `63/63`, payment/checkout browser regression `26/26`.
+- Backend `1283/1283`; frontend `142/142`; полный Playwright `226/226` за `12.3 min`; Release build `0` warnings/errors, typecheck/build, EF drift, fresh SQLite и dependency audit зелёные.
+- Secret scan `673/0`; Roadmap `668/688` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider/VPS/staging evidence локальными проверками не закрывались.
+
 ## 0.654.0 - 2026-08-12
 
 Release entry: `2026-08-12-payment-recheck-account-readiness-preflight`.

@@ -118,7 +118,7 @@ public sealed record CheckoutSessionDto(Guid Id, string Token, Guid TariffId, Gu
 public sealed record ClaimCheckoutSessionCommand(string Token, Guid UserId);
 
 public sealed record CreateOrderCommand(Guid UserId, Guid TariffId, OrderType Type, ChannelType Channel, PaymentProvider PaymentProvider, string? PromoCode, bool IsFirstPurchase, Guid? CheckoutSessionId = null, Guid? RenewalSubscriptionId = null);
-public sealed record OrderDto(Guid Id, Guid UserId, Guid TariffId, decimal Amount, string Currency, string Status, DateTimeOffset ExpiresAt, Guid? LinkedSubscriptionId = null);
+public sealed record OrderDto(Guid Id, Guid UserId, Guid TariffId, decimal Amount, string Currency, string Status, DateTimeOffset ExpiresAt, PaymentProvider PaymentProvider, Guid? LinkedSubscriptionId = null);
 
 public sealed record PaymentInitResult(string PaymentId, string RedirectUrl, string RawResponse);
 public sealed record PaymentInitCommand(Guid OrderId, PaymentProvider Provider, string? ReturnUrl = null);

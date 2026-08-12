@@ -199,7 +199,7 @@ export type OrderDto = {
   status: string
   type?: string
   channel?: string
-  paymentProvider?: string
+  paymentProvider: PaymentProvider
   checkoutSessionId?: string | null
   expiresAt: string
   paidAt?: string | null
@@ -2692,6 +2692,8 @@ function isOrderCommandDto(value: unknown): value is OrderDto {
     && hasString(value, 'currency', true)
     && hasString(value, 'status', true)
     && orderStatusValues.has(value.status as string)
+    && hasString(value, 'paymentProvider', true)
+    && paymentProviderValues.has(value.paymentProvider as PaymentProvider)
     && hasDateString(value, 'expiresAt')
     && hasNullableString(value, 'linkedSubscriptionId')
 }
