@@ -27,6 +27,9 @@ public static class PaymentProviderConfigurationRules
     public static bool SupportsRefundStatusRecheck(PaymentProvider provider)
         => provider is PaymentProvider.YooKassa or PaymentProvider.Stripe or PaymentProvider.PayPal;
 
+    public static bool SupportsIdempotentRefundCreateRetry(PaymentProvider provider)
+        => provider is PaymentProvider.YooKassa or PaymentProvider.Stripe or PaymentProvider.PayPal;
+
     public static bool IsCredentiallessLocalSandbox(PaymentProviderAccount account, string? environmentName)
         => account.Mode == PaymentProviderMode.Sandbox
            && string.IsNullOrWhiteSpace(account.SecretKeyProtected)

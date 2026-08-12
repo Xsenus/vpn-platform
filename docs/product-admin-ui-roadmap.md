@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `678/698` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `679/699` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,8 +85,8 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1345/1345`.
-- [x] Frontend unit tests: `145/145`.
+- [x] Backend full suite: `1354/1354`.
+- [x] Frontend unit tests: `148/148`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
@@ -167,7 +167,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-12-admin-payment-recheck-boundary`, версия `0.665.0`; admin UI получает от payment/order recheck только безопасный DTO, а backend выполняет readiness preflight и сохраняет actor-aware audit до provider call; backend `1345/1345`.
+- [x] Latest "Что нового": `2026-08-12-refund-create-recovery`, версия `0.666.0`; admin UI автоматически показывает durable неопределённый возврат и разрешает точный повтор только по backend readiness, а API не раскрывает provider diagnostics; backend `1354/1354`.
 
 ## Как вести дальше
 

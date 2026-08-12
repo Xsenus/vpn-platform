@@ -15659,5 +15659,28 @@
         "text": "Roadmap progress is 678/698 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-refund-create-recovery",
+    "version": "0.666.0",
+    "releasedAt": "2026-08-12T20:15:00+07:00",
+    "title": "Неопределённый возврат можно безопасно повторить",
+    "summary": "Администратор видит возврат с неопределённым исходом сразу и может повторить точную операцию без создания дубликата.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "YooKassa, Stripe и PayPal повторно используют исходный ключ идемпотентности только при совпадении платежа, суммы и причины; Т-Банк остаётся недоступным для небезопасного повтора."
+      },
+      {
+        "type": "improved",
+        "text": "Админка автоматически обновляет список после неопределённого результата и показывает команду повтора по readiness; ответы API и аудит не содержат внутреннюю диагностику провайдера."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 679/699 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; live refunds, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

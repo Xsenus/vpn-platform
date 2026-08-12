@@ -50,6 +50,7 @@ public sealed record RefundPaymentHttpRequest(decimal Amount, string? Reason);
 public sealed record RefundReadinessDto(bool IsSupported, bool CanRefund, decimal RefundableAmount, IReadOnlyList<string> Blockers);
 public sealed record RecheckReadinessDto(bool IsSupported, bool CanRecheck, IReadOnlyList<string> Blockers);
 public sealed record RefundRecheckReadinessDto(bool IsSupported, bool CanRecheck, IReadOnlyList<string> Blockers);
+public sealed record RefundRetryReadinessDto(bool IsSupported, bool CanRetry, IReadOnlyList<string> Blockers);
 public sealed record AdminPaymentRecheckDto(Guid OrderId, Guid PaymentId, string Status);
 public sealed record SetProviderEnabledHttpRequest(bool Enabled);
 public sealed record AdminSupportReplyHttpRequest(string Text, int? Revision = null);
@@ -1294,47 +1295,76 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.FinanceWrite)]
     public async Task<IActionResult> RefundPayment(Guid id, [FromBody] RefundPaymentHttpRequest request, CancellationToken cancellationToken)
     {
+        var reason = request.Reason?.Trim() ?? string.Empty;
+        if (reason.Length > 120)
+        {
+            return BadRequest(new { error = "Причина возврата не должна превышать 120 символов." });
+        }
+
         var payment = await _db.Payments.AsNoTracking()
             .Include(x => x.PaymentProviderAccount)
             .Include(x => x.Refunds)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (payment is null)
         {
-            return BadRequest(new { error = "Payment attempt not found." });
+            return BadRequest(new { error = "Платёжная попытка не найдена." });
         }
 
         var readiness = BuildRefundReadiness(payment);
-        if (!readiness.CanRefund)
+        var isRecoverableRetry = payment.Refunds.Any(x =>
+            x.Status is RefundStatus.New or RefundStatus.Unknown
+            && x.ProviderRefundId.StartsWith("pending:", StringComparison.OrdinalIgnoreCase)
+            && x.Amount == request.Amount
+            && string.Equals(x.Reason, x.Reason.Trim(), StringComparison.Ordinal)
+            && string.Equals(x.Reason.Trim(), reason, StringComparison.Ordinal)
+            && PaymentProviderConfigurationRules.SupportsIdempotentRefundCreateRetry(x.Provider));
+        if (!readiness.CanRefund && !isRecoverableRetry)
         {
-            return BadRequest(new { error = "Payment cannot be refunded.", readiness });
+            return BadRequest(new { error = "Возврат платежа недоступен.", readiness });
         }
 
         if (request.Amount <= 0 || request.Amount > readiness.RefundableAmount)
         {
-            return BadRequest(new { error = "Refund amount is invalid.", readiness });
-        }
-
-        var result = await _paymentOrchestrator.RefundPaymentAsync(id, request.Amount, request.Reason ?? string.Empty, cancellationToken);
-        if (!result.IsSuccess)
-        {
-            return BadRequest(new { error = result.Error });
+            return BadRequest(new { error = "Сумма возврата недопустима.", readiness });
         }
 
         AddAuditLog(
             "refund.create",
-            nameof(Refund),
-            result.Value!.Id,
-            "{}",
+            nameof(PaymentAttempt),
+            id,
             JsonSerializer.Serialize(new
             {
-                result.Value.PaymentAttemptId,
-                Provider = result.Value.Provider.ToString(),
-                result.Value.ProviderRefundId,
-                result.Value.Status,
-                result.Value.Amount,
-                result.Value.Currency
+                payment.OrderId,
+                Status = payment.Status.ToString(),
+                payment.Provider,
+                payment.ProviderMode,
+                payment.ProviderPaymentId,
+                payment.RefundedAmount
+            }),
+            JsonSerializer.Serialize(new
+            {
+                Outcome = "requested",
+                Amount = request.Amount,
+                payment.Currency
             }));
         await _db.SaveChangesAsync(cancellationToken);
+
+        var result = await _paymentOrchestrator.RefundPaymentAsync(id, request.Amount, reason, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            var unresolved = await _db.Refunds.AsNoTracking()
+                .Where(x => x.PaymentAttemptId == id
+                    && x.Amount == request.Amount
+                    && x.Reason == reason
+                    && (x.Status == RefundStatus.New || x.Status == RefundStatus.Pending || x.Status == RefundStatus.Unknown))
+                .FirstOrDefaultAsync(cancellationToken);
+            if (unresolved is not null)
+            {
+                return Accepted(MapRefundDto(unresolved));
+            }
+
+            return BadRequest(BuildRefundOperationError(result.IsRetryable));
+        }
         return Ok(result.Value);
     }
 
@@ -1363,6 +1393,7 @@ public class AdminOperationsController : ControllerBase
             .Select(x =>
             {
                 var readiness = BuildRefundRecheckReadiness(x);
+                var retry = BuildRefundRetryReadiness(x);
                 return new
                 {
                     x.Id,
@@ -1377,7 +1408,10 @@ public class AdminOperationsController : ControllerBase
                     x.RefundedAt,
                     RecheckSupported = readiness.IsSupported,
                     readiness.CanRecheck,
-                    RecheckBlockers = readiness.Blockers
+                    RecheckBlockers = readiness.Blockers,
+                    RetrySupported = retry.IsSupported,
+                    retry.CanRetry,
+                    RetryBlockers = retry.Blockers
                 };
             })
             .ToList());
@@ -1393,19 +1427,13 @@ public class AdminOperationsController : ControllerBase
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (before is null)
         {
-            return BadRequest(new { error = "Refund not found." });
+            return BadRequest(new { error = "Возврат не найден." });
         }
 
         var readiness = BuildRefundRecheckReadiness(before);
         if (!readiness.CanRecheck)
         {
-            return BadRequest(new { error = "Refund cannot be rechecked.", readiness });
-        }
-
-        var result = await _paymentOrchestrator.RecheckRefundAsync(id, cancellationToken);
-        if (!result.IsSuccess)
-        {
-            return BadRequest(new { error = result.Error });
+            return BadRequest(new { error = "Сверка возврата недоступна.", readiness });
         }
 
         AddAuditLog(
@@ -1415,18 +1443,21 @@ public class AdminOperationsController : ControllerBase
             JsonSerializer.Serialize(new
             {
                 Status = before.Status.ToString(),
+                before.Provider,
+                before.ProviderRefundId,
                 before.RefundedAt,
                 PaymentStatus = before.PaymentAttempt?.Status.ToString(),
                 before.PaymentAttempt?.RefundedAmount
             }),
-            JsonSerializer.Serialize(new
-            {
-                result.Value!.Status,
-                result.Value.RefundedAt,
-                result.Value.Amount,
-                result.Value.Currency
-            }));
+            JsonSerializer.Serialize(new { Outcome = "requested" }));
         await _db.SaveChangesAsync(cancellationToken);
+
+        var result = await _paymentOrchestrator.RecheckRefundAsync(id, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            var unresolved = await _db.Refunds.AsNoTracking().FirstAsync(x => x.Id == id, cancellationToken);
+            return Accepted(MapRefundDto(unresolved));
+        }
         return Ok(result.Value);
     }
 
@@ -3031,6 +3062,55 @@ public class AdminOperationsController : ControllerBase
         return new RefundRecheckReadinessDto(isSupported, blockers.Count == 0, blockers);
     }
 
+    private RefundRetryReadinessDto BuildRefundRetryReadiness(Refund refund)
+    {
+        var blockers = new List<string>();
+        var isSupported = PaymentProviderConfigurationRules.SupportsIdempotentRefundCreateRetry(refund.Provider);
+        if (!isSupported)
+        {
+            blockers.Add("Провайдер не гарантирует идемпотентный повтор создания возврата.");
+        }
+
+        if (refund.Status is not (RefundStatus.New or RefundStatus.Unknown))
+        {
+            blockers.Add("Повтор доступен только для возврата с неопределённым результатом создания.");
+        }
+
+        if (string.IsNullOrWhiteSpace(refund.ProviderRefundId)
+            || !refund.ProviderRefundId.StartsWith("pending:", StringComparison.OrdinalIgnoreCase))
+        {
+            blockers.Add("Возврат уже имеет идентификатор провайдера и должен сверяться по статусу.");
+        }
+
+        if (!string.Equals(refund.Reason, refund.Reason.Trim(), StringComparison.Ordinal))
+        {
+            blockers.Add("Legacy-возврат с ненормализованной причиной нельзя безопасно повторить автоматически.");
+        }
+
+        if (refund.PaymentAttempt is null)
+        {
+            blockers.Add("Связанная платёжная попытка недоступна.");
+        }
+        else
+        {
+            if (refund.PaymentAttempt.Status is not (PaymentStatus.Succeeded or PaymentStatus.PartiallyRefunded))
+            {
+                blockers.Add("Исходный платёж больше не допускает возврат.");
+            }
+
+            if (refund.Amount <= 0 || refund.Amount > refund.PaymentAttempt.Amount - refund.PaymentAttempt.RefundedAmount)
+            {
+                blockers.Add("Сохранённая сумма возврата больше недоступного остатка платежа.");
+            }
+
+            blockers.AddRange(PaymentProviderConfigurationRules
+                .GetRefundConfigurationIssues(refund.PaymentAttempt, refund.PaymentAttempt.PaymentProviderAccount, _hostEnvironment?.EnvironmentName)
+                .Select(x => x.Message));
+        }
+
+        return new RefundRetryReadinessDto(isSupported, blockers.Count == 0, blockers);
+    }
+
     private static object BuildPaymentRecheckError(bool retryable)
         => new
         {
@@ -3039,6 +3119,28 @@ public class AdminOperationsController : ControllerBase
                 : "Не удалось выполнить сверку статуса платежа.",
             retryable
         };
+
+    private static object BuildRefundOperationError(bool retryable)
+        => new
+        {
+            error = retryable
+                ? "Не удалось подтвердить результат возврата у провайдера. Повторите ту же операцию позже."
+                : "Не удалось выполнить возврат платежа.",
+            retryable
+        };
+
+    private static RefundDto MapRefundDto(Refund refund)
+        => new(
+            refund.Id,
+            refund.PaymentAttemptId,
+            refund.Provider,
+            refund.ProviderRefundId,
+            refund.Status.ToString(),
+            refund.Amount,
+            refund.Currency,
+            refund.Reason,
+            refund.CreatedAt,
+            refund.RefundedAt);
 
     private void AddAuditLog(string action, string entityType, Guid entityId, string beforeJson, string afterJson)
     {

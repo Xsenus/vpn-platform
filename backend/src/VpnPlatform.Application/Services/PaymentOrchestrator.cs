@@ -703,6 +703,12 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
     public async Task<Result<RefundDto>> RefundPaymentAsync(Guid paymentId, decimal amount, string reason, CancellationToken cancellationToken = default)
     {
+        reason = reason.Trim();
+        if (reason.Length > 120)
+        {
+            return Result<RefundDto>.Failure("Refund reason must not exceed 120 characters.");
+        }
+
         var payment = await _db.Payments
             .Include(x => x.Order)
             .Include(x => x.PaymentProviderAccount)
@@ -723,7 +729,12 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         var existing = await _db.Refunds
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.PaymentAttemptId == payment.Id && x.IdempotencyKey == refundIdempotencyKey, cancellationToken);
-        if (existing is not null)
+        var canRecoverReservation = existing is not null
+            && (existing.Status is RefundStatus.New or RefundStatus.Unknown)
+            && existing.ProviderRefundId.StartsWith("pending:", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(existing.Reason, existing.Reason.Trim(), StringComparison.Ordinal)
+            && PaymentProviderConfigurationRules.SupportsIdempotentRefundCreateRetry(existing.Provider);
+        if (existing is not null && !canRecoverReservation)
         {
             return Result<RefundDto>.Success(MapRefund(existing));
         }
@@ -748,7 +759,11 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         }
 
         var hasUnresolvedRefund = await _db.Refunds.AsNoTracking()
-            .AnyAsync(x => x.PaymentAttemptId == payment.Id && UnresolvedRefundStatuses.Contains(x.Status), cancellationToken);
+            .AnyAsync(
+                x => x.PaymentAttemptId == payment.Id
+                    && (existing == null || x.Id != existing.Id)
+                    && UnresolvedRefundStatuses.Contains(x.Status),
+                cancellationToken);
         if (hasUnresolvedRefund)
         {
             return Result<RefundDto>.Failure("Payment has an unfinished refund that requires provider reconciliation before another refund.");
@@ -764,48 +779,56 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             return Result<RefundDto>.Failure("Refund amount is invalid.");
         }
 
-        var refund = new Refund
+        Refund refund;
+        if (existing is not null)
         {
-            PaymentAttemptId = currentPayment.Id,
-            Provider = currentPayment.Provider,
-            ProviderRefundId = $"pending:{Guid.NewGuid():N}",
-            IdempotencyKey = refundIdempotencyKey,
-            Status = RefundStatus.New,
-            Amount = amount,
-            Currency = currentPayment.Currency,
-            Reason = reason,
-            RawRequest = JsonSerializer.Serialize(new { paymentId = currentPayment.Id, amount, currency = currentPayment.Currency, reason, idempotencyKey = refundIdempotencyKey }),
-            RawResponse = "{}"
-        };
-        _db.Refunds.Add(refund);
-
-        try
-        {
-            await _db.SaveChangesAsync(cancellationToken);
+            refund = await _db.Refunds.FirstAsync(x => x.Id == existing.Id, cancellationToken);
         }
-        catch (DbUpdateException)
+        else
         {
-            _db.Refunds.Remove(refund);
+            refund = new Refund
+            {
+                PaymentAttemptId = currentPayment.Id,
+                Provider = currentPayment.Provider,
+                ProviderRefundId = $"pending:{Guid.NewGuid():N}",
+                IdempotencyKey = refundIdempotencyKey,
+                Status = RefundStatus.New,
+                Amount = amount,
+                Currency = currentPayment.Currency,
+                Reason = reason,
+                RawRequest = JsonSerializer.Serialize(new { paymentId = currentPayment.Id, amount, currency = currentPayment.Currency, reason, idempotencyKey = refundIdempotencyKey }),
+                RawResponse = "{}"
+            };
+            _db.Refunds.Add(refund);
+
             try
             {
-                existing = await _db.Refunds
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.PaymentAttemptId == payment.Id && x.IdempotencyKey == refundIdempotencyKey, cancellationToken);
-                if (existing is not null)
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                _db.Refunds.Remove(refund);
+                try
                 {
-                    return Result<RefundDto>.Success(MapRefund(existing));
+                    existing = await _db.Refunds
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(x => x.PaymentAttemptId == payment.Id && x.IdempotencyKey == refundIdempotencyKey, cancellationToken);
+                    if (existing is not null)
+                    {
+                        return Result<RefundDto>.Success(MapRefund(existing));
+                    }
                 }
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch
-            {
-                // The provider has not been called yet, so a database read failure is still fail-closed.
-            }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch
+                {
+                    // The provider has not been called yet, so a database read failure is still fail-closed.
+                }
 
-            return Result<RefundDto>.Failure("Refund reservation could not be saved; the payment provider was not called.");
+                return Result<RefundDto>.Failure("Refund reservation could not be saved; the payment provider was not called.");
+            }
         }
 
         PaymentRefundResult refundResult;
@@ -823,7 +846,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         {
             var persisted = await MarkRefundUnresolvedAsync(refund, payment, currentPayment);
             var suffix = persisted ? string.Empty : " Local reconciliation also failed.";
-            return Result<RefundDto>.Failure($"Refund provider outcome is unknown and requires manual reconciliation. {ex.Message}{suffix}");
+            return Result<RefundDto>.Failure($"Refund provider outcome is unknown and requires manual reconciliation. {ex.Message}{suffix}", isRetryable: canRecoverReservation || PaymentProviderConfigurationRules.SupportsIdempotentRefundCreateRetry(currentPayment.Provider));
         }
 
         var refundValidation = ValidatePaymentRefundResult(currentPayment, refundResult, amount);

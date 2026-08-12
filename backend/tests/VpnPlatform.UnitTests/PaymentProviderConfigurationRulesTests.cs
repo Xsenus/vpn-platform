@@ -131,6 +131,10 @@ public class PaymentProviderConfigurationRulesTests
         Assert.Contains(robokassa, x => x.Key == "recheck" && !x.Supported);
         Assert.False(PaymentProviderConfigurationRules.SupportsManualRecheck(PaymentProvider.RoboKassa));
         Assert.True(PaymentProviderConfigurationRules.SupportsManualRecheck(PaymentProvider.YooKassa));
+        Assert.True(PaymentProviderConfigurationRules.SupportsIdempotentRefundCreateRetry(PaymentProvider.YooKassa));
+        Assert.True(PaymentProviderConfigurationRules.SupportsIdempotentRefundCreateRetry(PaymentProvider.Stripe));
+        Assert.True(PaymentProviderConfigurationRules.SupportsIdempotentRefundCreateRetry(PaymentProvider.PayPal));
+        Assert.False(PaymentProviderConfigurationRules.SupportsIdempotentRefundCreateRetry(PaymentProvider.TBankAcquiring));
     }
 
     [Theory]

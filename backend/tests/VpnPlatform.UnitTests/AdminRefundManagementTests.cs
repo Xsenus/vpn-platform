@@ -89,7 +89,9 @@ public class AdminRefundManagementTests
         var result = await controller.RefundPayment(payment.Id, new RefundPaymentHttpRequest(50m, "unsupported"), CancellationToken.None);
 
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Contains("cannot be refunded", JsonSerializer.Serialize(badRequest.Value));
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(badRequest.Value));
+        Assert.Equal("Возврат платежа недоступен.", json.RootElement.GetProperty("error").GetString());
+        Assert.False(json.RootElement.GetProperty("readiness").GetProperty("CanRefund").GetBoolean());
         Assert.Equal(0, provider.RefundCalls);
         Assert.Empty(await db.Refunds.ToListAsync());
     }
@@ -123,6 +125,113 @@ public class AdminRefundManagementTests
         Assert.Equal(40m, payment.RefundedAmount);
         Assert.Single(await db.Refunds.ToListAsync());
         Assert.Contains(await db.AuditLogs.AsNoTracking().ToListAsync(), x => x.Action == "refund.create");
+    }
+
+    [Fact]
+    public async Task RefundPayment_Controller_Should_Recover_Idempotent_Reservation_And_Keep_Safe_Request_Audits()
+    {
+        await using var db = CreateDb();
+        var provider = new TrackingPaymentProvider(
+            PaymentProvider.YooKassa,
+            refundFailuresRemaining: 1,
+            refundError: "provider-refund-private-marker");
+        var account = Account(PaymentProvider.YooKassa, secret: "secret");
+        var user = User();
+        var tariff = Tariff();
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        db.AddRange(user, tariff, account, payment.Order!, payment);
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, CreateOrchestrator(db, provider));
+        var first = Assert.IsType<AcceptedResult>(await controller.RefundPayment(
+            payment.Id,
+            new RefundPaymentHttpRequest(40m, " retry refund "),
+            CancellationToken.None));
+        var firstResponse = JsonSerializer.Serialize(first.Value);
+
+        Assert.DoesNotContain("provider-refund-private-marker", firstResponse, StringComparison.Ordinal);
+        using var firstJson = JsonDocument.Parse(firstResponse);
+        Assert.Equal("Unknown", firstJson.RootElement.GetProperty("Status").GetString());
+        Assert.False(firstJson.RootElement.TryGetProperty("RawResponse", out _));
+        Assert.False(firstJson.RootElement.TryGetProperty("StatusReason", out _));
+        Assert.Equal(1, provider.RefundCalls);
+        var reserved = Assert.Single(await db.Refunds.AsNoTracking().ToListAsync());
+        Assert.Equal(RefundStatus.Unknown, reserved.Status);
+        Assert.StartsWith("pending:", reserved.ProviderRefundId, StringComparison.OrdinalIgnoreCase);
+        var firstAudit = Assert.Single(await db.AuditLogs.AsNoTracking().Where(x => x.Action == "refund.create").ToListAsync());
+        Assert.Equal("admin", firstAudit.ActorType);
+        Assert.DoesNotContain("provider-refund-private-marker", firstAudit.BeforeJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("provider-refund-private-marker", firstAudit.AfterJson, StringComparison.Ordinal);
+
+        var second = Assert.IsType<OkObjectResult>(await controller.RefundPayment(
+            payment.Id,
+            new RefundPaymentHttpRequest(40m, "retry refund"),
+            CancellationToken.None));
+        using var secondJson = JsonDocument.Parse(JsonSerializer.Serialize(second.Value));
+
+        Assert.Equal("Succeeded", secondJson.RootElement.GetProperty("Status").GetString());
+        Assert.Equal(2, provider.RefundCalls);
+        Assert.Single(await db.Refunds.AsNoTracking().ToListAsync());
+        Assert.Equal(2, await db.AuditLogs.AsNoTracking().CountAsync(x => x.Action == "refund.create"));
+        db.ChangeTracker.Clear();
+        Assert.Equal(40m, (await db.Payments.SingleAsync()).RefundedAmount);
+    }
+
+    [Fact]
+    public async Task RefundPayment_Controller_Should_Not_Recover_Reservation_With_Different_Reason()
+    {
+        await using var db = CreateDb();
+        var provider = new TrackingPaymentProvider(
+            PaymentProvider.YooKassa,
+            refundFailuresRemaining: 1,
+            refundError: "provider-refund-private-marker");
+        var account = Account(PaymentProvider.YooKassa, secret: "secret");
+        var user = User();
+        var tariff = Tariff();
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        db.AddRange(user, tariff, account, payment.Order!, payment);
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, CreateOrchestrator(db, provider));
+        Assert.IsType<AcceptedResult>(await controller.RefundPayment(
+            payment.Id,
+            new RefundPaymentHttpRequest(40m, "original reason"),
+            CancellationToken.None));
+
+        var rejected = Assert.IsType<BadRequestObjectResult>(await controller.RefundPayment(
+            payment.Id,
+            new RefundPaymentHttpRequest(40m, "different reason"),
+            CancellationToken.None));
+        var response = JsonSerializer.Serialize(rejected.Value);
+
+        Assert.DoesNotContain("provider-refund-private-marker", response, StringComparison.Ordinal);
+        Assert.Equal(1, provider.RefundCalls);
+        Assert.Single(await db.Refunds.AsNoTracking().ToListAsync());
+        Assert.Single(await db.AuditLogs.AsNoTracking().Where(x => x.Action == "refund.create").ToListAsync());
+    }
+
+    [Fact]
+    public async Task RefundPayment_Controller_Should_Reject_Overlong_Reason_Before_Provider_And_Audit()
+    {
+        await using var db = CreateDb();
+        var provider = new TrackingPaymentProvider(PaymentProvider.YooKassa);
+        var account = Account(PaymentProvider.YooKassa, secret: "secret");
+        var user = User();
+        var tariff = Tariff();
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        db.AddRange(user, tariff, account, payment.Order!, payment);
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, CreateOrchestrator(db, provider));
+        var badRequest = Assert.IsType<BadRequestObjectResult>(await controller.RefundPayment(
+            payment.Id,
+            new RefundPaymentHttpRequest(40m, new string('x', 121)),
+            CancellationToken.None));
+
+        Assert.Contains("120", JsonSerializer.Serialize(badRequest.Value), StringComparison.Ordinal);
+        Assert.Equal(0, provider.RefundCalls);
+        Assert.Empty(await db.Refunds.AsNoTracking().ToListAsync());
+        Assert.Empty(await db.AuditLogs.AsNoTracking().ToListAsync());
     }
 
     [Theory]
@@ -717,6 +826,78 @@ public class AdminRefundManagementTests
         Assert.Equal(expectedSupported, refundJson.GetProperty("RecheckSupported").GetBoolean());
         Assert.Equal(expectedSupported, refundJson.GetProperty("CanRecheck").GetBoolean());
         Assert.Equal(!expectedSupported, refundJson.GetProperty("RecheckBlockers").GetArrayLength() > 0);
+        Assert.False(refundJson.GetProperty("CanRetry").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData(PaymentProvider.YooKassa, true)]
+    [InlineData(PaymentProvider.Stripe, true)]
+    [InlineData(PaymentProvider.PayPal, true)]
+    [InlineData(PaymentProvider.TBankAcquiring, false)]
+    public async Task GetRefunds_Should_Expose_Idempotent_Create_Retry_Only_For_Pending_Reservations(
+        PaymentProvider provider,
+        bool expectedSupported)
+    {
+        await using var db = CreateDb();
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(provider, secret: "secret");
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        payment.Refunds.Add(new Refund
+        {
+            PaymentAttemptId = payment.Id,
+            Provider = provider,
+            ProviderRefundId = $"pending:{Guid.NewGuid():N}",
+            IdempotencyKey = $"refund-{Guid.NewGuid():N}",
+            Status = RefundStatus.Unknown,
+            Amount = 40m,
+            Currency = payment.Currency,
+            Reason = "retry reservation"
+        });
+        db.AddRange(user, tariff, account, payment.Order!, payment);
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db);
+        var ok = Assert.IsType<OkObjectResult>(await controller.GetRefunds(CancellationToken.None));
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(ok.Value));
+        var refundJson = json.RootElement.EnumerateArray().Single();
+
+        Assert.Equal(expectedSupported, refundJson.GetProperty("RetrySupported").GetBoolean());
+        Assert.Equal(expectedSupported, refundJson.GetProperty("CanRetry").GetBoolean());
+        Assert.Equal(!expectedSupported, refundJson.GetProperty("RetryBlockers").GetArrayLength() > 0);
+        Assert.False(refundJson.GetProperty("CanRecheck").GetBoolean());
+    }
+
+    [Fact]
+    public async Task GetRefunds_Should_Block_Legacy_Retry_When_Reason_Was_Not_Normalized()
+    {
+        await using var db = CreateDb();
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(PaymentProvider.YooKassa, secret: "secret");
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        payment.Refunds.Add(new Refund
+        {
+            PaymentAttemptId = payment.Id,
+            Provider = payment.Provider,
+            ProviderRefundId = $"pending:{Guid.NewGuid():N}",
+            IdempotencyKey = $"refund-{Guid.NewGuid():N}",
+            Status = RefundStatus.Unknown,
+            Amount = 40m,
+            Currency = payment.Currency,
+            Reason = " legacy reason "
+        });
+        db.AddRange(user, tariff, account, payment.Order!, payment);
+        await db.SaveChangesAsync();
+
+        var ok = Assert.IsType<OkObjectResult>(await CreateController(db).GetRefunds(CancellationToken.None));
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(ok.Value));
+        var refundJson = json.RootElement.EnumerateArray().Single();
+
+        Assert.False(refundJson.GetProperty("CanRetry").GetBoolean());
+        Assert.Contains(
+            refundJson.GetProperty("RetryBlockers").EnumerateArray(),
+            x => x.GetString()?.Contains("Legacy", StringComparison.OrdinalIgnoreCase) == true);
     }
 
     [Theory]
@@ -902,6 +1083,43 @@ public class AdminRefundManagementTests
         Assert.DoesNotContain("secret customer note", audit.BeforeJson, StringComparison.Ordinal);
         Assert.DoesNotContain("secret customer note", audit.AfterJson, StringComparison.Ordinal);
         Assert.DoesNotContain("RawResponse", audit.AfterJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RecheckRefund_Controller_Should_Keep_Safe_Request_Audit_When_Provider_Fails()
+    {
+        await using var db = CreateDb();
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(PaymentProvider.YooKassa, secret: "secret");
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        var refund = new Refund
+        {
+            PaymentAttemptId = payment.Id,
+            Provider = payment.Provider,
+            ProviderRefundId = "provider-refund-failure",
+            IdempotencyKey = "refund-failure",
+            Status = RefundStatus.Pending,
+            Amount = 40m,
+            Currency = payment.Currency,
+            Reason = "private customer reason"
+        };
+        payment.Refunds.Add(refund);
+        db.AddRange(user, tariff, account, payment.Order!, payment);
+        await db.SaveChangesAsync();
+
+        var provider = new TrackingPaymentProvider(
+            PaymentProvider.YooKassa,
+            refundStatusError: "provider-recheck-private-marker");
+        var controller = CreateController(db, CreateOrchestrator(db, provider));
+        var accepted = Assert.IsType<AcceptedResult>(await controller.RecheckRefund(refund.Id, CancellationToken.None));
+        var response = JsonSerializer.Serialize(accepted.Value);
+
+        Assert.DoesNotContain("provider-recheck-private-marker", response, StringComparison.Ordinal);
+        var audit = Assert.Single(await db.AuditLogs.AsNoTracking().Where(x => x.Action == "refund.recheck").ToListAsync());
+        Assert.Equal("admin", audit.ActorType);
+        Assert.DoesNotContain("private customer reason", audit.BeforeJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("provider-recheck-private-marker", audit.AfterJson, StringComparison.Ordinal);
     }
 
     private static PaymentOrchestrator CreateOrchestrator(
@@ -1162,7 +1380,10 @@ public class AdminRefundManagementTests
         PaymentStatus? status = null,
         RefundStatus? refundStatus = null,
         string? statusError = null,
-        string? statusReason = null) : IPaymentProvider, IPaymentRefundStatusProvider
+        string? statusReason = null,
+        int refundFailuresRemaining = 0,
+        string? refundError = null,
+        string? refundStatusError = null) : IPaymentProvider, IPaymentRefundStatusProvider
     {
         public PaymentProvider Provider { get; } = provider;
         public int StatusCalls { get; private set; }
@@ -1190,12 +1411,21 @@ public class AdminRefundManagementTests
         {
             RefundCalls++;
             LastRefundAmount = amount;
+            if (refundFailuresRemaining > 0)
+            {
+                refundFailuresRemaining--;
+                throw new InvalidOperationException(refundError ?? "refund failed");
+            }
             return Task.FromResult(new PaymentRefundResult($"refund-{payment.Id:N}", RefundStatus.Succeeded, "{}"));
         }
 
         public Task<PaymentRefundResult> GetRefundStatusAsync(PaymentAttempt payment, PaymentProviderAccount account, Refund refund, CancellationToken cancellationToken)
         {
             RefundStatusCalls++;
+            if (!string.IsNullOrWhiteSpace(refundStatusError))
+            {
+                throw new InvalidOperationException(refundStatusError);
+            }
             var nextStatus = refundStatus ?? refund.Status;
             return Task.FromResult(new PaymentRefundResult(
                 refund.ProviderRefundId,

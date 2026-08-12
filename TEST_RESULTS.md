@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: refund create recovery
+
+Scope:
+- Неопределённый transport outcome создания возврата не должен навсегда блокировать платёж или требовать ручного изменения БД.
+- Повтор разрешён только для точного совпадения суммы и нормализованной причины у провайдера с гарантированной idempotency; API и audit не должны раскрывать provider diagnostics.
+
+Results:
+- Roadmap progress: `679/699` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-refund-create-recovery`, version `0.666.0`.
+- Fail-first: backend `0/3`, browser `0/2`; provider exception сохранял `Unknown` reservation, но повтор возвращал ту же запись без внешнего вызова, UI скрывал её до ручной перезагрузки, а API раскрывал внутреннюю диагностику и терял actor audit на failure path.
+- After fix: YooKassa/Stripe/PayPal повторяют ту же create-операцию с исходным idempotency key без второй refund-записи; другая сумма/причина и Т-Банк остаются fail-closed. Durable неопределённость возвращается как безопасный `202`, admin UI обновляется автоматически и показывает readiness-команду; причина ограничена 120 символами.
+- Targeted refund/payment regression `86/86`; backend Release `1354/1354`; frontend `148/148`; typecheck/build; desktop/mobile refund Playwright `6/6`; fresh SQLite подтвердил latest release `2026-08-12-refund-create-recovery`; EF drift, dependency audit `0 vulnerabilities`, strict UTF-8 и secret scan `673/0` зелёные. Реальные refund/provider кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## Check 2026-08-12: admin payment recheck boundary
 
 Scope:

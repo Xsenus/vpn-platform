@@ -962,6 +962,13 @@ function refundRecheckBlockerText(refund: RefundDto) {
   return ''
 }
 
+function refundRetryBlockerText(refund: RefundDto) {
+  if (refund.retryBlockers && refund.retryBlockers.length > 0) return refund.retryBlockers.join(' · ')
+  if (refund.retrySupported === false) return 'Провайдер не гарантирует безопасный повтор создания возврата.'
+  if (refund.canRetry !== true) return 'Возврат нельзя безопасно повторить.'
+  return ''
+}
+
 function homeContentIssueCount(readiness: SiteContentReadinessDto | null) {
   if (!readiness) return 0
   return readiness.missingKeys.length + readiness.inactiveKeys.length + readiness.emptyKeys.length + readiness.duplicateKeys.length
@@ -2534,7 +2541,13 @@ export function App() {
     await runAction('payments', payment.id, async (action) => {
       const amount = refundAmounts[payment.id] ?? getRefundableAmount(payment)
       const reason = refundReasons[payment.id]?.trim() || 'manual_admin_refund'
-      const refund = await api.refundAdminPayment(token, payment.id, amount, reason)
+      let refund: RefundDto
+      try {
+        refund = await api.refundAdminPayment(token, payment.id, amount, reason)
+      } catch (error) {
+        await action.reloadAll()
+        throw error
+      }
       if (!action.isCurrent()) return
       setNotice(`Возврат ${refund.providerRefundId || refund.id}: ${refund.status}`)
       setRefundAmounts((current) => {
@@ -2557,6 +2570,26 @@ export function App() {
       const result = await api.recheckAdminRefund(token, refund.id)
       if (!action.isCurrent()) return
       setNotice(`Возврат ${result.providerRefundId || shortId(result.id)} проверен: ${result.status}`)
+      await action.reloadAll()
+    }, refundActionResourceKeys(refund))
+  }
+
+  const handleRetryRefund = async (refund: RefundDto) => {
+    await runAction('payments', `refund-retry-${refund.id}`, async (action) => {
+      const blocker = refundRetryBlockerText(refund)
+      if (blocker) {
+        setError(blocker)
+        return
+      }
+      let result: RefundDto
+      try {
+        result = await api.refundAdminPayment(token, refund.paymentAttemptId, refund.amount, refund.reason)
+      } catch (error) {
+        await action.reloadAll()
+        throw error
+      }
+      if (!action.isCurrent()) return
+      setNotice(`Возврат ${result.providerRefundId || shortId(result.id)} повторён: ${result.status}`)
       await action.reloadAll()
     }, refundActionResourceKeys(refund))
   }
@@ -4423,7 +4456,7 @@ export function App() {
                     </label>
                     <label className="compact-field">
                       <span>Причина</span>
-                      <input value={refundReason} onChange={(e) => setRefundReasons((current) => ({ ...current, [payment.id]: e.target.value }))} placeholder="manual_admin_refund" disabled={!refundAllowed || paymentActionBusy} />
+                      <input value={refundReason} onChange={(e) => setRefundReasons((current) => ({ ...current, [payment.id]: e.target.value }))} placeholder="manual_admin_refund" maxLength={120} disabled={!refundAllowed || paymentActionBusy} />
                     </label>
                     <ConfirmButton disabled={paymentActionBusy || !refundAllowed || refundAmount <= 0 || refundAmount > refundableAmount} className="button-secondary" message={`Вернуть ${refundAmount} ${payment.currency} по платежу ${shortId(payment.id)}? Действие будет записано в аудит.`} onConfirm={() => handleRefundPayment(payment)}>Вернуть платеж</ConfirmButton>
                   </div>
@@ -4433,6 +4466,7 @@ export function App() {
             {paymentWebhookEvents.slice(0, 4).map((event) => <div key={event.id} className="list-item"><span>{event.provider} · {event.eventType} · подпись {event.signatureValidated ? 'проверена' : 'не проверена'}</span><StatusBadge value={event.status} /></div>)}
             {refunds.slice(0, 4).map((refund) => {
               const blocker = refundRecheckBlockerText(refund)
+              const retryBlocker = refundRetryBlockerText(refund)
               const refundBusy = isActionResourceBusy(...refundActionResourceKeys(refund))
               return (
                 <div key={refund.id} className="list-item-vertical">
@@ -4442,6 +4476,7 @@ export function App() {
                   </div>
                   <div className="toolbar" hidden={!canWriteSection('payments')}>
                     <PrimaryButton disabled={refundBusy || Boolean(blocker)} title={blocker || undefined} onClick={() => void handleRecheckRefund(refund)}>Сверить возврат</PrimaryButton>
+                    <ConfirmButton disabled={refundBusy || Boolean(retryBlocker)} className="button-secondary" message={`Повторить возврат ${refund.amount} ${refund.currency}? Будут использованы сохранённые параметры и тот же idempotency key.`} onConfirm={() => handleRetryRefund(refund)}>Повторить возврат</ConfirmButton>
                   </div>
                 </div>
               )

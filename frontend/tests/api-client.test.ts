@@ -1658,6 +1658,56 @@ test('ApiClient admin payments expose refund readiness and send refund payload',
   assert.equal(recheckedRefund.status, 'Succeeded')
 })
 
+test('ApiClient admin refunds require explicit retry readiness contract', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify([{
+    id: 'refund-1',
+    paymentAttemptId: 'payment-1',
+    provider: 'YooKassa',
+    providerRefundId: 'pending:refund-1',
+    status: 'Unknown',
+    amount: 50,
+    currency: 'RUB',
+    reason: 'manual',
+    createdAt: new Date().toISOString(),
+    refundedAt: null,
+    recheckSupported: true,
+    canRecheck: false,
+    recheckBlockers: ['Не сохранён идентификатор возврата у провайдера.'],
+    retrySupported: true,
+    canRetry: true,
+    retryBlockers: []
+  }]), { status: 200, headers: { 'Content-Type': 'application/json' } })) as typeof fetch
+
+  const refunds = await new ApiClient('http://localhost:8080').getAdminRefunds('admin-token')
+
+  assert.equal(refunds[0]?.canRetry, true)
+  assert.deepEqual(refunds[0]?.retryBlockers, [])
+})
+
+test('ApiClient rejects unknown admin refund status', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify([{
+    id: 'refund-1', paymentAttemptId: 'payment-1', provider: 'YooKassa', providerRefundId: 'rf-1',
+    status: 'ProviderCustomStatus', amount: 50, currency: 'RUB', reason: 'manual', createdAt: new Date().toISOString(), refundedAt: null,
+    recheckSupported: true, canRecheck: false, recheckBlockers: ['blocked'], retrySupported: true, canRetry: false, retryBlockers: ['blocked']
+  }]), { status: 200, headers: { 'Content-Type': 'application/json' } })) as typeof fetch
+
+  await assert.rejects(
+    () => new ApiClient('http://localhost:8080').getAdminRefunds('admin-token'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502)
+})
+
+test('ApiClient rejects provider diagnostics in admin refund response', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify({
+    id: 'refund-1', paymentAttemptId: 'payment-1', provider: 'YooKassa', providerRefundId: 'rf-1',
+    status: 'Unknown', amount: 50, currency: 'RUB', reason: 'manual', createdAt: new Date().toISOString(), refundedAt: null,
+    rawResponse: '{"private":"provider-marker"}'
+  }), { status: 202, headers: { 'Content-Type': 'application/json' } })) as typeof fetch
+
+  await assert.rejects(
+    () => new ApiClient('http://localhost:8080').refundAdminPayment('admin-token', 'payment-1', 50, 'manual'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502)
+})
+
 test('admin source serializes finance commands by provider, order and payment resources', () => {
   const adminSource = readFileSync(new URL('../apps/admin-panel/src/App.tsx', import.meta.url), 'utf8')
 
@@ -1667,6 +1717,8 @@ test('admin source serializes finance commands by provider, order and payment re
   assert.match(adminSource, /orderActionResourceKey\(order\.id\)/)
   assert.match(adminSource, /paymentActionResourceKey\(order\.lastPaymentId\)/)
   assert.match(adminSource, /paymentActionResourceKeys\(payment\.id, payment\.orderId\)/)
+  assert.match(adminSource, /maxLength=\{120\}/)
+  assert.match(adminSource, /catch \(error\) \{\s*await action\.reloadAll\(\)\s*throw error\s*\}/)
   assert.match(adminSource, /const paymentActionBusy = isActionResourceBusy/)
   assert.match(adminSource, /aria-busy=\{providerFormActionBusy\}/)
 })

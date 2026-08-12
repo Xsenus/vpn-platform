@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.666.0 - 2026-08-12
+
+Release entry: `2026-08-12-refund-create-recovery`.
+
+### Исправлено
+
+- Неопределённый исход создания возврата YooKassa, Stripe или PayPal больше не оставляет платёж навсегда заблокированным: администратор может безопасно повторить точную операцию с теми же суммой и причиной.
+- Admin refund create/recheck не раскрывает provider payload, status reason или transport exception; операторский audit сохраняется до внешнего вызова и на failure path.
+
+### Улучшено
+
+- API возвращает durable `Unknown` refund как `202 Accepted`, UI автоматически обновляет список и показывает команду «Повторить возврат» только при подтверждённой provider idempotency. Причина нормализуется и ограничена 120 символами; Т-Банк остаётся fail-closed.
+
+### Проверено
+
+- Fail-first backend `0/3`, browser `0/2`; targeted refund/payment regression `86/86`, backend Release `1354/1354`, frontend `148/148`, typecheck/build, desktop/mobile refund Playwright `6/6`, fresh SQLite, EF drift, dependency audit `0 vulnerabilities`, strict UTF-8 и secret scan `673/0` зелёные.
+- Roadmap `679/699` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные refund/provider кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## 0.665.0 - 2026-08-12
 
 Release entry: `2026-08-12-admin-payment-recheck-boundary`.

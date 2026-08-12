@@ -409,6 +409,9 @@ export type RefundDto = {
   recheckSupported?: boolean
   canRecheck?: boolean
   recheckBlockers?: string[]
+  retrySupported?: boolean
+  canRetry?: boolean
+  retryBlockers?: string[]
 }
 
 
@@ -1317,6 +1320,7 @@ const channelTypeValues = new Set<ChannelType>(['Web', 'Telegram', 'Discord', 'V
 const orderTypeValues = new Set<OrderType>(['NewSubscription', 'Renewal', 'Upgrade', 'Compensation'])
 const orderStatusValues = new Set(['Draft', 'PendingPayment', 'PaymentReceived', 'FulfillmentInProgress', 'Completed', 'Failed', 'Cancelled', 'Expired', 'Refunded', 'PartiallyProcessed'])
 const paymentStatusValues = new Set(['New', 'Pending', 'WaitingConfirmation', 'Succeeded', 'Failed', 'Cancelled', 'Refunded', 'PartiallyRefunded', 'Unknown'])
+const refundStatusValues = new Set(['New', 'Pending', 'Succeeded', 'Failed', 'Cancelled', 'Unknown'])
 const subscriptionStatusValues = new Set(['PendingActivation', 'Active', 'GracePeriod', 'Expired', 'Suspended', 'Cancelled', 'Blocked'])
 const accessCredentialStatusValues = new Set(['Provisioning', 'Active', 'Rotating', 'Disabled', 'Revoked', 'Error', 'SyncRequired'])
 const rewardStatusValues = new Set(['Pending', 'Approved', 'Cancelled', 'Reverted'])
@@ -1939,6 +1943,7 @@ function isRefundDto(value: unknown): value is RefundDto {
     && paymentProviderValues.has(value.provider as PaymentProvider)
     && hasString(value, 'providerRefundId', true)
     && hasString(value, 'status', true)
+    && refundStatusValues.has(value.status as string)
     && hasFiniteNumber(value, 'amount', 0)
     && (value.amount as number) > 0
     && hasString(value, 'currency', true)
@@ -1948,6 +1953,12 @@ function isRefundDto(value: unknown): value is RefundDto {
     && (value.recheckSupported === undefined || typeof value.recheckSupported === 'boolean')
     && (value.canRecheck === undefined || typeof value.canRecheck === 'boolean')
     && (value.recheckBlockers === undefined || (Array.isArray(value.recheckBlockers) && value.recheckBlockers.every((item) => typeof item === 'string' && item.trim().length > 0)))
+    && (value.retrySupported === undefined || typeof value.retrySupported === 'boolean')
+    && (value.canRetry === undefined || typeof value.canRetry === 'boolean')
+    && (value.retryBlockers === undefined || (Array.isArray(value.retryBlockers) && value.retryBlockers.every((item) => typeof item === 'string' && item.trim().length > 0)))
+    && value.rawRequest === undefined
+    && value.rawResponse === undefined
+    && value.statusReason === undefined
 }
 
 function isAdminRefundDto(value: unknown): value is RefundDto {
@@ -1957,6 +1968,10 @@ function isAdminRefundDto(value: unknown): value is RefundDto {
     && hasBoolean(value, 'canRecheck')
     && Array.isArray(value.recheckBlockers)
     && value.recheckBlockers.every((item) => typeof item === 'string' && item.trim().length > 0)
+    && hasBoolean(value, 'retrySupported')
+    && hasBoolean(value, 'canRetry')
+    && Array.isArray(value.retryBlockers)
+    && value.retryBlockers.every((item) => typeof item === 'string' && item.trim().length > 0)
 }
 
 function isAdminSupportMessageDto(value: unknown): value is SupportMessageDto {

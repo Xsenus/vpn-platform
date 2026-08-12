@@ -478,6 +478,7 @@ async function mockAdminApi(page: Page) {
   let releaseDelayedProviderEnabled: (() => void) | null = null
   let delayNextOrderRecheckResponse = false
   let releaseDelayedOrderRecheck: (() => void) | null = null
+  let failNextRefundCreateUncertain = false
   let failNextAccessQrStatus: number | null = null
   let expiringAdminAccess = false
   let expiringAdminSubscription = false
@@ -1007,11 +1008,38 @@ async function mockAdminApi(page: Page) {
 
     if (method === 'POST' && path === '/api/admin/payments/payment-e2e/refund') {
       const amount = Number((body as Record<string, unknown>)?.amount ?? 0)
+      const reason = String((body as Record<string, unknown>)?.reason ?? '')
+      if (failNextRefundCreateUncertain) {
+        failNextRefundCreateUncertain = false
+        refunds.splice(0, refunds.length, {
+          id: 'refund-uncertain-e2e',
+          paymentAttemptId: 'payment-e2e',
+          provider: 'YooKassa',
+          providerRefundId: 'pending:refund-uncertain-e2e',
+          status: 'Unknown',
+          amount,
+          currency: 'RUB',
+          reason,
+          createdAt: now,
+          refundedAt: null,
+          recheckSupported: true,
+          canRecheck: false,
+          recheckBlockers: ['Не сохранён идентификатор возврата у провайдера.'],
+          retrySupported: true,
+          canRetry: true,
+          retryBlockers: []
+        })
+        payments[0] = { ...payments[0], canRefund: false, refundsCount: 1, refundBlockers: ['Есть незавершенный возврат.'], updatedAt: now }
+        await fulfillJson(route, refunds[0], 202)
+        return
+      }
       const refundedAmount = Number(payments[0].refundedAmount ?? 0) + amount
       const refundableAmount = Math.max(0, 590 - refundedAmount)
-      const refundNumber = refunds.length + 1
-      const refund = { id: `refund-e2e-${refundNumber}`, paymentAttemptId: 'payment-e2e', provider: 'YooKassa', providerRefundId: `rf-e2e-${refundNumber}`, status: 'Succeeded', amount, currency: 'RUB', reason: String((body as Record<string, unknown>)?.reason ?? ''), createdAt: now, refundedAt: now, recheckSupported: true, canRecheck: false, recheckBlockers: ['Возврат уже имеет окончательный статус.'] }
-      refunds.push(refund)
+      const uncertainIndex = refunds.findIndex((item) => item.id === 'refund-uncertain-e2e')
+      const refundNumber = uncertainIndex >= 0 ? 1 : refunds.length + 1
+      const refund = { id: uncertainIndex >= 0 ? 'refund-uncertain-e2e' : `refund-e2e-${refundNumber}`, paymentAttemptId: 'payment-e2e', provider: 'YooKassa', providerRefundId: `rf-e2e-${refundNumber}`, status: 'Succeeded', amount, currency: 'RUB', reason, createdAt: now, refundedAt: now, recheckSupported: true, canRecheck: false, recheckBlockers: ['Возврат уже имеет окончательный статус.'], retrySupported: true, canRetry: false, retryBlockers: ['Возврат уже завершён.'] }
+      if (uncertainIndex >= 0) refunds[uncertainIndex] = refund
+      else refunds.push(refund)
       payments[0] = {
         ...payments[0],
         status: refundableAmount > 0 ? 'PartiallyRefunded' : 'Refunded',
@@ -2012,6 +2040,7 @@ async function mockAdminApi(page: Page) {
     releaseProviderEnabled: () => { releaseDelayedProviderEnabled?.() },
     delayNextOrderRecheck: () => { delayNextOrderRecheckResponse = true },
     releaseOrderRecheck: () => { releaseDelayedOrderRecheck?.() },
+    failNextRefundCreateWithUncertainOutcome: () => { failNextRefundCreateUncertain = true },
     prepareUnsupportedPaymentRecheck: () => {
       orders[0] = {
         ...orders[0],
@@ -2095,7 +2124,10 @@ async function mockAdminApi(page: Page) {
         refundedAt: null,
         recheckSupported: true,
         canRecheck: true,
-        recheckBlockers: []
+        recheckBlockers: [],
+        retrySupported: true,
+        canRetry: false,
+        retryBlockers: ['Возврат уже имеет идентификатор провайдера.']
       })
       payments[0] = {
         ...payments[0],
@@ -3530,6 +3562,46 @@ test('admin reconciles a pending refund and applies its amount once', async ({ p
   await openAdminSection(page, 'Оплаты', 'payments')
   await expect(page.locator('#payment-payment-e2e')).toContainText('возвращено 200 RUB')
   expect(api.getAuthorizedRequestCount('/api/admin/refunds/refund-pending-e2e/recheck', 'POST', 'Bearer admin-refund-recheck-token')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(browserErrors).toEqual([])
+})
+
+test('admin recovers an uncertain refund create without manual reload', async ({ page }) => {
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
+  const api = await mockAdminApi(page)
+  api.failNextRefundCreateWithUncertainOutcome()
+  await seedAdminSession(page, 'admin-refund-retry-token', 'admin-refund-retry-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Оплаты', 'payments')
+
+  const paymentsPanel = page.locator('#payments')
+  const paymentRow = page.locator('#payment-payment-e2e')
+  const reasonInput = paymentRow.getByRole('textbox', { name: 'Причина' })
+  await expect(reasonInput).toHaveAttribute('maxlength', '120')
+  await paymentRow.getByRole('spinbutton', { name: 'Сумма' }).fill('200')
+  await reasonInput.fill('uncertain_refund_e2e')
+  await paymentRow.getByRole('button', { name: 'Вернуть платеж' }).click()
+  await paymentsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+
+  await expect(page.getByText('Возврат pending:refund-uncertain-e2e: Unknown')).toBeVisible()
+  const refundRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: 'pending:refund-uncertain-e2e' })
+  await expect(refundRow).toContainText('Неизвестно')
+  await expect(refundRow.getByRole('button', { name: 'Повторить возврат' })).toBeEnabled()
+  await expect(refundRow.getByRole('button', { name: 'Сверить возврат' })).toBeDisabled()
+
+  await refundRow.getByRole('button', { name: 'Повторить возврат' }).click()
+  await expect(paymentsPanel.getByRole('dialog')).toContainText('Повторить возврат 200 RUB')
+  await paymentsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Возврат rf-e2e-1 повторён: Succeeded')).toBeVisible()
+  await expect(page.locator('#payment-payment-e2e')).toContainText('возвращено 200 RUB')
+  await expect(paymentsPanel.getByText('Возврат 200 RUB · rf-e2e-1')).toBeVisible()
+  expect(api.getAuthorizedRequestCount('/api/admin/payments/payment-e2e/refund', 'POST', 'Bearer admin-refund-retry-token')).toBe(2)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
 })
