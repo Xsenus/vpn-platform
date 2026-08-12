@@ -15245,5 +15245,28 @@
         "text": "Roadmap progress is 660/680 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-vpn-public-endpoint-protocol-guard",
+    "version": "0.648.0",
+    "releasedAt": "2026-08-12T08:45:32+07:00",
+    "title": "VPN endpoint и протоколы валидируются до выдачи доступа",
+    "summary": "Публичный hostname, port и protocol CSV проходят единый fail-closed контракт от admin API и provisioning queue до allocator и VPN URI.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Server/scenario API и legacy provisioning queue отклоняют malformed public endpoint и неподдерживаемые протоколы до node/run/client mutation."
+      },
+      {
+        "type": "improved",
+        "text": "Allocator сопоставляет protocol по точным CSV-токенам, sandbox URI проверяет host/port и корректно оформляет IPv6, а Ansible metadata экранируется JSON-фильтром."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 661/681 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

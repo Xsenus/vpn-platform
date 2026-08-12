@@ -71,6 +71,10 @@ public class SubscriptionService
         var maxDevices = ResolveMaxDevices(tariff, scenario);
         var trafficLimit = tariff.TrafficLimit ?? scenario?.TrafficLimit;
         var protocol = string.IsNullOrWhiteSpace(scenario?.VpnProtocol) ? "vless" : scenario.VpnProtocol.Trim().ToLowerInvariant();
+        if (!VpnProtocolPolicy.IsSupported(protocol))
+        {
+            return Result<ActivationResult>.Failure("Provisioning scenario VPN protocol is unsupported.");
+        }
         var inboundSelectionRule = string.IsNullOrWhiteSpace(scenario?.InboundSelectionRule) ? "default" : scenario.InboundSelectionRule.Trim().ToLowerInvariant();
         var generateQrCode = scenario?.GenerateQrCode ?? true;
         var useSandboxProvisioning = payment.ProviderMode == PaymentProviderMode.Sandbox;

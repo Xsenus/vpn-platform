@@ -97,4 +97,4 @@ PNG создаются только при явном флаге внутри `f
 - VPN server/inbound programmatic submit и semantic validators проходят отдельные desktop/mobile regression; server panel URL повторно проверяется backend.
 - Read-only capability regression принудительно отправляет hidden admin forms на desktop/mobile и подтверждает отсутствие mutation-запросов.
 - Action capability regression принудительно подтверждает, что hidden tariff action из writable Dashboard не вызывает PATCH на desktop/mobile; allowed admin lifecycle проходит `66/66`.
-- Latest "Что нового": `2026-08-12-provisioning-inventory-argument-guard`, версия `0.647.0`; admin server form показывает IP/SSH inventory diagnostics до submit, а актуальный полный browser inventory проходит `218/218` за `11.2 min` без failed/flaky/skipped.
+- Latest "Что нового": `2026-08-12-vpn-public-endpoint-protocol-guard`, версия `0.648.0`; admin server/scenario формы валидируют public endpoint и protocol allow-list до submit, полный browser inventory проходит `218/218` за `11.7 min` без failed/flaky/skipped.

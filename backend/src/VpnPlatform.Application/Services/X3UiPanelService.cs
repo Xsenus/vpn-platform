@@ -1937,7 +1937,7 @@ public class X3UiPanelService
     private static string BuildClientConfigUri(VpnPanel panel, VpnInbound inbound, VpnClient client)
     {
         var host = ExtractHost(panel.BaseUrl);
-        if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(client.Uuid) || inbound.Port <= 0)
+        if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(client.Uuid) || inbound.Port is < 1 or > 65535)
         {
             return client.ConfigUri;
         }

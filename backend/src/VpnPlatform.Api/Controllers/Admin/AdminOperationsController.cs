@@ -1667,7 +1667,7 @@ public class AdminOperationsController : ControllerBase
             Country = request.Country.Trim(),
             Datacenter = request.Datacenter.Trim(),
             Capacity = request.Capacity,
-            SupportedProtocolsCsv = string.IsNullOrWhiteSpace(request.SupportedProtocolsCsv) ? "vless,vmess,trojan" : request.SupportedProtocolsCsv.Trim(),
+            SupportedProtocolsCsv = NormalizeServerProtocols(request.SupportedProtocolsCsv),
             Priority = request.Priority,
             TagsCsv = tags,
             SshUser = string.IsNullOrWhiteSpace(request.SshUser) ? "root" : request.SshUser.Trim(),
@@ -1682,7 +1682,7 @@ public class AdminOperationsController : ControllerBase
             ProtectedPanelPassword = protectedPanelPassword,
             PanelSecretRef = string.IsNullOrWhiteSpace(protectedPanelPassword) ? string.Empty : $"secretref:panel:{Guid.NewGuid():N}",
             PanelInboundId = request.PanelInboundId,
-            PublicHostname = request.PublicHostname?.Trim() ?? string.Empty,
+            PublicHostname = NormalizePublicHostname(request.PublicHostname),
             PublicPort = request.PublicPort,
             NodeGroupId = request.NodeGroupId,
             Status = NodeStatus.New,
@@ -1806,7 +1806,7 @@ public class AdminOperationsController : ControllerBase
         node.Country = request.Country.Trim();
         node.Datacenter = request.Datacenter.Trim();
         node.Capacity = capacity;
-        node.SupportedProtocolsCsv = string.IsNullOrWhiteSpace(request.SupportedProtocolsCsv) ? "vless,vmess,trojan" : request.SupportedProtocolsCsv.Trim();
+        node.SupportedProtocolsCsv = NormalizeServerProtocols(request.SupportedProtocolsCsv);
         node.Priority = request.Priority;
         node.SshUser = string.IsNullOrWhiteSpace(request.SshUser) ? "root" : request.SshUser.Trim();
         node.SshPort = request.SshPort;
@@ -1814,7 +1814,7 @@ public class AdminOperationsController : ControllerBase
         node.PanelBaseUrl = panelBaseUrl;
         node.PanelUsername = string.IsNullOrWhiteSpace(request.PanelUsername) ? "admin" : request.PanelUsername.Trim();
         node.PanelInboundId = request.PanelInboundId;
-        node.PublicHostname = request.PublicHostname?.Trim() ?? string.Empty;
+        node.PublicHostname = NormalizePublicHostname(request.PublicHostname);
         node.PublicPort = request.PublicPort;
         node.NodeGroupId = request.NodeGroupId;
         node.TagsCsv = NormalizeServerTags(request.TagsCsv, owner, authMethod, ProvisioningService.CredentialsConfigured(node) ? "protected" : "missing", request.ValidationMode);
@@ -3216,6 +3216,18 @@ public class AdminOperationsController : ControllerBase
             return "Panel inbound ID must be greater than zero.";
         }
 
+        if (!string.IsNullOrWhiteSpace(request.SupportedProtocolsCsv)
+            && !VpnProtocolPolicy.TryNormalizeCsv(request.SupportedProtocolsCsv, out _))
+        {
+            return "Supported protocols must contain only vless, vmess or trojan CSV tokens.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.PublicHostname)
+            && !ProvisioningService.IsValidHost(NormalizePublicHostname(request.PublicHostname)))
+        {
+            return "Public hostname must be a valid DNS name, IPv4 or IPv6 address.";
+        }
+
         if (!string.IsNullOrWhiteSpace(request.IpAddress)
             && !ProvisioningService.IsValidIpAddress(request.IpAddress))
         {
@@ -3236,6 +3248,19 @@ public class AdminOperationsController : ControllerBase
 
         return null;
     }
+
+    private static string NormalizeServerProtocols(string? value)
+    {
+        var candidate = string.IsNullOrWhiteSpace(value)
+            ? VpnProtocolPolicy.DefaultSupportedProtocolsCsv
+            : value;
+        return VpnProtocolPolicy.TryNormalizeCsv(candidate, out var normalized)
+            ? normalized
+            : string.Empty;
+    }
+
+    private static string NormalizePublicHostname(string? value)
+        => string.IsNullOrWhiteSpace(value) ? string.Empty : ProvisioningService.NormalizeHost(value);
 
     private static bool RequiresServerSecretProtection(CreateServerHttpRequest request)
         => !string.IsNullOrWhiteSpace(request.SshCredential)

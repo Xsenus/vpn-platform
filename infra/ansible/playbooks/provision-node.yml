@@ -63,15 +63,15 @@
         group: "{{ vpn_platform_user }}"
         content: |
           {
-            "nodeName": "{{ node_name | default(inventory_hostname) }}",
-            "region": "{{ node_region | default('unknown') }}",
-            "country": "{{ node_country | default('unknown') }}",
-            "provider": "{{ node_provider | default('unknown') }}",
-            "panelBaseUrl": "{{ panel_base_url | default('') }}",
-            "panelUsername": "{{ panel_username | default('admin') }}",
-            "panelInboundId": "{{ panel_inbound_id | default('') }}",
-            "publicHostname": "{{ public_hostname | default('') }}",
-            "publicPort": "{{ public_port | default(443) }}"
+            "nodeName": {{ node_name | default(inventory_hostname) | to_json }},
+            "region": {{ node_region | default('unknown') | to_json }},
+            "country": {{ node_country | default('unknown') | to_json }},
+            "provider": {{ node_provider | default('unknown') | to_json }},
+            "panelBaseUrl": {{ panel_base_url | default('') | to_json }},
+            "panelUsername": {{ panel_username | default('admin') | to_json }},
+            "panelInboundId": {{ panel_inbound_id | default(none) | to_json }},
+            "publicHostname": {{ public_hostname | default('') | to_json }},
+            "publicPort": {{ public_port | default(443) | int }}
           }
 
     - name: Install monitoring bootstrap note

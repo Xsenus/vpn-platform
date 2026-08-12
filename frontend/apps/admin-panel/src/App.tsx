@@ -4697,7 +4697,7 @@ export function App() {
                 <label><span>Дата-центр</span><input value={serverForm.datacenter} onChange={(e) => updateServerForm('datacenter', e.target.value)} placeholder="fsn1" /></label>
                 <label><span>Емкость</span><input value={serverForm.capacity} onChange={(e) => updateServerForm('capacity', Number(e.target.value) || 0)} placeholder="5000" type="number" min={1} step="1" /></label>
                 <label><span>Приоритет</span><input value={serverForm.priority} onChange={(e) => updateServerForm('priority', Number(e.target.value) || 0)} placeholder="100" type="number" min={1} step="1" /></label>
-                <label><span>Протоколы</span><input value={serverForm.supportedProtocolsCsv ?? ''} onChange={(e) => updateServerForm('supportedProtocolsCsv', e.target.value)} placeholder="vless,vmess,trojan" /></label>
+                <label><span>Протоколы</span><select value={serverForm.supportedProtocolsCsv ?? 'vless,vmess,trojan'} onChange={(e) => updateServerForm('supportedProtocolsCsv', e.target.value)}><option value="vless,vmess,trojan">VLESS, VMess, Trojan</option><option value="vless">VLESS</option><option value="vmess">VMess</option><option value="trojan">Trojan</option><option value="vless,vmess">VLESS, VMess</option><option value="vless,trojan">VLESS, Trojan</option><option value="vmess,trojan">VMess, Trojan</option></select></label>
                 <label><span>Теги</span><input value={serverForm.tagsCsv ?? ''} onChange={(e) => updateServerForm('tagsCsv', e.target.value)} placeholder="tier:premium,city:amsterdam" /></label>
               </div>
             </fieldset>
@@ -4717,6 +4717,9 @@ export function App() {
                 <label><span>URL панели</span><input value={serverForm.panelBaseUrl ?? ''} onChange={(e) => updateServerForm('panelBaseUrl', e.target.value)} placeholder="https://panel.example.com:2053" type="url" inputMode="url" /></label>
                 <label><span>Логин панели</span><input value={serverForm.panelUsername ?? ''} onChange={(e) => updateServerForm('panelUsername', e.target.value)} placeholder="admin" /></label>
                 <SecretField label="Пароль панели" value={serverForm.panelPassword ?? ''} onChange={(value) => updateServerForm('panelPassword', value)} />
+                <label><span>Inbound ID</span><input value={serverForm.panelInboundId ?? ''} onChange={(e) => updateServerForm('panelInboundId', e.target.value ? Number(e.target.value) : null)} type="number" min={1} step="1" /></label>
+                <label><span>Публичный hostname</span><input value={serverForm.publicHostname ?? ''} onChange={(e) => updateServerForm('publicHostname', e.target.value)} placeholder="vpn.example.com" /></label>
+                <label><span>Публичный порт</span><input value={serverForm.publicPort} onChange={(e) => updateServerForm('publicPort', Number(e.target.value) || 0)} type="number" min={1} max={65535} step="1" /></label>
               </div>
             </fieldset>
             <p className="muted">SSH-доступ защищается API и не возвращается обратно. Проверочный режим не выполняет реальный SSH-деплой.</p>
@@ -5188,7 +5191,7 @@ export function App() {
               <div className="form-grid">
                 <label><span>Название</span><input value={workScenarioForm.name} onChange={(e) => updateWorkScenarioForm('name', e.target.value)} placeholder="Автоматическая выдача VPN" required /></label>
                 <label><span>Ключ</span><input value={workScenarioForm.key} onChange={(e) => updateWorkScenarioForm('key', e.target.value)} placeholder="auto" required /></label>
-                <label><span>VPN-протокол</span><input value={workScenarioForm.vpnProtocol} onChange={(e) => updateWorkScenarioForm('vpnProtocol', e.target.value)} placeholder="vless" /></label>
+                <label><span>VPN-протокол</span><select value={workScenarioForm.vpnProtocol} onChange={(e) => updateWorkScenarioForm('vpnProtocol', e.target.value)}><option value="vless">VLESS</option><option value="vmess">VMess</option><option value="trojan">Trojan</option></select></label>
                 <label><span>Режим выдачи</span><select value={workScenarioForm.provisioningMode} onChange={(e) => updateWorkScenarioForm('provisioningMode', e.target.value)}><option value="auto">Автоматически</option><option value="manual">Вручную</option><option value="hybrid">Гибридно</option></select></label>
                 <label><span>Правило сервера</span><input value={workScenarioForm.serverSelectionRule} onChange={(e) => updateWorkScenarioForm('serverSelectionRule', e.target.value)} placeholder="least-loaded" /></label>
                 <label><span>Правило inbound</span><input value={workScenarioForm.inboundSelectionRule} onChange={(e) => updateWorkScenarioForm('inboundSelectionRule', e.target.value)} placeholder="default" /></label>

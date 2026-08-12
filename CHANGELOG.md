@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.648.0 - 2026-08-12
+
+Release entry: `2026-08-12-vpn-public-endpoint-protocol-guard`.
+
+### Исправлено
+
+- Server и work-scenario API принимают только `vless`, `vmess`, `trojan`, валидируют public hostname/port и нормализуют protocol CSV; admin UI использует ограниченные списки и показывает endpoint diagnostics до submit.
+- Node allocator сопоставляет протокол по точному CSV-токену; provisioning queue и VPN provider повторяют preflight для legacy/internal callers, а sandbox URI fail-closed валидирует config endpoint и корректно оформляет IPv6 authority.
+- VLESS/VMess/Trojan generator отклоняет port вне `1..65535`; Ansible node metadata экранирует строковые значения через `to_json` вместо прямой вставки в JSON.
+
+### Проверено
+
+- Fail-first: backend `8/25`, sandbox endpoint `0/2`; после исправления затронутый backend `161/161`, runner `5/5`, frontend helper `4/4`, valid desktop/mobile lifecycle `2/2`, negative semantic desktop/mobile `2/2`.
+- Backend `1229/1229`; frontend `140/140`; typecheck/build всех приложений зелёные; targeted responsive admin matrix `1/1` за `6.9 min` на всех 25 viewport-конфигурациях.
+- Полный Playwright `218/218` за `11.7 min`, без failed/flaky/skipped; EF drift отсутствует, fresh SQLite smoke зелёный, release/encoding gate `59/59`, dependency audit `0` уязвимостей, secret scan `671/0`.
+- Roadmap: `661/681` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked; real VPS/staging/3x-ui evidence не заменялся локальными проверками.
+
 ## 0.647.0 - 2026-08-12
 
 Release entry: `2026-08-12-provisioning-inventory-argument-guard`.

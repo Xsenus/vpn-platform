@@ -3562,9 +3562,20 @@ test('admin VPN configuration validators reject invalid semantic fields', async 
   await serverForm.getByLabel('SSH-пользователь').fill('root ansible_connection=local')
   await serverForm.getByLabel('Приоритет').fill('0')
   await serverForm.getByLabel('URL панели').fill('https://operator:secret@panel.example.test')
+  await serverForm.getByLabel('Публичный hostname').fill('vpn.example.test/path?token=leak')
+  await serverForm.evaluate((form) => {
+    const protocolSelect = Array.from(form.querySelectorAll('select')).find((item) => item.labels?.[0]?.textContent?.includes('Протоколы'))
+    protocolSelect?.append(new Option('WireGuard', 'wireguard'))
+    if (protocolSelect) {
+      protocolSelect.value = 'wireguard'
+      protocolSelect.dispatchEvent(new Event('change', { bubbles: true }))
+    }
+  })
   await expect(serverForm.getByRole('button', { name: 'Создать сервер' })).toBeDisabled()
   await expect(serverForm).toContainText('IP-адрес должен быть корректным IPv4 или IPv6 без пробелов.')
   await expect(serverForm).toContainText('SSH-пользователь содержит недопустимые символы или пробелы.')
+  await expect(serverForm).toContainText('Публичный hostname должен быть корректным DNS-именем, IPv4 или IPv6.')
+  await expect(serverForm).toContainText('Протоколы могут содержать только CSV-токены vless, vmess и trojan.')
   await serverForm.evaluate((form) => form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true })))
 
   await openAdminSection(page, '3x-ui панели', 'panels')
@@ -3619,7 +3630,10 @@ test('admin VPN infrastructure supports secure managed lifecycle', async ({ page
   await serverForm.getByLabel('Дата-центр').fill('AMS-E2E')
   await serverForm.getByLabel('Емкость').fill('250')
   await serverForm.getByLabel('Приоритет').fill('25')
-  await serverForm.getByLabel('Протоколы').fill('vless,trojan')
+  await serverForm.getByLabel('Протоколы').selectOption('vless,trojan')
+  await serverForm.getByLabel('Inbound ID').fill('7')
+  await serverForm.getByLabel('Публичный hostname').fill('vpn-nl.example.test')
+  await serverForm.getByLabel('Публичный порт').fill('8443')
   await serverForm.getByRole('textbox', { name: /^SSH-доступ/ }).fill('playwright-ssh-write-only')
   await serverForm.getByRole('textbox', { name: /^Пароль панели/ }).fill('playwright-panel-write-only')
   await serverForm.getByRole('button', { name: 'Создать сервер' }).click()
@@ -3628,6 +3642,10 @@ test('admin VPN infrastructure supports secure managed lifecycle', async ({ page
   expect(api.getLastRequest('/api/admin/servers', 'POST')?.body).toMatchObject({
     name: 'E2E NL Node',
     host: 'nl-node.example.test',
+    supportedProtocolsCsv: 'vless,trojan',
+    panelInboundId: 7,
+    publicHostname: 'vpn-nl.example.test',
+    publicPort: 8443,
     sshCredential: 'playwright-ssh-write-only',
     panelPassword: 'playwright-panel-write-only'
   })
@@ -4168,7 +4186,7 @@ test('admin managed configuration supports complete CRUD lifecycle', async ({ pa
   const scenariosPanel = page.locator('#scenarios')
   await scenariosPanel.getByLabel('Название').fill('CRUD Scenario E2E')
   await scenariosPanel.getByLabel('Ключ').fill('crud-scenario-e2e')
-  await scenariosPanel.getByLabel('VPN-протокол').fill('vless')
+  await scenariosPanel.getByLabel('VPN-протокол').selectOption('vless')
   await scenariosPanel.getByLabel('Текст для кабинета').fill('Сценарий полного браузерного CRUD.')
   await scenariosPanel.getByRole('button', { name: 'Создать сценарий' }).click()
   await expect(page.getByText('Сценарий работы создан.')).toBeVisible()
@@ -4559,7 +4577,7 @@ test('admin panel covers login and critical operational mutations across all sec
   const scenariosPanel = page.locator('#scenarios')
   await scenariosPanel.getByLabel('Название').fill('E2E ручная проверка')
   await scenariosPanel.getByLabel('Ключ').fill('e2e-manual')
-  await scenariosPanel.getByLabel('VPN-протокол').fill('vless')
+  await scenariosPanel.getByLabel('VPN-протокол').selectOption('vless')
   await scenariosPanel.getByLabel('Текст для кабинета').fill('Сценарий создан из Playwright E2E.')
   await scenariosPanel.getByRole('button', { name: 'Создать сценарий' }).click()
   await expect(scenariosPanel.locator('strong').filter({ hasText: 'E2E ручная проверка' })).toBeVisible()

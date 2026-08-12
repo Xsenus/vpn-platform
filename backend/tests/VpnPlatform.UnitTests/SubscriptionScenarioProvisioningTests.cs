@@ -13,6 +13,22 @@ namespace VpnPlatform.UnitTests;
 public class SubscriptionScenarioProvisioningTests
 {
     [Fact]
+    public async Task Node_Allocation_Should_Match_Protocol_As_Exact_Csv_Token()
+    {
+        await using var db = CreateDb();
+        var rejected = Node(Guid.NewGuid(), "substring", "eu", priority: 100, protocol: "notvless");
+        var selected = Node(Guid.NewGuid(), "exact", "eu", priority: 10, protocol: "trojan, VLESS");
+        db.VpnNodes.AddRange(rejected, selected);
+        await db.SaveChangesAsync();
+
+        var result = await new NodeAllocationService(db).SelectNodeAsync(
+            new Tariff { Name = "Protocol", Slug = "protocol", AllowedRegionsCsv = "eu" },
+            new WorkScenario { VpnProtocol = "vless", ServerSelectionRule = "priority-first" });
+
+        Assert.Equal(selected.Id, result.Id);
+    }
+
+    [Fact]
     public async Task ActivateOrRenewFromOrderAsync_Should_Apply_WorkScenario_To_Vpn_Provisioning()
     {
         await using var db = CreateDb();
@@ -137,6 +153,29 @@ public class SubscriptionScenarioProvisioningTests
         Assert.Contains("not allowed", result.Error, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(await db.Subscriptions.ToListAsync());
         Assert.Empty(await db.AccessCredentials.ToListAsync());
+    }
+
+    [Fact]
+    public async Task ActivateOrRenewFromOrderAsync_Should_Reject_Legacy_Unsupported_Scenario_Protocol()
+    {
+        await using var db = CreateDb();
+        var now = new DateTimeOffset(2026, 8, 12, 1, 0, 0, TimeSpan.Zero);
+        var user = new User { Email = "legacy-protocol@example.test", DisplayName = "Legacy", PasswordHash = "hash", ReferralCode = "legacy-protocol" };
+        var tariff = new Tariff { Name = "Legacy protocol", Slug = "legacy-protocol", DurationDays = 30, Price = 490m, Currency = "RUB", MaxDevices = 3, ProvisioningScenario = "legacy-wireguard" };
+        db.WorkScenarios.Add(new WorkScenario { Name = "Legacy", Key = "legacy-wireguard", IsActive = true, VpnProtocol = "wireguard", MaxDevices = 3 });
+        var order = new Order { UserId = user.Id, TariffId = tariff.Id, Type = OrderType.NewSubscription, Channel = ChannelType.Web, PaymentProvider = PaymentProvider.YooKassa, Status = OrderStatus.PaymentReceived, Amount = 490m, Currency = "RUB", ExpiresAt = now.AddMinutes(15) };
+        var payment = new PaymentAttempt { OrderId = order.Id, Provider = PaymentProvider.YooKassa, Status = PaymentStatus.Succeeded, Amount = 490m, Currency = "RUB", ProviderPaymentId = "legacy-protocol", PaidAt = now };
+        db.AddRange(user, tariff, order, payment);
+        await db.SaveChangesAsync();
+        var provider = new TrackingVpnProvider();
+
+        var result = await new SubscriptionService(db, new FixedClock(now), new NodeAllocationService(db), new SingleVpnProviderFactory(provider))
+            .ActivateOrRenewFromOrderAsync(order, payment);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("protocol", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(provider.LastRequest);
+        Assert.Empty(await db.Subscriptions.ToListAsync());
     }
 
     [Fact]

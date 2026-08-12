@@ -637,6 +637,22 @@ public class ProvisioningService
             return "SSH username is invalid. Use letters, digits, dot, underscore, @ or hyphen without whitespace.";
         }
 
+        if (!string.IsNullOrWhiteSpace(node.PublicHostname)
+            && !IsValidHost(NormalizeHost(node.PublicHostname)))
+        {
+            return "Public hostname is invalid.";
+        }
+
+        if (node.PublicPort is < 1 or > 65535)
+        {
+            return "Public port must be between 1 and 65535.";
+        }
+
+        if (!VpnProtocolPolicy.TryNormalizeCsv(node.SupportedProtocolsCsv, out _))
+        {
+            return "Supported VPN protocols are invalid.";
+        }
+
         return null;
     }
 

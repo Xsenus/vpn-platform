@@ -25,6 +25,24 @@ test('admin server target validation rejects inventory and argument injection va
   assert.equal(isValidLegacySshKeyPath('/run/secrets/key" --check'), false)
 })
 
+test('admin server endpoint validation rejects malformed public host and protocol tokens', () => {
+  const errors = validateServerForm({
+    name: 'Unsafe endpoint',
+    host: 'vpn.example.test',
+    sshPort: 22,
+    capacity: 100,
+    priority: 1,
+    panelBaseUrl: 'https://panel.example.test',
+    publicHostname: 'vpn.example.test/path?token=leak',
+    publicPort: 443,
+    panelInboundId: 1,
+    supportedProtocolsCsv: 'notvless,wireguard'
+  })
+
+  assert.equal(errors.some((error) => error.includes('Публичный hostname')), true)
+  assert.equal(errors.some((error) => error.includes('vless, vmess и trojan')), true)
+})
+
 test('admin server form reports unsafe provisioning fields before submit', () => {
   const errors = validateServerForm({
     name: 'Unsafe node',

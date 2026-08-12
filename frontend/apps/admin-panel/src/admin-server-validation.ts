@@ -10,6 +10,10 @@ export type ServerValidationFields = {
   capacity: number
   priority: number
   panelBaseUrl?: string | null
+  supportedProtocolsCsv?: string | null
+  panelInboundId?: number | null
+  publicHostname?: string | null
+  publicPort?: number | null
 }
 
 function isValidIpv4(value: string) {
@@ -64,6 +68,12 @@ export function validateServerForm(form: ServerValidationFields) {
   const sshPort = Number(form.sshPort)
   const capacity = Number(form.capacity)
   const priority = Number(form.priority)
+  const publicPort = Number(form.publicPort ?? 443)
+  const panelInboundId = form.panelInboundId == null ? null : Number(form.panelInboundId)
+  const protocols = String(form.supportedProtocolsCsv ?? '')
+    .split(',')
+    .map((protocol) => protocol.trim().toLowerCase())
+    .filter(Boolean)
   if (!form.name.trim()) errors.push('Укажите название VPN-сервера.')
   if (!isValidServerHost(form.host)) errors.push('Укажите корректный Host / DNS VPN-сервера.')
   if (form.ipAddress && !isValidServerIpAddress(form.ipAddress)) errors.push('IP-адрес должен быть корректным IPv4 или IPv6 без пробелов.')
@@ -73,5 +83,9 @@ export function validateServerForm(form: ServerValidationFields) {
   if (!Number.isInteger(capacity) || capacity <= 0) errors.push('Емкость сервера должна быть целым числом больше 0.')
   if (!Number.isInteger(priority) || priority <= 0) errors.push('Приоритет должен быть целым числом больше 0.')
   if (!isOptionalSafeAdminHttpUrl(form.panelBaseUrl)) errors.push('URL панели должен быть корректным http/https адресом без логина и пароля.')
+  if (protocols.length > 0 && protocols.some((protocol) => !['vless', 'vmess', 'trojan'].includes(protocol))) errors.push('Протоколы могут содержать только CSV-токены vless, vmess и trojan.')
+  if (panelInboundId !== null && (!Number.isInteger(panelInboundId) || panelInboundId <= 0)) errors.push('Inbound ID должен быть целым числом больше 0.')
+  if (form.publicHostname && !isValidServerHost(form.publicHostname)) errors.push('Публичный hostname должен быть корректным DNS-именем, IPv4 или IPv6.')
+  if (!Number.isInteger(publicPort) || publicPort <= 0 || publicPort > 65535) errors.push('Публичный порт должен быть целым числом в диапазоне 1-65535.')
   return errors
 }

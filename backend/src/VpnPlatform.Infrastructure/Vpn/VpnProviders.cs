@@ -6,6 +6,7 @@ using QRCoder;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
+using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 
@@ -34,6 +35,7 @@ public class X3UiVpnProvider : IVpnProvider
 
     public async Task<VpnProvisionResult> CreateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
     {
+        EnsureSupportedProtocol(request.Protocol);
         await using var gate = await PaymentProcessingGate.AcquireVpnSubscriptionAsync(request.SubscriptionId, cancellationToken);
         if (IsSandboxProvisioning(request))
         {
@@ -45,6 +47,7 @@ public class X3UiVpnProvider : IVpnProvider
 
     public async Task<VpnProvisionResult> UpdateAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
     {
+        EnsureSupportedProtocol(request.Protocol);
         await using var gate = await PaymentProcessingGate.AcquireVpnSubscriptionAsync(request.SubscriptionId, cancellationToken);
         if (IsSandboxProvisioning(request))
         {
@@ -52,6 +55,15 @@ public class X3UiVpnProvider : IVpnProvider
         }
 
         return await CreateOrUpdateRealAccessAsync(request, cancellationToken);
+    }
+
+    private static void EnsureSupportedProtocol(string? protocol)
+    {
+        var normalized = string.IsNullOrWhiteSpace(protocol) ? "vless" : VpnProtocolPolicy.Normalize(protocol);
+        if (!VpnProtocolPolicy.IsSupported(normalized))
+        {
+            throw new InvalidOperationException("Unsupported VPN protocol.");
+        }
     }
 
     public Task DisableAccessAsync(string providerAccessId, CancellationToken cancellationToken)
@@ -486,14 +498,29 @@ public class X3UiVpnProvider : IVpnProvider
 
     private async Task<VpnProvisionResult> CreateOrUpdateSandboxAccessAsync(VpnProvisionRequest request, CancellationToken cancellationToken)
     {
-        var protocol = string.IsNullOrWhiteSpace(request.Protocol) ? "vless" : request.Protocol.Trim().ToLowerInvariant();
+        var protocol = string.IsNullOrWhiteSpace(request.Protocol) ? "vless" : VpnProtocolPolicy.Normalize(request.Protocol);
+        if (!VpnProtocolPolicy.IsSupported(protocol))
+        {
+            throw new InvalidOperationException("Unsupported VPN protocol.");
+        }
+        var publicHost = ProvisioningService.NormalizeHost(_configuration["Vpn:X3Ui:SandboxPublicHost"] ?? "sandbox-node.local");
+        var publicPortText = _configuration["Vpn:X3Ui:SandboxPublicPort"];
+        var publicPort = string.IsNullOrWhiteSpace(publicPortText)
+            ? 443
+            : int.TryParse(publicPortText, out var configuredPort) ? configuredPort : 0;
+        if (!ProvisioningService.IsValidHost(publicHost) || publicPort is < 1 or > 65535)
+        {
+            throw new InvalidOperationException("Sandbox public endpoint must contain a valid DNS name, IPv4 or IPv6 address and port 1-65535.");
+        }
+
+        var publicAuthorityHost = Uri.CheckHostName(publicHost) == UriHostNameType.IPv6
+            ? $"[{publicHost}]"
+            : publicHost;
         var (panel, inbound) = await EnsureSandboxPanelAndInboundAsync(protocol, cancellationToken);
         var accessId = $"x3ui-sandbox-{request.SubscriptionId:N}";
         var uuid = request.SubscriptionId.ToString("D");
         var email = $"sandbox-{request.UserId:N}-{request.SubscriptionId:N}";
-        var publicHost = _configuration["Vpn:X3Ui:SandboxPublicHost"] ?? "sandbox-node.local";
-        var publicPort = int.TryParse(_configuration["Vpn:X3Ui:SandboxPublicPort"], out var port) ? port : 443;
-        var uri = $"{protocol}://{uuid}@{publicHost}:{publicPort}?security=reality&type=tcp#vpn-{request.SubscriptionId:N}";
+        var uri = $"{protocol}://{uuid}@{publicAuthorityHost}:{publicPort}?security=reality&type=tcp#vpn-{request.SubscriptionId:N}";
         var qr = request.GenerateQrCode
             ? _qrCodeGenerator.GeneratePayload(uri, $"vpn-client:{request.SubscriptionId:N}")
             : new QrCodeGenerationResult(uri, null, false, _clock.UtcNow);
@@ -874,7 +901,7 @@ public static class X3UiConfigUriGenerator
 
     public static string BuildVlessUri(VpnPanel panel, VpnInbound inbound, VpnClient client)
     {
-        if (NormalizeProtocol(inbound.Protocol) != "vless" || string.IsNullOrWhiteSpace(client.Uuid) || inbound.Port <= 0)
+        if (NormalizeProtocol(inbound.Protocol) != "vless" || string.IsNullOrWhiteSpace(client.Uuid) || inbound.Port is < 1 or > 65535)
         {
             return string.Empty;
         }
@@ -908,7 +935,7 @@ public static class X3UiConfigUriGenerator
 
     public static string BuildTrojanUri(VpnPanel panel, VpnInbound inbound, VpnClient client)
     {
-        if (NormalizeProtocol(inbound.Protocol) != "trojan" || string.IsNullOrWhiteSpace(client.Uuid) || inbound.Port <= 0)
+        if (NormalizeProtocol(inbound.Protocol) != "trojan" || string.IsNullOrWhiteSpace(client.Uuid) || inbound.Port is < 1 or > 65535)
         {
             return string.Empty;
         }
@@ -927,7 +954,7 @@ public static class X3UiConfigUriGenerator
 
     public static string BuildVmessUri(VpnPanel panel, VpnInbound inbound, VpnClient client)
     {
-        if (NormalizeProtocol(inbound.Protocol) != "vmess" || string.IsNullOrWhiteSpace(client.Uuid) || inbound.Port <= 0)
+        if (NormalizeProtocol(inbound.Protocol) != "vmess" || string.IsNullOrWhiteSpace(client.Uuid) || inbound.Port is < 1 or > 65535)
         {
             return string.Empty;
         }

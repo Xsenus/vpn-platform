@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 
@@ -21,6 +22,10 @@ public class NodeAllocationService
         var regionHints = SplitHints(tariff.AllowedRegionsCsv);
         var nodeGroupHints = SplitHints(tariff.AllowedNodeGroupsCsv);
         var requiredProtocol = NormalizeProtocol(scenario?.VpnProtocol);
+        if (!VpnProtocolPolicy.IsSupported(requiredProtocol))
+        {
+            throw new InvalidOperationException("Unsupported VPN protocol.");
+        }
         var serverSelectionRule = NormalizeRule(scenario?.ServerSelectionRule, "least-loaded");
 
         var query = _db.VpnNodes
@@ -32,8 +37,7 @@ public class NodeAllocationService
                 x.UsedCapacity < x.Capacity &&
                 x.Region != "sandbox" &&
                 x.Name != "sandbox-vpn-node" &&
-                !x.TagsCsv.ToLower().Contains("sandbox") &&
-                (string.IsNullOrWhiteSpace(x.SupportedProtocolsCsv) || x.SupportedProtocolsCsv.ToLower().Contains(requiredProtocol)));
+                !x.TagsCsv.ToLower().Contains("sandbox"));
 
         if (regionHints.Length > 0)
         {
@@ -45,7 +49,9 @@ public class NodeAllocationService
             query = query.Where(x => x.NodeGroup != null && nodeGroupHints.Contains(x.NodeGroup.Code));
         }
 
-        var nodeCandidates = await query.ToListAsync(cancellationToken);
+        var nodeCandidates = (await query.ToListAsync(cancellationToken))
+            .Where(x => VpnProtocolPolicy.Supports(x.SupportedProtocolsCsv, requiredProtocol))
+            .ToList();
         var selected = ApplyNodeOrdering(nodeCandidates, serverSelectionRule).FirstOrDefault();
 
         if (selected is not null)
@@ -103,6 +109,10 @@ public class NodeAllocationService
     public async Task<VpnNode> SelectOrCreateSandboxNodeAsync(string? protocol, CancellationToken cancellationToken = default)
     {
         var requiredProtocol = NormalizeProtocol(protocol);
+        if (!VpnProtocolPolicy.IsSupported(requiredProtocol))
+        {
+            throw new InvalidOperationException("Unsupported VPN protocol.");
+        }
         var sandboxCandidates = await _db.VpnNodes
             .Where(x =>
                 x.Provider == "x3ui" &&
@@ -110,9 +120,11 @@ public class NodeAllocationService
                 x.Status == NodeStatus.Ready &&
                 x.IsAvailableForNewUsers &&
                 x.HealthStatus != HealthStatus.Unhealthy &&
-                x.UsedCapacity < x.Capacity &&
-                (string.IsNullOrWhiteSpace(x.SupportedProtocolsCsv) || x.SupportedProtocolsCsv.ToLower().Contains(requiredProtocol)))
+                x.UsedCapacity < x.Capacity)
             .ToListAsync(cancellationToken);
+        sandboxCandidates = sandboxCandidates
+            .Where(x => VpnProtocolPolicy.Supports(x.SupportedProtocolsCsv, requiredProtocol))
+            .ToList();
         var sandboxNode = ApplyNodeOrdering(sandboxCandidates, "least-loaded").FirstOrDefault();
 
         if (sandboxNode is not null)
@@ -166,7 +178,7 @@ public class NodeAllocationService
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static string NormalizeProtocol(string? value)
-        => string.IsNullOrWhiteSpace(value) ? "vless" : value.Trim().ToLowerInvariant();
+        => string.IsNullOrWhiteSpace(value) ? "vless" : VpnProtocolPolicy.Normalize(value);
 
     private static string NormalizeRule(string? value, string fallback)
         => string.IsNullOrWhiteSpace(value) ? fallback : value.Trim().ToLowerInvariant();

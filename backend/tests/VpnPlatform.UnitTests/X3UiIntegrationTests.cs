@@ -102,6 +102,32 @@ public class X3UiIntegrationTests
         Assert.Equal(string.Empty, uri);
     }
 
+    [Theory]
+    [InlineData("vless", "vless://11111111-1111-1111-1111-111111111111@[2001:db8::10]:443")]
+    [InlineData("trojan", "trojan://11111111-1111-1111-1111-111111111111@[2001:db8::10]:443")]
+    public void Config_Generator_Should_Bracket_Ipv6_Endpoint(string protocol, string expectedPrefix)
+    {
+        var uri = X3UiConfigUriGenerator.BuildUri(
+            new VpnPanel { BaseUrl = "https://[2001:db8::10]:2053" },
+            new VpnInbound { Protocol = protocol, Port = 443, StreamSettingsJson = "{\"network\":\"tcp\",\"security\":\"tls\"}" },
+            new VpnClient { SubscriptionId = Guid.NewGuid(), Uuid = "11111111-1111-1111-1111-111111111111" });
+
+        Assert.StartsWith(expectedPrefix, uri, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(65536)]
+    public void Config_Generator_Should_Reject_Out_Of_Range_Port(int port)
+    {
+        var uri = X3UiConfigUriGenerator.BuildUri(
+            new VpnPanel { BaseUrl = "https://vpn.example.test" },
+            new VpnInbound { Protocol = "vless", Port = port },
+            new VpnClient { Uuid = "11111111-1111-1111-1111-111111111111" });
+
+        Assert.Empty(uri);
+    }
+
     [Fact]
     public async Task Panel_Health_And_Sync_Should_Save_Health_And_Detect_Diffs()
     {
@@ -2165,6 +2191,62 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Vpn_Provider_Should_Reject_Unsupported_Protocol_Before_Any_State_Or_Network_Mutation()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var provider = new X3UiVpnProvider(SandboxConfiguration(), db, remote, new TestSecretProtector(), clock);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => provider.CreateAccessAsync(
+            new VpnProvisionRequest(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), clock.UtcNow.AddDays(30), 3, Protocol: "wireguard"),
+            CancellationToken.None));
+
+        Assert.Contains("unsupported VPN protocol", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await db.VpnClients.ToListAsync());
+        Assert.Empty(await db.VpnPanels.ToListAsync());
+        Assert.Empty(await db.VpnInbounds.ToListAsync());
+        Assert.Equal(0, remote.AddClientCalls);
+    }
+
+    [Fact]
+    public async Task Sandbox_Vpn_Provider_Should_Reject_Invalid_Public_Endpoint_Without_Local_State()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var provider = new X3UiVpnProvider(SandboxConfiguration("sandbox-node.local/path?token=leak", "65536"), db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock);
+        var tariff = new Tariff { Name = "Invalid sandbox endpoint", Slug = "invalid-sandbox-endpoint", DurationDays = 30, Price = 490m, Currency = "RUB", MaxDevices = 3, IsActive = true };
+        db.Tariffs.Add(tariff);
+        await db.SaveChangesAsync();
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => provider.CreateAccessAsync(
+            new VpnProvisionRequest(Guid.NewGuid(), Guid.NewGuid(), tariff.Id, Guid.NewGuid(), clock.UtcNow.AddDays(30), 3),
+            CancellationToken.None));
+
+        Assert.Contains("sandbox public endpoint", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await db.VpnClients.ToListAsync());
+        Assert.Empty(await db.VpnPanels.ToListAsync());
+        Assert.Empty(await db.VpnInbounds.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Sandbox_Vpn_Provider_Should_Bracket_Ipv6_Public_Endpoint()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var provider = new X3UiVpnProvider(SandboxConfiguration("2001:db8::20"), db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock);
+        var tariff = new Tariff { Name = "IPv6 sandbox", Slug = "ipv6-sandbox", DurationDays = 30, Price = 490m, Currency = "RUB", MaxDevices = 3, IsActive = true };
+        db.Tariffs.Add(tariff);
+        await db.SaveChangesAsync();
+
+        var access = await provider.CreateAccessAsync(
+            new VpnProvisionRequest(Guid.NewGuid(), Guid.NewGuid(), tariff.Id, Guid.NewGuid(), clock.UtcNow.AddDays(30), 3),
+            CancellationToken.None);
+
+        Assert.Contains("@[2001:db8::20]:443", access.AccessUri, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Sandbox_Vpn_Provider_Enable_Disable_Sync_And_Reset_Should_Update_Local_Client()
     {
         await using var db = CreateDbContext();
@@ -2313,12 +2395,12 @@ public class X3UiIntegrationTests
     private static IConfiguration ProductionConfiguration()
         => new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Vpn:X3Ui:Mode"] = "Production" }).Build();
 
-    private static IConfiguration SandboxConfiguration()
+    private static IConfiguration SandboxConfiguration(string publicHost = "sandbox-node.local", string publicPort = "443")
         => new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["Vpn:X3Ui:Mode"] = "Sandbox",
-            ["Vpn:X3Ui:SandboxPublicHost"] = "sandbox-node.local",
-            ["Vpn:X3Ui:SandboxPublicPort"] = "443"
+            ["Vpn:X3Ui:SandboxPublicHost"] = publicHost,
+            ["Vpn:X3Ui:SandboxPublicPort"] = publicPort
         }).Build();
 
     private static CreateVpnInboundCommand NewInboundCommand(

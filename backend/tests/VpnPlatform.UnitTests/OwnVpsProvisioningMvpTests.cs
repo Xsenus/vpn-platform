@@ -21,6 +21,45 @@ namespace VpnPlatform.UnitTests;
 public class OwnVpsProvisioningMvpTests
 {
     [Theory]
+    [InlineData("public-hostname", "Public hostname")]
+    [InlineData("public-port", "Public port")]
+    [InlineData("protocols", "protocol")]
+    public async Task QueueAsync_Should_Reject_Legacy_Invalid_Public_Endpoint_Metadata_On_Sqlite(string field, string expectedError)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var node = new VpnNode
+        {
+            Name = $"endpoint-guard-{field}",
+            Host = "endpoint.example.test",
+            Provider = "customer-vps",
+            SshUser = "root",
+            SshPort = 22,
+            PublicHostname = field == "public-hostname" ? "vpn.example.test/path?token=leak" : "vpn.example.test",
+            PublicPort = field == "public-port" ? 65536 : 443,
+            SupportedProtocolsCsv = field == "protocols" ? "notvless" : "vless",
+            Status = NodeStatus.New,
+            ProvisioningStatus = ProvisioningRunStatus.Requested,
+            TagsCsv = "validation-mode:false,explicit-live-provisioning:true,ssh-auth:ssh_key",
+            ProtectedSshCredential = "v1:cHJpdmF0ZS1rZXk="
+        };
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+
+        var result = await new ProvisioningService(db, new TestClock(), new TestSecretProtector())
+            .QueueAsync(node.Id, dryRun: false, requestedByUserId: Guid.NewGuid());
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(expectedError, result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await db.ProvisioningRuns.ToListAsync());
+        Assert.Empty(await db.ProvisioningStepRuns.ToListAsync());
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Theory]
     [InlineData("ip-address", "IP address")]
     [InlineData("ssh-user", "SSH username")]
     public async Task QueueAsync_Should_Reject_Provisioning_Inventory_Injection_On_Sqlite(string field, string expectedError)

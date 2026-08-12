@@ -132,6 +132,21 @@ public class WorkScenarioControllerTests
     }
 
     [Theory]
+    [InlineData("wireguard")]
+    [InlineData("vless://attacker.example")]
+    public async Task AdminWorkScenarios_Should_Reject_Unsupported_Vpn_Protocol(string protocol)
+    {
+        await using var db = CreateDb();
+        var controller = CreateController(db);
+
+        var result = await controller.Create(Request("protocol-check") with { VpnProtocol = protocol }, CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("vless, vmess or trojan", System.Text.Json.JsonSerializer.Serialize(badRequest.Value));
+        Assert.Empty(await db.WorkScenarios.ToListAsync());
+    }
+
+    [Theory]
     [InlineData("{\"tariff\":\"bad\"}", "Allowed tariff ids must be a JSON array")]
     [InlineData("[\"not-a-guid\"]", "Allowed tariff ids must contain only tariff GUID strings")]
     [InlineData("[", "Allowed tariff ids must be valid JSON")]

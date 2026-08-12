@@ -9,6 +9,7 @@ from unittest.mock import patch
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+ANSIBLE_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 import run_playbook  # noqa: E402
@@ -53,6 +54,18 @@ class RunPlaybookTests(unittest.TestCase):
         self.assertIn("--extra-vars", command)
         self.assertIn("@/tmp/extra.json", command)
         self.assertIn("--check", command)
+
+    def test_node_metadata_uses_json_filters_for_untrusted_strings(self):
+        files = [
+            ANSIBLE_ROOT / "playbooks" / "provision-node.yml",
+            ANSIBLE_ROOT / "templates" / "node-meta.json.j2",
+        ]
+
+        for path in files:
+            content = path.read_text(encoding="utf-8")
+            self.assertNotIn('"{{ node_name', content, path.as_posix())
+            self.assertNotIn('"{{ public_hostname', content, path.as_posix())
+            self.assertGreaterEqual(content.count("| to_json"), 8, path.as_posix())
 
     @patch("run_playbook.subprocess.run")
     def test_execute_returns_machine_readable_result(self, mocked_run):

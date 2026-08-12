@@ -253,6 +253,8 @@ public class AdminServerManagementTests
     [InlineData(false, "public-port-high")]
     [InlineData(false, "panel-inbound")]
     [InlineData(false, "node-group")]
+    [InlineData(false, "public-hostname")]
+    [InlineData(false, "protocols")]
     [InlineData(true, "name")]
     [InlineData(true, "capacity")]
     [InlineData(true, "priority")]
@@ -260,6 +262,8 @@ public class AdminServerManagementTests
     [InlineData(true, "public-port-high")]
     [InlineData(true, "panel-inbound")]
     [InlineData(true, "node-group")]
+    [InlineData(true, "public-hostname")]
+    [InlineData(true, "protocols")]
     public async Task Server_Write_Should_Reject_Invalid_Semantic_Payload_On_Sqlite(bool update, string field)
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -282,7 +286,9 @@ public class AdminServerManagementTests
                 _ => node.PublicPort
             },
             PanelInboundId = field == "panel-inbound" ? 0 : node.PanelInboundId,
-            NodeGroupId = field == "node-group" ? Guid.NewGuid() : node.NodeGroupId
+            NodeGroupId = field == "node-group" ? Guid.NewGuid() : node.NodeGroupId,
+            PublicHostname = field == "public-hostname" ? "vpn.example.test/path?token=leak" : node.PublicHostname,
+            SupportedProtocolsCsv = field == "protocols" ? "notvless,wireguard" : node.SupportedProtocolsCsv
         };
         var controller = CreateController(db);
 
@@ -300,6 +306,8 @@ public class AdminServerManagementTests
         Assert.Equal(node.PublicPort, persisted.PublicPort);
         Assert.Equal(node.PanelInboundId, persisted.PanelInboundId);
         Assert.Equal(node.NodeGroupId, persisted.NodeGroupId);
+        Assert.Equal(node.PublicHostname, persisted.PublicHostname);
+        Assert.Equal(node.SupportedProtocolsCsv, persisted.SupportedProtocolsCsv);
         Assert.DoesNotContain(await db.AuditLogs.ToListAsync(), x => x.Action == (update ? "server.update" : "server.create"));
     }
 
@@ -322,6 +330,7 @@ public class AdminServerManagementTests
         {
             Name = $"  {node.Name}  ",
             Provider = "  x3ui  ",
+            SupportedProtocolsCsv = " TROJAN, VLESS, trojan ",
             NodeGroupId = group.Id
         };
         var controller = CreateController(db);
@@ -338,6 +347,7 @@ public class AdminServerManagementTests
             : await db.VpnNodes.SingleAsync(x => x.Id != node.Id);
         Assert.Equal(node.Name, persisted.Name);
         Assert.Equal("x3ui", persisted.Provider);
+        Assert.Equal("vless,trojan", persisted.SupportedProtocolsCsv);
         Assert.Equal(group.Id, persisted.NodeGroupId);
         Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == (update ? "server.update" : "server.create"));
     }

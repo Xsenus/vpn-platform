@@ -2,6 +2,20 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: VPN public endpoint and protocol guard
+
+Scope:
+- Server/scenario writes, provisioning queue, allocator and provider must reject malformed endpoint/protocol metadata before persistence, run creation, remote mutation or access URI generation.
+- Sandbox/config URI and Ansible node metadata must preserve valid IPv6/JSON semantics and reject invalid ports.
+
+Results:
+- Roadmap progress: `661/681` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-vpn-public-endpoint-protocol-guard`, version `0.648.0`.
+- Reproduction before fix: backend `8/25` failed for arbitrary protocol/public host, substring allocation and out-of-range URI port; sandbox endpoint `0/2` accepted malformed config and emitted unbracketed IPv6.
+- After fix: targeted backend `161/161`, runner `5/5`, frontend helper `4/4`; exact token matching, legacy queue/provider preflight, sandbox IPv6 and no-mutation invalid endpoint cases pass.
+- Backend full suite: `1229/1229`; frontend tests: `140/140`; typecheck/build all apps: OK. Targeted valid desktop/mobile lifecycle `2/2`, negative semantic desktop/mobile `2/2`, responsive admin matrix `1/1` in `6.9 min` over all 25 viewport configurations.
+- Full browser inventory: `218/218` in `11.7 min`, `0` failed/flaky/skipped. EF drift: clean; fresh SQLite smoke: OK; encoding/documentation/release gate: `59/59`; dependency audit: `0` vulnerabilities; secret scan: `671` files, `0` findings. Real VPS/staging/3x-ui validation remains external and no live item was closed from local evidence.
+
 ## Check 2026-08-12: provisioning inventory and process argument guard
 
 Scope:

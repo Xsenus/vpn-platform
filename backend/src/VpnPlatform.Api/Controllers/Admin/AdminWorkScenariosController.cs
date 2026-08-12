@@ -108,6 +108,8 @@ public class AdminWorkScenariosController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Name)) return "Scenario name is required.";
         if (string.IsNullOrWhiteSpace(request.Key)) return "Scenario key is required.";
         if (request.MaxDevices <= 0) return "Scenario maxDevices must be positive.";
+        var vpnProtocol = string.IsNullOrWhiteSpace(request.VpnProtocol) ? "vless" : VpnProtocolPolicy.Normalize(request.VpnProtocol);
+        if (!VpnProtocolPolicy.IsSupported(vpnProtocol)) return "VPN protocol must be vless, vmess or trojan.";
 
         scenario.Name = request.Name.Trim();
         scenario.Key = NormalizeKey(request.Key);
@@ -116,7 +118,7 @@ public class AdminWorkScenariosController : ControllerBase
         if (allowedTariffIds.Error is not null) return allowedTariffIds.Error;
 
         scenario.AllowedTariffIdsJson = allowedTariffIds.Json;
-        scenario.VpnProtocol = string.IsNullOrWhiteSpace(request.VpnProtocol) ? "vless" : request.VpnProtocol.Trim();
+        scenario.VpnProtocol = vpnProtocol;
         scenario.ServerSelectionRule = string.IsNullOrWhiteSpace(request.ServerSelectionRule) ? "least-loaded" : request.ServerSelectionRule.Trim();
         scenario.InboundSelectionRule = string.IsNullOrWhiteSpace(request.InboundSelectionRule) ? "default" : request.InboundSelectionRule.Trim();
         scenario.ProvisioningMode = NormalizeScenarioToken(request.ProvisioningMode, "auto");
