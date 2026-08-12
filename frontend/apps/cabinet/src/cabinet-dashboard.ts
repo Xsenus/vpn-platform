@@ -1,10 +1,10 @@
-import { AccessCredentialDto, SubscriptionDto } from '@vpn-platform/api-client'
+import { AccessCredentialDto, CabinetSubscriptionDto } from '@vpn-platform/api-client'
 
-export function getSubscriptionAccessExpiry(subscription: Pick<SubscriptionDto, 'endAt' | 'gracePeriodEndAt'>) {
+export function getSubscriptionAccessExpiry(subscription: Pick<CabinetSubscriptionDto, 'endAt' | 'gracePeriodEndAt'>) {
   return subscription.gracePeriodEndAt ?? subscription.endAt
 }
 
-export function getEffectiveSubscriptionStatus(subscription: SubscriptionDto, now = new Date()) {
+export function getEffectiveSubscriptionStatus(subscription: CabinetSubscriptionDto, now = new Date()) {
   if (subscription.status !== 'Active' && subscription.status !== 'GracePeriod') return subscription.status
 
   const endAt = Date.parse(subscription.endAt)
@@ -15,7 +15,7 @@ export function getEffectiveSubscriptionStatus(subscription: SubscriptionDto, no
   return subscription.status
 }
 
-export function isCurrentSubscription(subscription: SubscriptionDto, now = new Date()) {
+export function isCurrentSubscription(subscription: CabinetSubscriptionDto, now = new Date()) {
   const status = getEffectiveSubscriptionStatus(subscription, now)
   return status === 'Active' || status === 'GracePeriod'
 }
@@ -29,7 +29,7 @@ export function formatReferralRewardType(type: string) {
   return labels[type.trim().toLowerCase()] ?? 'Реферальное начисление'
 }
 
-export function getSubscriptionRenewalAvailability(subscription: SubscriptionDto) {
+export function getSubscriptionRenewalAvailability(subscription: CabinetSubscriptionDto) {
   if (subscription.status === 'Blocked') {
     return {
       canRenew: false,
@@ -95,7 +95,7 @@ export function getAccessQrAvailability(
   }
 }
 
-export function selectCurrentSubscription(subscriptions: SubscriptionDto[], now = new Date()) {
+export function selectCurrentSubscription(subscriptions: CabinetSubscriptionDto[], now = new Date()) {
   const sorted = subscriptions.filter((subscription) => isCurrentSubscription(subscription, now)).sort((left, right) => {
     const leftEndAt = Date.parse(getSubscriptionAccessExpiry(left))
     const rightEndAt = Date.parse(getSubscriptionAccessExpiry(right))
@@ -105,7 +105,7 @@ export function selectCurrentSubscription(subscriptions: SubscriptionDto[], now 
   return sorted[0] ?? null
 }
 
-export function findAccessForSubscription(subscription: SubscriptionDto | null, accesses: AccessCredentialDto[], now = new Date()) {
+export function findAccessForSubscription(subscription: CabinetSubscriptionDto | null, accesses: AccessCredentialDto[], now = new Date()) {
   if (!subscription) return null
 
   if (subscription.currentAccessId) {
@@ -126,7 +126,7 @@ export function daysUntil(dateValue?: string | null, now = new Date()) {
   return Math.ceil((target - now.getTime()) / 86_400_000)
 }
 
-export function buildCabinetSummary(subscriptions: SubscriptionDto[], accesses: AccessCredentialDto[], now = new Date()) {
+export function buildCabinetSummary(subscriptions: CabinetSubscriptionDto[], accesses: AccessCredentialDto[], now = new Date()) {
   const currentSubscription = selectCurrentSubscription(subscriptions, now)
   const currentAccess = findAccessForSubscription(currentSubscription, accesses, now)
   const linkedCurrentAccess = currentSubscription?.currentAccessId
@@ -144,7 +144,7 @@ export function buildCabinetSummary(subscriptions: SubscriptionDto[], accesses: 
 }
 
 export function getNextCabinetAccessExpiryDelay(
-  subscriptions: SubscriptionDto[],
+  subscriptions: CabinetSubscriptionDto[],
   accesses: AccessCredentialDto[],
   now = new Date()
 ) {

@@ -15728,5 +15728,28 @@
         "text": "Roadmap progress is 681/701 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-cabinet-subscription-boundary",
+    "version": "0.669.0",
+    "releasedAt": "2026-08-12T21:40:00+07:00",
+    "title": "История подписок защищает технические данные",
+    "summary": "Кабинет получает только пользовательское состояние подписки без внутренних причин блокировки, служебных идентификаторов и путей конфигурации.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "API подписок кабинета больше не передаёт техническую причину блокировки, внутренние server/payment поля, lifecycle diagnostics и пути QR-конфигурации."
+      },
+      {
+        "type": "improved",
+        "text": "Кабинет использует отдельный минимальный контракт, последние 100 подписок ограничиваются базой данных, а компактный мобильный header больше не перекрывает кнопку инструкции после прокрутки."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 682/702 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

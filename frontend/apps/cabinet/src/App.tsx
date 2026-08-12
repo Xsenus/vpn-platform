@@ -10,7 +10,7 @@ import {
   PaymentProvider,
   PublicPaymentProviderDto,
   RewardLedgerDto,
-  SubscriptionDto,
+  CabinetSubscriptionDto,
   SupportConversationDto,
   SupportMessageDto,
   TelegramLinkTokenDto,
@@ -119,7 +119,7 @@ export function App() {
   const [token, setToken] = useState(readSessionStorageItem(TOKEN_STORAGE_KEY) ?? '')
   const [refreshToken, setRefreshToken] = useState(readSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY) ?? '')
   const [profile, setProfile] = useState<UserProfileDto | null>(null)
-  const [subscriptions, setSubscriptions] = useState<SubscriptionDto[]>([])
+  const [subscriptions, setSubscriptions] = useState<CabinetSubscriptionDto[]>([])
   const [orders, setOrders] = useState<OrderDto[]>([])
   const [payments, setPayments] = useState<CabinetPaymentAttemptDto[]>([])
   const [accesses, setAccesses] = useState<AccessCredentialDto[]>([])
@@ -1014,7 +1014,7 @@ export function App() {
     })
   }
 
-  const handleRenew = async (subscription: SubscriptionDto) => {
+  const handleRenew = async (subscription: CabinetSubscriptionDto) => {
     if (!token) return
     const renewalAvailability = getSubscriptionRenewalAvailability(subscription)
     if (!renewalAvailability.canRenew) {
@@ -1481,9 +1481,7 @@ export function App() {
                     </>
                   )}
                   {isTerminal && <p className="safe-note" role="status">{terminalReason}</p>}
-                  {!isTerminal && subscription.qrCodePath && <CodeBlock>QR-содержимое: {subscription.qrCodePath}</CodeBlock>}
                   {!isTerminal && subscription.currentAccessId && qrSvgs[subscription.currentAccessId] && <QrCodePreview svg={qrSvgs[subscription.currentAccessId]} />}
-                  {!isTerminal && subscription.configPath && <p>Конфигурация: {subscription.configPath}</p>}
                   {!isTerminal && <p className="muted">Инструкция: импортируйте ссылку или QR-код в совместимый VLESS/Xray клиент. Если доступ требует проверки, дождитесь подтверждения администратора.</p>}
                   {renewalAvailability.canRenew ? (
                     <div className="toolbar">

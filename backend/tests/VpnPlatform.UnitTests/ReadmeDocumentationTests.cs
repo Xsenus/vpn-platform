@@ -38,14 +38,14 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1356/1356", readme, StringComparison.Ordinal);
-        Assert.Contains("150/150", readme, StringComparison.Ordinal);
+        Assert.Contains("1357/1357", readme, StringComparison.Ordinal);
+        Assert.Contains("151/151", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-12-cabinet-payment-boundary", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-12-cabinet-subscription-boundary", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("227/227", readme, StringComparison.Ordinal);
     }
 
@@ -58,9 +58,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "1356/1356",
-                     "2026-08-12-cabinet-payment-boundary",
-                     "0.668.0",
+                     "1357/1357",
+                     "2026-08-12-cabinet-subscription-boundary",
+                     "0.669.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

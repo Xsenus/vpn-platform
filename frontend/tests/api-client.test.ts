@@ -585,6 +585,26 @@ function cabinetPaymentFixture(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function cabinetSubscriptionFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'sub-1',
+    tariffId: 'tariff-1',
+    tariffName: 'Monthly',
+    status: 'Active',
+    startAt: adminFixtureTimestamp,
+    endAt: '2026-09-09T00:00:00Z',
+    gracePeriodEndAt: null,
+    currentAccessId: 'access-1',
+    accessUri: 'vless://cabinet-safe',
+    nodeName: 'EU node',
+    suspendedAt: null,
+    cancelledAt: null,
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
 function adminPaymentProviderAccountFixture(overrides: Record<string, unknown> = {}) {
   return {
     id: 'provider-1',
@@ -1425,6 +1445,28 @@ test('ApiClient accepts only the safe cabinet payment contract', async () => {
   await assert.rejects(() => client.getMyPayments('user-token'), (error: unknown) => error instanceof ApiClientError && error.status === 502)
   await assert.rejects(() => client.getMyPayments('user-token'), (error: unknown) => error instanceof ApiClientError && error.status === 502)
   await assert.rejects(() => client.getMyPayments('user-token'), (error: unknown) => error instanceof ApiClientError && error.status === 502)
+})
+
+test('ApiClient accepts only the safe cabinet subscription contract', async () => {
+  const responses = [
+    [cabinetSubscriptionFixture()],
+    [{ ...cabinetSubscriptionFixture(), blockReason: 'private-x3ui-provider-exception' }],
+    [{ ...cabinetSubscriptionFixture(), currentServerId: 'private-node-id' }],
+    [{ ...cabinetSubscriptionFixture(), configPath: '/private/config/path' }],
+    [{ ...cabinetSubscriptionFixture(), lifecycleLastError: 'private-lifecycle-error' }]
+  ]
+  globalThis.fetch = (async () => new Response(JSON.stringify(responses.shift()), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const subscriptions = await client.getMySubscriptions('user-token')
+
+  assert.equal(subscriptions[0]?.accessUri, 'vless://cabinet-safe')
+  for (let index = 0; index < 4; index += 1) {
+    await assert.rejects(() => client.getMySubscriptions('user-token'), (error: unknown) => error instanceof ApiClientError && error.status === 502)
+  }
 })
 
 test('ApiClient admin support reply and note endpoints are tokenized', async () => {

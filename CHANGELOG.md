@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.669.0 - 2026-08-12
+
+Release entry: `2026-08-12-cabinet-subscription-boundary`.
+
+### Исправлено
+
+- `/api/me/subscriptions` больше не раскрывает `BlockReason`, внутренние server/payment идентификаторы, lifecycle diagnostics и пути QR/конфигурации.
+- Карточка подписки использует защищённую QR-операцию и не отображает служебные пути; полный административный контракт не изменён.
+- На компактных мобильных экранах header остаётся в потоке и не перекрывает кнопку полной инструкции после прокрутки.
+
+### Улучшено
+
+- Для кабинета выделен минимальный `CabinetSubscriptionDto`, а frontend fail-closed отклоняет расширенный ответ со служебными полями.
+- Последние 100 подписок сортируются и ограничиваются на стороне БД; SQLite использует параметризованный UTC-совместимый запрос с `LIMIT 100`.
+
+### Проверено
+
+- Fail-first backend `0/2`, frontend `0/1`; targeted backend `17/17`, frontend decoder/dashboard `11/11`, backend `1357/1357`, frontend `151/151`, typecheck/build, cabinet desktop/mobile Playwright `64/64` и targeted all-screens `2/2` зелёные.
+- Roadmap `682/702` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## 0.668.0 - 2026-08-12
 
 Release entry: `2026-08-12-cabinet-payment-boundary`.

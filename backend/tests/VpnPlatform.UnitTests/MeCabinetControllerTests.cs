@@ -1,9 +1,11 @@
+using System.Data.Common;
 using System.Reflection;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Controllers.Me;
 using VpnPlatform.Application.Common;
@@ -242,8 +244,8 @@ public class MeCabinetControllerTests
         var accessDto = Assert.Single(accesses);
 
         Assert.Null(subscriptionDto.GetType().GetProperty("AccessUri")!.GetValue(subscriptionDto));
-        Assert.Null(subscriptionDto.GetType().GetProperty("QrCodePath")!.GetValue(subscriptionDto));
-        Assert.Null(subscriptionDto.GetType().GetProperty("ConfigPath")!.GetValue(subscriptionDto));
+        Assert.Null(subscriptionDto.GetType().GetProperty("QrCodePath"));
+        Assert.Null(subscriptionDto.GetType().GetProperty("ConfigPath"));
         Assert.Equal(string.Empty, Read<string>(accessDto, "ProviderAccessId"));
         Assert.Equal(string.Empty, Read<string>(accessDto, "AccessUri"));
         Assert.Equal(string.Empty, Read<string>(accessDto, "QrCodePayload"));
@@ -308,8 +310,8 @@ public class MeCabinetControllerTests
         var accessDto = Assert.Single(accesses);
 
         Assert.Null(subscriptionDto.GetType().GetProperty("AccessUri")!.GetValue(subscriptionDto));
-        Assert.Null(subscriptionDto.GetType().GetProperty("QrCodePath")!.GetValue(subscriptionDto));
-        Assert.Null(subscriptionDto.GetType().GetProperty("ConfigPath")!.GetValue(subscriptionDto));
+        Assert.Null(subscriptionDto.GetType().GetProperty("QrCodePath"));
+        Assert.Null(subscriptionDto.GetType().GetProperty("ConfigPath"));
         Assert.Equal("Cancelled", Read<string>(accessDto, "SubscriptionStatus"));
         Assert.True(Read<bool>(accessDto, "IsTerminal"));
         Assert.Equal(string.Empty, Read<string>(accessDto, "ProviderAccessId"));
@@ -377,8 +379,8 @@ public class MeCabinetControllerTests
         var accessDto = Assert.Single(AssertOkList(await meController.GetAccesses(CancellationToken.None)));
 
         Assert.Null(subscriptionDto.GetType().GetProperty("AccessUri")!.GetValue(subscriptionDto));
-        Assert.Null(subscriptionDto.GetType().GetProperty("QrCodePath")!.GetValue(subscriptionDto));
-        Assert.Null(subscriptionDto.GetType().GetProperty("ConfigPath")!.GetValue(subscriptionDto));
+        Assert.Null(subscriptionDto.GetType().GetProperty("QrCodePath"));
+        Assert.Null(subscriptionDto.GetType().GetProperty("ConfigPath"));
         Assert.True(Read<bool>(accessDto, "IsTerminal"));
         Assert.Equal(string.Empty, Read<string>(accessDto, "ProviderAccessId"));
         Assert.Equal(string.Empty, Read<string>(accessDto, "AccessUri"));
@@ -527,6 +529,7 @@ public class MeCabinetControllerTests
             CurrentServerId = node.Id,
             AutoRenewFlag = true,
             RenewalCount = 1,
+            BlockReason = "private-x3ui-provider-exception",
             CreatedAt = now.AddMinutes(1),
             UpdatedAt = now.AddMinutes(2)
         };
@@ -595,11 +598,15 @@ public class MeCabinetControllerTests
         Assert.Equal("Active", Read<string>(subscriptionDto, "Status"));
         Assert.Equal(tariff.Name, Read<string>(subscriptionDto, "TariffName"));
         Assert.Equal(access.Id, Read<Guid>(subscriptionDto, "CurrentAccessId"));
-        Assert.Equal(node.Id, Read<Guid>(subscriptionDto, "CurrentServerId"));
         Assert.Equal(node.Name, Read<string>(subscriptionDto, "NodeName"));
         Assert.Equal(access.AccessUri, Read<string>(subscriptionDto, "AccessUri"));
-        Assert.Equal(access.QrCodePath, Read<string>(subscriptionDto, "QrCodePath"));
-        Assert.Equal(access.ConfigPath, Read<string>(subscriptionDto, "ConfigPath"));
+        var subscriptionJson = System.Text.Json.JsonSerializer.Serialize(subscriptionDto);
+        Assert.DoesNotContain("BlockReason", subscriptionJson);
+        Assert.DoesNotContain("CurrentServerId", subscriptionJson);
+        Assert.DoesNotContain("LastPaymentId", subscriptionJson);
+        Assert.DoesNotContain("QrCodePath", subscriptionJson);
+        Assert.DoesNotContain("ConfigPath", subscriptionJson);
+        Assert.DoesNotContain("private-x3ui-provider-exception", subscriptionJson);
 
         var accessDto = Assert.Single(accesses);
         Assert.Equal(access.Id, Read<Guid>(accessDto, "Id"));
@@ -611,6 +618,40 @@ public class MeCabinetControllerTests
         Assert.Equal(access.AccessUri, Read<string>(accessDto, "AccessUri"));
         Assert.Equal(access.QrCodePath, Read<string>(accessDto, "QrCodePayload"));
         Assert.Equal(2, Read<int>(accessDto, "Revision"));
+    }
+
+    [Fact]
+    public async Task Cabinet_Subscriptions_Should_Apply_User_History_Limit_In_Sqlite_Query()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new CommandCaptureInterceptor();
+        await using var db = CreateSqliteDbContext(connection, interceptor);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        var now = new TestClock().UtcNow;
+        db.Users.Add(User(userId, "subscription-limit@example.test"));
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Limit", Slug = "subscription-limit", DurationDays = 30, Price = 100, Currency = "RUB", IsActive = true });
+        db.Subscriptions.AddRange(Enumerable.Range(0, 105).Select(index => new Subscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TariffId = tariffId,
+            Status = SubscriptionStatus.Expired,
+            StartAt = now.AddDays(-60),
+            EndAt = now.AddDays(-30),
+            CreatedAt = now.AddMinutes(index),
+            UpdatedAt = now.AddMinutes(index)
+        }));
+        await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
+
+        var result = await CreateController(db, userId).GetSubscriptions(CancellationToken.None);
+
+        Assert.Equal(100, AssertOkList(result).Count);
+        Assert.Contains(interceptor.Commands, command => command.Contains("LIMIT", StringComparison.OrdinalIgnoreCase));
     }
 
     private static User User(Guid id, string email)
@@ -670,11 +711,29 @@ public class MeCabinetControllerTests
         public DateTimeOffset UtcNow => new(2026, 8, 5, 6, 20, 0, TimeSpan.FromHours(7));
     }
 
-    private static ApplicationDbContext CreateSqliteDbContext(SqliteConnection connection)
+    private static ApplicationDbContext CreateSqliteDbContext(SqliteConnection connection, IInterceptor? interceptor = null)
     {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseSqlite(connection)
-            .Options;
-        return new ApplicationDbContext(options);
+        var builder = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection);
+        if (interceptor is not null)
+        {
+            builder.AddInterceptors(interceptor);
+        }
+
+        return new ApplicationDbContext(builder.Options);
+    }
+
+    private sealed class CommandCaptureInterceptor : DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+        }
     }
 }

@@ -517,6 +517,10 @@
 }
 
 @media (max-width: 390px) {
+  .topbar {
+    position: static;
+  }
+
   .nav-button {
     width: 100%;
   }

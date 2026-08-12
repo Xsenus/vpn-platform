@@ -19,6 +19,21 @@ public sealed record InitMePaymentHttpRequest(string? ReturnUrl);
 public sealed record CreateMeSupportConversationHttpRequest(string Subject, string Text, Guid? OrderId, Guid? SubscriptionId);
 public sealed record MeSupportReplyHttpRequest(string Text, int? Revision = null);
 public sealed record MeSupportStatusHttpRequest(string Status, int? Revision = null);
+public sealed record CabinetSubscriptionDto(
+    Guid Id,
+    Guid TariffId,
+    string Status,
+    DateTimeOffset StartAt,
+    DateTimeOffset EndAt,
+    string? TariffName,
+    DateTimeOffset? GracePeriodEndAt,
+    Guid? CurrentAccessId,
+    string? AccessUri,
+    string? NodeName,
+    DateTimeOffset? SuspendedAt,
+    DateTimeOffset? CancelledAt,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
 public sealed record CabinetPaymentAttemptDto(
     Guid Id,
     Guid OrderId,
@@ -89,39 +104,57 @@ public class MeController : ControllerBase
     {
         var userId = ResolveUserId();
         var now = _clock.UtcNow;
-        var items = await _db.Subscriptions
+        IQueryable<Subscription> query;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            query = _db.Subscriptions.FromSqlInterpolated($"""
+                SELECT s.*
+                FROM "Subscriptions" AS s
+                WHERE s."UserId" = {userId}
+                ORDER BY julianday(s."CreatedAt") DESC, julianday(s."UpdatedAt") DESC
+                LIMIT 100
+                """);
+        }
+        else
+        {
+            query = _db.Subscriptions
+                .Where(x => x.UserId == userId)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.UpdatedAt)
+                .Take(100);
+        }
+
+        var subscriptions = await query
             .AsNoTracking()
             .Include(x => x.Tariff)
             .Include(x => x.CurrentAccess)
             .Include(x => x.CurrentServer)
-            .Where(x => x.UserId == userId)
-            .Select(x => new SubscriptionDto(
-                x.Id,
-                x.UserId,
-                x.TariffId,
-                x.Status.ToString(),
-                x.StartAt,
-                x.EndAt,
-                (x.Status == SubscriptionStatus.Active || x.Status == SubscriptionStatus.GracePeriod) && (x.GracePeriodEndAt ?? x.EndAt) > now && x.CurrentAccess != null && x.CurrentAccess.Status != AccessCredentialStatus.Revoked ? x.CurrentAccess.AccessUri : null,
-                (x.Status == SubscriptionStatus.Active || x.Status == SubscriptionStatus.GracePeriod) && (x.GracePeriodEndAt ?? x.EndAt) > now && x.CurrentAccess != null && x.CurrentAccess.Status != AccessCredentialStatus.Revoked ? x.CurrentAccess.QrCodePath : null,
-                (x.Status == SubscriptionStatus.Active || x.Status == SubscriptionStatus.GracePeriod) && (x.GracePeriodEndAt ?? x.EndAt) > now && x.CurrentAccess != null && x.CurrentAccess.Status != AccessCredentialStatus.Revoked ? x.CurrentAccess.ConfigPath : null,
-                x.CurrentServer != null ? x.CurrentServer.Name : null,
-                x.Tariff != null ? x.Tariff.Name : null,
-                x.GracePeriodEndAt,
-                x.AutoRenewFlag,
-                x.SourceChannel.ToString(),
-                x.CurrentServerId,
-                x.CurrentAccessId,
-                x.LastPaymentId,
-                x.RenewalCount,
-                x.BlockReason,
-                x.SuspendedAt,
-                x.CancelledAt,
-                x.CreatedAt,
-                x.UpdatedAt))
             .ToListAsync(cancellationToken);
 
-        return Ok(items.OrderByDescending(x => x.CreatedAt).ToList());
+        var items = subscriptions.Select(subscription =>
+        {
+            var hasUsableAccess = (subscription.Status == SubscriptionStatus.Active || subscription.Status == SubscriptionStatus.GracePeriod)
+                && (subscription.GracePeriodEndAt ?? subscription.EndAt) > now
+                && subscription.CurrentAccess is { Status: not AccessCredentialStatus.Revoked };
+
+            return new CabinetSubscriptionDto(
+                subscription.Id,
+                subscription.TariffId,
+                subscription.Status.ToString(),
+                subscription.StartAt,
+                subscription.EndAt,
+                subscription.Tariff?.Name,
+                subscription.GracePeriodEndAt,
+                subscription.CurrentAccessId,
+                hasUsableAccess ? subscription.CurrentAccess?.AccessUri : null,
+                subscription.CurrentServer?.Name,
+                subscription.SuspendedAt,
+                subscription.CancelledAt,
+                subscription.CreatedAt,
+                subscription.UpdatedAt);
+        }).ToList();
+
+        return Ok(items);
     }
 
     [HttpGet("orders")]

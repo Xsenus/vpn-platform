@@ -1,16 +1,17 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { AccessCredentialDto, SubscriptionDto } from '../packages/api-client/src/index.ts'
+import { AccessCredentialDto, CabinetSubscriptionDto } from '../packages/api-client/src/index.ts'
 import { buildCabinetSummary, daysUntil, findAccessForSubscription, formatReferralRewardType, getAccessQrAvailability, getCabinetAccessTerminalReason, getEffectiveSubscriptionStatus, getNextCabinetAccessExpiryDelay, getSubscriptionRenewalAvailability, selectCurrentSubscription } from '../apps/cabinet/src/cabinet-dashboard.ts'
 
-function subscription(overrides: Partial<SubscriptionDto>): SubscriptionDto {
+function subscription(overrides: Partial<CabinetSubscriptionDto>): CabinetSubscriptionDto {
   return {
     id: 'sub-1',
-    userId: 'user-1',
     tariffId: 'tariff-1',
     status: 'Active',
     startAt: '2026-05-01T00:00:00Z',
     endAt: '2026-06-01T00:00:00Z',
+    createdAt: '2026-05-01T00:00:00Z',
+    updatedAt: '2026-05-01T00:00:00Z',
     ...overrides
   }
 }

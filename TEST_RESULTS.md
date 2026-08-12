@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: cabinet subscription boundary
+
+Scope:
+- Cabinet subscription API не должен раскрывать техническую причину блокировки, внутренние server/payment идентификаторы, lifecycle diagnostics и пути QR/конфигурации.
+- Последние 100 пользовательских подписок должны ограничиваться на стороне БД, включая SQLite; административный контракт должен сохраниться.
+
+Results:
+- Roadmap progress: `682/702` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-cabinet-subscription-boundary`, version `0.669.0`.
+- Fail-first: backend `0/2`, frontend `0/1`; API возвращал `BlockReason=private-x3ui-provider-exception`, materialize-ил 105 записей без SQL limit, а клиент требовал широкий DTO.
+- After fix: отдельный `CabinetSubscriptionDto` содержит только пользовательские поля; frontend fail-closed отклоняет diagnostics, карточка подписки не показывает служебные пути, а SQLite/PostgreSQL ветки выполняют DB-side top-100.
+- Targeted backend `17/17`, frontend decoder/dashboard `11/11`; backend `1357/1357`; frontend `151/151`; typecheck/build; cabinet desktop/mobile Playwright `64/64`; targeted all-screens cabinet desktop/responsive `2/2`. На compact mobile header больше не перекрывает кнопку инструкции. Реальные provider кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## Check 2026-08-12: cabinet payment boundary
 
 Scope:

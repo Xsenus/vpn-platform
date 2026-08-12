@@ -61,25 +61,16 @@ const staleAppVersionRelease = {
 
 const subscription = {
   id: 'sub-active',
-  userId: user.id,
   tariffId: 'tariff-pro',
   tariffName: 'Pro 30 дней',
   status: 'Active',
   startAt: '2026-06-01T00:00:00Z',
   endAt: '2099-07-01T00:00:00Z',
   gracePeriodEndAt: null,
-  autoRenewFlag: false,
-  sourceChannel: 'Web',
-  currentServerId: 'server-eu',
   currentAccessId: 'access-active',
-  lastPaymentId: 'payment-paid',
-  renewalCount: 0,
-  blockReason: null,
   suspendedAt: null,
   cancelledAt: null,
   accessUri: 'vless://cabinet-e2e@example.com:443?security=reality#cabinet-e2e',
-  qrCodePath: 'qr://cabinet-e2e',
-  configPath: 'config://cabinet-e2e',
   nodeName: 'EU Sandbox',
   createdAt: now,
   updatedAt: now
@@ -91,11 +82,7 @@ const blockedSubscription = {
   tariffName: 'Заблокированный тариф',
   status: 'Blocked',
   currentAccessId: null,
-  lastPaymentId: null,
-  accessUri: null,
-  qrCodePath: null,
-  configPath: null,
-  blockReason: 'support review'
+  accessUri: null
 }
 
 const cancelledSubscription = {
@@ -104,10 +91,7 @@ const cancelledSubscription = {
   tariffName: 'Отменённый тариф',
   status: 'Cancelled',
   currentAccessId: 'access-revoked',
-  lastPaymentId: null,
   accessUri: null,
-  qrCodePath: null,
-  configPath: null,
   cancelledAt: now
 }
 
@@ -117,10 +101,7 @@ const cancelledStaleSubscription = {
   tariffName: 'Отменённый stale тариф',
   status: 'Cancelled',
   currentAccessId: 'access-cancelled-stale',
-  lastPaymentId: null,
   accessUri: 'vless://cancelled-cabinet-stale-secret@example.test',
-  qrCodePath: 'qr://cancelled-cabinet-stale-secret',
-  configPath: 'config://cancelled-cabinet-stale-secret',
   cancelledAt: now
 }
 
@@ -1930,6 +1911,9 @@ test('cabinet covers register, login, payments, subscription access and support'
   await expect(page.getByText('Аккаунт создан.')).toBeVisible()
   await expect(page.getByText('Pro 30 дней').first()).toBeVisible()
   await expect(page.locator('.code-block').filter({ hasText: 'vless://cabinet-e2e@example.com:443' }).first()).toBeVisible()
+  const activeSubscriptionCard = page.locator('.card').filter({ has: page.getByRole('heading', { name: 'Pro 30 дней' }) }).first()
+  await expect(activeSubscriptionCard).not.toContainText('qr://cabinet-e2e')
+  await expect(activeSubscriptionCard).not.toContainText('config://cabinet-e2e')
   await expect(page.getByText('yk-paid-1')).toBeVisible()
   const paidPaymentCard = page.locator('.payment-record').filter({ hasText: 'yk-paid-1' })
   await expect(paidPaymentCard.getByText('Платёж подтверждён.')).toBeVisible()

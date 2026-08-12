@@ -264,6 +264,23 @@ export type SubscriptionDto = {
   updatedAt?: string
 }
 
+export type CabinetSubscriptionDto = {
+  id: string
+  tariffId: string
+  tariffName?: string | null
+  status: string
+  startAt: string
+  endAt: string
+  gracePeriodEndAt?: string | null
+  currentAccessId?: string | null
+  accessUri?: string | null
+  nodeName?: string | null
+  suspendedAt?: string | null
+  cancelledAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export type CabinetPaymentAttemptDto = {
   id: string
   orderId: string
@@ -2798,11 +2815,27 @@ function isTelegramLinkTokenDto(value: unknown): value is TelegramLinkTokenDto {
     && url.searchParams.get('start') === `link_${value.token}`
 }
 
-function isCabinetSubscriptionDto(value: unknown): value is SubscriptionDto {
+function isCabinetSubscriptionDto(value: unknown): value is CabinetSubscriptionDto {
   if (!isRecord(value)) return false
 
+  const forbiddenFields = [
+    'userId',
+    'autoRenewFlag',
+    'sourceChannel',
+    'currentServerId',
+    'lastPaymentId',
+    'renewalCount',
+    'blockReason',
+    'qrCodePath',
+    'configPath',
+    'lifecycleAttemptCount',
+    'lifecycleProcessingStartedAt',
+    'lifecycleLeaseExpiresAt',
+    'lifecycleNextAttemptAt',
+    'lifecycleLastError'
+  ]
+
   return hasString(value, 'id', true)
-    && hasString(value, 'userId', true)
     && hasString(value, 'tariffId', true)
     && hasString(value, 'status', true)
     && subscriptionStatusValues.has(value.status as string)
@@ -2810,22 +2843,14 @@ function isCabinetSubscriptionDto(value: unknown): value is SubscriptionDto {
     && hasDateString(value, 'endAt')
     && hasNullableString(value, 'tariffName')
     && hasNullableDateString(value, 'gracePeriodEndAt')
-    && hasBoolean(value, 'autoRenewFlag')
-    && hasString(value, 'sourceChannel', true)
-    && channelTypeValues.has(value.sourceChannel as ChannelType)
-    && hasNullableString(value, 'currentServerId')
     && hasNullableString(value, 'currentAccessId')
-    && hasNullableString(value, 'lastPaymentId')
-    && hasInteger(value, 'renewalCount', 0)
-    && hasNullableString(value, 'blockReason')
     && hasNullableDateString(value, 'suspendedAt')
     && hasNullableDateString(value, 'cancelledAt')
     && hasNullableString(value, 'accessUri')
-    && hasNullableString(value, 'qrCodePath')
-    && hasNullableString(value, 'configPath')
     && hasNullableString(value, 'nodeName')
     && hasDateString(value, 'createdAt')
     && hasDateString(value, 'updatedAt')
+    && forbiddenFields.every((field) => !(field in value))
 }
 
 function isCabinetOrderDto(value: unknown): value is OrderDto {
@@ -3316,8 +3341,8 @@ export class ApiClient {
     }, 'object', isPaymentInitResult)
   }
 
-  getMySubscriptions(token: string): Promise<SubscriptionDto[]> {
-    return this.requestArray<SubscriptionDto>('/api/me/subscriptions', { token, errorMessage: apiFallbackErrorMessage }, isCabinetSubscriptionDto, (items) => hasUniqueStringKey(items, 'id'))
+  getMySubscriptions(token: string): Promise<CabinetSubscriptionDto[]> {
+    return this.requestArray<CabinetSubscriptionDto>('/api/me/subscriptions', { token, errorMessage: apiFallbackErrorMessage }, isCabinetSubscriptionDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getMyOrders(token: string): Promise<OrderDto[]> {
