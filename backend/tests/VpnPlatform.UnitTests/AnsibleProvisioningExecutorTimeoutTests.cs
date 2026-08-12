@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using VpnPlatform.Application.Abstractions;
@@ -12,6 +13,130 @@ namespace VpnPlatform.UnitTests;
 
 public class AnsibleProvisioningExecutorTimeoutTests
 {
+    [Theory]
+    [InlineData("ip-address")]
+    [InlineData("ssh-user")]
+    public async Task ExecuteAsync_Should_Reject_Inventory_Injection_Before_Process_Start(string field)
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"vpn-platform-inventory-guard-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            var canaryPath = Path.Combine(root, "runner-started.txt");
+            var runnerPath = Path.Combine(root, "runner.py");
+            var playbookPath = Path.Combine(root, "precheck.yml");
+            var escapedCanaryPath = canaryPath.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("'", "\\'", StringComparison.Ordinal);
+            await File.WriteAllTextAsync(
+                runnerPath,
+                $"from pathlib import Path\nPath('{escapedCanaryPath}').write_text('started')\nprint('{{\"success\":true,\"summaryLog\":\"runner started\",\"steps\":[]}}')\n",
+                new UTF8Encoding(false));
+            await File.WriteAllTextAsync(playbookPath, "---\n", new UTF8Encoding(false));
+            var options = new ProvisioningOptions
+            {
+                LiveExecutionEnabled = true,
+                ExecutionTimeoutSeconds = 10,
+                WorkingDirectory = Path.Combine(root, "work"),
+                PythonBinary = ResolvePythonBinary(),
+                RunnerScriptPath = runnerPath,
+                PrecheckPlaybookPath = playbookPath,
+                ProvisionPlaybookPath = playbookPath
+            };
+            var executor = new AnsibleProvisioningExecutor(
+                Options.Create(options),
+                new ProvisioningSecretMaterializer(new TestSecretProtector()),
+                NullLogger<AnsibleProvisioningExecutor>.Instance);
+            var node = new VpnNode
+            {
+                Name = $"inventory-guard-{field}",
+                Host = "inventory.example.test",
+                IpAddress = field == "ip-address" ? "10.0.0.1\ninjected ansible_connection=local" : string.Empty,
+                SshUser = field == "ssh-user" ? "root ansible_connection=local" : "root",
+                SshPort = 22,
+                TagsCsv = "validation-mode:false"
+            };
+            var run = new ProvisioningRun
+            {
+                NodeId = node.Id,
+                Status = ProvisioningRunStatus.PrecheckQueued,
+                DryRun = true
+            };
+
+            var result = await executor.ExecuteAsync(node, run, CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Contains("validation", result.ErrorText, StringComparison.OrdinalIgnoreCase);
+            Assert.False(File.Exists(canaryPath));
+            Assert.False(Directory.Exists(options.WorkingDirectory));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Should_Preserve_Each_Process_Argument_Exactly()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"vpn-platform-argument-list-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            var argumentsPath = Path.Combine(root, "arguments.json");
+            var runnerPath = Path.Combine(root, "runner.py");
+            var playbookPath = Path.Combine(root, "precheck.yml");
+            var escapedArgumentsPath = argumentsPath.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("'", "\\'", StringComparison.Ordinal);
+            await File.WriteAllTextAsync(
+                runnerPath,
+                $"import json, sys\nfrom pathlib import Path\nPath('{escapedArgumentsPath}').write_text(json.dumps(sys.argv[1:]))\nprint('{{\"success\":true,\"summaryLog\":\"arguments captured\",\"steps\":[]}}')\n",
+                new UTF8Encoding(false));
+            await File.WriteAllTextAsync(playbookPath, "---\n", new UTF8Encoding(false));
+            const string ansibleBinary = "ansible binary \"quoted\" value";
+            var knownHostsPath = Path.Combine(root, "known \"hosts\"");
+            var options = new ProvisioningOptions
+            {
+                LiveExecutionEnabled = true,
+                ExecutionTimeoutSeconds = 10,
+                WorkingDirectory = Path.Combine(root, "work"),
+                PythonBinary = ResolvePythonBinary(),
+                RunnerScriptPath = runnerPath,
+                PrecheckPlaybookPath = playbookPath,
+                ProvisionPlaybookPath = playbookPath,
+                AnsibleBinary = ansibleBinary,
+                KnownHostsPath = knownHostsPath
+            };
+            var executor = new AnsibleProvisioningExecutor(
+                Options.Create(options),
+                new ProvisioningSecretMaterializer(new TestSecretProtector()),
+                NullLogger<AnsibleProvisioningExecutor>.Instance);
+            var node = new VpnNode
+            {
+                Name = "argument-list",
+                Host = "arguments.example.test",
+                SshUser = "root",
+                SshPort = 22,
+                TagsCsv = "validation-mode:false"
+            };
+            var run = new ProvisioningRun
+            {
+                NodeId = node.Id,
+                Status = ProvisioningRunStatus.PrecheckQueued,
+                DryRun = true
+            };
+
+            var result = await executor.ExecuteAsync(node, run, CancellationToken.None);
+
+            Assert.True(result.Success, result.ErrorText);
+            var arguments = JsonSerializer.Deserialize<string[]>(await File.ReadAllTextAsync(argumentsPath));
+            Assert.NotNull(arguments);
+            Assert.Equal(ansibleBinary, arguments[Array.IndexOf(arguments, "--ansible-binary") + 1]);
+            Assert.Equal(knownHostsPath, arguments[Array.IndexOf(arguments, "--known-hosts-path") + 1]);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
     [Fact]
     public async Task ExecuteAsync_Should_Keep_Validation_Node_In_Mock_Mode_When_Live_Flags_Are_Enabled()
     {

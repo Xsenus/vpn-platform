@@ -1660,7 +1660,7 @@ public class AdminOperationsController : ControllerBase
         var node = new VpnNode
         {
             Name = request.Name.Trim(),
-            Host = string.IsNullOrWhiteSpace(request.Host) ? host : request.Host.Trim(),
+            Host = host,
             IpAddress = request.IpAddress.Trim(),
             Provider = string.IsNullOrWhiteSpace(request.Provider) ? "admin-vps" : request.Provider.Trim(),
             Region = request.Region.Trim(),
@@ -1799,7 +1799,7 @@ public class AdminOperationsController : ControllerBase
         }
 
         node.Name = request.Name.Trim();
-        node.Host = string.IsNullOrWhiteSpace(request.Host) ? host : request.Host.Trim();
+        node.Host = host;
         node.IpAddress = request.IpAddress.Trim();
         node.Provider = string.IsNullOrWhiteSpace(request.Provider) ? "admin-vps" : request.Provider.Trim();
         node.Region = request.Region.Trim();
@@ -3216,10 +3216,22 @@ public class AdminOperationsController : ControllerBase
             return "Panel inbound ID must be greater than zero.";
         }
 
+        if (!string.IsNullOrWhiteSpace(request.IpAddress)
+            && !ProvisioningService.IsValidIpAddress(request.IpAddress))
+        {
+            return "IP address must be a valid IPv4 or IPv6 address without whitespace.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.SshUser)
+            && !ProvisioningService.IsValidSshUsername(request.SshUser))
+        {
+            return "SSH username is invalid. Use letters, digits, dot, underscore, @ or hyphen without whitespace.";
+        }
+
         if (!string.IsNullOrWhiteSpace(request.SshPrivateKeyPath)
             && !ProvisioningService.IsSafeLegacySshPrivateKeyPath(request.SshPrivateKeyPath))
         {
-            return "SSH private key path must be an absolute Unix filesystem path without control or quote characters. Submit key material through the protected SSH credential field.";
+            return "SSH private key path must be an absolute Unix filesystem path without whitespace, control or quote characters. Submit key material through the protected SSH credential field.";
         }
 
         return null;

@@ -3558,9 +3558,13 @@ test('admin VPN configuration validators reject invalid semantic fields', async 
   const serverForm = page.locator('#nodes form')
   await serverForm.getByLabel('Название').fill('Invalid boundary node')
   await serverForm.getByLabel('Host или DNS').fill('boundary.example.test')
+  await serverForm.getByLabel('IP-адрес').fill('10.0.0.1\ninjected ansible_connection=local')
+  await serverForm.getByLabel('SSH-пользователь').fill('root ansible_connection=local')
   await serverForm.getByLabel('Приоритет').fill('0')
   await serverForm.getByLabel('URL панели').fill('https://operator:secret@panel.example.test')
   await expect(serverForm.getByRole('button', { name: 'Создать сервер' })).toBeDisabled()
+  await expect(serverForm).toContainText('IP-адрес должен быть корректным IPv4 или IPv6 без пробелов.')
+  await expect(serverForm).toContainText('SSH-пользователь содержит недопустимые символы или пробелы.')
   await serverForm.evaluate((form) => form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true })))
 
   await openAdminSection(page, '3x-ui панели', 'panels')

@@ -15222,5 +15222,28 @@
         "text": "Roadmap progress is 659/679 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-provisioning-inventory-argument-guard",
+    "version": "0.647.0",
+    "releasedAt": "2026-08-12T07:47:02+07:00",
+    "title": "Provisioning защищён от inventory и argument injection",
+    "summary": "Target, SSH username и credential проверяются до mutation/process start, а Python получает точный ArgumentList без ручного quoting.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Server API, own-VPS onboarding и queue отклоняют невалидные IP/SSH username и whitespace path до node/run/step/audit mutation; host сохраняется нормализованным."
+      },
+      {
+        "type": "improved",
+        "text": "Executor повторяет preflight до workdir/process, использует фиксированный inventory alias и передаёт Python каждый аргумент через ProcessStartInfo.ArgumentList."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 660/680 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; real Telegram Bot API delivery and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: provisioning inventory and process argument guard
+
+Scope:
+- Admin server writes, own-VPS onboarding and queueing must reject inventory-breaking target/IP/SSH values before persistence or run creation.
+- Executor must repeat preflight before workdir/process creation and preserve every Python argument exactly without manual command-line quoting.
+
+Results:
+- Roadmap progress: `660/680` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-provisioning-inventory-argument-guard`, version `0.647.0`.
+- Reproduction before fix: inventory/process regressions `0/9`; unsafe own-VPS username made invalid-input matrix `5/6`; trailing-slash host normalization `0/2`; whitespace-path additions made credential matrix `22/25`.
+- After fix: boundary `15/15`, host normalization `2/2`, credential matrix `25/25`, server/API/queue/materializer/executor/coordinator contour `134/134`. Rejected writes/runs leave node, run, step and audit state unchanged; executor canary is not started.
+- Backend full suite: `1211/1211`; Release build: `0` warnings/errors; EF model drift/fresh SQLite: `15/15`; scoped formatter: OK.
+- Frontend tests: `139/139`; typecheck/build all apps: OK; dependency audit: `0 vulnerabilities`; targeted admin desktop/mobile: `2/2`; full browser inventory: `218/218` in `11.2 min`, `0` failed/flaky/skipped.
+- Encoding/documentation/release guards: `57/57`; release seed: `646` entries with latest identity/version/order OK; secret scan: `670` files, `0` findings; artifact cleanup: OK. Real VPS/staging/3x-ui validation remains external and no live item was closed from local evidence.
+
 ## Check 2026-08-12: provisioning credential preflight
 
 Scope:

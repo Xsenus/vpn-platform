@@ -176,8 +176,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-09 локально подтверждено:
 
-- backend full suite: 1196/1196;
-- frontend tests: 136/136;
+- backend full suite: 1211/1211;
+- frontend tests: 139/139;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-12-provisioning-credential-preflight`, версия `0.646.0`; server API принимает в legacy SSH field только абсолютный Unix path без control/quote-символов, а queue отклоняет credential, который live materializer не сможет исполнить.
-- roadmap progress: `659/679` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-12-provisioning-inventory-argument-guard`, версия `0.647.0`; API/queue/executor валидируют target и credential до mutations/process, inventory alias фиксирован, а Python arguments передаются без ручного quoting.
+- roadmap progress: `660/680` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

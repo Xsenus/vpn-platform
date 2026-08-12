@@ -27,6 +27,30 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
 
     public async Task<ProvisioningExecutionResult> ExecuteAsync(VpnNode node, ProvisioningRun run, CancellationToken cancellationToken)
     {
+        var targetError = ProvisioningService.ValidateProvisioningTarget(node);
+        if (targetError is not null)
+        {
+            var error = $"Provisioning target validation failed: {targetError}";
+            return new ProvisioningExecutionResult(
+                false,
+                error,
+                new[] { new ProvisioningStepResult("Provisioning target validation", false, "No process was started.", targetError) },
+                null,
+                error);
+        }
+
+        var credentialError = ProvisioningService.ValidateProvisioningSshCredential(node);
+        if (credentialError is not null)
+        {
+            var error = $"Provisioning SSH credential validation failed: {credentialError}";
+            return new ProvisioningExecutionResult(
+                false,
+                error,
+                new[] { new ProvisioningStepResult("SSH credential validation", false, "No process was started.", credentialError) },
+                null,
+                error);
+        }
+
         if (ProvisioningService.IsValidationNode(node))
         {
             return await Task.FromResult(BuildMockResult(node, run));
@@ -79,19 +103,19 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
 
         var arguments = new List<string>
         {
-            Quote(runnerScript),
-            "--playbook", Quote(playbookPath),
-            "--host", Quote(!string.IsNullOrWhiteSpace(node.IpAddress) ? node.IpAddress : node.Host),
-            "--ssh-user", Quote(string.IsNullOrWhiteSpace(node.SshUser) ? "root" : node.SshUser),
+            runnerScript,
+            "--playbook", playbookPath,
+            "--host", !string.IsNullOrWhiteSpace(node.IpAddress) ? node.IpAddress.Trim() : node.Host.Trim(),
+            "--ssh-user", node.SshUser.Trim(),
             "--ssh-port", node.SshPort.ToString(),
-            "--workdir", Quote(workDirectory),
-            "--ansible-binary", Quote(_options.AnsibleBinary)
+            "--workdir", workDirectory,
+            "--ansible-binary", _options.AnsibleBinary
         };
 
         if (!string.IsNullOrWhiteSpace(node.Host))
         {
             arguments.Add("--inventory-name");
-            arguments.Add(Quote(node.Host));
+            arguments.Add($"vpn-node-{node.Id:N}");
         }
 
         MaterializedProvisioningSecret? materializedSshKey = null;
@@ -115,7 +139,7 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
             if (materializedSshKey is not null)
             {
                 arguments.Add("--private-key-path");
-                arguments.Add(Quote(materializedSshKey.Path));
+                arguments.Add(materializedSshKey.Path);
             }
 
             if (!string.IsNullOrWhiteSpace(node.SshPrivateKeyPath))
@@ -133,14 +157,14 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
                 if (materializedSshKey is null)
                 {
                     arguments.Add("--private-key-path");
-                    arguments.Add(Quote(node.SshPrivateKeyPath));
+                    arguments.Add(node.SshPrivateKeyPath);
                 }
             }
 
             if (!string.IsNullOrWhiteSpace(_options.KnownHostsPath))
             {
                 arguments.Add("--known-hosts-path");
-                arguments.Add(Quote(_options.KnownHostsPath));
+                arguments.Add(_options.KnownHostsPath);
             }
 
             if (node.SkipHostKeyChecking)
@@ -173,18 +197,21 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
             extraVarsPath = Path.Combine(workDirectory, "extra-vars.json");
             await File.WriteAllTextAsync(extraVarsPath, JsonSerializer.Serialize(extraVars, new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
             arguments.Add("--extra-vars-file");
-            arguments.Add(Quote(extraVarsPath));
+            arguments.Add(extraVarsPath);
 
             var psi = new ProcessStartInfo
             {
                 FileName = _options.PythonBinary,
-                Arguments = string.Join(' ', arguments),
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 WorkingDirectory = workDirectory
             };
+            foreach (var argument in arguments)
+            {
+                psi.ArgumentList.Add(argument);
+            }
 
             _logger.LogInformation("Starting provisioning run {RunId} for node {NodeId} with playbook {PlaybookPath}", run.Id, node.Id, playbookPath);
 
@@ -356,9 +383,6 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
             },
             $"mock://provisioning/{run.Id:N}");
     }
-
-    private static string Quote(string value)
-        => value.Contains(' ') ? $"\"{value}\"" : value;
 
     private static void TryDeleteSensitiveFile(string path)
     {

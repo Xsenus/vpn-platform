@@ -12,7 +12,8 @@ Live provisioning разрешается только для одобренно�
 - У оператора есть root или sudo-доступ.
 - SSH credential сохранен в платформе как protected `ssh_key`.
 - Password-based live SSH не используется: текущий runner материализует только private key.
-- Legacy `SshPrivateKeyPath` может содержать только абсолютный Unix path к уже смонтированному key-файлу без control/quote-символов; raw key, protected marker и validation placeholder API отклоняет до записи.
+- Legacy `SshPrivateKeyPath` может содержать только абсолютный Unix path к уже смонтированному key-файлу без whitespace/control/quote-символов; raw key, protected marker и validation placeholder API отклоняет до записи.
+- Host, отдельный IPv4/IPv6 и SSH username проходят общий preflight в API, queue и executor; executor использует фиксированный inventory alias и `ProcessStartInfo.ArgumentList`.
 - Сервер не является production-сервером клиента без отдельного согласования.
 - В БД есть актуальный `VpnNode` с корректными `Host` или `IpAddress`, `SshUser`, `SshPort`, `PublicHostname`, `PublicPort`.
 - Для live deploy у ноды есть тег `explicit-live-provisioning:true`.

@@ -94,19 +94,10 @@ public class ProvisioningService
             return Result<ProvisioningRun>.Failure(LiveDeployDisabledError);
         }
 
-        if (string.IsNullOrWhiteSpace(node.Host) && string.IsNullOrWhiteSpace(node.IpAddress))
+        var targetError = ValidateProvisioningTarget(node);
+        if (targetError is not null)
         {
-            return Result<ProvisioningRun>.Failure("Target host or IP is required.");
-        }
-
-        if (node.SshPort <= 0 || node.SshPort > 65535)
-        {
-            return Result<ProvisioningRun>.Failure("SSH port must be between 1 and 65535.");
-        }
-
-        if (string.IsNullOrWhiteSpace(node.SshUser))
-        {
-            return Result<ProvisioningRun>.Failure("SSH username is required.");
+            return Result<ProvisioningRun>.Failure(targetError);
         }
 
         var credentialError = ValidateProvisioningSshCredential(node);
@@ -427,6 +418,11 @@ public class ProvisioningService
             return "SSH username is required.";
         }
 
+        if (!IsValidSshUsername(command.Username))
+        {
+            return "SSH username is invalid. Use letters, digits, dot, underscore, @ or hyphen without whitespace.";
+        }
+
         var authMethod = NormalizeAuthMethod(command.AuthMethod);
         if (authMethod != "password" && authMethod != "ssh_key")
         {
@@ -487,7 +483,7 @@ public class ProvisioningService
 
         foreach (var character in path)
         {
-            if (char.IsControl(character) || character == '"')
+            if (char.IsWhiteSpace(character) || character == '"')
             {
                 return false;
             }
@@ -597,6 +593,51 @@ public class ProvisioningService
         }
 
         return Regex.IsMatch(host, @"^(?=.{1,253}$)([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$", RegexOptions.CultureInvariant);
+    }
+
+    public static bool IsValidIpAddress(string? value)
+        => !string.IsNullOrWhiteSpace(value)
+            && string.Equals(value, value.Trim(), StringComparison.Ordinal)
+            && IPAddress.TryParse(value, out _);
+
+    public static bool IsValidSshUsername(string? value)
+        => !string.IsNullOrWhiteSpace(value)
+            && value.Length <= 64
+            && Regex.IsMatch(value, @"^[a-zA-Z0-9_][a-zA-Z0-9._@-]*$", RegexOptions.CultureInvariant);
+
+    public static string? ValidateProvisioningTarget(VpnNode node)
+    {
+        if (string.IsNullOrWhiteSpace(node.Host) && string.IsNullOrWhiteSpace(node.IpAddress))
+        {
+            return "Target host or IP is required.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(node.Host) && !IsValidHost(node.Host.Trim()))
+        {
+            return "Target host is invalid.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(node.IpAddress) && !IsValidIpAddress(node.IpAddress))
+        {
+            return "Target IP address is invalid.";
+        }
+
+        if (node.SshPort <= 0 || node.SshPort > 65535)
+        {
+            return "SSH port must be between 1 and 65535.";
+        }
+
+        if (string.IsNullOrWhiteSpace(node.SshUser))
+        {
+            return "SSH username is required.";
+        }
+
+        if (!IsValidSshUsername(node.SshUser))
+        {
+            return "SSH username is invalid. Use letters, digits, dot, underscore, @ or hyphen without whitespace.";
+        }
+
+        return null;
     }
 
     public static string BuildTags(IReadOnlyDictionary<string, string?> tags)

@@ -61,6 +61,7 @@ import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlock
 import { canCancelProvisioningRun, canRetryProvisioningRun, isProvisioningStateConflict } from './provisioning-state'
 import { adminAccessDeniedMessage, adminSessionEndedMessage, isAdminAccessTokenExpired, isAdminSessionRejected } from './admin-session'
 import { isOptionalSafeAdminHttpUrl, validateTelegramBotUrlFields } from './admin-url-validation'
+import { validateServerForm } from './admin-server-validation'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-admin-token'
@@ -1054,20 +1055,6 @@ function validatePaymentProviderForm(
   for (const field of setup.extraSettingsFields.filter((item) => item.inputMode === 'url')) {
     if (!isOptionalSafeAdminHttpUrl(providerExtraSettingValue(form, field))) errors.push(`${field.label} должен быть корректным http/https адресом без логина и пароля.`)
   }
-  return errors
-}
-
-function validateServerForm(form: ServerFormState) {
-  const errors: string[] = []
-  const sshPort = Number(form.sshPort)
-  const capacity = Number(form.capacity)
-  const priority = Number(form.priority)
-  if (!form.name.trim()) errors.push('Укажите название VPN-сервера.')
-  if (!form.host.trim()) errors.push('Укажите Host / DNS VPN-сервера.')
-  if (!Number.isInteger(sshPort) || sshPort <= 0 || sshPort > 65535) errors.push('SSH-порт должен быть целым числом в диапазоне 1-65535.')
-  if (!Number.isInteger(capacity) || capacity <= 0) errors.push('Емкость сервера должна быть целым числом больше 0.')
-  if (!Number.isInteger(priority) || priority <= 0) errors.push('Приоритет должен быть целым числом больше 0.')
-  if (!isOptionalSafeAdminHttpUrl(form.panelBaseUrl)) errors.push('URL панели должен быть корректным http/https адресом без логина и пароля.')
   return errors
 }
 

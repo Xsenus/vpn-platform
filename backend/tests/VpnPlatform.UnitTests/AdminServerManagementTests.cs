@@ -21,16 +21,83 @@ namespace VpnPlatform.UnitTests;
 public class AdminServerManagementTests
 {
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Server_Write_Should_Persist_The_Normalized_Host_On_Sqlite(bool update)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var node = NewNode($"normalized-host-{update}");
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        var request = UpdateRequest(node) with { Host = "normalized.example.test/", IpAddress = string.Empty };
+        var controller = CreateController(db);
+
+        var result = update
+            ? await controller.UpdateServer(node.Id, request, CancellationToken.None)
+            : await controller.AddServer(request, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        db.ChangeTracker.Clear();
+        var persisted = update
+            ? await db.VpnNodes.SingleAsync(x => x.Id == node.Id)
+            : await db.VpnNodes.SingleAsync(x => x.Id != node.Id);
+        Assert.Equal("normalized.example.test", persisted.Host);
+        Assert.Null(ProvisioningService.ValidateProvisioningTarget(persisted));
+    }
+
+    [Theory]
+    [InlineData(false, "ip-address")]
+    [InlineData(false, "ssh-user")]
+    [InlineData(true, "ip-address")]
+    [InlineData(true, "ssh-user")]
+    public async Task Server_Write_Should_Reject_Provisioning_Inventory_Injection_On_Sqlite(bool update, string field)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var node = NewNode($"inventory-guard-{update}-{field}");
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        var request = UpdateRequest(node) with
+        {
+            Name = $"mutated-{node.Name}",
+            IpAddress = field == "ip-address" ? "10.0.0.1\ninjected ansible_connection=local" : node.IpAddress,
+            SshUser = field == "ssh-user" ? "root ansible_connection=local" : "root"
+        };
+        var controller = CreateController(db);
+
+        var result = update
+            ? await controller.UpdateServer(node.Id, request, CancellationToken.None)
+            : await controller.AddServer(request, CancellationToken.None);
+
+        var invalid = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains(field == "ip-address" ? "IP address" : "SSH username", invalid.Value!.ToString(), StringComparison.OrdinalIgnoreCase);
+        db.ChangeTracker.Clear();
+        var persisted = await db.VpnNodes.SingleAsync();
+        Assert.Equal(node.Id, persisted.Id);
+        Assert.Equal(node.Name, persisted.Name);
+        Assert.DoesNotContain(await db.AuditLogs.ToListAsync(), x => x.Action is "server.create" or "server.update");
+    }
+
+    [Theory]
     [InlineData(false, "pem")]
     [InlineData(false, "protected")]
     [InlineData(false, "placeholder")]
     [InlineData(false, "relative")]
     [InlineData(false, "quoted")]
+    [InlineData(false, "whitespace")]
     [InlineData(true, "pem")]
     [InlineData(true, "protected")]
     [InlineData(true, "placeholder")]
     [InlineData(true, "relative")]
     [InlineData(true, "quoted")]
+    [InlineData(true, "whitespace")]
     public async Task Server_Write_Should_Reject_Secret_Material_In_Legacy_Ssh_Key_Path_On_Sqlite(bool update, string pathKind)
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -49,7 +116,8 @@ public class AdminServerManagementTests
             "protected" => "v1:legacy-protected-value",
             "placeholder" => "validation-placeholder:legacy-value",
             "relative" => "secrets/id_ed25519",
-            _ => "/run/secrets/id_ed25519\" --check"
+            "quoted" => "/run/secrets/id_ed25519\" --check",
+            _ => "/run/secrets/operator key"
         };
         var request = UpdateRequest(node) with
         {

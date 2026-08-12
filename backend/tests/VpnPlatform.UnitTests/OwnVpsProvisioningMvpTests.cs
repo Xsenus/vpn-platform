@@ -21,6 +21,47 @@ namespace VpnPlatform.UnitTests;
 public class OwnVpsProvisioningMvpTests
 {
     [Theory]
+    [InlineData("ip-address", "IP address")]
+    [InlineData("ssh-user", "SSH username")]
+    public async Task QueueAsync_Should_Reject_Provisioning_Inventory_Injection_On_Sqlite(string field, string expectedError)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var node = new VpnNode
+        {
+            Name = $"inventory-guard-{field}",
+            Host = "inventory.example.test",
+            IpAddress = field == "ip-address" ? "10.0.0.1\ninjected ansible_connection=local" : string.Empty,
+            Provider = "customer-vps",
+            SshUser = field == "ssh-user" ? "root ansible_connection=local" : "root",
+            SshPort = 22,
+            Status = NodeStatus.New,
+            ProvisioningStatus = ProvisioningRunStatus.Requested,
+            TagsCsv = "validation-mode:false,explicit-live-provisioning:true,ssh-auth:ssh_key",
+            ProtectedSshCredential = "v1:cHJpdmF0ZS1rZXk="
+        };
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+
+        var result = await new ProvisioningService(db, new TestClock(), new TestSecretProtector())
+            .QueueAsync(node.Id, dryRun: false, requestedByUserId: Guid.NewGuid());
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(expectedError, result.Error, StringComparison.OrdinalIgnoreCase);
+        db.ChangeTracker.Clear();
+        var persisted = await db.VpnNodes.SingleAsync();
+        Assert.Equal(NodeStatus.New, persisted.Status);
+        Assert.Equal(ProvisioningRunStatus.Requested, persisted.ProvisioningStatus);
+        Assert.Empty(await db.ProvisioningRuns.ToListAsync());
+        Assert.Empty(await db.ProvisioningStepRuns.ToListAsync());
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Theory]
     [InlineData("orphan-ref", "payload is missing")]
     [InlineData("placeholder", "placeholder")]
     [InlineData("password", "password")]
@@ -28,6 +69,7 @@ public class OwnVpsProvisioningMvpTests
     [InlineData("raw-key-path", "private key material")]
     [InlineData("relative-path", "invalid")]
     [InlineData("quoted-path", "invalid")]
+    [InlineData("whitespace-path", "invalid")]
     public async Task QueueAsync_Should_Reject_NonExecutable_Ssh_Credential_State_On_Sqlite(string credentialState, string expectedError)
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -68,6 +110,9 @@ public class OwnVpsProvisioningMvpTests
                 break;
             case "quoted-path":
                 node.SshPrivateKeyPath = "/run/secrets/id_ed25519\" --check";
+                break;
+            case "whitespace-path":
+                node.SshPrivateKeyPath = "/run/secrets/operator key";
                 break;
             default:
                 node.SshPrivateKeyPath = "-----BEGIN OPENSSH PRIVATE KEY-----\nraw-secret\n-----END OPENSSH PRIVATE KEY-----";
@@ -180,6 +225,7 @@ public class OwnVpsProvisioningMvpTests
     [InlineData("https://bad.example/path", 22, "root", "password", "secret", "Invalid host")]
     [InlineData("vps.example.test", 0, "root", "password", "secret", "Invalid SSH port")]
     [InlineData("vps.example.test", 22, "", "password", "secret", "SSH username is required")]
+    [InlineData("vps.example.test", 22, "root ansible_connection=local", "password", "secret", "SSH username is invalid")]
     [InlineData("vps.example.test", 22, "root", "token", "secret", "Unsupported auth method")]
     [InlineData("vps.example.test", 22, "root", "password", "", "SSH password/private key is required")]
     public async Task OwnVps_Request_Should_Reject_Invalid_Input(string host, int port, string username, string authMethod, string credential, string expectedError)

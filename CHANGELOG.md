@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.647.0 - 2026-08-12
+
+Release entry: `2026-08-12-provisioning-inventory-argument-guard`.
+
+### Исправлено
+
+- Server API, own-VPS onboarding и provisioning queue отклоняют невалидные IP/SSH username до node/run/step/audit mutation; заполненный `IpAddress` больше не обходит проверку валидного `Host`.
+- Executor повторяет target/credential preflight до создания workdir и запуска process, использует безопасный фиксированный inventory alias и передаёт Python каждый аргумент через `ProcessStartInfo.ArgumentList` без ручного quoting.
+- Legacy SSH key path не допускает whitespace, а create/update сохраняет нормализованный host без завершающего `/`; admin-форма показывает IP/SSH diagnostics до submit на desktop/mobile.
+
+### Проверено
+
+- Fail-first: inventory/process boundary `0/9`, own-VPS invalid input `5/6`, host normalization `0/2`, credential matrix `22/25`; после исправления boundary `15/15`, normalization `2/2`, credential matrix `25/25`, затронутый server/provisioning contour `134/134`.
+- Backend `1211/1211`; Release build `0` warnings/errors; EF/fresh SQLite `15/15`; frontend `139/139`; typecheck/build всех приложений и audit `0 vulnerabilities` зелёные.
+- Targeted admin desktop/mobile `2/2`; полный browser inventory `218/218` за `11.2 min` (`52+62+98+6`) без failed/flaky/skipped.
+- Fresh SQLite flow подтвердил latest release; seed содержит `646` записей, encoding/release guards `57/57`, secret scan `670` files/`0` findings.
+- Roadmap: `660/680` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked; real VPS/staging/3x-ui evidence не заменялся локальными проверками.
+
 ## 0.646.0 - 2026-08-12
 
 Release entry: `2026-08-12-provisioning-credential-preflight`.
