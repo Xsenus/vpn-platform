@@ -59,6 +59,21 @@ public class PaymentProvidersPublicControllerTests
     }
 
     [Fact]
+    public async Task GetAvailableProviders_Should_Hide_Legacy_Account_With_Unsafe_Url()
+    {
+        await using var db = CreateDbContext();
+        var account = Account(PaymentProvider.YooKassa, PaymentProviderMode.Sandbox, true, "Unsafe legacy checkout");
+        account.ApiBaseUrl = "https://operator:secret@api.example.test";
+        db.PaymentProviderAccounts.Add(account);
+        await db.SaveChangesAsync();
+
+        var result = await new PaymentsController(db).GetAvailableProviders(CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Empty(Assert.IsAssignableFrom<IReadOnlyCollection<PublicPaymentProviderDto>>(ok.Value));
+    }
+
+    [Fact]
     public async Task Public_List_And_Web_Checkout_Should_Select_The_Same_Configured_Account()
     {
         await using var db = CreateDbContext();

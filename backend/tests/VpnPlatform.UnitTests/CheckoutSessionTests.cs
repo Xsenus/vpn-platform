@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -111,6 +112,76 @@ public class CheckoutSessionTests
         Assert.False(result.IsSuccess);
         Assert.Contains("not configured", result.Error, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(await db.CheckoutSessions.ToListAsync());
+    }
+
+    [Fact]
+    public async Task CheckoutSession_Should_Reject_Legacy_Payment_Provider_With_Unsafe_Url()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock(new DateTimeOffset(2026, 8, 12, 9, 15, 0, TimeSpan.Zero));
+        var tariff = await SeedTariffAsync(db);
+        var account = await db.PaymentProviderAccounts.SingleAsync();
+        account.ReturnUrl = "javascript:alert(1)";
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db, clock).CreateAsync(new(
+            tariff.Id,
+            OrderType.NewSubscription,
+            ChannelType.Web,
+            PaymentProvider.YooKassa,
+            null,
+            false,
+            null,
+            null));
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("not configured", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await db.CheckoutSessions.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData("javascript:alert(1)")]
+    [InlineData("https://operator:secret@example.test/account")]
+    [InlineData("ftp://example.test/account")]
+    public async Task CheckoutSession_Should_Reject_Unsafe_Return_Url(string returnUrl)
+    {
+        await using var db = CreateDbContext();
+        var tariff = await SeedTariffAsync(db);
+
+        var result = await CreateService(db, new FixedClock(new DateTimeOffset(2026, 8, 12, 9, 30, 0, TimeSpan.Zero))).CreateAsync(new(
+            tariff.Id,
+            OrderType.NewSubscription,
+            ChannelType.Web,
+            PaymentProvider.YooKassa,
+            null,
+            false,
+            null,
+            returnUrl));
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("return URL", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await db.CheckoutSessions.ToListAsync());
+    }
+
+    [Fact]
+    public async Task CheckoutSession_Should_Serialize_Normalized_Return_Url_As_Json()
+    {
+        await using var db = CreateDbContext();
+        var tariff = await SeedTariffAsync(db);
+
+        var result = await CreateService(db, new FixedClock(new DateTimeOffset(2026, 8, 12, 9, 45, 0, TimeSpan.Zero))).CreateAsync(new(
+            tariff.Id,
+            OrderType.NewSubscription,
+            ChannelType.Web,
+            PaymentProvider.YooKassa,
+            null,
+            false,
+            null,
+            "  https://example.test/account?source=public  "));
+
+        Assert.True(result.IsSuccess, result.Error);
+        using var metadata = JsonDocument.Parse((await db.CheckoutSessions.SingleAsync()).MetadataJson);
+        Assert.Equal("https://example.test/account?source=public", metadata.RootElement.GetProperty("returnUrl").GetString());
     }
 
     [Fact]

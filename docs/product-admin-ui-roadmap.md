@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `661/681` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `662/682` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,7 +85,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1229/1229`.
+- [x] Backend full suite: `1238/1238`.
 - [x] Frontend unit tests: `140/140`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -167,7 +167,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-12-vpn-public-endpoint-protocol-guard`, версия `0.648.0`; server/scenario формы используют protocol select и public endpoint validation, backend/allocator/provider повторяют fail-closed guards, полный browser inventory `218/218` зелёный.
+- [x] Latest "Что нового": `2026-08-12-payment-checkout-url-readiness-guard`, версия `0.649.0`; payment readiness/public list/checkout используют единый safe URL guard, полный browser inventory `218/218` зелёный.
 
 ## Как вести дальше
 

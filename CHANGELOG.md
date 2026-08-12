@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.649.0 - 2026-08-12
+
+Release entry: `2026-08-12-payment-checkout-url-readiness-guard`.
+
+### Исправлено
+
+- Legacy payment account с credential-bearing или non-HTTP API/return/webhook/hosted URL больше не считается готовым, не публикуется пользователю и не позволяет создать тупиковую checkout session.
+- Публичный checkout return URL проверяется как credential-free `http/https`, нормализуется до persistence и сохраняется через структурный `JsonSerializer` вместо ручной вставки в JSON.
+
+### Проверено
+
+- Fail-first readiness/public/checkout `5/30`; отдельный return URL/JSON fail-first `4/4`; после исправления payment regression `76/76`, targeted public/cabinet desktop/mobile `8/8`.
+- Backend `1238/1238`; frontend `140/140`; typecheck/build всех приложений зелёные; полный Playwright `218/218` за `11.5 min` без failed/flaky/skipped; EF drift и fresh SQLite зелёные; audit `0` уязвимостей, secret scan `671/0`.
+- Roadmap: `662/682` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked; реальные provider/VPS/staging evidence локальными проверками не закрывались.
+
 ## 0.648.0 - 2026-08-12
 
 Release entry: `2026-08-12-vpn-public-endpoint-protocol-guard`.

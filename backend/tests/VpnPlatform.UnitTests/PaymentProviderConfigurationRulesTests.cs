@@ -96,6 +96,31 @@ public class PaymentProviderConfigurationRulesTests
         Assert.True(PaymentProviderConfigurationRules.IsWebCheckoutConfigured(account));
     }
 
+    [Theory]
+    [InlineData("https://operator:secret@api.example.test", "https://cabinet.example.test/payments", "https://api.example.test/webhook", "credentials")]
+    [InlineData("ftp://api.example.test", "https://cabinet.example.test/payments", "https://api.example.test/webhook", "http")]
+    [InlineData("https://api.example.test", "javascript:alert(1)", "https://api.example.test/webhook", "http")]
+    public void Web_Provider_Should_Reject_Unsafe_Legacy_Urls(
+        string apiBaseUrl,
+        string returnUrl,
+        string webhookUrl,
+        string expectedIssue)
+    {
+        var account = new PaymentProviderAccount
+        {
+            Provider = PaymentProvider.YooKassa,
+            Mode = PaymentProviderMode.Sandbox,
+            IsEnabled = true,
+            ShopId = "shop",
+            ApiBaseUrl = apiBaseUrl,
+            ReturnUrl = returnUrl,
+            WebhookUrl = webhookUrl
+        };
+
+        Assert.False(PaymentProviderConfigurationRules.IsWebCheckoutConfigured(account));
+        Assert.Contains(expectedIssue, PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account) ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void Capability_Rules_Should_Report_Unsupported_Features()
     {

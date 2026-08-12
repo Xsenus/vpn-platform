@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
@@ -43,6 +44,13 @@ public class CheckoutSessionService
             return Result<CheckoutSessionDto>.Failure("Payment provider is not configured for public web checkout.");
         }
 
+        var returnUrl = string.Empty;
+        if (!string.IsNullOrWhiteSpace(command.ReturnUrl)
+            && !SafeHttpUrl.TryNormalize(command.ReturnUrl, out returnUrl))
+        {
+            return Result<CheckoutSessionDto>.Failure("Checkout return URL must be an absolute http/https URL without embedded credentials.");
+        }
+
         var promoValidation = await _orderService.ValidatePromoForCheckoutAsync(
             command.PromoCode,
             command.TariffId,
@@ -66,9 +74,9 @@ public class CheckoutSessionService
             IsFirstPurchase = command.IsFirstPurchase,
             ExpiresAt = _clock.UtcNow.AddMinutes(30),
             Status = "open",
-            MetadataJson = string.IsNullOrWhiteSpace(command.ReturnUrl) ? "{}" : $$"""
-            { "returnUrl": "{{JsonEscape(command.ReturnUrl)}}" }
-            """
+            MetadataJson = string.IsNullOrWhiteSpace(returnUrl)
+                ? "{}"
+                : JsonSerializer.Serialize(new { returnUrl })
         };
 
         _db.CheckoutSessions.Add(session);
@@ -329,6 +337,4 @@ public class CheckoutSessionService
     private static string? NormalizeEmail(string? email)
         => string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
 
-    private static string JsonEscape(string value)
-        => value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
 }

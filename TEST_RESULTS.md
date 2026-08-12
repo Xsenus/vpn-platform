@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: payment checkout URL readiness guard
+
+Scope:
+- Legacy payment account с unsafe API/return/webhook/hosted URL не должен быть advertised или создавать checkout session.
+- Public checkout return URL должен fail-closed проверяться и корректно сериализоваться до persistence.
+
+Results:
+- Roadmap progress: `662/682` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-payment-checkout-url-readiness-guard`, version `0.649.0`.
+- Reproduction before fix: readiness/public/checkout `5/30` failed; return URL/JSON boundary `4/4` failed.
+- After fix: payment regression `76/76`; targeted public/cabinet desktop/mobile `8/8`. Backend full suite: `1238/1238`; frontend tests: `140/140`; typecheck/build all apps: OK.
+- Full browser inventory: `218/218` in `11.5 min`, `0` failed/flaky/skipped. EF drift: clean; fresh SQLite smoke: OK; dependency audit: `0` vulnerabilities; secret scan: `671` files, `0` findings. Real provider cabinets, VPS/staging and live payment evidence remain external.
+
 ## Check 2026-08-12: VPN public endpoint and protocol guard
 
 Scope:

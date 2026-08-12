@@ -65,6 +65,21 @@ public static class PaymentProviderConfigurationRules
             return "CloudPayments checkout requires ExtraSettingsJson.hostedCheckoutUrl with a merchant-hosted widget page.";
         }
 
+        foreach (var (value, fieldName) in new[]
+                 {
+                     (account.ApiBaseUrl, "API base URL"),
+                     (account.ReturnUrl, "Return URL"),
+                     (account.WebhookUrl, "Webhook URL"),
+                     (ReadExtraSetting(account.ExtraSettingsJson, "hostedCheckoutUrl"), "hostedCheckoutUrl")
+                 })
+        {
+            var issue = GetOptionalSafeHttpUrlIssue(value, fieldName);
+            if (issue is not null)
+            {
+                return issue;
+            }
+        }
+
         return null;
     }
 
@@ -101,6 +116,23 @@ public static class PaymentProviderConfigurationRules
 
     public static bool IsBotCheckoutConfigured(PaymentProviderAccount account)
         => GetBotCheckoutConfigurationIssue(account) is null;
+
+    private static string? GetOptionalSafeHttpUrlIssue(string? value, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (SafeHttpUrl.ContainsCredentials(value))
+        {
+            return $"{fieldName} must not contain credentials (login or password).";
+        }
+
+        return SafeHttpUrl.TryNormalize(value, out _)
+            ? null
+            : $"{fieldName} must be an absolute http/https URL.";
+    }
 
     public static string GetCapabilitiesJson(PaymentProvider provider)
     {

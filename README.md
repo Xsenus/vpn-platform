@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-12 локально подтверждено:
 
-- backend на .NET 9: `1229/1229` unit tests;
+- backend на .NET 9: `1238/1238` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `140/140`;
 - frontend typecheck и production build: OK;
@@ -343,8 +343,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - кабинет и пользовательские API скрывают VPN URI/QR/config/provider ID точно по effective access deadline, не ожидая фонового lifecycle worker;
 - административные access DTO, QR и provider-команды используют тот же effective deadline; открытая админка скрывает секреты без reload и оставляет только безопасное отключение у провайдера;
 - административные sync/migration подписки, dashboard и user overview используют effective expiry; открытая админка обновляет команды и метрики без reload, а grace-period unblock согласован с backend state machine;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-vpn-public-endpoint-protocol-guard`, версия `0.648.0`;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-12-payment-checkout-url-readiness-guard`, версия `0.649.0`;
 - server API, own-VPS onboarding, queue и executor отклоняют inventory-breaking IP/SSH values; executor использует фиксированный alias и `ArgumentList`, а admin-форма показывает те же diagnostics до submit;
-- roadmap progress: `661/681` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- roadmap progress: `662/682` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.
