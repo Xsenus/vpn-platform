@@ -826,6 +826,16 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             return Result<RefundDto>.Failure($"Refund provider outcome is unknown and requires manual reconciliation. {ex.Message}{suffix}");
         }
 
+        var refundValidation = ValidatePaymentRefundResult(currentPayment, refundResult, amount);
+        if (!refundValidation.IsSuccess)
+        {
+            refund.ProviderRefundId = string.IsNullOrWhiteSpace(refundResult.RefundId) ? refund.ProviderRefundId : refundResult.RefundId;
+            refund.RawResponse = refundResult.RawResponse;
+            var persisted = await MarkRefundUnresolvedAsync(refund, payment, currentPayment);
+            var suffix = persisted ? string.Empty : " Local reconciliation also failed.";
+            return Result<RefundDto>.Failure($"Refund provider proof is invalid and requires manual reconciliation. {refundValidation.Error}{suffix}");
+        }
+
         refund.ProviderRefundId = string.IsNullOrWhiteSpace(refundResult.RefundId) ? refund.ProviderRefundId : refundResult.RefundId;
         refund.Status = refundResult.Status;
         refund.RawResponse = refundResult.RawResponse;
@@ -1169,6 +1179,48 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         }
 
         return Result<string>.Success("Payment provider status matches payment attempt.");
+    }
+
+    private Result<string> ValidatePaymentRefundResult(PaymentAttempt payment, PaymentRefundResult refundResult, decimal requestedAmount)
+    {
+        if (refundResult.Status == RefundStatus.Unknown)
+        {
+            return Result<string>.Failure(refundResult.StatusReason ?? "Payment provider refund status is unknown.");
+        }
+
+        if (string.IsNullOrWhiteSpace(refundResult.RefundId))
+        {
+            return Result<string>.Failure("Payment provider refund identifier is missing.");
+        }
+
+        var expectedProviderPaymentId = string.IsNullOrWhiteSpace(refundResult.ExpectedProviderPaymentId)
+            ? payment.ProviderPaymentId
+            : refundResult.ExpectedProviderPaymentId;
+        if (!string.IsNullOrWhiteSpace(refundResult.ProviderPaymentId)
+            && !string.Equals(refundResult.ProviderPaymentId, expectedProviderPaymentId, StringComparison.Ordinal))
+        {
+            return Result<string>.Failure("Payment provider returned a mismatched refund payment identifier.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(refundResult.InternalPaymentAttemptId)
+            && !string.Equals(refundResult.InternalPaymentAttemptId, payment.Id.ToString("N"), StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(refundResult.InternalPaymentAttemptId, payment.Id.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<string>.Failure("Payment provider returned a mismatched refund payment attempt identifier.");
+        }
+
+        if (refundResult.Amount.HasValue && decimal.Round(refundResult.Amount.Value, 2) != decimal.Round(requestedAmount, 2))
+        {
+            return Result<string>.Failure("Payment provider returned a mismatched refund amount.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(refundResult.Currency)
+            && !string.Equals(NormalizeCurrency(refundResult.Currency), NormalizeCurrency(payment.Currency), StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<string>.Failure("Payment provider returned a mismatched refund currency.");
+        }
+
+        return Result<string>.Success("Payment provider refund matches the request.");
     }
 
     private async Task SaveRejectedWebhookAsync(PaymentProvider provider, string providerPaymentId, string externalEventId, string eventType, string rawBody, IReadOnlyDictionary<string, string> headers, string error, CancellationToken cancellationToken)

@@ -308,7 +308,7 @@ public sealed class YooKassaPaymentProvider : IPaymentProvider, IPaymentWebhookV
                 status = "succeeded",
                 amount = new { value = amount.ToString("0.00", CultureInfo.InvariantCulture), currency = payment.Currency }
             }, JsonOptions);
-            return new PaymentRefundResult(sandboxRefundId, RefundStatus.Succeeded, sandboxRaw);
+            return new PaymentRefundResult(sandboxRefundId, RefundStatus.Succeeded, sandboxRaw, payment.ProviderPaymentId, amount, payment.Currency, payment.Id.ToString("N"));
         }
 
         var secretKey = _accounts.GetSecretKey(account);
@@ -341,7 +341,18 @@ public sealed class YooKassaPaymentProvider : IPaymentProvider, IPaymentWebhookV
         var root = document.RootElement;
         var refundId = root.GetProperty("id").GetString() ?? string.Empty;
         var statusText = root.TryGetProperty("status", out var statusElement) ? statusElement.GetString() ?? string.Empty : string.Empty;
-        return new PaymentRefundResult(refundId, MapRefundStatus(statusText), rawResponse);
+        var providerPaymentId = root.TryGetProperty("payment_id", out var paymentIdElement) ? paymentIdElement.GetString() : null;
+        var refundAmount = TryReadAmount(root, out var currency);
+        var status = MapRefundStatus(statusText);
+        var statusReason = status == RefundStatus.Succeeded
+            && (string.IsNullOrWhiteSpace(refundId) || string.IsNullOrWhiteSpace(providerPaymentId) || !refundAmount.HasValue || string.IsNullOrWhiteSpace(currency))
+                ? "yookassa_refund_proof_incomplete"
+                : statusText;
+        if (statusReason == "yookassa_refund_proof_incomplete")
+        {
+            status = RefundStatus.Unknown;
+        }
+        return new PaymentRefundResult(refundId, status, rawResponse, providerPaymentId, refundAmount, currency, StatusReason: statusReason);
     }
 
     public PaymentStatus MapPaymentStatus(string providerStatus, bool paid) => YooKassaPaymentStatusMapper.MapPaymentStatus(providerStatus, paid);

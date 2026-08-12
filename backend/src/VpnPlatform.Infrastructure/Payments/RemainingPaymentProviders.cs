@@ -133,7 +133,7 @@ internal static class RemainingPaymentProviderShared
             currency = payment.Currency,
             reason
         });
-        return new PaymentRefundResult(refundId, RefundStatus.Succeeded, raw);
+        return new PaymentRefundResult(refundId, RefundStatus.Succeeded, raw, payment.ProviderPaymentId, amount, payment.Currency, payment.Id.ToString("N"));
     }
 
     public static bool FixedEqualsBase64(string provided, byte[] expectedBytes)
@@ -428,7 +428,32 @@ public sealed class StripePaymentProvider : IPaymentProvider, IPaymentWebhookVer
         var root = document.RootElement;
         var refundId = root.TryGetProperty("id", out var id) ? id.GetString() ?? string.Empty : string.Empty;
         var status = root.TryGetProperty("status", out var statusElement) ? MapRefundStatus(statusElement.GetString() ?? string.Empty) : RefundStatus.Unknown;
-        return new PaymentRefundResult(refundId, status, raw);
+        var paymentIntentId = root.TryGetProperty("payment_intent", out var paymentIntentElement) ? paymentIntentElement.GetString() : null;
+        var currency = root.TryGetProperty("currency", out var currencyElement) ? currencyElement.GetString()?.ToUpperInvariant() : null;
+        var refundAmount = root.TryGetProperty("amount", out var amountElement) && amountElement.TryGetInt64(out var amountMinor)
+            && !string.IsNullOrWhiteSpace(currency)
+                ? RemainingPaymentProviderShared.FromMinorUnits(amountMinor, currency)
+                : (decimal?)null;
+        var paymentAttemptId = TryGetMetadata(root, "paymentAttemptId");
+        var proofStatusReason = status == RefundStatus.Succeeded
+            && (string.IsNullOrWhiteSpace(refundId) || string.IsNullOrWhiteSpace(paymentIntentId) || !refundAmount.HasValue
+                || string.IsNullOrWhiteSpace(currency) || string.IsNullOrWhiteSpace(paymentAttemptId))
+                ? "stripe_refund_proof_incomplete"
+                : null;
+        if (proofStatusReason is not null)
+        {
+            status = RefundStatus.Unknown;
+        }
+        return new PaymentRefundResult(
+            refundId,
+            status,
+            raw,
+            ProviderPaymentId: paymentIntentId,
+            Amount: refundAmount,
+            Currency: currency,
+            InternalPaymentAttemptId: paymentAttemptId,
+            StatusReason: proofStatusReason,
+            ExpectedProviderPaymentId: paymentIntent);
     }
 
     public PaymentStatus MapPaymentStatus(string providerStatus, bool paid)
@@ -803,6 +828,7 @@ public sealed class PayPalPaymentProvider : IPaymentProvider, IPaymentWebhookVer
         using var request = new HttpRequestMessage(HttpMethod.Post, BuildPayPalUri(account, $"/v2/payments/captures/{WebUtility.UrlEncode(captureId)}/refund"));
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Headers.Add("PayPal-Request-Id", $"refund-{payment.Id:N}-{RemainingPaymentProviderShared.ToMinorUnits(amount, payment.Currency)}-{ComputeSha256Hex(reason)[..16]}");
+        request.Headers.Add("Prefer", "return=representation");
         request.Content = new StringContent(body.ToJsonString(new JsonSerializerOptions(JsonSerializerDefaults.Web)), Encoding.UTF8, "application/json");
         using var response = await SendPayPalAsync(request, cancellationToken);
         var raw = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -812,9 +838,28 @@ public sealed class PayPalPaymentProvider : IPaymentProvider, IPaymentWebhookVer
         }
 
         using var document = JsonDocument.Parse(raw);
-        var id = document.RootElement.TryGetProperty("id", out var idElement) ? idElement.GetString() ?? string.Empty : string.Empty;
-        var status = document.RootElement.TryGetProperty("status", out var statusElement) ? MapRefundStatus(statusElement.GetString() ?? string.Empty) : RefundStatus.Unknown;
-        return new PaymentRefundResult(id, status, raw);
+        var root = document.RootElement;
+        var id = root.TryGetProperty("id", out var idElement) ? idElement.GetString() ?? string.Empty : string.Empty;
+        var status = root.TryGetProperty("status", out var statusElement) ? MapRefundStatus(statusElement.GetString() ?? string.Empty) : RefundStatus.Unknown;
+        var refundAmount = TryReadPayPalMoney(root, "amount", out var currency);
+        var responseCaptureId = TryGetPayPalUpCaptureId(root);
+        var statusReason = status == RefundStatus.Succeeded
+            && (string.IsNullOrWhiteSpace(id) || !refundAmount.HasValue || string.IsNullOrWhiteSpace(currency) || string.IsNullOrWhiteSpace(responseCaptureId))
+                ? "paypal_refund_proof_incomplete"
+                : null;
+        if (statusReason is not null)
+        {
+            status = RefundStatus.Unknown;
+        }
+        return new PaymentRefundResult(
+            id,
+            status,
+            raw,
+            ProviderPaymentId: responseCaptureId,
+            Amount: refundAmount,
+            Currency: currency,
+            StatusReason: statusReason,
+            ExpectedProviderPaymentId: captureId);
     }
 
     public PaymentStatus MapPaymentStatus(string providerStatus, bool paid)
@@ -1071,6 +1116,55 @@ public sealed class PayPalPaymentProvider : IPaymentProvider, IPaymentWebhookVer
         return new Uri($"{baseUrl}/{path.TrimStart('/')}", UriKind.Absolute);
     }
 
+    private static decimal? TryReadPayPalMoney(JsonElement root, string propertyName, out string? currency)
+    {
+        currency = null;
+        if (!root.TryGetProperty(propertyName, out var money) || money.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        currency = money.TryGetProperty("currency_code", out var currencyElement) && currencyElement.ValueKind == JsonValueKind.String
+            ? currencyElement.GetString()?.Trim().ToUpperInvariant()
+            : null;
+        return money.TryGetProperty("value", out var valueElement)
+            && valueElement.ValueKind == JsonValueKind.String
+            && decimal.TryParse(valueElement.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var value)
+                ? value
+                : null;
+    }
+
+    private static string? TryGetPayPalUpCaptureId(JsonElement root)
+    {
+        if (!root.TryGetProperty("links", out var links) || links.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        foreach (var link in links.EnumerateArray())
+        {
+            if (link.ValueKind != JsonValueKind.Object
+                || !link.TryGetProperty("rel", out var rel)
+                || !string.Equals(rel.GetString(), "up", StringComparison.OrdinalIgnoreCase)
+                || !link.TryGetProperty("href", out var href)
+                || !Uri.TryCreate(href.GetString(), UriKind.Absolute, out var uri))
+            {
+                continue;
+            }
+
+            var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            for (var index = 0; index + 1 < segments.Length; index++)
+            {
+                if (string.Equals(segments[index], "captures", StringComparison.OrdinalIgnoreCase))
+                {
+                    return WebUtility.UrlDecode(segments[index + 1]);
+                }
+            }
+        }
+
+        return null;
+    }
+
     private static string ResolvePayPalOrderId(JsonElement resource)
     {
         if (resource.TryGetProperty("supplementary_data", out var supplementary)
@@ -1307,8 +1401,13 @@ public sealed class TBankAcquiringPaymentProvider : IPaymentProvider, IPaymentWe
         using var document = JsonDocument.Parse(raw);
         var root = document.RootElement;
         var success = root.TryGetProperty("Success", out var successElement) && successElement.ValueKind == JsonValueKind.True;
-        var refundId = root.TryGetProperty("PaymentId", out var idElement) ? idElement.ToString() : payment.ProviderPaymentId;
-        return new PaymentRefundResult(refundId, success ? RefundStatus.Succeeded : RefundStatus.Failed, raw);
+        var responsePaymentId = root.TryGetProperty("PaymentId", out var idElement) ? idElement.ToString() : string.Empty;
+        var statusText = root.TryGetProperty("Status", out var statusElement) ? statusElement.GetString() ?? string.Empty : string.Empty;
+        var status = success ? MapTBankRefundStatus(statusText) : RefundStatus.Failed;
+        var providerRefundId = string.IsNullOrWhiteSpace(responsePaymentId)
+            ? string.Empty
+            : $"tbank-refund:{responsePaymentId}:{RemainingPaymentProviderShared.ToMinorUnits(amount, payment.Currency)}:{ComputeSha256Hex(reason)[..16]}";
+        return new PaymentRefundResult(providerRefundId, status, raw, ProviderPaymentId: responsePaymentId, StatusReason: statusText);
     }
 
     public PaymentStatus MapPaymentStatus(string providerStatus, bool paid)
@@ -1323,7 +1422,17 @@ public sealed class TBankAcquiringPaymentProvider : IPaymentProvider, IPaymentWe
             _ => PaymentStatus.Unknown
         };
 
-    public RefundStatus MapRefundStatus(string providerStatus) => providerStatus == "CONFIRMED" ? RefundStatus.Succeeded : RefundStatus.Unknown;
+    public RefundStatus MapRefundStatus(string providerStatus) => MapTBankRefundStatus(providerStatus);
+
+    private static RefundStatus MapTBankRefundStatus(string providerStatus)
+        => providerStatus.Trim().ToUpperInvariant() switch
+        {
+            "REFUNDED" or "PARTIAL_REFUNDED" or "REVERSED" or "PARTIAL_REVERSED" => RefundStatus.Succeeded,
+            "NEW" or "FORM_SHOWED" or "AUTHORIZING" => RefundStatus.Pending,
+            "REJECTED" or "DEADLINE_EXPIRED" => RefundStatus.Failed,
+            "CANCELED" => RefundStatus.Cancelled,
+            _ => RefundStatus.Unknown
+        };
 
     public static string BuildTBankToken(IReadOnlyDictionary<string, string> values, string password)
     {

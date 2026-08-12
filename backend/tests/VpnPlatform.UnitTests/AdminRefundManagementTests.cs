@@ -429,6 +429,138 @@ public class AdminRefundManagementTests
     }
 
     [Theory]
+    [InlineData(PaymentProvider.YooKassa, "foreign-reference", false)]
+    [InlineData(PaymentProvider.Stripe, "foreign-reference", false)]
+    [InlineData(PaymentProvider.PayPal, "foreign-reference", false)]
+    [InlineData(PaymentProvider.TBankAcquiring, "foreign-reference", false)]
+    [InlineData(PaymentProvider.YooKassa, "wrong-amount", false)]
+    [InlineData(PaymentProvider.Stripe, "wrong-amount", false)]
+    [InlineData(PaymentProvider.PayPal, "wrong-amount", false)]
+    [InlineData(PaymentProvider.YooKassa, "valid", true)]
+    [InlineData(PaymentProvider.Stripe, "valid", true)]
+    [InlineData(PaymentProvider.PayPal, "valid", true)]
+    [InlineData(PaymentProvider.TBankAcquiring, "valid", true)]
+    public async Task RefundPayment_Should_Validate_Provider_Proof_On_Sqlite(PaymentProvider providerType, string proof, bool expectedSuccess)
+    {
+        await using var db = CreateDb();
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 12, 18, 30, 0, TimeSpan.Zero));
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(providerType, secret: "provider-secret");
+        account.Mode = PaymentProviderMode.Production;
+        account.ShopId = providerType == PaymentProvider.PayPal ? "paypal-client-id" : "merchant-account";
+        account.ApiBaseUrl = "https://provider.test";
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        payment.ProviderMode = PaymentProviderMode.Production;
+        payment.ProviderPaymentId = "PAYMENT-LOCAL";
+        if (providerType == PaymentProvider.Stripe)
+        {
+            payment.RawResponse = "{\"payment_intent\":\"PI-LOCAL\"}";
+        }
+        else if (providerType == PaymentProvider.PayPal)
+        {
+            payment.WebhookPayload = "{\"resource\":{\"id\":\"CAPTURE-LOCAL\",\"status\":\"COMPLETED\"}}";
+        }
+
+        db.Users.Add(user);
+        db.Tariffs.Add(tariff);
+        db.PaymentProviderAccounts.Add(account);
+        db.Orders.Add(payment.Order!);
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+
+        var handler = new RefundProofHandler(providerType, proof, payment.Id);
+        var httpFactory = new StaticHttpClientFactory(new HttpClient(handler));
+        var environment = new TestHostEnvironment("Production");
+        IPaymentProvider provider = providerType switch
+        {
+            PaymentProvider.YooKassa => new YooKassaPaymentProvider(httpFactory, accounts, Microsoft.Extensions.Logging.Abstractions.NullLogger<YooKassaPaymentProvider>.Instance, environment),
+            PaymentProvider.Stripe => new StripePaymentProvider(httpFactory, accounts, environment),
+            PaymentProvider.PayPal => new PayPalPaymentProvider(httpFactory, accounts, environment),
+            PaymentProvider.TBankAcquiring => new TBankAcquiringPaymentProvider(httpFactory, accounts, environment),
+            _ => throw new ArgumentOutOfRangeException(nameof(providerType), providerType, null)
+        };
+        var orchestrator = new PaymentOrchestrator(
+            db,
+            new TestPaymentProviderFactory(provider),
+            Array.Empty<IPaymentWebhookVerifier>(),
+            accounts,
+            null!,
+            clock,
+            new TestRuntimeEnvironment("Production"));
+
+        var result = await orchestrator.RefundPaymentAsync(payment.Id, 40m, "provider proof mismatch", CancellationToken.None);
+
+        Assert.Equal(expectedSuccess, result.IsSuccess);
+        db.ChangeTracker.Clear();
+        var persistedPayment = await db.Payments.SingleAsync();
+        var refund = await db.Refunds.SingleAsync();
+        if (expectedSuccess)
+        {
+            Assert.Equal(PaymentStatus.PartiallyRefunded, persistedPayment.Status);
+            Assert.Equal(40m, persistedPayment.RefundedAmount);
+            Assert.Equal(RefundStatus.Succeeded, refund.Status);
+            Assert.NotNull(refund.RefundedAt);
+        }
+        else
+        {
+            Assert.Contains("reconciliation", result.Error, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(PaymentStatus.Succeeded, persistedPayment.Status);
+            Assert.Equal(0m, persistedPayment.RefundedAmount);
+            Assert.Equal(RefundStatus.Unknown, refund.Status);
+            Assert.Null(refund.RefundedAt);
+        }
+    }
+
+    [Fact]
+    public async Task RefundPayment_Should_Allow_Sequential_TBank_Partial_Refunds_On_Sqlite()
+    {
+        await using var db = CreateDb();
+        var clock = new TestClock(new DateTimeOffset(2026, 8, 12, 18, 45, 0, TimeSpan.Zero));
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
+        var user = User();
+        var tariff = Tariff();
+        var account = Account(PaymentProvider.TBankAcquiring, secret: "provider-secret");
+        account.Mode = PaymentProviderMode.Production;
+        account.ShopId = "terminal";
+        account.ApiBaseUrl = "https://provider.test";
+        var payment = Payment(user.Id, tariff.Id, account, PaymentStatus.Succeeded, amount: 100m);
+        payment.ProviderMode = PaymentProviderMode.Production;
+        payment.ProviderPaymentId = "PAYMENT-LOCAL";
+        db.AddRange(user, tariff, account, payment.Order!, payment);
+        await db.SaveChangesAsync();
+
+        var handler = new RefundProofHandler(PaymentProvider.TBankAcquiring, "valid", payment.Id);
+        var provider = new TBankAcquiringPaymentProvider(
+            new StaticHttpClientFactory(new HttpClient(handler)),
+            accounts,
+            new TestHostEnvironment("Production"));
+        var orchestrator = new PaymentOrchestrator(
+            db,
+            new TestPaymentProviderFactory(provider),
+            Array.Empty<IPaymentWebhookVerifier>(),
+            accounts,
+            null!,
+            clock,
+            new TestRuntimeEnvironment("Production"));
+
+        var first = await orchestrator.RefundPaymentAsync(payment.Id, 40m, "first partial refund", CancellationToken.None);
+        var second = await orchestrator.RefundPaymentAsync(payment.Id, 30m, "second partial refund", CancellationToken.None);
+
+        Assert.True(first.IsSuccess, first.Error);
+        Assert.True(second.IsSuccess, second.Error);
+        db.ChangeTracker.Clear();
+        var persistedPayment = await db.Payments.SingleAsync();
+        Assert.Equal(PaymentStatus.PartiallyRefunded, persistedPayment.Status);
+        Assert.Equal(70m, persistedPayment.RefundedAmount);
+        var refunds = await db.Refunds.ToListAsync();
+        Assert.Equal(2, refunds.Count);
+        Assert.All(refunds, refund => Assert.Equal(RefundStatus.Succeeded, refund.Status));
+        Assert.NotEqual(refunds[0].ProviderRefundId, refunds[1].ProviderRefundId);
+    }
+
+    [Theory]
     [InlineData(RefundStatus.New)]
     [InlineData(RefundStatus.Pending)]
     [InlineData(RefundStatus.Unknown)]
@@ -626,13 +758,79 @@ public class AdminRefundManagementTests
             var json = provider switch
             {
                 PaymentProvider.Stripe when request.Method == HttpMethod.Get => """{"id":"cs_test_1","payment_status":"paid","payment_intent":"pi_test_1"}""",
-                PaymentProvider.Stripe => """{"id":"re_test_1","status":"succeeded"}""",
+                PaymentProvider.Stripe => """{"id":"re_test_1","status":"succeeded","payment_intent":"pi_test_1","amount":4000,"currency":"rub","metadata":{"paymentAttemptId":"PAYMENT_ATTEMPT_ID"}}""",
                 PaymentProvider.PayPal when path.Contains("oauth2/token", StringComparison.OrdinalIgnoreCase) => """{"access_token":"access-token","token_type":"Bearer"}""",
                 PaymentProvider.PayPal when request.Method == HttpMethod.Get => """{"id":"ORDER-1","status":"COMPLETED","purchase_units":[{"payments":{"captures":[{"id":"CAPTURE-1","status":"COMPLETED"}]}}]}""",
-                PaymentProvider.PayPal => """{"id":"REFUND-1","status":"COMPLETED"}""",
+                PaymentProvider.PayPal => """{"id":"REFUND-1","status":"COMPLETED","amount":{"value":"40.00","currency_code":"RUB"},"links":[{"rel":"up","href":"https://api-m.paypal.com/v2/payments/captures/CAPTURE-1","method":"GET"}]}""",
                 _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, null)
             };
+            json = json.Replace("PAYMENT_ATTEMPT_ID", ExtractPaymentAttemptId(request), StringComparison.Ordinal);
             return Task.FromResult(new HttpResponseMessage(isUnexpectedPayPalRefund ? System.Net.HttpStatusCode.NotFound : System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+        }
+
+        private static string ExtractPaymentAttemptId(HttpRequestMessage request)
+        {
+            var idempotencyKey = request.Headers.TryGetValues("Idempotency-Key", out var values)
+                ? values.Single()
+                : string.Empty;
+            var segments = idempotencyKey.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            return segments.Length >= 2 ? segments[1] : string.Empty;
+        }
+    }
+
+    private sealed class RefundProofHandler(PaymentProvider provider, string proof, Guid paymentAttemptId) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            var foreign = proof == "foreign-reference";
+            var amount = proof == "wrong-amount" ? "39.00" : "40.00";
+            var amountMinor = proof == "wrong-amount" ? 3900 : 4000;
+            if (provider == PaymentProvider.PayPal
+                && !path.Contains("oauth2/token", StringComparison.OrdinalIgnoreCase)
+                && (!request.Headers.TryGetValues("Prefer", out var preferences)
+                    || !preferences.Contains("return=representation", StringComparer.OrdinalIgnoreCase)))
+            {
+                throw new Xunit.Sdk.XunitException("PayPal refund must request a complete provider representation.");
+            }
+            var json = provider switch
+            {
+                PaymentProvider.YooKassa => JsonSerializer.Serialize(new
+                {
+                    id = "REFUND-1",
+                    status = "succeeded",
+                    payment_id = foreign ? "PAYMENT-FOREIGN" : "PAYMENT-LOCAL",
+                    amount = new { value = amount, currency = "RUB" }
+                }),
+                PaymentProvider.Stripe => JsonSerializer.Serialize(new
+                {
+                    id = "REFUND-1",
+                    status = "succeeded",
+                    payment_intent = foreign ? "PI-FOREIGN" : "PI-LOCAL",
+                    amount = amountMinor,
+                    currency = "rub",
+                    metadata = new { paymentAttemptId = paymentAttemptId.ToString("N") }
+                }),
+                PaymentProvider.PayPal when path.Contains("oauth2/token", StringComparison.OrdinalIgnoreCase) => "{\"access_token\":\"access-token\",\"token_type\":\"Bearer\"}",
+                PaymentProvider.PayPal => JsonSerializer.Serialize(new
+                {
+                    id = "REFUND-1",
+                    status = "COMPLETED",
+                    amount = new { value = amount, currency_code = "RUB" },
+                    links = new[] { new { rel = "up", href = $"https://api-m.paypal.test/v2/payments/captures/{(foreign ? "CAPTURE-FOREIGN" : "CAPTURE-LOCAL")}", method = "GET" } }
+                }),
+                PaymentProvider.TBankAcquiring => JsonSerializer.Serialize(new
+                {
+                    Success = true,
+                    Status = "PARTIAL_REFUNDED",
+                    PaymentId = foreign ? "PAYMENT-FOREIGN" : "PAYMENT-LOCAL"
+                }),
+                _ => throw new Xunit.Sdk.XunitException($"Unexpected refund proof request: {request.Method} {path}")
+            };
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             });

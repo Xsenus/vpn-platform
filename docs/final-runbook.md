@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-09 локально подтверждено:
 
-- backend full suite: 1316/1316;
+- backend full suite: 1328/1328;
 - frontend tests: 144/144;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-12-payment-status-proof-boundary`, версия `0.662.0`; manual recheck Stripe/YooKassa/Т-Банк требует совпадающие provider ID, сумму, валюту и внутренние payment references.
-- roadmap progress: `675/695` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-12-refund-proof-boundary`, версия `0.663.0`; refund YooKassa/Stripe/PayPal/Т-Банк требует совпадающий source reference и доступные amount/currency/internal payment proof.
+- roadmap progress: `676/696` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

@@ -15590,5 +15590,28 @@
         "text": "Roadmap progress is 675/695 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-refund-proof-boundary",
+    "version": "0.663.0",
+    "releasedAt": "2026-08-12T18:30:00+07:00",
+    "title": "Возврат проверяет подтверждение провайдера",
+    "summary": "Возвраты применяются локально только после связи ответа с исходной provider-транзакцией и проверки доступных суммы, валюты и внутренней ссылки.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "YooKassa, Stripe, PayPal и Т-Банк отклоняют успешный refund response с чужой source reference; YooKassa, Stripe и PayPal также сверяют сумму и валюту."
+      },
+      {
+        "type": "improved",
+        "text": "PayPal запрашивает полное представление refund, а последовательные частичные возвраты Т-Банка получают отдельные operation IDs без конфликта БД."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 676/696 closed, readiness 97.1%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; live refunds, provider cabinets, Telegram/Bot API and SMTP must be confirmed externally."
+      }
+    ]
   }
 ]

@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: refund proof boundary
+
+Scope:
+- Production refund adapters YooKassa, Stripe, PayPal и Т-Банка должны связать successful response с исходной provider-транзакцией до изменения `RefundedAmount` и статусов payment/order.
+- Доступные в ответе сумма, валюта и internal payment reference должны совпадать с запросом; incomplete/mismatched proof должен сохраняться как `Unknown` для ручной сверки.
+
+Results:
+- Roadmap progress: `676/696` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-refund-proof-boundary`, version `0.663.0`.
+- Fail-first: `0/7`; все четыре production adapter принимали чужую source reference, а YooKassa/Stripe/PayPal принимали другую сумму и сразу изменяли SQLite payment.
+- After fix: YooKassa/Stripe/PayPal проверяют source reference, amount и currency; Stripe дополнительно проверяет metadata payment attempt; Т-Банк требует terminal refund status и совпадающий PaymentId. PayPal запрашивает `return=representation`, а два последовательных partial refund Т-Банка получают разные operation IDs.
+- Production adapters + SQLite `14/14`; backend `1328/1328`; fresh SQLite checkout/webhook/subscription/VPN access, EF drift и secret scan `673/0` зелёные. Frontend и browser не менялись; актуальное подтверждённое evidence остаётся frontend `144/144`, responsive `7/7`, Playwright `227/227`. Live refund/provider cabinets и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## Check 2026-08-12: payment status proof boundary
 
 Scope:

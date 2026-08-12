@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.663.0 - 2026-08-12
+
+Release entry: `2026-08-12-refund-proof-boundary`.
+
+### Исправлено
+
+- YooKassa, Stripe, PayPal и Т-Банк больше не изменяют локальную сумму возврата по успешному ответу, который относится к другой provider-транзакции или содержит другую сумму/валюту/internal payment reference.
+- Т-Банк использует отдельный детерминированный ID операции возврата, поэтому последовательные частичные возвраты одного платежа не конфликтуют с уникальным индексом БД.
+
+### Улучшено
+
+- PayPal refund запрашивает полное представление ответа; успешные production refund responses без обязательного provider proof переводятся в `Unknown` и требуют сверки.
+
+### Проверено
+
+- Fail-first `0/7`; после исправления production adapters + SQLite `14/14`, backend `1328/1328`, fresh SQLite и EF drift зелёные, secret scan `673/0`.
+- Roadmap `676/696` closed, readiness `97.1%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Live refund/provider cabinet и VPS/staging/payment/3x-ui evidence локально не закрывались.
+
 ## 0.662.0 - 2026-08-12
 
 Release entry: `2026-08-12-payment-status-proof-boundary`.

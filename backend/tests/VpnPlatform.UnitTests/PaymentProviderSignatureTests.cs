@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
@@ -932,7 +933,7 @@ public class AdditionalPaymentProviderSignatureTests
     {
         public List<(HttpMethod Method, string Path)> Requests { get; } = [];
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var path = request.RequestUri?.AbsolutePath ?? string.Empty;
             Requests.Add((request.Method, path));
@@ -940,19 +941,40 @@ public class AdditionalPaymentProviderSignatureTests
                 && request.Method == HttpMethod.Post
                 && path.Contains("/v2/payments/captures/", StringComparison.OrdinalIgnoreCase)
                 && path != "/v2/payments/captures/CAPTURE-1/refund";
+            var requestBody = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);
+            var refundAmount = provider == PaymentProvider.PayPal
+                && request.Method == HttpMethod.Post
+                && path.Contains("/refund", StringComparison.OrdinalIgnoreCase)
+                ? JsonDocument.Parse(requestBody).RootElement.GetProperty("amount").GetProperty("value").GetString() ?? string.Empty
+                : string.Empty;
+            var paymentAttemptId = request.Headers.TryGetValues("Idempotency-Key", out var idempotencyValues)
+                ? idempotencyValues.Single().Split('-', StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(1) ?? string.Empty
+                : string.Empty;
+            if (provider == PaymentProvider.PayPal
+                && request.Method == HttpMethod.Post
+                && !path.Contains("oauth2/token", StringComparison.OrdinalIgnoreCase)
+                && (!request.Headers.TryGetValues("Prefer", out var preferences)
+                    || !preferences.Contains("return=representation", StringComparer.OrdinalIgnoreCase)))
+            {
+                throw new Xunit.Sdk.XunitException("PayPal refund must request a complete provider representation.");
+            }
+
             var json = provider switch
             {
                 PaymentProvider.Stripe when request.Method == HttpMethod.Get => """{"id":"cs_test_1","payment_status":"paid","payment_intent":"pi_test_1"}""",
-                PaymentProvider.Stripe => """{"id":"re_test_1","status":"succeeded"}""",
+                PaymentProvider.Stripe => """{"id":"re_test_1","status":"succeeded","payment_intent":"pi_test_1","amount":19000,"currency":"rub","metadata":{"paymentAttemptId":"PAYMENT_ATTEMPT_ID"}}""",
                 PaymentProvider.PayPal when path.Contains("oauth2/token", StringComparison.OrdinalIgnoreCase) => """{"access_token":"access-token","token_type":"Bearer"}""",
                 PaymentProvider.PayPal when request.Method == HttpMethod.Get => """{"id":"ORDER-1","status":"COMPLETED","purchase_units":[{"payments":{"captures":[{"id":"CAPTURE-1","status":"COMPLETED"}]}}]}""",
-                PaymentProvider.PayPal => """{"id":"REFUND-1","status":"COMPLETED"}""",
+                PaymentProvider.PayPal => """{"id":"REFUND-1","status":"COMPLETED","amount":{"value":"REFUND_AMOUNT","currency_code":"RUB"},"links":[{"rel":"up","href":"https://api-m.paypal.com/v2/payments/captures/CAPTURE-1","method":"GET"}]}""",
                 _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, null)
             };
-            return Task.FromResult(new HttpResponseMessage(isUnexpectedPayPalRefund ? System.Net.HttpStatusCode.NotFound : System.Net.HttpStatusCode.OK)
+            json = json
+                .Replace("PAYMENT_ATTEMPT_ID", paymentAttemptId, StringComparison.Ordinal)
+                .Replace("REFUND_AMOUNT", refundAmount, StringComparison.Ordinal);
+            return new HttpResponseMessage(isUnexpectedPayPalRefund ? System.Net.HttpStatusCode.NotFound : System.Net.HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
-            });
+            };
         }
     }
 }
