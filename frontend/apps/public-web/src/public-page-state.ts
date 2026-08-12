@@ -1,4 +1,4 @@
-import { normalizeApiError, type OrderDto, type PublicPaymentProviderDto, type TariffDto } from '@vpn-platform/api-client'
+import { normalizeApiError, type OrderCommandDto, type PublicPaymentProviderDto, type TariffDto } from '@vpn-platform/api-client'
 import { getPendingCheckoutSessionExpiryDelay, type PendingCheckout } from './pending-checkout'
 
 export type PublicListState = 'loading' | 'error' | 'empty' | 'ready'
@@ -62,7 +62,7 @@ export function getCheckoutErrorMessage(error: unknown, fallback: string) {
 }
 
 export function getPendingCheckoutOrderAvailability(
-  order: Pick<OrderDto, 'status' | 'expiresAt'>,
+  order: Pick<OrderCommandDto, 'status' | 'expiresAt'>,
   now = new Date()
 ) {
   const hasRetryableStatus = order.status === 'PendingPayment' || order.status === 'Failed'
@@ -148,14 +148,14 @@ export function getPendingCheckoutOrderAvailability(
 }
 
 export function canOpenCheckoutPayment(
-  order: Pick<OrderDto, 'status' | 'expiresAt'>,
+  order: Pick<OrderCommandDto, 'status' | 'expiresAt'>,
   now = new Date()
 ) {
   return getPendingCheckoutOrderAvailability(order, now).canRetry
 }
 
 export function getCheckoutPaymentExpiryDelay(
-  order: Pick<OrderDto, 'status' | 'expiresAt'>,
+  order: Pick<OrderCommandDto, 'status' | 'expiresAt'>,
   now = new Date()
 ) {
   if (!canOpenCheckoutPayment(order, now)) return null
@@ -167,7 +167,7 @@ export function getCheckoutPaymentExpiryDelay(
 }
 
 export function getNextPublicCheckoutExpiryDelay(
-  orders: ReadonlyArray<Pick<OrderDto, 'status' | 'expiresAt'>>,
+  orders: ReadonlyArray<Pick<OrderCommandDto, 'status' | 'expiresAt'>>,
   pending: Pick<PendingCheckout, 'expiresAt'> | null,
   now = new Date()
 ) {

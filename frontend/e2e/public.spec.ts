@@ -402,9 +402,7 @@ async function mockPublicApi(page: Page) {
     }
     await fulfillJson(route, {
       id: 'public-order',
-      userId: 'public-user',
       tariffId: 'tariff-start',
-      tariffName: 'Start 30 дней',
       amount: 299,
       currency: 'RUB',
       status: claimedCheckoutOrderStatus,
@@ -433,8 +431,7 @@ async function mockPublicApi(page: Page) {
     }
     await fulfillJson(route, {
       paymentId: 'public-payment',
-      redirectUrl: unsafePaymentLink ? 'javascript:alert(1)' : 'https://pay.example.test/public',
-      rawResponse: '{"sandbox":true}'
+      redirectUrl: unsafePaymentLink ? 'javascript:alert(1)' : 'https://pay.example.test/public'
     })
   })
 

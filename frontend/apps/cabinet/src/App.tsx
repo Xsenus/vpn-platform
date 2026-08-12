@@ -4,8 +4,9 @@ import {
   ApiClient,
   ApiClientError,
   AuthResponse,
+  CabinetOrderDto,
   CabinetPaymentAttemptDto,
-  OrderDto,
+  OrderCommandDto,
   PaymentInitResult,
   PaymentProvider,
   PublicPaymentProviderDto,
@@ -62,12 +63,12 @@ function removeSessionStorageItem(key: string) {
 
 type RenewalState = {
   subscriptionId: string
-  order: OrderDto
+  order: OrderCommandDto
   payment: PaymentInitResult | null
 } | null
 
 type RetryPaymentState = {
-  order: OrderDto
+  order: CabinetOrderDto
   payment: PaymentInitResult
 } | null
 
@@ -120,7 +121,7 @@ export function App() {
   const [refreshToken, setRefreshToken] = useState(readSessionStorageItem(REFRESH_TOKEN_STORAGE_KEY) ?? '')
   const [profile, setProfile] = useState<UserProfileDto | null>(null)
   const [subscriptions, setSubscriptions] = useState<CabinetSubscriptionDto[]>([])
-  const [orders, setOrders] = useState<OrderDto[]>([])
+  const [orders, setOrders] = useState<CabinetOrderDto[]>([])
   const [payments, setPayments] = useState<CabinetPaymentAttemptDto[]>([])
   const [accesses, setAccesses] = useState<CabinetAccessCredentialDto[]>([])
   const [referrals, setReferrals] = useState<RewardLedgerDto[]>([])
@@ -992,7 +993,7 @@ export function App() {
     })
   }
 
-  const handleRetryOrderPayment = async (order: OrderDto) => {
+  const handleRetryOrderPayment = async (order: CabinetOrderDto) => {
     if (!token) return
     const paymentAvailability = getOrderPaymentAvailability(order)
     if (!paymentAvailability.canRetry) {
@@ -1028,7 +1029,7 @@ export function App() {
 
     const selectedProvider = provider
     await runSessionAction(`renew-${subscription.id}`, 'Не удалось создать продление', async (action) => {
-      let createdOrder: OrderDto | null = null
+      let createdOrder: OrderCommandDto | null = null
       try {
         const order = await api.createMyOrder(token, {
         tariffId: subscription.tariffId,
@@ -1039,7 +1040,6 @@ export function App() {
         })
         if (!action.isCurrent()) return
         createdOrder = order
-        setOrders((current) => [order, ...current.filter((item) => item.id !== order.id)])
         setRenewalState({ subscriptionId: subscription.id, order, payment: null })
         const providerAvailability = getOrderPaymentProviderAvailability(order, paymentProviders)
         if (!providerAvailability.canInitialize) {
@@ -1557,11 +1557,10 @@ export function App() {
                   <p className="muted no-margin-bottom">{paymentAvailability.reason ?? getOrderStatusMessage(order.status)}</p>
                   <dl className="payment-meta-grid">
                     <div><dt>Тип</dt><dd>{order.type ?? '—'}</dd></div>
-                    <div><dt>Канал</dt><dd>{order.channel ?? '—'}</dd></div>
                     <div><dt>Провайдер</dt><dd>{order.paymentProvider}</dd></div>
                     <div><dt>Истекает</dt><dd>{new Date(order.expiresAt).toLocaleString()}</dd></div>
                     <div><dt>Оплачен</dt><dd>{order.paidAt ? new Date(order.paidAt).toLocaleString() : '—'}</dd></div>
-                    <div><dt>Попыток оплаты</dt><dd>{order.paymentAttemptsCount ?? orderPayments.length}</dd></div>
+                    <div><dt>Попыток оплаты</dt><dd>{orderPayments.length}</dd></div>
                   </dl>
                   {latestPayment && (
                     <div className="payment-related">

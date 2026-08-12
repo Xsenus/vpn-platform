@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.671.0 - 2026-08-12
+
+Release entry: `2026-08-12-cabinet-order-boundary`.
+
+### Исправлено
+
+- История и команды заказов кабинета больше не раскрывают `UserId`, checkout/provider metadata, служебные счетчики и административные признаки.
+- Инициализация оплаты возвращает только идентификатор платежа и проверенный redirect URL; raw provider response и exception заменены безопасным пользовательским сообщением.
+- Playwright ожидает готовность public, cabinet и admin SPA независимо, поэтому оставшийся Vite-процесс не маскирует недоступный экран.
+
+### Улучшено
+
+- Последние 100 заказов сортируются и ограничиваются на стороне БД; cabinet/admin DTO и read/command contracts разделены, frontend fail-closed отклоняет служебные поля.
+- Каждый Playwright webServer запускает одну именованную SPA и fail-fast отклоняет неизвестное приложение.
+
+### Проверено
+
+- Fail-first backend `0/3` и provider exception `0/1`, frontend `0/2`, Playwright harness `0/1`; targeted backend `22/22`, backend `1362/1362`, frontend `154/154`, typecheck/build, public/cabinet desktop/mobile Playwright `118/118`, cabinet all-screens `2/2`, admin inventory `1/1`, admin responsive `1/1`, fresh SQLite, EF drift, `RoadmapCurrentStateTests` и dependency audit `0 vulnerabilities` зелёные.
+- Roadmap `684/704` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались; статус остается staging-ready baseline, not production-ready.
+
 ## 0.670.0 - 2026-08-12
 
 Release entry: `2026-08-12-cabinet-access-boundary`.

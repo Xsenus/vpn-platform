@@ -58,10 +58,14 @@ public class FreshLocalSetupSmokeTests
         var createOrderActionStart = meController.IndexOf("[HttpPost(\"orders\")]", StringComparison.Ordinal);
         Assert.True(ordersActionStart >= 0 && createOrderActionStart > ordersActionStart);
         var ordersAction = meController[ordersActionStart..createOrderActionStart];
+        Assert.Contains("Database.IsSqlite()", ordersAction, StringComparison.Ordinal);
+        Assert.Contains("julianday(o.\"CreatedAt\")", ordersAction, StringComparison.Ordinal);
+        Assert.Contains("LIMIT 100", ordersAction, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(".Take(100)", ordersAction, StringComparison.Ordinal);
         Assert.True(
-            ordersAction.IndexOf("ToListAsync(cancellationToken)", StringComparison.Ordinal) <
-            ordersAction.IndexOf("OrderByDescending(x => x.CreatedAt)", StringComparison.Ordinal),
-            "/api/me/orders must materialize before DateTimeOffset ordering to stay SQLite-compatible.");
+            ordersAction.IndexOf(".Take(100)", StringComparison.Ordinal) <
+            ordersAction.LastIndexOf("ToListAsync(cancellationToken)", StringComparison.Ordinal),
+            "/api/me/orders must apply the history limit before materialization.");
     }
 
     [Fact]

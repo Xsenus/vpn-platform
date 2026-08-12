@@ -8,7 +8,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Controllers.Me;
+using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
+using VpnPlatform.Application.DTOs;
+using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.Persistence;
@@ -19,6 +22,225 @@ namespace VpnPlatform.UnitTests;
 
 public class MeCabinetControllerTests
 {
+    [Fact]
+    public async Task Cabinet_Orders_Should_Return_Only_User_Facing_Fields()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var foreignUserId = Guid.NewGuid();
+        var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Safe order", Slug = "safe-order", DurationDays = 30, Price = 490m, Currency = "RUB", IsActive = true };
+        var order = new Order
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TariffId = tariff.Id,
+            Amount = 490m,
+            Currency = "RUB",
+            Status = OrderStatus.PendingPayment,
+            Type = OrderType.Renewal,
+            Channel = ChannelType.Web,
+            PaymentProvider = PaymentProvider.YooKassa,
+            IsFirstPurchase = true,
+            ExpiresAt = new TestClock().UtcNow.AddMinutes(15),
+            ReferralContext = "{\"private\":true}"
+        };
+        db.Users.AddRange(User(userId, "safe-order@example.test"), User(foreignUserId, "foreign-order@example.test"));
+        db.Tariffs.Add(tariff);
+        db.Orders.AddRange(order, new Order
+        {
+            Id = Guid.NewGuid(),
+            UserId = foreignUserId,
+            TariffId = tariff.Id,
+            Amount = 990m,
+            Currency = "RUB",
+            Status = OrderStatus.PendingPayment,
+            PaymentProvider = PaymentProvider.YooKassa,
+            ExpiresAt = new TestClock().UtcNow.AddMinutes(15)
+        });
+        db.Payments.Add(new PaymentAttempt
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            Provider = PaymentProvider.YooKassa,
+            ProviderMode = PaymentProviderMode.Sandbox,
+            ProviderPaymentId = "private-provider-payment",
+            IdempotencyKey = "private-idempotency",
+            Amount = order.Amount,
+            Currency = order.Currency,
+            Status = PaymentStatus.Pending,
+            RawResponse = "{\"private\":true}"
+        });
+        await db.SaveChangesAsync();
+
+        var item = Assert.Single(AssertOkList(await CreateController(db, userId).GetOrders(CancellationToken.None)));
+
+        Assert.Equal(order.Id, Read<Guid>(item, "Id"));
+        Assert.Equal("Safe order", Read<string>(item, "TariffName"));
+        AssertCabinetOrderInternalFieldsAbsent(item);
+    }
+
+    [Fact]
+    public async Task Cabinet_Orders_Should_Apply_User_History_Limit_In_Sqlite_Query()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new CommandCaptureInterceptor();
+        await using var db = CreateSqliteDbContext(connection, interceptor);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Order limit", Slug = "order-limit", DurationDays = 30, Price = 100m, Currency = "RUB", IsActive = true };
+        var now = new TestClock().UtcNow;
+        db.Users.Add(User(userId, "order-limit@example.test"));
+        db.Tariffs.Add(tariff);
+        db.Orders.AddRange(Enumerable.Range(0, 105).Select(index => new Order
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TariffId = tariff.Id,
+            Amount = index,
+            Currency = "RUB",
+            Status = OrderStatus.Expired,
+            PaymentProvider = PaymentProvider.YooKassa,
+            ExpiresAt = now.AddMinutes(index),
+            CreatedAt = now.AddMinutes(index),
+            UpdatedAt = now.AddMinutes(index)
+        }));
+        await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
+
+        var items = AssertOkList(await CreateController(db, userId).GetOrders(CancellationToken.None));
+
+        Assert.Equal(100, items.Count);
+        Assert.Contains(interceptor.Commands, command => command.Contains("LIMIT", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Cabinet_Payment_Init_Should_Not_Return_Raw_Provider_Response()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Payment init", Slug = "payment-init-safe", DurationDays = 30, Price = 490m, Currency = "RUB", IsActive = true };
+        var order = new Order
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TariffId = tariff.Id,
+            Amount = 490m,
+            Currency = "RUB",
+            Status = OrderStatus.PendingPayment,
+            PaymentProvider = PaymentProvider.YooKassa,
+            ExpiresAt = new TestClock().UtcNow.AddMinutes(15)
+        };
+        var account = new PaymentProviderAccount
+        {
+            Id = Guid.NewGuid(),
+            Provider = PaymentProvider.YooKassa,
+            Mode = PaymentProviderMode.Sandbox,
+            Name = "safe-init",
+            PublicName = "Safe init",
+            IsEnabled = true,
+            IsDefault = true,
+            ShopId = "shop",
+            SecretKeyProtected = "secret",
+            ReturnUrl = "https://cabinet.example.test/payments"
+        };
+        db.Users.Add(User(userId, "payment-init-safe@example.test"));
+        db.Tariffs.Add(tariff);
+        db.Orders.Add(order);
+        db.PaymentProviderAccounts.Add(account);
+        db.Payments.Add(new PaymentAttempt
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            PaymentProviderAccountId = account.Id,
+            Provider = PaymentProvider.YooKassa,
+            ProviderMode = PaymentProviderMode.Sandbox,
+            ProviderPaymentId = "provider-payment-safe",
+            IdempotencyKey = "payment-init-safe",
+            Amount = order.Amount,
+            Currency = order.Currency,
+            Status = PaymentStatus.Pending,
+            ConfirmationUrl = "https://pay.example.test/safe",
+            RawResponse = "{\"private\":\"provider-secret\"}"
+        });
+        await db.SaveChangesAsync();
+        var clock = new TestClock();
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
+        var orchestrator = new PaymentOrchestrator(db, new TestPaymentProviderFactory(), [], accounts, null!, clock);
+
+        var ok = Assert.IsType<OkObjectResult>(await CreateController(db, userId, paymentOrchestrator: orchestrator)
+            .InitOrderPayment(order.Id, "YooKassa", null, CancellationToken.None));
+        var json = System.Text.Json.JsonSerializer.Serialize(ok.Value);
+
+        Assert.DoesNotContain("RawResponse", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("provider-secret", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Cabinet_Payment_Init_Should_Not_Return_Provider_Exception()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var tariff = new Tariff { Id = Guid.NewGuid(), Name = "Payment exception", Slug = "payment-init-exception", DurationDays = 30, Price = 490m, Currency = "RUB", IsActive = true };
+        var order = new Order
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TariffId = tariff.Id,
+            Amount = 490m,
+            Currency = "RUB",
+            Status = OrderStatus.PendingPayment,
+            PaymentProvider = PaymentProvider.YooKassa,
+            ExpiresAt = new TestClock().UtcNow.AddMinutes(15)
+        };
+        db.Users.Add(User(userId, "payment-init-exception@example.test"));
+        db.Tariffs.Add(tariff);
+        db.Orders.Add(order);
+        db.PaymentProviderAccounts.Add(new PaymentProviderAccount
+        {
+            Id = Guid.NewGuid(),
+            Provider = PaymentProvider.YooKassa,
+            Mode = PaymentProviderMode.Sandbox,
+            Name = "exception-init",
+            PublicName = "Exception init",
+            IsEnabled = true,
+            IsDefault = true,
+            ShopId = "shop",
+            SecretKeyProtected = "secret",
+            ReturnUrl = "https://cabinet.example.test/payments"
+        });
+        await db.SaveChangesAsync();
+        var clock = new TestClock();
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
+        var orchestrator = new PaymentOrchestrator(
+            db,
+            new TestPaymentProviderFactory("private-provider-token-and-stack"),
+            [],
+            accounts,
+            null!,
+            clock);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(await CreateController(db, userId, paymentOrchestrator: orchestrator)
+            .InitOrderPayment(order.Id, "YooKassa", null, CancellationToken.None));
+        var error = Read<string>(badRequest.Value!, "error");
+
+        Assert.DoesNotContain("private-provider-token-and-stack", error, StringComparison.Ordinal);
+        Assert.Contains("Не удалось подготовить оплату", error, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("999", "YooKassa")]
     [InlineData("NewSubscription", "999")]
@@ -731,12 +953,25 @@ public class MeCabinetControllerTests
         }
     }
 
-    private static MeController CreateController(ApplicationDbContext db, Guid userId, SvgQrCodeGenerator? qrCodeGenerator = null)
+    private static void AssertCabinetOrderInternalFieldsAbsent(object value)
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(value);
+        foreach (var field in new[] { "UserId", "CheckoutSessionId", "Channel", "IsFirstPurchase", "PaymentAttemptsCount" })
+        {
+            Assert.DoesNotContain($"\"{field}\"", json, StringComparison.Ordinal);
+        }
+    }
+
+    private static MeController CreateController(
+        ApplicationDbContext db,
+        Guid userId,
+        SvgQrCodeGenerator? qrCodeGenerator = null,
+        PaymentOrchestrator? paymentOrchestrator = null)
     {
         var configuration = new ConfigurationBuilder().Build();
         var clock = new TestClock();
         var orderService = new VpnPlatform.Application.Services.OrderService(db, clock);
-        return new MeController(db, orderService, new VpnPlatform.Application.Services.CheckoutSessionService(db, clock, orderService), null!, null!, qrCodeGenerator!, configuration, clock)
+        return new MeController(db, orderService, new CheckoutSessionService(db, clock, orderService), paymentOrchestrator!, null!, qrCodeGenerator!, configuration, clock)
         {
             ControllerContext = new ControllerContext
             {
@@ -788,5 +1023,27 @@ public class MeCabinetControllerTests
             Commands.Add(command.CommandText);
             return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
         }
+    }
+
+    private sealed class TestSecretProtector : ISecretProtector
+    {
+        public string Protect(string plaintext) => plaintext;
+        public string Unprotect(string protectedValue) => protectedValue;
+        public string Mask(string? value, int visibleTail = 4) => "***";
+    }
+
+    private sealed class TestPaymentProviderFactory(string? exceptionMessage = null) : IPaymentProviderFactory
+    {
+        public IPaymentProvider Get(PaymentProvider provider) => new TestPaymentProvider(provider, exceptionMessage);
+    }
+
+    private sealed class TestPaymentProvider(PaymentProvider provider, string? exceptionMessage) : IPaymentProvider
+    {
+        public PaymentProvider Provider { get; } = provider;
+        public Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken)
+            => throw new InvalidOperationException(exceptionMessage ?? "Provider call was not expected.");
+        public Task<PaymentWebhookParseResult> ParseWebhookAsync(string rawBody, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<PaymentStatusResult> GetStatusAsync(PaymentAttempt payment, PaymentProviderAccount account, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

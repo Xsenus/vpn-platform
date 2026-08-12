@@ -1,4 +1,6 @@
-import type { CabinetPaymentAttemptDto, OrderDto, PaymentProvider, PublicPaymentProviderDto } from '@vpn-platform/api-client'
+import type { CabinetOrderDto, CabinetPaymentAttemptDto, OrderCommandDto, PaymentProvider, PublicPaymentProviderDto } from '@vpn-platform/api-client'
+
+type CabinetPaymentOrder = CabinetOrderDto | OrderCommandDto
 
 export type PaymentStatusTone = 'pending' | 'success' | 'failed' | 'neutral'
 
@@ -12,7 +14,7 @@ export function formatPaymentMoney(amount: number, currency: string) {
   return `${amount.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ${currency}`
 }
 
-export function getOrderPaymentAvailability(order: Pick<OrderDto, 'status' | 'expiresAt'>, now = new Date()) {
+export function getOrderPaymentAvailability(order: Pick<CabinetPaymentOrder, 'status' | 'expiresAt'>, now = new Date()) {
   const hasRetryableStatus = retryableOrderStatuses.has(order.status)
   const expiresAt = Date.parse(order.expiresAt)
   const isExpired = order.status === 'Expired'
@@ -36,7 +38,7 @@ export function getOrderPaymentAvailability(order: Pick<OrderDto, 'status' | 'ex
 }
 
 export function getOrderPaymentProviderAvailability(
-  order: Pick<OrderDto, 'paymentProvider'>,
+  order: Pick<CabinetPaymentOrder, 'paymentProvider'>,
   providers: ReadonlyArray<Pick<PublicPaymentProviderDto, 'provider'>>
 ): { canInitialize: boolean; provider: PaymentProvider; reason: string | null } {
   const canInitialize = providers.some((item) => item.provider === order.paymentProvider)
@@ -59,7 +61,7 @@ export function canOpenPaymentConfirmation(status: string) {
 }
 
 export function canOpenOrderPaymentConfirmation(
-  order: Pick<OrderDto, 'status' | 'expiresAt'> | null | undefined,
+  order: Pick<CabinetPaymentOrder, 'status' | 'expiresAt'> | null | undefined,
   paymentStatus: string | null,
   now = new Date()
 ) {
@@ -68,7 +70,7 @@ export function canOpenOrderPaymentConfirmation(
 }
 
 export function getNextOrderPaymentExpiryDelay(
-  orders: ReadonlyArray<Pick<OrderDto, 'status' | 'expiresAt'>>,
+  orders: ReadonlyArray<Pick<CabinetPaymentOrder, 'status' | 'expiresAt'>>,
   now = new Date()
 ) {
   const nowTime = now.getTime()
@@ -151,14 +153,14 @@ export function groupPaymentsByOrderId(payments: CabinetPaymentAttemptDto[]) {
   return grouped
 }
 
-export function getLatestPaymentForOrder(order: OrderDto, payments: CabinetPaymentAttemptDto[]) {
+export function getLatestPaymentForOrder(order: CabinetOrderDto, payments: CabinetPaymentAttemptDto[]) {
   const orderPayments = payments.filter((payment) => payment.orderId === order.id)
   orderPayments.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
 
   return orderPayments[0] ?? null
 }
 
-export function buildOrderExportText(order: OrderDto, payments: CabinetPaymentAttemptDto[]) {
+export function buildOrderExportText(order: CabinetOrderDto, payments: CabinetPaymentAttemptDto[]) {
   const safePayments = payments.map((payment) => ({
     id: payment.id,
     orderId: payment.orderId,
@@ -187,11 +189,9 @@ export function buildOrderExportText(order: OrderDto, payments: CabinetPaymentAt
       currency: order.currency,
       status: order.status,
       type: order.type ?? null,
-      channel: order.channel ?? null,
       paymentProvider: order.paymentProvider ?? null,
       expiresAt: order.expiresAt,
       paidAt: order.paidAt ?? null,
-      isFirstPurchase: order.isFirstPurchase ?? null,
       linkedSubscriptionId: order.linkedSubscriptionId ?? null,
       createdAt: order.createdAt ?? null,
       updatedAt: order.updatedAt ?? null

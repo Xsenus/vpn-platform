@@ -23,31 +23,33 @@ const servers = [
   }
 ]
 
-const children = servers.map((server) => {
-  const viteCli = resolveViteCli(server.appDir)
-  const child = spawn(
-    process.execPath,
-    [viteCli, server.appDir, '--host', '127.0.0.1', '--port', server.port, '--strictPort'],
-    {
-      cwd: root,
-      env: {
-        ...process.env,
-        VITE_API_BASE_URL: 'http://127.0.0.1:19080',
-        VITE_PUBLIC_WEB_URL: 'http://127.0.0.1:5293'
-      },
-      stdio: ['ignore', 'pipe', 'pipe']
-    }
-  )
+const requestedName = process.argv[2]
+const server = servers.find((item) => item.name === requestedName)
+if (!server) {
+  throw new Error(`Unknown Playwright webserver: ${requestedName ?? '<missing>'}`)
+}
 
-  child.stdout.on('data', (chunk) => process.stdout.write(`[${server.name}] ${chunk}`))
-  child.stderr.on('data', (chunk) => process.stderr.write(`[${server.name}] ${chunk}`))
-  child.on('exit', (code, signal) => {
-    if (shuttingDown) return
-    console.error(`[${server.name}] exited with code=${code ?? 'null'} signal=${signal ?? 'null'}`)
-    shutdown(code ?? 1)
-  })
+const viteCli = resolveViteCli(server.appDir)
+const child = spawn(
+  process.execPath,
+  [viteCli, server.appDir, '--host', '127.0.0.1', '--port', server.port, '--strictPort'],
+  {
+    cwd: root,
+    env: {
+      ...process.env,
+      VITE_API_BASE_URL: 'http://127.0.0.1:19080',
+      VITE_PUBLIC_WEB_URL: 'http://127.0.0.1:5293'
+    },
+    stdio: ['ignore', 'pipe', 'pipe']
+  }
+)
 
-  return child
+child.stdout.on('data', (chunk) => process.stdout.write(`[${server.name}] ${chunk}`))
+child.stderr.on('data', (chunk) => process.stderr.write(`[${server.name}] ${chunk}`))
+child.on('exit', (code, signal) => {
+  if (shuttingDown) return
+  console.error(`[${server.name}] exited with code=${code ?? 'null'} signal=${signal ?? 'null'}`)
+  process.exit(code ?? 1)
 })
 
 let shuttingDown = false
@@ -56,9 +58,7 @@ function shutdown(exitCode = 0) {
   if (shuttingDown) return
   shuttingDown = true
 
-  for (const child of children) {
-    if (!child.killed) child.kill('SIGTERM')
-  }
+  if (!child.killed) child.kill('SIGTERM')
 
   setTimeout(() => process.exit(exitCode), 250).unref()
 }

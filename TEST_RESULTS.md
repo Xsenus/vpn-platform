@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-12.
 
+## Check 2026-08-12: cabinet order boundary
+
+Scope:
+- История и команды заказов кабинета не должны раскрывать user/checkout/provider diagnostics или административные признаки; последние 100 записей должны ограничиваться БД.
+- Payment init не должен возвращать raw provider response или exception, а Playwright обязан отдельно подтверждать готовность public, cabinet и admin SPA.
+
+Results:
+- Roadmap progress: `684/704` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-12-cabinet-order-boundary`, version `0.671.0`.
+- Fail-first: backend `0/3` и provider exception `0/1`, frontend `0/2`, Playwright harness `0/1`; API раскрывал `UserId`, checkout metadata, raw provider response/exception и materialize-ил 105 заказов, а единый readiness URL мог скрыть недоступные cabinet/admin SPA.
+- After fix: отдельные `CabinetOrderDto`, `CabinetOrderCommandDto` и `CabinetPaymentInitDto` содержат только пользовательские поля; ошибки provider sanitised, SQLite/PostgreSQL выполняют DB-side top-100, frontend fail-closed отклоняет расширенный контракт. Три независимых Playwright webServer имеют собственные readiness URL.
+- Targeted backend `22/22`; backend `1362/1362`; frontend `154/154`; typecheck/build; public/cabinet desktop/mobile Playwright `118/118`; cabinet all-screens `2/2`; admin inventory `1/1`; admin responsive `1/1`; fresh SQLite checkout/payment/subscription/VPN access, EF drift и dependency audit `0 vulnerabilities` зелёные. Real VPS/staging/live evidence remains open; provider cabinets, Telegram/Bot API, SMTP and production-like 3x-ui were not checked locally.
+
 ## Check 2026-08-12: cabinet VPN access boundary
 
 Scope:

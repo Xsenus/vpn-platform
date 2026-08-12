@@ -107,25 +107,15 @@ const cancelledStaleSubscription = {
 
 const paidOrder = {
   id: 'order-paid',
-  userId: user.id,
-  userDisplayName: user.displayName,
-  userEmail: user.email,
   tariffId: subscription.tariffId,
   tariffName: subscription.tariffName,
   amount: 490,
   currency: 'RUB',
   status: 'Completed',
   type: 'NewSubscription',
-  channel: 'Web',
   paymentProvider: 'YooKassa',
-  checkoutSessionId: null,
   expiresAt: '2026-06-14T00:00:00Z',
   paidAt: '2026-06-13T06:00:00Z',
-  isFirstPurchase: true,
-  paymentAttemptsCount: 1,
-  lastPaymentId: 'payment-paid',
-  lastPaymentStatus: 'Succeeded',
-  lastPaymentProvider: 'YooKassa',
   linkedSubscriptionId: subscription.id,
   createdAt: now,
   updatedAt: now
@@ -138,10 +128,6 @@ const stalePendingOrder = {
   status: 'PendingPayment',
   expiresAt: '2026-06-12T00:00:00Z',
   paidAt: null,
-  isFirstPurchase: false,
-  paymentAttemptsCount: 0,
-  lastPaymentId: null,
-  lastPaymentStatus: null,
   linkedSubscriptionId: null
 }
 
@@ -156,9 +142,7 @@ const unsafeLinkOrder = {
   ...retryablePendingOrder,
   id: 'order-unsafe-link',
   tariffName: 'Заказ с некорректной ссылкой',
-  lastPaymentId: 'payment-unsafe-link',
-  lastPaymentStatus: 'Pending',
-  paymentAttemptsCount: 1
+  linkedSubscriptionId: null
 }
 
 const paidPayment = {
@@ -370,16 +354,12 @@ async function mockCabinetApi(page: Page) {
     status: 'PendingPayment',
     type: 'Renewal',
     expiresAt: '2099-06-14T00:00:00Z',
-    isFirstPurchase: false,
     linkedSubscriptionId: subscription.id,
-    paidAt: null,
-    lastPaymentId: null,
-    lastPaymentStatus: null
+    paidAt: null
   }
   let renewalPayment = {
     paymentId: 'payment-renewal',
-    redirectUrl: 'https://pay.example.test/renewal',
-    rawResponse: '{"sandbox":true}'
+    redirectUrl: 'https://pay.example.test/renewal'
   }
   let retryableOrder = { ...retryablePendingOrder }
   let retryPaymentAttempt: typeof paidPayment | null = null
@@ -680,7 +660,6 @@ async function mockCabinetApi(page: Page) {
       }
       await fulfillJson(route, {
         id: renewalOrder.id,
-        userId: renewalOrder.userId,
         tariffId: renewalOrder.tariffId,
         amount: renewalOrder.amount,
         currency: renewalOrder.currency,
@@ -727,8 +706,7 @@ async function mockCabinetApi(page: Page) {
       }
       await fulfillJson(route, {
         paymentId: 'payment-retry',
-        redirectUrl: 'https://pay.example.test/retry',
-        rawResponse: '{"sandbox":true}'
+        redirectUrl: 'https://pay.example.test/retry'
       })
       return
     }
@@ -892,7 +870,6 @@ async function mockCabinetApi(page: Page) {
         ...renewalOrder,
         status: 'Completed',
         paidAt: '2026-06-13T08:00:00Z',
-        lastPaymentStatus: 'Succeeded',
         updatedAt: '2026-06-13T08:00:00Z'
       }
     },
@@ -901,9 +878,6 @@ async function mockCabinetApi(page: Page) {
         ...retryableOrder,
         status: 'Completed',
         paidAt: '2026-06-13T08:00:00Z',
-        lastPaymentId: 'payment-retry-local',
-        lastPaymentStatus: 'Succeeded',
-        paymentAttemptsCount: 1,
         updatedAt: '2026-06-13T08:00:00Z'
       }
       if (retryPaymentAttempt) {

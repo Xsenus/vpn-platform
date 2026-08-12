@@ -142,6 +142,22 @@ const order = {
   updatedAt: now
 }
 
+const cabinetOrder = {
+  id: order.id,
+  tariffId: order.tariffId,
+  tariffName: order.tariffName,
+  amount: order.amount,
+  currency: order.currency,
+  status: order.status,
+  type: order.type,
+  paymentProvider: order.paymentProvider,
+  expiresAt: order.expiresAt,
+  paidAt: order.paidAt,
+  linkedSubscriptionId: order.linkedSubscriptionId,
+  createdAt: order.createdAt,
+  updatedAt: order.updatedAt
+}
+
 const payment = {
   id: 'payment-all-screens',
   orderId: order.id,
@@ -371,7 +387,7 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/me/orders') {
-      await fulfillJson(route, [order])
+      await fulfillJson(route, [cabinetOrder])
       return
     }
 

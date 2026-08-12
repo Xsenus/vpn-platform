@@ -4,7 +4,7 @@ import {
   ApiClient,
   AuthResponse,
   FaqItem,
-  OrderDto,
+  OrderCommandDto,
   PaymentInitResult,
   PaymentProvider,
   PublicPaymentProviderDto,
@@ -32,7 +32,7 @@ const PENDING_CHECKOUT_STORAGE_KEY = 'vpn-platform-pending-checkout'
 type CheckoutState = {
   tariffName: string
   provider: PaymentProvider
-  order: OrderDto
+  order: OrderCommandDto
   payment: PaymentInitResult
 } | null
 
@@ -824,7 +824,7 @@ function AccountPage({
   sessionHydrationBusy: boolean
   lastCheckout: CheckoutState
   pendingCheckout: PendingCheckout | null
-  pendingCheckoutOrder: OrderDto | null
+  pendingCheckoutOrder: OrderCommandDto | null
   checkoutError: string
   claimBusy: boolean
   onRetrySession: () => void
@@ -1294,7 +1294,7 @@ export function App() {
   const [profile, setProfile] = useState<UserProfileDto | null>(null)
   const [lastCheckout, setLastCheckout] = useState<CheckoutState>(null)
   const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(readPendingCheckout())
-  const [pendingCheckoutOrder, setPendingCheckoutOrder] = useState<OrderDto | null>(null)
+  const [pendingCheckoutOrder, setPendingCheckoutOrder] = useState<OrderCommandDto | null>(null)
   const [checkoutError, setCheckoutError] = useState('')
   const [claimBusy, setClaimBusy] = useState(false)
   const [claimAttempt, setClaimAttempt] = useState(0)

@@ -91,11 +91,20 @@ test('frontend package and CI keep the same mandatory commands', () => {
 
 test('playwright webserver helper supports hoisted Vite workspaces', () => {
   const helper = readRepoFile('frontend', 'scripts', 'playwright-webservers.mjs')
+  const config = readRepoFile('frontend', 'playwright.config.ts')
 
   assert.match(helper, /existsSync/)
   assert.match(helper, /resolveViteCli/)
   assert.match(helper, /root, 'node_modules\/vite\/bin\/vite\.js'/)
   assert.match(helper, /appDir, 'node_modules\/vite\/bin\/vite\.js'/)
+  assert.match(helper, /process\.argv\[2\]/)
+  assert.match(helper, /Unknown Playwright webserver/)
+  assert.match(config, /command: 'node scripts\/playwright-webservers\.mjs public-web'/)
+  assert.match(config, /command: 'node scripts\/playwright-webservers\.mjs cabinet'/)
+  assert.match(config, /command: 'node scripts\/playwright-webservers\.mjs admin-panel'/)
+  assert.match(config, /url: 'http:\/\/127\.0\.0\.1:5293'/)
+  assert.match(config, /url: 'http:\/\/127\.0\.0\.1:5294'/)
+  assert.match(config, /url: 'http:\/\/127\.0\.0\.1:5295'/)
 })
 
 test('frontend validation documentation and roadmap expose current green count', () => {

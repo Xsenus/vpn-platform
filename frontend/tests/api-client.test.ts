@@ -585,6 +585,25 @@ function cabinetPaymentFixture(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function cabinetOrderFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'order-1',
+    tariffId: 'tariff-1',
+    tariffName: 'Monthly',
+    amount: 490,
+    currency: 'RUB',
+    status: 'PendingPayment',
+    type: 'Renewal',
+    paymentProvider: 'YooKassa',
+    expiresAt: '2026-09-09T00:00:00Z',
+    paidAt: null,
+    linkedSubscriptionId: 'sub-1',
+    createdAt: adminFixtureTimestamp,
+    updatedAt: adminFixtureTimestamp,
+    ...overrides
+  }
+}
+
 function cabinetSubscriptionFixture(overrides: Record<string, unknown> = {}) {
   return {
     id: 'sub-1',
@@ -1081,7 +1100,6 @@ test('ApiClient.createMyOrder sends auth header and payload', async () => {
     const timestamp = new Date().toISOString()
     return new Response(JSON.stringify({
       id: 'order-1',
-      userId: 'user-1',
       tariffId: 'tariff-1',
       amount: 490,
       currency: 'RUB',
@@ -1117,7 +1135,7 @@ test('ApiClient.initMyPayment calls tokenized endpoint', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify({ paymentId: 'pay-1', redirectUrl: 'https://example.test/pay-1', rawResponse: '{}' }), {
+    return new Response(JSON.stringify({ paymentId: 'pay-1', redirectUrl: 'https://example.test/pay-1' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -1420,7 +1438,7 @@ test('ApiClient.claimCheckoutSession binds session through authenticated endpoin
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
-    return new Response(JSON.stringify({ id: 'order-1', userId: 'user-1', tariffId: 'tariff-1', amount: 490, currency: 'RUB', status: 'PendingPayment', paymentProvider: 'YooKassa', expiresAt: new Date().toISOString(), linkedSubscriptionId: null }), {
+    return new Response(JSON.stringify({ id: 'order-1', tariffId: 'tariff-1', amount: 490, currency: 'RUB', status: 'PendingPayment', paymentProvider: 'YooKassa', expiresAt: new Date().toISOString(), linkedSubscriptionId: null }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -1459,6 +1477,52 @@ test('ApiClient accepts only the safe cabinet payment contract', async () => {
   await assert.rejects(() => client.getMyPayments('user-token'), (error: unknown) => error instanceof ApiClientError && error.status === 502)
   await assert.rejects(() => client.getMyPayments('user-token'), (error: unknown) => error instanceof ApiClientError && error.status === 502)
   await assert.rejects(() => client.getMyPayments('user-token'), (error: unknown) => error instanceof ApiClientError && error.status === 502)
+})
+
+test('ApiClient accepts only the safe cabinet order contract', async () => {
+  const responses = [
+    [cabinetOrderFixture()],
+    [{ ...cabinetOrderFixture(), userId: 'private-user-id' }],
+    [{ ...cabinetOrderFixture(), checkoutSessionId: 'private-checkout-id' }],
+    [{ ...cabinetOrderFixture(), channel: 'Web' }],
+    [{ ...cabinetOrderFixture(), isFirstPurchase: true }],
+    [{ ...cabinetOrderFixture(), paymentAttemptsCount: 7 }]
+  ]
+  globalThis.fetch = (async () => new Response(JSON.stringify(responses.shift()), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const orders = await client.getMyOrders('user-token')
+
+  assert.equal(orders[0]?.tariffName, 'Monthly')
+  for (let index = 0; index < 5; index += 1) {
+    await assert.rejects(
+      () => client.getMyOrders('user-token'),
+      (error: unknown) => error instanceof ApiClientError && error.status === 502
+    )
+  }
+})
+
+test('ApiClient payment init rejects raw provider responses', async () => {
+  const responses = [
+    { paymentId: 'payment-1', redirectUrl: 'https://pay.example.test/order-1' },
+    { paymentId: 'payment-1', redirectUrl: 'https://pay.example.test/order-1', rawResponse: '{"private":true}' }
+  ]
+  globalThis.fetch = (async () => new Response(JSON.stringify(responses.shift()), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  const payment = await client.initMyPayment('user-token', 'order-1', 'YooKassa')
+
+  assert.equal(payment.paymentId, 'payment-1')
+  await assert.rejects(
+    () => client.initMyPayment('user-token', 'order-1', 'YooKassa'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502
+  )
 })
 
 test('ApiClient accepts only the safe cabinet subscription contract', async () => {

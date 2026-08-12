@@ -15,15 +15,26 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:5293',
     trace: 'retain-on-failure'
   },
-  webServer: {
-    command: 'node scripts/playwright-webservers.mjs',
-    url: 'http://127.0.0.1:5293',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    env: {
-      VITE_API_BASE_URL: 'http://127.0.0.1:19080'
+  webServer: [
+    {
+      command: 'node scripts/playwright-webservers.mjs public-web',
+      url: 'http://127.0.0.1:5293',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000
+    },
+    {
+      command: 'node scripts/playwright-webservers.mjs cabinet',
+      url: 'http://127.0.0.1:5294',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000
+    },
+    {
+      command: 'node scripts/playwright-webservers.mjs admin-panel',
+      url: 'http://127.0.0.1:5295',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000
     }
-  },
+  ],
   projects: [
     {
       name: 'public-web',

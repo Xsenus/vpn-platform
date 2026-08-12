@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-12.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-cabinet-access-boundary`, версия `0.670.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `683/703` проверяемых пунктов, готовность `97.2%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-12-cabinet-order-boundary`, версия `0.671.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `684/704` проверяемых пунктов, готовность `97.2%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,8 +37,8 @@ git diff --check
 
 Что подтверждено на 2026-08-12:
 
-- [x] `STATE-001` Backend test suite проходит: `1358/1358`.
-- [x] `STATE-002` Frontend test suite проходит: `152/152`.
+- [x] `STATE-001` Backend test suite проходит: `1362/1362`.
+- [x] `STATE-002` Frontend test suite проходит: `154/154`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2428,6 +2428,10 @@ git diff --check
   - Что сделать: `/api/me/accesses` не должен раскрывать provider/client/server идентификаторы, служебные QR/config поля, revision и lifecycle timestamps; последние 100 записей должны ограничиваться БД. Административный контракт и защищённая выдача QR должны сохраниться.
   - Что сделано: API возвращает отдельный минимальный `CabinetAccessCredentialDto` из восьми пользовательских полей; SQLite применяет параметризованный UTC-совместимый запрос с `LIMIT 100`, PostgreSQL-ветка — `Take(100)` до materialization. Frontend разделяет cabinet/admin типы, fail-closed отклоняет служебные поля, а UI показывает доступ и QR только в разделе «VPN-ключи».
   - Доказательство: fail-first backend `0/2`, frontend `0/1`; targeted backend `18/18`, frontend decoder/dashboard `11/11`, backend `1358/1358`, frontend `152/152`, typecheck/build, cabinet desktop/mobile Playwright `64/64`, targeted all-screens cabinet desktop/responsive `2/2`, fresh SQLite, EF drift и dependency audit `0 vulnerabilities`. Реальные provider кабинеты и VPS/staging/payment/3x-ui evidence остаются внешней проверкой.
+- [x] `P11-ACC-393` Закрыть пользовательскую границу истории, команд и инициализации оплаты заказа кабинета. 2026-08-12.
+  - Что сделать: `/api/me/orders`, создание/claim заказа и payment init не должны раскрывать `UserId`, checkout/provider diagnostics, raw response или exception; последние 100 заказов должны ограничиваться БД. Playwright должен отдельно подтверждать готовность public, cabinet и admin SPA.
+  - Что сделано: API возвращает отдельные `CabinetOrderDto`, `CabinetOrderCommandDto` и `CabinetPaymentInitDto`; SQLite применяет параметризованный UTC-совместимый `LIMIT 100`, PostgreSQL-ветка — `Take(100)` до materialization. Frontend разделяет cabinet/admin контракты и fail-closed отклоняет служебные поля. Provider errors заменены безопасными пользовательскими сообщениями. Playwright запускает и ожидает каждую SPA отдельным webServer.
+  - Доказательство: fail-first backend `0/3` и provider exception `0/1`, frontend `0/2`, Playwright harness `0/1`; targeted backend `22/22`, backend `1362/1362`, frontend `154/154`, typecheck/build, public/cabinet desktop/mobile Playwright `118/118`, cabinet all-screens `2/2`, admin inventory `1/1`, admin responsive `1/1`, fresh SQLite, EF drift и dependency audit `0 vulnerabilities`. Реальные provider кабинеты и VPS/staging/payment/3x-ui evidence остаются внешней проверкой.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3077,6 +3081,8 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-12-033` | P1 | Playwright web servers | Один helper запускал три Vite-процесса, но readiness проверял только public SPA; повторное использование оставшегося процесса могло скрыть недоступные cabinet/admin и дать `ERR_CONNECTION_REFUSED`. | Исправлено локально | Три независимых webServer/readiness URL и fail-fast unknown app подтверждены source guard и финальным admin responsive прогоном. |
+| `BUG-2026-08-12-032` | P0 | Cabinet order/payment-init boundary | История и команды заказов раскрывали `UserId`, checkout/provider metadata и служебные счетчики; payment init передавал raw provider response и exception, а история materialize-илась целиком. | Исправлено локально | Minimal history/command/payment-init DTO, безопасные ошибки, DB-side top-100 и fail-closed frontend contracts проверены backend/frontend/browser/SQLite regressions. Live provider outcome остаётся внешним evidence. |
 | `BUG-2026-08-12-031` | P0 | Cabinet VPN access boundary | Cabinet API передавал provider/client/server идентификаторы, служебные QR/config поля, revision и lifecycle timestamps, materialize-ил всю историю, а UI дублировал VPN-доступы в двух разделах. | Исправлено локально | Minimal cabinet DTO, DB-side top-100, fail-closed decoder и единый VPN-список проверены backend/frontend/desktop/mobile/SQLite regressions; admin contract и защищённый QR endpoint сохранены. Live provider/VPS outcome остаётся внешним evidence. |
 | `BUG-2026-08-12-029` | P0 | Cabinet payment boundary | Cabinet API передавал внутренний `StatusReason` и служебные provider/webhook поля, UI отображал причину ошибки и экспортировал часть diagnostics, а список materialize-ил все платежи до `Take(100)`. | Исправлено локально | Minimal cabinet DTO, safe status message, DB-side top-100, fail-closed decoder и безопасный экспорт проверены backend/frontend/desktop/mobile/SQLite regressions. Live provider outcome остаётся внешним evidence. |
 | `BUG-2026-08-12-030` | P0 | Cabinet subscription boundary | Cabinet API передавал технический `BlockReason`, внутренние server/payment поля и пути QR/конфигурации, а список materialize-ил всю историю до сортировки. | Исправлено локально | Minimal cabinet DTO, DB-side top-100, fail-closed decoder и desktop/mobile UI regression проверены; admin contract и защищённый QR endpoint сохранены. Live provider/VPS outcome остаётся внешним evidence. |

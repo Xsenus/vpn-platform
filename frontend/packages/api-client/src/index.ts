@@ -216,6 +216,33 @@ export type OrderDto = {
   updatedAt?: string
 }
 
+export type CabinetOrderDto = {
+  id: string
+  tariffId: string
+  tariffName?: string | null
+  amount: number
+  currency: string
+  status: string
+  type: string
+  paymentProvider: PaymentProvider
+  expiresAt: string
+  paidAt?: string | null
+  linkedSubscriptionId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type OrderCommandDto = {
+  id: string
+  tariffId: string
+  amount: number
+  currency: string
+  status: string
+  expiresAt: string
+  paymentProvider: PaymentProvider
+  linkedSubscriptionId: string | null
+}
+
 export type AdminOrderFilters = {
   status?: string
   search?: string
@@ -230,7 +257,6 @@ export type PaymentStatusResultDto = {
 export type PaymentInitResult = {
   paymentId: string
   redirectUrl: string
-  rawResponse: string
 }
 
 export type SubscriptionDto = {
@@ -2740,7 +2766,7 @@ function isAdminUserOverviewDto(value: unknown): value is AdminUserOverviewDto {
     || !Array.isArray(value.supportConversations)) return false
 
   return value.telegramAccounts.every(isAdminTelegramAccountDto)
-    && value.orders.every(isCabinetOrderDto)
+    && value.orders.every(isAdminOrderDto)
     && value.payments.every(isAdminOverviewPaymentAttemptDto)
     && value.subscriptions.every(isAdminOverviewSubscriptionDto)
     && value.accessCredentials.every(isAdminOverviewAccessDto)
@@ -2807,10 +2833,9 @@ function isCheckoutSessionDto(value: unknown): value is CheckoutSessionDto {
     && value.orderId.trim().length > 0
 }
 
-function isOrderCommandDto(value: unknown): value is OrderDto {
+function isOrderCommandDto(value: unknown): value is OrderCommandDto {
   return isRecord(value)
     && hasString(value, 'id', true)
-    && hasString(value, 'userId', true)
     && hasString(value, 'tariffId', true)
     && hasFiniteNumber(value, 'amount', 0)
     && hasString(value, 'currency', true)
@@ -2820,13 +2845,17 @@ function isOrderCommandDto(value: unknown): value is OrderDto {
     && paymentProviderValues.has(value.paymentProvider as PaymentProvider)
     && hasDateString(value, 'expiresAt')
     && hasNullableString(value, 'linkedSubscriptionId')
+    && value.userId === undefined
+    && value.checkoutSessionId === undefined
+    && value.channel === undefined
+    && value.isFirstPurchase === undefined
 }
 
 function isPaymentInitResult(value: unknown): value is PaymentInitResult {
   return isRecord(value)
     && hasString(value, 'paymentId', true)
     && hasSafeAbsoluteHttpUrl(value, 'redirectUrl')
-    && hasString(value, 'rawResponse')
+    && Object.keys(value).every((key) => key === 'paymentId' || key === 'redirectUrl')
 }
 
 function isSupportMutationResult(value: unknown): value is { conversationId: string; status: string; revision: number } {
@@ -2887,7 +2916,7 @@ function isCabinetSubscriptionDto(value: unknown): value is CabinetSubscriptionD
     && forbiddenFields.every((field) => !(field in value))
 }
 
-function isCabinetOrderDto(value: unknown): value is OrderDto {
+function isAdminOrderDto(value: unknown): value is OrderDto {
   if (!isRecord(value)) return false
 
   return hasString(value, 'id', true)
@@ -2912,6 +2941,44 @@ function isCabinetOrderDto(value: unknown): value is OrderDto {
     && hasNullableString(value, 'linkedSubscriptionId')
     && hasDateString(value, 'createdAt')
     && hasDateString(value, 'updatedAt')
+}
+
+function isCabinetOrderDto(value: unknown): value is CabinetOrderDto {
+  if (!isRecord(value)) return false
+
+  const forbiddenFields = [
+    'userId',
+    'userDisplayName',
+    'userEmail',
+    'channel',
+    'checkoutSessionId',
+    'isFirstPurchase',
+    'paymentAttemptsCount',
+    'lastPaymentId',
+    'lastPaymentStatus',
+    'lastPaymentProvider',
+    'lastPaymentRecheckSupported',
+    'lastPaymentCanRecheck',
+    'lastPaymentRecheckBlockers'
+  ]
+
+  return hasString(value, 'id', true)
+    && hasString(value, 'tariffId', true)
+    && hasNullableString(value, 'tariffName')
+    && hasFiniteNumber(value, 'amount', 0)
+    && hasString(value, 'currency', true)
+    && hasString(value, 'status', true)
+    && orderStatusValues.has(value.status as string)
+    && hasString(value, 'type', true)
+    && orderTypeValues.has(value.type as OrderType)
+    && hasString(value, 'paymentProvider', true)
+    && paymentProviderValues.has(value.paymentProvider as PaymentProvider)
+    && hasDateString(value, 'expiresAt')
+    && hasNullableDateString(value, 'paidAt')
+    && hasNullableString(value, 'linkedSubscriptionId')
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+    && forbiddenFields.every((field) => !(field in value))
 }
 
 function isPaymentAttemptCore(value: unknown): value is Record<string, unknown> {
@@ -3353,8 +3420,8 @@ export class ApiClient {
     }, 'object', (value): value is CheckoutSessionDto => isCheckoutSessionDto(value) && value.token === token)
   }
 
-  claimCheckoutSession(token: string, checkoutToken: string): Promise<OrderDto> {
-    return this.request<OrderDto>(`/api/me/checkout-sessions/${encodeURIComponent(checkoutToken)}/claim`, {
+  claimCheckoutSession(token: string, checkoutToken: string): Promise<OrderCommandDto> {
+    return this.request<OrderCommandDto>(`/api/me/checkout-sessions/${encodeURIComponent(checkoutToken)}/claim`, {
       method: 'POST',
       token,
       body: JSON.stringify({}),
@@ -3362,8 +3429,8 @@ export class ApiClient {
     }, 'object', isOrderCommandDto)
   }
 
-  createMyOrder(token: string, payload: CreateMyOrderPayload): Promise<OrderDto> {
-    return this.request<OrderDto>('/api/me/orders', {
+  createMyOrder(token: string, payload: CreateMyOrderPayload): Promise<OrderCommandDto> {
+    return this.request<OrderCommandDto>('/api/me/orders', {
       method: 'POST',
       token,
       body: JSON.stringify(payload),
@@ -3384,8 +3451,8 @@ export class ApiClient {
     return this.requestArray<CabinetSubscriptionDto>('/api/me/subscriptions', { token, errorMessage: apiFallbackErrorMessage }, isCabinetSubscriptionDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
-  getMyOrders(token: string): Promise<OrderDto[]> {
-    return this.requestArray<OrderDto>('/api/me/orders', { token, errorMessage: apiFallbackErrorMessage }, isCabinetOrderDto, (items) => hasUniqueStringKey(items, 'id'))
+  getMyOrders(token: string): Promise<CabinetOrderDto[]> {
+    return this.requestArray<CabinetOrderDto>('/api/me/orders', { token, errorMessage: apiFallbackErrorMessage }, isCabinetOrderDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getMyPayments(token: string): Promise<CabinetPaymentAttemptDto[]> {
@@ -3637,7 +3704,7 @@ export class ApiClient {
     if (filters.status) params.set('status', filters.status)
     if (filters.search) params.set('search', filters.search)
     const query = params.toString()
-    return this.requestArray<OrderDto>(`/api/admin/orders${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage }, (value): value is OrderDto => isCabinetOrderDto(value) && hasBoolean(value, 'lastPaymentRecheckSupported') && hasBoolean(value, 'lastPaymentCanRecheck') && hasStringArray(value, 'lastPaymentRecheckBlockers'), (items) => hasUniqueStringKey(items, 'id'))
+    return this.requestArray<OrderDto>(`/api/admin/orders${query ? `?${query}` : ''}`, { token, errorMessage: apiFallbackErrorMessage }, (value): value is OrderDto => isAdminOrderDto(value) && hasBoolean(value, 'lastPaymentRecheckSupported') && hasBoolean(value, 'lastPaymentCanRecheck') && hasStringArray(value, 'lastPaymentRecheckBlockers'), (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminPayments(token: string): Promise<PaymentAttemptDto[]> {

@@ -34,6 +34,30 @@ public sealed record CabinetSubscriptionDto(
     DateTimeOffset? CancelledAt,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
+public sealed record CabinetOrderDto(
+    Guid Id,
+    Guid TariffId,
+    string? TariffName,
+    decimal Amount,
+    string Currency,
+    string Status,
+    string Type,
+    string PaymentProvider,
+    DateTimeOffset ExpiresAt,
+    DateTimeOffset? PaidAt,
+    Guid? LinkedSubscriptionId,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+public sealed record CabinetOrderCommandDto(
+    Guid Id,
+    Guid TariffId,
+    decimal Amount,
+    string Currency,
+    string Status,
+    DateTimeOffset ExpiresAt,
+    string PaymentProvider,
+    Guid? LinkedSubscriptionId);
+public sealed record CabinetPaymentInitDto(string PaymentId, string RedirectUrl);
 public sealed record CabinetAccessCredentialDto(
     Guid Id,
     Guid SubscriptionId,
@@ -169,34 +193,46 @@ public class MeController : ControllerBase
     [HttpGet("orders")]
     public async Task<IActionResult> GetOrders(CancellationToken cancellationToken)
     {
-        var orders = await _db.Orders
+        var userId = ResolveUserId();
+        IQueryable<Order> query;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            query = _db.Orders.FromSqlInterpolated($"""
+                SELECT o.*
+                FROM "Orders" AS o
+                WHERE o."UserId" = {userId}
+                ORDER BY julianday(o."CreatedAt") DESC, julianday(o."UpdatedAt") DESC
+                LIMIT 100
+                """);
+        }
+        else
+        {
+            query = _db.Orders
+                .Where(x => x.UserId == userId)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.UpdatedAt)
+                .Take(100);
+        }
+
+        var orders = await query
             .AsNoTracking()
             .Include(x => x.Tariff)
-            .Include(x => x.PaymentAttempts)
-            .Where(x => x.UserId == ResolveUserId())
             .ToListAsync(cancellationToken);
 
-        return Ok(orders.OrderByDescending(x => x.CreatedAt).Select(x => new
-        {
+        return Ok(orders.Select(x => new CabinetOrderDto(
             x.Id,
-            x.UserId,
             x.TariffId,
-            TariffName = x.Tariff != null ? x.Tariff.Name : null,
+            x.Tariff?.Name,
             x.Amount,
             x.Currency,
-            Status = x.Status.ToString(),
-            Type = x.Type.ToString(),
-            Channel = x.Channel.ToString(),
-            PaymentProvider = x.PaymentProvider.ToString(),
-            x.CheckoutSessionId,
+            x.Status.ToString(),
+            x.Type.ToString(),
+            x.PaymentProvider.ToString(),
             x.ExpiresAt,
             x.PaidAt,
-            x.IsFirstPurchase,
-            PaymentAttemptsCount = x.PaymentAttempts.Count,
-            LinkedSubscriptionId = OrderService.GetRenewalSubscriptionId(x),
+            OrderService.GetRenewalSubscriptionId(x),
             x.CreatedAt,
-            x.UpdatedAt
-        }).ToList());
+            x.UpdatedAt)).ToList());
     }
 
     [HttpPost("orders")]
@@ -255,7 +291,7 @@ public class MeController : ControllerBase
             cancellationToken);
 
         return result.IsSuccess
-            ? Ok(result.Value)
+            ? Ok(MapOrderCommand(result.Value!))
             : result.IsRetryable
                 ? Conflict(new { error = result.Error })
                 : BadRequest(new { error = result.Error });
@@ -266,7 +302,7 @@ public class MeController : ControllerBase
     {
         var result = await _checkoutSessionService.ClaimAsync(new ClaimCheckoutSessionCommand(token, ResolveUserId()), cancellationToken);
         return result.IsSuccess
-            ? Ok(result.Value)
+            ? Ok(MapOrderCommand(result.Value!))
             : result.IsRetryable
                 ? Conflict(new { error = result.Error })
                 : BadRequest(new { error = result.Error });
@@ -291,7 +327,9 @@ public class MeController : ControllerBase
             new PaymentInitCommand(id, paymentProvider, request?.ReturnUrl),
             cancellationToken);
 
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        return result.IsSuccess
+            ? Ok(new CabinetPaymentInitDto(result.Value!.PaymentId, result.Value.RedirectUrl))
+            : BadRequest(new { error = GetCabinetPaymentInitError(result.Error) });
     }
 
     [HttpGet("payments")]
@@ -715,6 +753,59 @@ public class MeController : ControllerBase
     private static bool TryParseDefined<TEnum>(string? value, out TEnum parsed)
         where TEnum : struct, Enum
         => Enum.TryParse(value, true, out parsed) && Enum.IsDefined(parsed);
+
+    private static CabinetOrderCommandDto MapOrderCommand(VpnPlatform.Application.DTOs.OrderDto order)
+        => new(
+            order.Id,
+            order.TariffId,
+            order.Amount,
+            order.Currency,
+            order.Status,
+            order.ExpiresAt,
+            order.PaymentProvider.ToString(),
+            order.LinkedSubscriptionId);
+
+    private static string GetCabinetPaymentInitError(string? error)
+    {
+        if (error?.Contains("already paid", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return "Заказ уже оплачен. Обновите историю заказов и проверьте подписку.";
+        }
+
+        if (error?.Contains("cancelled", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return "Заказ отменён. Создайте новый заказ с актуальным способом оплаты.";
+        }
+
+        if (error?.Contains("expired", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return "Срок оплаты заказа истёк. Создайте новый заказ.";
+        }
+
+        if (error?.Contains("does not match the order", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return "Способ оплаты не соответствует заказу. Обновите страницу и повторите операцию.";
+        }
+
+        if (error?.Contains("not configured", StringComparison.OrdinalIgnoreCase) == true
+            || error?.Contains("disabled", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return "Выбранный способ оплаты сейчас недоступен. Выберите другой способ или повторите позже.";
+        }
+
+        if (error?.Contains("already in progress", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return "Оплата уже подготавливается. Подождите несколько секунд и обновите историю заказов.";
+        }
+
+        if (error?.Contains("confirmation URL", StringComparison.OrdinalIgnoreCase) == true
+            || error?.Contains("return URL", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return "Безопасную ссылку оплаты подготовить не удалось. Повторите операцию или обратитесь в поддержку.";
+        }
+
+        return "Не удалось подготовить оплату. Повторите операцию позже или обратитесь в поддержку.";
+    }
 
     private Guid ResolveUserId()
     {

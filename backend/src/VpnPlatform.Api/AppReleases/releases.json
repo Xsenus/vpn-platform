@@ -15774,5 +15774,28 @@
         "text": "Roadmap progress is 683/703 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-12-cabinet-order-boundary",
+    "version": "0.671.0",
+    "releasedAt": "2026-08-12T23:15:00+07:00",
+    "title": "Заказы кабинета скрывают служебные данные",
+    "summary": "История и команды заказов используют минимальные пользовательские контракты, а инициализация оплаты не раскрывает ответ или ошибку провайдера.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "API заказов кабинета больше не передаёт идентификатор пользователя, checkout/provider metadata, служебные счётчики, raw provider response или exception."
+      },
+      {
+        "type": "improved",
+        "text": "Последние 100 заказов ограничиваются базой данных, frontend отклоняет расширенный контракт, а browser checks отдельно ожидают готовность public, cabinet и admin экранов."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 684/704 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
