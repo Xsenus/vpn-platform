@@ -16257,5 +16257,28 @@
         "text": "Roadmap progress is 704/724 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-subscription-migration-selection-boundary",
+    "version": "0.692.0",
+    "releasedAt": "2026-08-13T14:50:00+07:00",
+    "title": "Цель миграции выбирается одним запросом",
+    "summary": "Auto-target node, panel и inbound выбираются без полной выборки и N+1.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Миграция подписки больше не загружает все candidate nodes и inbounds каждой панели."
+      },
+      {
+        "type": "improved",
+        "text": "Ordered SQL join сохраняет load/priority/default/protocol/capacity и explicit inbound semantics с LIMIT 1."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 705/725 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

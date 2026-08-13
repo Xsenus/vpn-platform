@@ -1,9 +1,11 @@
+using System.Data.Common;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Application.Abstractions;
@@ -89,7 +91,8 @@ public class AdminOperationBoundaryTests
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
-        await using var db = CreateDbContext(connection);
+        var interceptor = new CommandCaptureInterceptor();
+        await using var db = CreateDbContext(connection, interceptor);
         await db.Database.EnsureCreatedAsync();
 
         var now = new DateTimeOffset(2026, 8, 4, 7, 0, 0, TimeSpan.Zero);
@@ -209,7 +212,13 @@ public class AdminOperationBoundaryTests
         db.MigrationJobs.Remove(activeJob);
         await db.SaveChangesAsync();
 
-        Assert.IsType<OkObjectResult>(await controller.MigrateSubscription(subscription.Id, target.Id, CancellationToken.None));
+        interceptor.Commands.Clear();
+        Assert.IsType<OkObjectResult>(await controller.MigrateSubscription(subscription.Id, null, CancellationToken.None));
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("VpnNodes", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("VpnPanels", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("VpnInbounds", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("LIMIT", StringComparison.OrdinalIgnoreCase));
 
         var job = await db.MigrationJobs.Include(x => x.Items).SingleAsync();
         Assert.Equal(source.Id, job.SourceNodeId);
@@ -515,8 +524,33 @@ public class AdminOperationBoundaryTests
             }
         };
 
-    private static ApplicationDbContext CreateDbContext(SqliteConnection connection)
-        => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
+    private static ApplicationDbContext CreateDbContext(
+        SqliteConnection connection,
+        DbCommandInterceptor? interceptor = null)
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection);
+        if (interceptor is not null)
+        {
+            options.AddInterceptors(interceptor);
+        }
+
+        return new ApplicationDbContext(options.Options);
+    }
+
+    private sealed class CommandCaptureInterceptor : DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
+    }
 
     private sealed class UnexpectedVpnProviderFactory : IVpnProviderFactory
     {

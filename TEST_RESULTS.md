@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: subscription migration selection boundary
+
+Scope:
+- Auto-target migration должна выбирать одну пару node/panel/inbound без полной candidate materialization и N+1.
+- Приоритет, protocol/capacity, explicit inbound и ответы not-found/not-ready/incompatible должны сохраниться.
+
+Results:
+- Roadmap progress: `705/725` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-subscription-migration-selection-boundary`, version `0.692.0`.
+- Fail-first: full SQLite migration завершалась правильно, но SQL capture показывал отдельные node/panel/inbound queries без общего `LIMIT 1`.
+- After fix: один ordered join выбирает node/panel/inbound через `FirstOrDefaultAsync`; explicit-target fallback сохраняет 404/not-ready/incompatible semantics. Admin operation boundary `11/11`, backend `1467/1467`, frontend `172/172`, auto-target subscription lifecycle desktop/mobile `2/2`, fresh SQLite full flow, EF drift, encoding `18/18`, secret scan `698/0` и dependency audit `0 vulnerabilities` зеленые. Реальные VPS/3x-ui migration, provider кабинеты, live payment, Telegram/Bot API/SMTP локально не проверялись.
+
 ## Check 2026-08-13: admin dashboard aggregate boundary
 
 Scope:

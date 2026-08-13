@@ -1190,66 +1190,66 @@ public class AdminOperationsController : ControllerBase
                 return Conflict(new { error = "Subscription already has an active migration." });
             }
 
-            var candidateNodes = await _db.VpnNodes.AsNoTracking()
-                .Where(x => (!targetNodeId.HasValue || x.Id == targetNodeId.Value)
-                    && x.Id != sourceNodeId
-                    && x.Status == NodeStatus.Ready
-                    && x.IsAvailableForNewUsers
-                    && x.HealthStatus != HealthStatus.Unhealthy
-                    && x.UsedCapacity < x.Capacity
-                    && x.PanelBaseUrl != string.Empty)
-                .OrderBy(x => x.UsedCapacity * 1.0 / Math.Max(1, x.Capacity))
-                .ThenBy(x => x.Priority)
-                .ThenBy(x => x.Id)
-                .ToListAsync(cancellationToken);
-            if (targetNodeId.HasValue && candidateNodes.Count == 0)
-            {
-                var targetExists = await _db.VpnNodes.AsNoTracking().AnyAsync(x => x.Id == targetNodeId.Value, cancellationToken);
-                return targetExists
-                    ? BadRequest(new { error = "Target VPN server is not ready for allocation." })
-                    : NotFound(new { error = "Target VPN server not found." });
-            }
+            var sourceProtocol = vpnClient.VpnInbound.Protocol;
+            var selectedTarget = await (
+                from node in _db.VpnNodes.AsNoTracking()
+                join panel in _db.VpnPanels.AsNoTracking() on node.PanelBaseUrl equals panel.BaseUrl
+                join inbound in _db.VpnInbounds.AsNoTracking() on panel.Id equals inbound.VpnPanelId
+                where (!targetNodeId.HasValue || node.Id == targetNodeId.Value)
+                    && node.Id != sourceNodeId
+                    && node.Status == NodeStatus.Ready
+                    && node.IsAvailableForNewUsers
+                    && node.HealthStatus != HealthStatus.Unhealthy
+                    && node.UsedCapacity < node.Capacity
+                    && node.PanelBaseUrl != string.Empty
+                    && panel.Status == VpnPanelStatus.Active
+                    && panel.HealthStatus != HealthStatus.Unhealthy
+                    && panel.UsedCapacity < panel.Capacity
+                    && inbound.IsActive
+                    && inbound.UsedCapacity < inbound.Capacity
+                    && inbound.Protocol == sourceProtocol
+                    && (!node.PanelInboundId.HasValue || inbound.ExternalInboundId == node.PanelInboundId.Value.ToString())
+                orderby node.UsedCapacity * 1.0 / Math.Max(1, node.Capacity),
+                    node.Priority,
+                    node.Id,
+                    inbound.IsDefault descending,
+                    inbound.UsedCapacity * 1.0 / Math.Max(1, inbound.Capacity),
+                    inbound.Id
+                select new { Node = node, Inbound = inbound })
+                .FirstOrDefaultAsync(cancellationToken);
 
-            VpnNode? selectedNode = null;
-            VpnInbound? selectedInbound = null;
-            foreach (var candidateNode in candidateNodes)
+            if (selectedTarget is null && targetNodeId.HasValue)
             {
-                var panel = await _db.VpnPanels.AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.BaseUrl == candidateNode.PanelBaseUrl
-                        && x.Status == VpnPanelStatus.Active
-                        && x.HealthStatus != HealthStatus.Unhealthy
-                        && x.UsedCapacity < x.Capacity, cancellationToken);
-                if (panel is null)
+                var targetState = await _db.VpnNodes.AsNoTracking()
+                    .Where(x => x.Id == targetNodeId.Value)
+                    .Select(x => new
+                    {
+                        IsReady = x.Id != sourceNodeId
+                            && x.Status == NodeStatus.Ready
+                            && x.IsAvailableForNewUsers
+                            && x.HealthStatus != HealthStatus.Unhealthy
+                            && x.UsedCapacity < x.Capacity
+                            && x.PanelBaseUrl != string.Empty
+                    })
+                    .FirstOrDefaultAsync(cancellationToken);
+                if (targetState is null)
                 {
-                    continue;
+                    return NotFound(new { error = "Target VPN server not found." });
                 }
 
-                var inbounds = await _db.VpnInbounds.AsNoTracking()
-                    .Where(x => x.VpnPanelId == panel.Id
-                        && x.IsActive
-                        && x.UsedCapacity < x.Capacity
-                        && x.Protocol == vpnClient.VpnInbound.Protocol)
-                    .OrderByDescending(x => x.IsDefault)
-                    .ThenBy(x => x.UsedCapacity * 1.0 / Math.Max(1, x.Capacity))
-                    .ThenBy(x => x.Id)
-                    .ToListAsync(cancellationToken);
-                selectedInbound = candidateNode.PanelInboundId.HasValue
-                    ? inbounds.FirstOrDefault(x => x.ExternalInboundId == candidateNode.PanelInboundId.Value.ToString())
-                    : inbounds.FirstOrDefault();
-                if (selectedInbound is not null)
+                if (!targetState.IsReady)
                 {
-                    selectedNode = candidateNode;
-                    break;
+                    return BadRequest(new { error = "Target VPN server is not ready for allocation." });
                 }
             }
 
-            if (selectedNode is null || selectedInbound is null)
+            if (selectedTarget is null)
             {
                 return BadRequest(new { error = "Target VPN server does not have a compatible active inbound." });
             }
 
-            resolvedTargetNodeId = selectedNode.Id;
-            targetInboundId = selectedInbound.Id;
+            resolvedTargetNodeId = selectedTarget.Node.Id;
+            targetInboundId = selectedTarget.Inbound.Id;
             var migrationJob = new MigrationJob
             {
                 SourceNodeId = sourceNodeId,

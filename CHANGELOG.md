@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.692.0 - 2026-08-13
+
+Release entry: `2026-08-13-subscription-migration-selection-boundary`.
+
+### Исправлено
+
+- Auto-target миграция подписки больше не загружает все candidate nodes и не выполняет panel/inbound N+1.
+
+### Улучшено
+
+- Единственный ordered join выбирает node/panel/inbound с `LIMIT 1`, сохраняя capacity, protocol, explicit inbound и прежние ошибки явной цели.
+
+### Проверено
+
+- Fail-first показал отдельные node/panel/inbound queries; after-fix operation boundary `11/11`, backend `1467/1467`, frontend `172/172`, subscription lifecycle desktop/mobile `2/2`, fresh SQLite full flow, EF drift, encoding `18/18`, secret scan `698/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `705/725` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальная VPS/production-like 3x-ui миграция и другие внешние evidence не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.691.0 - 2026-08-13
 
 Release entry: `2026-08-13-admin-dashboard-aggregate-boundary`.
