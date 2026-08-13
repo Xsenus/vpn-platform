@@ -1,4 +1,7 @@
+using System.Data.Common;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
@@ -15,17 +18,85 @@ public class SubscriptionScenarioProvisioningTests
     [Fact]
     public async Task Node_Allocation_Should_Match_Protocol_As_Exact_Csv_Token()
     {
-        await using var db = CreateDb();
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new CommandCaptureInterceptor();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
         var rejected = Node(Guid.NewGuid(), "substring", "eu", priority: 100, protocol: "notvless");
         var selected = Node(Guid.NewGuid(), "exact", "eu", priority: 10, protocol: "trojan, VLESS");
         db.VpnNodes.AddRange(rejected, selected);
         await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
 
         var result = await new NodeAllocationService(db).SelectNodeAsync(
             new Tariff { Name = "Protocol", Slug = "protocol", AllowedRegionsCsv = "eu" },
             new WorkScenario { VpnProtocol = "vless", ServerSelectionRule = "priority-first" });
 
         Assert.Equal(selected.Id, result.Id);
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("FROM \"VpnNodes\"", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("SupportedProtocolsCsv", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("LIMIT 1", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Node_Allocation_Should_Select_Panel_Fallback_With_A_Database_Top_One()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new CommandCaptureInterceptor();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        db.VpnPanels.AddRange(
+            new VpnPanel { Name = "loaded", BaseUrl = "https://loaded.example.test", Region = "eu", Status = VpnPanelStatus.Active, HealthStatus = HealthStatus.Healthy, Capacity = 100, UsedCapacity = 90 },
+            new VpnPanel { Name = "selected", BaseUrl = "https://selected.example.test", Region = "eu", Status = VpnPanelStatus.Active, HealthStatus = HealthStatus.Healthy, Capacity = 100, UsedCapacity = 10 });
+        await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
+
+        var result = await new NodeAllocationService(db).SelectNodeAsync(
+            new Tariff { Name = "Panel", Slug = "panel", AllowedRegionsCsv = "eu" });
+
+        Assert.Equal("selected", result.Name);
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("FROM \"VpnPanels\"", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("LIMIT 1", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Sandbox_Node_Allocation_Should_Use_Exact_Protocol_And_A_Database_Top_One()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new CommandCaptureInterceptor();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        db.VpnNodes.AddRange(
+            Node(Guid.NewGuid(), "substring", "sandbox", priority: 100, protocol: "notvless"),
+            Node(Guid.NewGuid(), "selected", "sandbox", priority: 10, protocol: "vmess, vless"));
+        await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
+
+        var result = await new NodeAllocationService(db).SelectOrCreateSandboxNodeAsync("vless");
+
+        Assert.Equal("selected", result.Name);
+        Assert.Equal(2, await db.VpnNodes.CountAsync());
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("FROM \"VpnNodes\"", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("SupportedProtocolsCsv", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("LIMIT 1", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -477,6 +548,30 @@ public class SubscriptionScenarioProvisioningTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
             .Options;
         return new ApplicationDbContext(options);
+    }
+
+    private sealed class CommandCaptureInterceptor : DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+
+        public override InterceptionResult<DbDataReader> ReaderExecuting(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result)
+        {
+            Commands.Add(command.CommandText);
+            return result;
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
     }
 
     private sealed class FixedClock : IClock

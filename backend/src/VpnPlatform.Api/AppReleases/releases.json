@@ -16326,5 +16326,28 @@
         "text": "Roadmap progress is 707/727 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-node-allocation-selection-boundary",
+    "version": "0.695.0",
+    "releasedAt": "2026-08-13T15:28:00+07:00",
+    "title": "VPN-узел выбирается в БД",
+    "summary": "Production, panel fallback и sandbox allocation получают один подходящий target без полной materialization.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Node allocation больше не загружает все candidates перед exact protocol filtering и ordering."
+      },
+      {
+        "type": "improved",
+        "text": "SQLite использует parameterized ratio/julianday/LIMIT 1, PostgreSQL LINQ top-1; region, group, capacity и sandbox isolation сохранены."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 708/728 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

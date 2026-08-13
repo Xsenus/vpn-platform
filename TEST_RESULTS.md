@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: node allocation selection boundary
+
+Scope:
+- Production node, panel fallback и sandbox allocation должны применять region/group, exact protocol, capacity/health и ordering до materialization.
+- SQLite обязан сохранить `DateTimeOffset` ordering через абсолютный `julianday`; capacity reservation/compensation lifecycle не должен измениться.
+
+Results:
+- Roadmap progress: `708/728` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-node-allocation-selection-boundary`, version `0.695.0`.
+- Fail-first: node выбирался правильно, но SQLite SQL не содержал protocol predicate/`LIMIT 1`; provider-neutral top-1 затем выявил неподдерживаемый SQLite `DateTimeOffset ORDER BY`.
+- After fix: SQLite использует parameterized exact-token/ratio/`julianday`/`LIMIT 1`, PostgreSQL и другие providers применяют LINQ top-1. Targeted SQLite `3/3`, allocation/capacity/activation regression `55/55`, backend `1470/1470`, frontend `172/172`, typecheck/build, fresh SQLite full flow и EF drift зеленые. Реальные VPS/provider кабинеты, live payment, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: lifecycle worker query boundary
 
 Scope:

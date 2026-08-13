@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.695.0 - 2026-08-13
+
+Release entry: `2026-08-13-node-allocation-selection-boundary`.
+
+### Исправлено
+
+- Production и sandbox allocation больше не загружают все node/panel candidates перед protocol filtering и ordering.
+
+### Улучшено
+
+- SQLite выбирает node/panel top-1 параметризованным exact-token/ratio/`julianday` SQL; PostgreSQL использует LINQ top-1, прежние allocation rules сохранены.
+
+### Проверено
+
+- Fail-first SQL был без protocol predicate/limit; after-fix targeted SQLite `3/3`, allocation/capacity/activation regression `55/55`, backend `1470/1470`, frontend `172/172`, typecheck/build, fresh SQLite full flow и EF drift зеленые.
+- Roadmap `708/728` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/provider кабинеты, live payment, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.694.0 - 2026-08-13
 
 Release entry: `2026-08-13-lifecycle-worker-query-boundary`.

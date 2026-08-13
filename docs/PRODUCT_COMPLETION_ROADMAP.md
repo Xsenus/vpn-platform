@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-13.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-lifecycle-worker-query-boundary`, версия `0.694.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `707/727` проверяемых пунктов, готовность `97.2%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-node-allocation-selection-boundary`, версия `0.695.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `708/728` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-13:
 
-- [x] `STATE-001` Backend test suite проходит: `1468/1468`.
+- [x] `STATE-001` Backend test suite проходит: `1470/1470`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2524,6 +2524,10 @@ git diff --check
   - Что сделать: пятиминутный worker не должен materialize-ить все orders, active subscriptions и grace subscriptions; expiry/retry/lease временные условия обязаны применяться в БД без изменения переходов и provider lifecycle.
   - Что сделано: relational order expiry выполняется одним atomic conditional update; SQLite использует `julianday`, PostgreSQL `ExecuteUpdateAsync`. Active и grace subscription queues выбираются как независимые due-only batches по 200; SQLite применяет параметризованные `julianday` queries, остальные провайдеры LINQ `Where/OrderBy/Take`. Node-scoped lifecycle gate, повторная проверка и retry claim сохранены.
   - Доказательство: fail-first SQL regression `0/2` фиксировал full-table reads и отсутствие DB-side temporal limits; after-fix targeted `2/2`, order/promo/subscription/worker regression `34/34`, backend `1468/1468`, frontend `172/172`, typecheck/build, fresh SQLite full flow и EF drift зеленые. Реальные provider delivery, VPS/SSH/Ansible, live payment и production-like 3x-ui lifecycle остаются внешней проверкой.
+- [x] `P11-ACC-417` Ограничить production/sandbox node allocation до DB-side top-1. 2026-08-13.
+  - Что сделать: node, panel fallback и sandbox allocation не должны materialize-ить все candidates; region/group, exact protocol token, capacity/health, priority/newest/least-loaded и sandbox isolation должны применяться до materialization.
+  - Что сделано: PostgreSQL/другие провайдеры выполняют translatable exact-token LINQ и ordered `FirstOrDefaultAsync`; SQLite использует параметризованные node/panel SQL с ratio ordering, `julianday(CreatedAt)` и `LIMIT 1`. Tie-break дополнен `Id`; panel-created node и capacity reservation lifecycle сохранены.
+  - Доказательство: fail-first SQLite выбирал правильный node, но SQL загружал все candidates без protocol predicate/limit; первый provider-neutral top-1 выявил неподдерживаемый SQLite `DateTimeOffset ORDER BY`, после чего добавлен проверенный provider-aware путь. Targeted SQLite `3/3`, allocation/capacity/activation regression `55/55`, backend `1470/1470`, frontend `172/172`, typecheck/build, fresh SQLite full flow и EF drift зеленые. Реальные VPS/provider и production-like 3x-ui allocation остаются внешней проверкой.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
