@@ -2724,18 +2724,27 @@ public class AdminOperationsController : ControllerBase
         var nodeIds = runs.Select(x => x.NodeId).Distinct().ToList();
         var runIds = runs.Select(x => x.Id).ToList();
         var nodes = await _db.VpnNodes.AsNoTracking().Where(x => nodeIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, cancellationToken);
-        var precheckReports = _db is DbContext precheckDbContext
-            && runIds.Count > 0
-            && (precheckDbContext.Database.IsSqlite() || precheckDbContext.Database.IsNpgsql())
-                ? await LoadLatestProvisioningPrecheckReportsAsync(precheckDbContext, runIds, cancellationToken)
-                : await _db.ProvisioningStepRuns.AsNoTracking()
-                    .Where(x => runIds.Contains(x.ProvisioningRunId) && x.StepName == PrecheckReportStepName)
-                    .GroupBy(x => x.ProvisioningRunId)
-                    .Select(group => group
-                        .OrderByDescending(x => x.CreatedAt)
-                        .ThenByDescending(x => x.Id)
-                        .First())
-                    .ToListAsync(cancellationToken);
+        List<ProvisioningStepRun> precheckReports;
+        if (runIds.Count == 0)
+        {
+            precheckReports = [];
+        }
+        else if (_db is DbContext precheckDbContext
+                 && (precheckDbContext.Database.IsSqlite() || precheckDbContext.Database.IsNpgsql()))
+        {
+            precheckReports = await LoadLatestProvisioningPrecheckReportsAsync(precheckDbContext, runIds, cancellationToken);
+        }
+        else
+        {
+            precheckReports = await _db.ProvisioningStepRuns.AsNoTracking()
+                .Where(x => runIds.Contains(x.ProvisioningRunId) && x.StepName == PrecheckReportStepName)
+                .GroupBy(x => x.ProvisioningRunId)
+                .Select(group => group
+                    .OrderByDescending(x => x.CreatedAt)
+                    .ThenByDescending(x => x.Id)
+                    .First())
+                .ToListAsync(cancellationToken);
+        }
         var precheckReportByRunId = precheckReports
             .ToDictionary(x => x.ProvisioningRunId, x => RedactSensitiveText(x.Output, 4000));
         return Ok(runs.Select(x =>

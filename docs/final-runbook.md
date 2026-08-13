@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-13 локально подтверждено:
 
-- backend full suite: 1475/1475;
+- backend full suite: 1480/1480;
 - frontend tests: 172/172;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-13-admin-user-session-revocation-write-boundary`, версия `0.703.0`; деактивация пользователя отзывает active sessions одним set-based write в общей транзакции с user/audit changes.
-- roadmap progress: `716/736` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-13-admin-bootstrap-sqlite-runtime-boundaries`, версия `0.704.0`; admin bootstrap отзывает reset tokens и refresh-сессии двумя set-based writes в общей транзакции, а SQLite provisioning list и panel workers проходят реальный local admin browser flow без runtime errors.
+- roadmap progress: `718/738` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

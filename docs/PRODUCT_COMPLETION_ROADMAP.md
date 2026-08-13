@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-13.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-admin-user-session-revocation-write-boundary`, версия `0.703.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `716/736` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-admin-bootstrap-sqlite-runtime-boundaries`, версия `0.704.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `718/738` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-13:
 
-- [x] `STATE-001` Backend test suite проходит: `1475/1475`.
+- [x] `STATE-001` Backend test suite проходит: `1480/1480`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2560,6 +2560,14 @@ git diff --check
   - Что сделать: блокировка или перевод пользователя в неактивный статус не должны материализовывать все активные refresh-сессии и обновлять их по одной; `SessionVersion`, audit, block/unblock lifecycle, concurrent rotation и время операции обязаны сохраниться.
   - Что сделано: relational providers отзывают active sessions одним `ExecuteUpdateAsync` в общей транзакции с user/audit changes; tracked rows синхронизируются без повторной записи, InMemory использует объектный fallback. Patch применяет внедрённый `IClock`, а уже конкурентно отозванная сессия не перезаписывается.
   - Доказательство: fail-first SQLite boundary при 25 сессиях обнаружил SELECT всей коллекции и 25 UPDATE; after-fix admin user boundary/controller `13/13`, admin/auth/security/session regression `90/90`, backend Debug/Release `1475/1475`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, docs/encoding `49/49`, secret scan `702/0` и dependency audit `0 vulnerabilities` зеленые.
+- [x] `P11-ACC-426` Ограничить массовые отзывы admin bootstrap и сделать service boundary атомарной. 2026-08-13.
+  - Что сделать: admin bootstrap/reset не должен материализовывать все активные reset tokens и refresh-сессии; password, reset generation, roles/status, session version и оба отзыва должны сохраняться атомарно до возврата service/CLI вызова.
+  - Что сделано: relational providers выполняют по одному `ExecuteUpdateAsync` для active reset tokens и sessions в общей транзакции с tracked user/reset-state changes; service владеет SaveChanges/transaction boundary, CLI больше не дублирует сохранение, tracker синхронизируется без повторного UPDATE, InMemory сохраняет объектный fallback.
+  - Доказательство: fail-first SQLite boundary при `25+25` строках обнаружил SELECT обеих коллекций и отдельные UPDATE, а fault-injection выявил отсутствие собственного save boundary; after-fix boundary/bootstrap/seed `8/8`, admin/bootstrap/auth/security regression `106/106`, backend Debug/Release `1480/1480`, fresh SQLite full flow, EF drift и rollback fault-injection зеленые.
+- [x] `P11-ACC-427` Исправить SQLite runtime-сбои provisioning list и panel workers. 2026-08-13.
+  - Что сделать: пустой provisioning list и фоновые panel health/sync workers не должны падать на SQLite `DateTimeOffset ORDER BY`; DB-side лимиты и детерминированный порядок обязаны сохраниться.
+  - Что сделано: пустой run set сразу возвращает пустые precheck reports без неподдерживаемого fallback query; SQLite workers используют parameterized status predicates, `julianday`, `Id` tie-break и `LIMIT 10/5`, другие providers сохраняют LINQ ветку.
+  - Доказательство: три fail-first SQLite regression воспроизвели ошибки `0/3`; local admin wrapper дважды подтвердил provisioning 500, скрытые dashboard/provisioning sections и console error. After-fix targeted `3/3`, server/panel/bootstrap regression `101/101`, wrapper readiness `17`, preflight `10/10`, sections `17/17`, no JS errors/401/403, API log без ERR/500; backend Debug/Release `1480/1480`, frontend `172/172`, typecheck/build, bundle budget, EF drift, docs/encoding `46/46`, secret scan `703/0` и dependency audit `0 vulnerabilities` зелёные.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

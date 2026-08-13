@@ -132,6 +132,20 @@ public class AdminServerManagementTests
     }
 
     [Fact]
+    public async Task Empty_Provisioning_List_Should_Return_Ok_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var result = Assert.IsType<OkObjectResult>(
+            await CreateController(db).GetProvisioningRuns(CancellationToken.None));
+
+        Assert.Empty(Assert.IsAssignableFrom<IEnumerable<object>>(result.Value));
+    }
+
+    [Fact]
     public async Task Provisioning_List_Should_Load_Only_The_Latest_Precheck_Report_Per_Run()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");

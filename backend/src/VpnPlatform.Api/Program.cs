@@ -188,7 +188,6 @@ static async Task RunAdminBootstrapCommandAsync(IServiceProvider services)
         ResetExistingPassword = true
     };
     var result = await provider.GetRequiredService<AdminBootstrapService>().BootstrapAsync(db, commandOptions, CancellationToken.None);
-    await db.SaveChangesAsync();
 
     Console.WriteLine("Admin bootstrap completed.");
     Console.WriteLine($"Email: {result.Email}");

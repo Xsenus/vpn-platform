@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.704.0 - 2026-08-13
+
+Release entry: `2026-08-13-admin-bootstrap-sqlite-runtime-boundaries`.
+
+### Исправлено
+
+- Admin bootstrap/reset больше не загружает все активные password-reset tokens и refresh-сессии в память и не обновляет их по одной.
+- Пустой список provisioning runs и panel health/sync workers больше не падают на SQLite из-за неподдерживаемой сортировки `DateTimeOffset`.
+
+### Улучшено
+
+- Relational providers выполняют два ограниченных set-based UPDATE в общей транзакции с password, reset-state и session-version changes; service сохраняет результат до возврата, а CLI не делает дублирующий SaveChanges.
+- SQLite workers выбирают ограниченные очереди через `julianday` и `LIMIT 10/5`; пустой provisioning list не запускает лишний precheck query.
+
+### Проверено
+
+- Fail-first: SELECT двух bootstrap-коллекций по `25` строк и отдельные UPDATE; три SQLite runtime regression `0/3`, browser wrapper дважды обнаружил provisioning 500/console error. After-fix boundary/bootstrap/server/panel `101/101`, local admin wrapper readiness `17`, preflight `10/10`, sections `17/17`, без JS errors/401/403 и API ERR/500; backend Debug/Release `1480/1480`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, docs/encoding `46/46`, secret scan `703/0`, dependency audit `0 vulnerabilities` и rollback fault-injection зелёные. `RoadmapCurrentStateTests` и документационные guards синхронизированы.
+- Roadmap `718/738` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.703.0 - 2026-08-13
 
 Release entry: `2026-08-13-admin-user-session-revocation-write-boundary`.

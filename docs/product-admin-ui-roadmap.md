@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `716/736` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `718/738` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,7 +85,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1475/1475`.
+- [x] Backend full suite: `1480/1480`.
 - [x] Frontend unit tests: `172/172`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -167,7 +167,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-13-admin-user-session-revocation-write-boundary`, версия `0.703.0`; деактивация пользователя отзывает active sessions одним set-based write в общей транзакции с user/audit changes; backend `1475/1475`.
+- [x] Latest "Что нового": `2026-08-13-admin-bootstrap-sqlite-runtime-boundaries`, версия `0.704.0`; admin bootstrap использует bounded writes, а SQLite provisioning list и panel workers проходят local browser flow без runtime errors; backend `1480/1480`.
 
 ## Как вести дальше
 

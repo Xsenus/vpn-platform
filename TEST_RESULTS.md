@@ -2,6 +2,20 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: admin bootstrap and SQLite runtime boundaries
+
+Scope:
+- Admin bootstrap/reset не должен читать и отслеживать неограниченное число активных reset tokens и refresh-сессий перед отзывом.
+- Password, reset generation, session version, roles/status и оба массовых отзыва должны сохраняться атомарно до возврата CLI/service вызова.
+- Пустой provisioning list и panel health/sync workers должны работать на локальном SQLite без неподдерживаемого `DateTimeOffset ORDER BY`.
+
+Results:
+- Roadmap progress: `718/738` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-admin-bootstrap-sqlite-runtime-boundaries`, version `0.704.0`.
+- Fail-first: bootstrap с `25` активными reset tokens и `25` refresh-сессиями выполнял SELECT обеих коллекций и отдельные UPDATE каждой строки; fault-injection также подтверждал отсутствие собственного save/transaction boundary.
+- Runtime fail-first: реальный local admin wrapper дважды получил 500 `/api/admin/provisioning-runs`, скрытые dashboard/provisioning sections и один console error; API startup log также содержал падения обоих panel workers на SQLite `DateTimeOffset ORDER BY`. Три изолированных SQLite-теста воспроизвели ошибки `0/3`.
+- After fix: relational bootstrap выполняет по одному set-based UPDATE для reset tokens и refresh-сессий в общей транзакции с user/reset-state changes; empty provisioning list возвращает `200 []`, panel workers используют `julianday` и DB-side `LIMIT 10/5`. Boundary/bootstrap/server/panel regression `101/101`; local admin wrapper: readiness checks `17`, preflight `10/10`, sections `17/17`, no JS errors/401/403, API log без ERR/500; backend Debug/Release `1480/1480`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, docs/encoding `46/46`, secret scan `703/0` и dependency audit `0 vulnerabilities` зелёные.
+
 ## Check 2026-08-13: admin user session revocation write boundary
 
 Scope:

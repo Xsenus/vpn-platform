@@ -47,12 +47,24 @@ public class PanelHealthWorker : BackgroundService
         using (var selectionScope = _scopeFactory.CreateScope())
         {
             var db = selectionScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
-            panels = (await db.VpnPanels.AsNoTracking()
+            var selected = db is DbContext dbContext && dbContext.Database.IsSqlite()
+                ? await db.VpnPanels.FromSqlInterpolated($$"""
+                    SELECT *
+                    FROM "VpnPanels"
+                    WHERE "Status" IN ({{VpnPanelStatus.Active}}, {{VpnPanelStatus.New}})
+                    ORDER BY
+                        CASE WHEN "LastHealthCheckAt" IS NULL THEN 0 ELSE 1 END,
+                        julianday("LastHealthCheckAt"),
+                        "Id"
+                    LIMIT 10
+                    """).AsNoTracking().ToListAsync(cancellationToken)
+                : await db.VpnPanels.AsNoTracking()
                     .Where(x => x.Status == VpnPanelStatus.Active || x.Status == VpnPanelStatus.New)
                     .OrderBy(x => x.LastHealthCheckAt ?? DateTimeOffset.MinValue)
+                    .ThenBy(x => x.Id)
                     .Take(10)
-                    .Select(x => new { x.Id, x.LastHealthCheckAt })
-                    .ToListAsync(cancellationToken))
+                    .ToListAsync(cancellationToken);
+            panels = selected
                 .Select(x => (x.Id, x.LastHealthCheckAt))
                 .ToList();
         }
@@ -131,12 +143,24 @@ public class PanelSyncWorker : BackgroundService
         using (var selectionScope = _scopeFactory.CreateScope())
         {
             var db = selectionScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
-            panels = (await db.VpnPanels.AsNoTracking()
+            var selected = db is DbContext dbContext && dbContext.Database.IsSqlite()
+                ? await db.VpnPanels.FromSqlInterpolated($$"""
+                    SELECT *
+                    FROM "VpnPanels"
+                    WHERE "Status" = {{VpnPanelStatus.Active}}
+                    ORDER BY
+                        CASE WHEN "LastSyncAt" IS NULL THEN 0 ELSE 1 END,
+                        julianday("LastSyncAt"),
+                        "Id"
+                    LIMIT 5
+                    """).AsNoTracking().ToListAsync(cancellationToken)
+                : await db.VpnPanels.AsNoTracking()
                     .Where(x => x.Status == VpnPanelStatus.Active)
                     .OrderBy(x => x.LastSyncAt ?? DateTimeOffset.MinValue)
+                    .ThenBy(x => x.Id)
                     .Take(5)
-                    .Select(x => new { x.Id, x.LastSyncAt })
-                    .ToListAsync(cancellationToken))
+                    .ToListAsync(cancellationToken);
+            panels = selected
                 .Select(x => (x.Id, x.LastSyncAt))
                 .ToList();
         }

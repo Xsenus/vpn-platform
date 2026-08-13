@@ -16533,5 +16533,28 @@
         "text": "Roadmap progress is 716/736 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-admin-bootstrap-sqlite-runtime-boundaries",
+    "version": "0.704.0",
+    "releasedAt": "2026-08-13T18:40:00+07:00",
+    "title": "Bootstrap и SQLite runtime используют безопасные границы",
+    "summary": "Admin bootstrap применяет bounded writes, а provisioning list и panel workers работают на локальном SQLite без runtime errors.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Password reset через bootstrap больше не выполняет SELECT всей active token/session collection и отдельный UPDATE для каждой строки."
+      },
+      {
+        "type": "improved",
+        "text": "Relational bootstrap применяет два set-based UPDATE в общей транзакции; SQLite workers используют julianday и LIMIT 10/5, а пустой provisioning list возвращает 200 без лишнего precheck query."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 718/738 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

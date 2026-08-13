@@ -57,10 +57,12 @@ public sealed record AdminBootstrapResult(
 public sealed class AdminBootstrapService
 {
     private readonly IPasswordService _passwordService;
+    private readonly IClock _clock;
 
-    public AdminBootstrapService(IPasswordService passwordService)
+    public AdminBootstrapService(IPasswordService passwordService, IClock? clock = null)
     {
         _passwordService = passwordService;
+        _clock = clock ?? new SystemClock();
     }
 
     public async Task<AdminBootstrapResult> BootstrapAsync(ApplicationDbContext db, AdminBootstrapOptions options, CancellationToken cancellationToken)
@@ -77,77 +79,193 @@ public sealed class AdminBootstrapService
         }
 
         var rolesCsv = UserRoles.NormalizeCsv(options.RolesCsv);
-        var admin = await db.Users.FirstOrDefaultAsync(x => x.Email == normalizedEmail, cancellationToken);
-        if (admin is null)
+        await using var transaction = db.Database.IsRelational() && db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+        try
         {
-            db.Users.Add(new User
+            var now = _clock.UtcNow;
+            var admin = await db.Users.FirstOrDefaultAsync(x => x.Email == normalizedEmail, cancellationToken);
+            if (admin is null)
             {
-                Email = normalizedEmail,
-                DisplayName = string.IsNullOrWhiteSpace(options.DisplayName) ? "Platform Admin" : options.DisplayName.Trim(),
-                PasswordHash = _passwordService.Hash(options.Password),
-                RolesCsv = rolesCsv,
-                Status = UserStatus.Active,
-                ReferralCode = $"ADM-{Guid.NewGuid():N}"[..10]
-            });
+                db.Users.Add(new User
+                {
+                    Email = normalizedEmail,
+                    DisplayName = string.IsNullOrWhiteSpace(options.DisplayName) ? "Platform Admin" : options.DisplayName.Trim(),
+                    PasswordHash = _passwordService.Hash(options.Password),
+                    RolesCsv = rolesCsv,
+                    Status = UserStatus.Active,
+                    ReferralCode = $"ADM-{Guid.NewGuid():N}"[..10],
+                    UpdatedAt = now
+                });
+                await db.SaveChangesAsync(cancellationToken);
+                if (transaction is not null)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                }
+                return new AdminBootstrapResult(normalizedEmail, rolesCsv, Created: true, ExistingPasswordReset: true);
+            }
 
-            return new AdminBootstrapResult(normalizedEmail, rolesCsv, Created: true, ExistingPasswordReset: true);
-        }
+            var shouldInvalidateSessions = admin.IsBlocked
+                || admin.Status != UserStatus.Active
+                || !string.Equals(admin.RolesCsv, rolesCsv, StringComparison.Ordinal)
+                || options.ResetExistingPassword;
 
-        var shouldInvalidateSessions = admin.IsBlocked
-            || admin.Status != UserStatus.Active
-            || !string.Equals(admin.RolesCsv, rolesCsv, StringComparison.Ordinal)
-            || options.ResetExistingPassword;
+            admin.RolesCsv = rolesCsv;
+            admin.Status = UserStatus.Active;
+            admin.IsBlocked = false;
+            admin.UpdatedAt = now;
 
-        admin.RolesCsv = rolesCsv;
-        admin.Status = UserStatus.Active;
-        admin.IsBlocked = false;
-        admin.UpdatedAt = DateTimeOffset.UtcNow;
-
-        if (options.ResetExistingPassword)
-        {
-            var now = DateTimeOffset.UtcNow;
-            admin.PasswordHash = _passwordService.Hash(options.Password);
-            var resetState = await db.PasswordResetStates.FirstOrDefaultAsync(x => x.UserId == admin.Id, cancellationToken);
-            if (resetState is null)
+            if (options.ResetExistingPassword)
             {
-                db.PasswordResetStates.Add(new PasswordResetState { UserId = admin.Id, Generation = 1 });
+                admin.PasswordHash = _passwordService.Hash(options.Password);
+                var resetState = await db.PasswordResetStates.FirstOrDefaultAsync(x => x.UserId == admin.Id, cancellationToken);
+                if (resetState is null)
+                {
+                    db.PasswordResetStates.Add(new PasswordResetState
+                    {
+                        UserId = admin.Id,
+                        Generation = 1,
+                        UpdatedAt = now
+                    });
+                }
+                else
+                {
+                    resetState.Generation = checked(resetState.Generation + 1);
+                    resetState.Revision = checked(resetState.Revision + 1);
+                    resetState.UpdatedAt = now;
+                }
+            }
+
+            if (shouldInvalidateSessions)
+            {
+                admin.SessionVersion = checked(admin.SessionVersion + 1);
+            }
+
+            if (!db.Database.IsRelational())
+            {
+                await ApplyNonRelationalInvalidationsAsync(
+                    db,
+                    admin.Id,
+                    options.ResetExistingPassword,
+                    shouldInvalidateSessions,
+                    now,
+                    cancellationToken);
+                await db.SaveChangesAsync(cancellationToken);
             }
             else
             {
-                resetState.Generation = checked(resetState.Generation + 1);
-                resetState.Revision = checked(resetState.Revision + 1);
-                resetState.UpdatedAt = now;
+                await db.SaveChangesAsync(cancellationToken);
+                if (options.ResetExistingPassword)
+                {
+                    await db.PasswordResetTokens
+                        .Where(x => x.UserId == admin.Id && x.UsedAt == null && x.InvalidatedAt == null)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(x => x.InvalidatedAt, now)
+                            .SetProperty(x => x.InvalidationReason, "admin_bootstrap_password_reset")
+                            .SetProperty(x => x.Revision, x => x.Revision + 1)
+                            .SetProperty(x => x.UpdatedAt, now), cancellationToken);
+                    SynchronizeTrackedResetTokens(db, admin.Id, now);
+                }
+
+                if (shouldInvalidateSessions)
+                {
+                    await db.UserRefreshTokens
+                        .Where(x => x.UserId == admin.Id && x.RevokedAt == null)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(x => x.RevokedAt, now)
+                            .SetProperty(x => x.RevocationReason, "admin_bootstrap_session_invalidated")
+                            .SetProperty(x => x.Revision, x => x.Revision + 1)
+                            .SetProperty(x => x.UpdatedAt, now), cancellationToken);
+                    SynchronizeTrackedSessions(db, admin.Id, now);
+                }
             }
 
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+
+            return new AdminBootstrapResult(normalizedEmail, rolesCsv, Created: false, ExistingPasswordReset: options.ResetExistingPassword);
+        }
+        catch
+        {
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+                db.ChangeTracker.Clear();
+            }
+            throw;
+        }
+    }
+
+    private static async Task ApplyNonRelationalInvalidationsAsync(
+        ApplicationDbContext db,
+        Guid adminId,
+        bool invalidateResetTokens,
+        bool invalidateSessions,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (invalidateResetTokens)
+        {
             var resetTokens = await db.PasswordResetTokens
-                .Where(x => x.UserId == admin.Id && x.UsedAt == null && x.InvalidatedAt == null)
+                .Where(x => x.UserId == adminId && x.UsedAt == null && x.InvalidatedAt == null)
                 .ToListAsync(cancellationToken);
             foreach (var resetToken in resetTokens)
             {
-                resetToken.InvalidatedAt = now;
-                resetToken.InvalidationReason = "admin_bootstrap_password_reset";
-                resetToken.Revision = checked(resetToken.Revision + 1);
-                resetToken.UpdatedAt = now;
+                InvalidateResetToken(resetToken, now);
             }
         }
 
-        if (shouldInvalidateSessions)
+        if (invalidateSessions)
         {
-            var now = DateTimeOffset.UtcNow;
-            admin.SessionVersion = checked(admin.SessionVersion + 1);
             var sessions = await db.UserRefreshTokens
-                .Where(x => x.UserId == admin.Id && x.RevokedAt == null)
+                .Where(x => x.UserId == adminId && x.RevokedAt == null)
                 .ToListAsync(cancellationToken);
             foreach (var session in sessions)
             {
-                session.RevokedAt = now;
-                session.RevocationReason = "admin_bootstrap_session_invalidated";
-                session.Revision = checked(session.Revision + 1);
-                session.UpdatedAt = now;
+                InvalidateSession(session, now);
             }
         }
+    }
 
-        return new AdminBootstrapResult(normalizedEmail, rolesCsv, Created: false, ExistingPasswordReset: options.ResetExistingPassword);
+    private static void SynchronizeTrackedResetTokens(ApplicationDbContext db, Guid adminId, DateTimeOffset now)
+    {
+        foreach (var entry in db.ChangeTracker.Entries<PasswordResetToken>()
+                     .Where(x => x.Entity.UserId == adminId && x.Entity.UsedAt is null && x.Entity.InvalidatedAt is null))
+        {
+            InvalidateResetToken(entry.Entity, now);
+            entry.OriginalValues.SetValues(entry.CurrentValues);
+            entry.State = EntityState.Unchanged;
+        }
+    }
+
+    private static void SynchronizeTrackedSessions(ApplicationDbContext db, Guid adminId, DateTimeOffset now)
+    {
+        foreach (var entry in db.ChangeTracker.Entries<UserRefreshToken>()
+                     .Where(x => x.Entity.UserId == adminId && x.Entity.RevokedAt is null))
+        {
+            InvalidateSession(entry.Entity, now);
+            entry.OriginalValues.SetValues(entry.CurrentValues);
+            entry.State = EntityState.Unchanged;
+        }
+    }
+
+    private static void InvalidateResetToken(PasswordResetToken resetToken, DateTimeOffset now)
+    {
+        resetToken.InvalidatedAt = now;
+        resetToken.InvalidationReason = "admin_bootstrap_password_reset";
+        resetToken.Revision = checked(resetToken.Revision + 1);
+        resetToken.UpdatedAt = now;
+    }
+
+    private static void InvalidateSession(UserRefreshToken session, DateTimeOffset now)
+    {
+        session.RevokedAt = now;
+        session.RevocationReason = "admin_bootstrap_session_invalidated";
+        session.Revision = checked(session.Revision + 1);
+        session.UpdatedAt = now;
     }
 
     private static string NormalizeEmail(string value) => value.Trim().ToLowerInvariant();

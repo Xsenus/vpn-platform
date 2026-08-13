@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +16,44 @@ namespace VpnPlatform.UnitTests;
 
 public class PanelWorkerIsolationTests
 {
+    [Fact]
+    public async Task Health_Worker_Should_Handle_Empty_Sqlite_Panel_List()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var services = CreateServices(
+            new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options,
+            new WorkerX3UiClient(),
+            new ConditionalSecretProtector());
+        using (var scope = services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.EnsureCreatedAsync();
+        }
+
+        var worker = new PanelHealthWorker(services.GetRequiredService<IServiceScopeFactory>(), NullLogger<PanelHealthWorker>.Instance);
+
+        await worker.ProcessIterationAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Sync_Worker_Should_Handle_Empty_Sqlite_Panel_List()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var services = CreateServices(
+            new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options,
+            new WorkerX3UiClient(),
+            new ConditionalSecretProtector());
+        using (var scope = services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.EnsureCreatedAsync();
+        }
+
+        var worker = new PanelSyncWorker(services.GetRequiredService<IServiceScopeFactory>(), NullLogger<PanelSyncWorker>.Instance);
+
+        await worker.ProcessIterationAsync(CancellationToken.None);
+    }
+
     [Fact]
     public async Task Health_Worker_Should_Continue_After_One_Panel_Fails_Before_Client_Call()
     {
@@ -103,6 +142,11 @@ public class PanelWorkerIsolationTests
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName)
             .Options;
+        return CreateServices(options, client, protector);
+    }
+
+    private static ServiceProvider CreateServices(DbContextOptions<ApplicationDbContext> options, IX3UiClient client, ISecretProtector protector)
+    {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["Vpn:X3Ui:Mode"] = "Production" })
             .Build();
