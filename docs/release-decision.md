@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1486/1486`.
+- Backend full suite: `1490/1490`.
 - API Release build: OK.
 - Frontend unit tests: `172/172`.
 - Frontend typecheck/build: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-13-sqlite-temporal-repair-preflight`, версия `0.708.0`; SQLite migration preflight/local repair использует chronological deduplication для Telegram/payment/panel sync. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `722/742` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-13-sqlite-outbox-provisioning-temporal-preflight`, версия `0.709.0`; SQLite migration preflight/local repair использует chronological deduplication для outbox/provisioning conflicts. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `723/743` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

@@ -1,4 +1,5 @@
 using System.Data;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Application.Common;
 
@@ -14,6 +15,20 @@ public static class LocalSqliteSchemaRepair
         }
 
         var prepared = 0;
+        if (await TableExistsAsync(db, "OutboxMessages", cancellationToken)
+            && !await IndexIsUniqueAsync(db, "OutboxMessages", "IX_OutboxMessages_Type_CorrelationId", cancellationToken)
+            && await NormalizeDuplicateOutboxCreatedAtAsync(db, cancellationToken))
+        {
+            prepared++;
+        }
+
+        if (await TableExistsAsync(db, "ProvisioningRuns", cancellationToken)
+            && !await IndexIsUniqueAsync(db, "ProvisioningRuns", "IX_ProvisioningRuns_Active_NodeId", cancellationToken)
+            && await NormalizeDuplicateActiveProvisioningCreatedAtAsync(db, cancellationToken))
+        {
+            prepared++;
+        }
+
         if (await TableExistsAsync(db, "TelegramAccounts", cancellationToken)
             && !await IndexIsUniqueAsync(db, "TelegramAccounts", "IX_TelegramAccounts_UserId", cancellationToken))
         {
@@ -581,7 +596,7 @@ public static class LocalSqliteSchemaRepair
                         PARTITION BY "NodeId"
                         ORDER BY
                             CASE WHEN "Status" IN (1, 9, 13) THEN 0 ELSE 1 END,
-                            "CreatedAt",
+                            julianday("CreatedAt"),
                             "Id") AS active_rank
                 FROM "ProvisioningRuns"
                 WHERE "Status" IN (0, 1, 8, 9, 12, 13, 15)
@@ -605,6 +620,90 @@ public static class LocalSqliteSchemaRepair
             DROP TABLE "__DuplicateActiveProvisioningRuns";
             """,
             cancellationToken);
+    }
+
+    private static Task<bool> NormalizeDuplicateOutboxCreatedAtAsync(
+        ApplicationDbContext db,
+        CancellationToken cancellationToken)
+        => NormalizeCreatedAtAsync(
+            db,
+            """
+            SELECT message."Id", message."CreatedAt"
+            FROM "OutboxMessages" AS message
+            WHERE EXISTS (
+                SELECT 1
+                FROM "OutboxMessages" AS duplicate
+                WHERE duplicate."Type" = message."Type"
+                  AND duplicate."CorrelationId" = message."CorrelationId"
+                  AND duplicate."Id" <> message."Id")
+            """,
+            "OutboxMessages",
+            cancellationToken);
+
+    private static Task<bool> NormalizeDuplicateActiveProvisioningCreatedAtAsync(
+        ApplicationDbContext db,
+        CancellationToken cancellationToken)
+        => NormalizeCreatedAtAsync(
+            db,
+            """
+            SELECT run."Id", run."CreatedAt"
+            FROM "ProvisioningRuns" AS run
+            WHERE run."Status" IN (0, 1, 8, 9, 12, 13, 15)
+              AND EXISTS (
+                  SELECT 1
+                  FROM "ProvisioningRuns" AS duplicate
+                  WHERE duplicate."NodeId" = run."NodeId"
+                    AND duplicate."Status" IN (0, 1, 8, 9, 12, 13, 15)
+                    AND duplicate."Id" <> run."Id")
+            """,
+            "ProvisioningRuns",
+            cancellationToken);
+
+    private static async Task<bool> NormalizeCreatedAtAsync(
+        ApplicationDbContext db,
+        string selectSql,
+        string tableName,
+        CancellationToken cancellationToken)
+    {
+        await EnsureOpenAsync(db, cancellationToken);
+        var rows = new List<(string Id, string CreatedAt)>();
+        await using (var select = db.Database.GetDbConnection().CreateCommand())
+        {
+            select.CommandText = selectSql;
+            await using var reader = await select.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                rows.Add((reader.GetString(0), reader.GetString(1)));
+            }
+        }
+
+        var changed = false;
+        foreach (var row in rows)
+        {
+            if (!DateTimeOffset.TryParse(
+                    row.CreatedAt,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind,
+                    out var parsed))
+            {
+                throw new InvalidOperationException($"SQLite {tableName}.CreatedAt contains an invalid timestamp for migration preflight.");
+            }
+
+            var canonical = parsed.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+            if (string.Equals(canonical, row.CreatedAt, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            await using var update = db.Database.GetDbConnection().CreateCommand();
+            update.CommandText = $"UPDATE \"{tableName}\" SET \"CreatedAt\" = $createdAt WHERE \"Id\" = $id";
+            AddParameter(update, "$createdAt", canonical);
+            AddParameter(update, "$id", row.Id);
+            await update.ExecuteNonQueryAsync(cancellationToken);
+            changed = true;
+        }
+
+        return changed;
     }
 
     private static async Task BackfillTelegramNotificationDeduplicationKeysAsync(

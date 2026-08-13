@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.709.0 - 2026-08-13
+
+Release entry: `2026-08-13-sqlite-outbox-provisioning-temporal-preflight`.
+
+### Исправлено
+
+- SQLite upgrade больше не сохраняет более поздний outbox event или provisioning run из-за лексикографической сортировки одинаковых correlation/node записей с разными UTC offsets.
+- Local schema repair выбирает oldest queued provisioning run по фактическому моменту времени через `julianday`.
+
+### Улучшено
+
+- Migration preflight канонизирует в UTC только `CreatedAt` конфликтующих outbox/provisioning групп перед immutable historical migrations; обычные строки и PostgreSQL path не изменены.
+- Некорректный timestamp в конфликтующей группе останавливает upgrade fail-closed вместо недетерминированной дедупликации.
+
+### Проверено
+
+- Fail-first upgrade regressions `0/2` подтвердили отсутствие preflight; after-fix local repair/upgrade `15/15`, backend Debug/Release `1490/1490`, frontend `172/172`, полный Playwright `268/268`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `723/743` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.708.0 - 2026-08-13
 
 Release entry: `2026-08-13-sqlite-temporal-repair-preflight`.

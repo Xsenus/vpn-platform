@@ -1,5 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.Persistence;
@@ -263,6 +265,196 @@ public class LocalSqliteSchemaRepairTests
     }
 
     [Fact]
+    public async Task ApplyAsync_Should_Preserve_Oldest_Queued_Provisioning_Run_Across_Mixed_Offsets()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "ProvisioningRuns" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "CreatedAt" TEXT NOT NULL,
+                "UpdatedAt" TEXT NOT NULL,
+                "NodeId" TEXT NOT NULL,
+                "Status" INTEGER NOT NULL,
+                "RequestedByUserId" TEXT NULL,
+                "DryRun" INTEGER NOT NULL,
+                "StartedAt" TEXT NOT NULL,
+                "FinishedAt" TEXT NULL,
+                "ExecutionLog" TEXT NOT NULL
+            );
+            """);
+        var nodeId = Guid.NewGuid();
+        var olderId = Guid.NewGuid();
+        var newerId = Guid.NewGuid();
+        var olderInstant = new DateTimeOffset(2026, 8, 4, 10, 0, 0, TimeSpan.FromHours(5));
+        var newerInstant = new DateTimeOffset(2026, 8, 4, 8, 0, 0, TimeSpan.Zero);
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "ProvisioningRuns"
+                ("Id", "CreatedAt", "UpdatedAt", "NodeId", "Status", "RequestedByUserId", "DryRun", "StartedAt", "FinishedAt", "ExecutionLog")
+            VALUES
+                ({olderId}, {olderInstant}, {olderInstant}, {nodeId}, 8, NULL, 1, {olderInstant}, NULL, 'older'),
+                ({newerId}, {newerInstant}, {newerInstant}, {nodeId}, 8, NULL, 1, {newerInstant}, NULL, 'newer');
+            """);
+
+        Assert.Equal(6, await LocalSqliteSchemaRepair.ApplyAsync(db));
+
+        var runs = await db.ProvisioningRuns.AsNoTracking().ToDictionaryAsync(x => x.Id);
+        Assert.Equal(ProvisioningRunStatus.PrecheckQueued, runs[olderId].Status);
+        Assert.Equal(ProvisioningRunStatus.PrecheckFailed, runs[newerId].Status);
+        Assert.Contains("quarantined", runs[newerId].LastError, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task PrepareMigrationsAsync_Should_Preserve_Oldest_Outbox_Duplicate_Across_Mixed_Offsets()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        var migrator = db.GetService<IMigrator>();
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "OutboxMessages" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "CreatedAt" TEXT NOT NULL,
+                "UpdatedAt" TEXT NOT NULL,
+                "Type" TEXT NOT NULL,
+                "PayloadJson" TEXT NOT NULL,
+                "CorrelationId" TEXT NOT NULL,
+                "Attempts" INTEGER NOT NULL,
+                "ProcessedAt" TEXT NULL,
+                "LastError" TEXT NULL
+            );
+            CREATE INDEX "IX_OutboxMessages_Type_CorrelationId"
+                ON "OutboxMessages" ("Type", "CorrelationId");
+            """);
+        await MarkMigrationsBeforeAsync(db, "20260804131342_OutboxDispatchRecovery");
+
+        var olderId = Guid.NewGuid();
+        var newerId = Guid.NewGuid();
+        var olderInstant = new DateTimeOffset(2026, 8, 4, 10, 0, 0, TimeSpan.FromHours(5));
+        var newerInstant = new DateTimeOffset(2026, 8, 4, 8, 0, 0, TimeSpan.Zero);
+        var payloadJson = "{}";
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "OutboxMessages"
+                ("Id", "CreatedAt", "UpdatedAt", "Type", "PayloadJson", "CorrelationId", "Attempts", "ProcessedAt", "LastError")
+            VALUES
+                ({olderId}, {olderInstant}, {olderInstant}, 'NotificationRequested', {payloadJson}, 'mixed-offset', 0, NULL, NULL),
+                ({newerId}, {newerInstant}, {newerInstant}, 'NotificationRequested', {payloadJson}, 'mixed-offset', 0, NULL, NULL);
+            """);
+
+        Assert.Equal(1, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db));
+        await migrator.MigrateAsync("20260804131342_OutboxDispatchRecovery");
+
+        var messages = await db.OutboxMessages.AsNoTracking().ToDictionaryAsync(x => x.Id);
+        Assert.Equal("mixed-offset", messages[olderId].CorrelationId);
+        Assert.Null(messages[olderId].FailedAt);
+        Assert.StartsWith("legacy:", messages[newerId].CorrelationId, StringComparison.Ordinal);
+        Assert.NotNull(messages[newerId].FailedAt);
+    }
+
+    [Fact]
+    public async Task PrepareMigrationsAsync_Should_Fail_Closed_On_Invalid_Duplicate_Timestamp()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "OutboxMessages" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "Type" TEXT NOT NULL,
+                "CorrelationId" TEXT NOT NULL,
+                "CreatedAt" TEXT NOT NULL
+            );
+            CREATE INDEX "IX_OutboxMessages_Type_CorrelationId"
+                ON "OutboxMessages" ("Type", "CorrelationId");
+            INSERT INTO "OutboxMessages" ("Id", "Type", "CorrelationId", "CreatedAt")
+            VALUES
+                ('11111111-1111-1111-1111-111111111111', 'NotificationRequested', 'invalid-time', 'not-a-timestamp'),
+                ('22222222-2222-2222-2222-222222222222', 'NotificationRequested', 'invalid-time', '2026-08-04T08:00:00.0000000+00:00');
+            """);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => LocalSqliteSchemaRepair.PrepareMigrationsAsync(db));
+
+        Assert.Contains("invalid timestamp", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task PrepareMigrationsAsync_Should_Preserve_Oldest_Queued_Provisioning_Run_Across_Mixed_Offsets()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        var migrator = db.GetService<IMigrator>();
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "ProvisioningRuns" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "CreatedAt" TEXT NOT NULL,
+                "UpdatedAt" TEXT NOT NULL,
+                "NodeId" TEXT NOT NULL,
+                "Status" INTEGER NOT NULL,
+                "RequestedByUserId" TEXT NULL,
+                "DryRun" INTEGER NOT NULL,
+                "StartedAt" TEXT NOT NULL,
+                "FinishedAt" TEXT NULL,
+                "ExecutionLog" TEXT NOT NULL
+            );
+            """);
+        await MarkMigrationsBeforeAsync(db, "20260804134818_ProvisioningWorkerRecovery");
+
+        var nodeId = Guid.NewGuid();
+        var olderId = Guid.NewGuid();
+        var newerId = Guid.NewGuid();
+        var olderInstant = new DateTimeOffset(2026, 8, 4, 10, 0, 0, TimeSpan.FromHours(5));
+        var newerInstant = new DateTimeOffset(2026, 8, 4, 8, 0, 0, TimeSpan.Zero);
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "ProvisioningRuns"
+                ("Id", "CreatedAt", "UpdatedAt", "NodeId", "Status", "RequestedByUserId", "DryRun", "StartedAt", "FinishedAt", "ExecutionLog")
+            VALUES
+                ({olderId}, {olderInstant}, {olderInstant}, {nodeId}, 8, NULL, 1, {olderInstant}, NULL, 'older'),
+                ({newerId}, {newerInstant}, {newerInstant}, {nodeId}, 8, NULL, 1, {newerInstant}, NULL, 'newer');
+            """);
+
+        Assert.Equal(1, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db));
+        await migrator.MigrateAsync("20260804134818_ProvisioningWorkerRecovery");
+
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT "Id", "Status", "LastError"
+            FROM "ProvisioningRuns"
+            ORDER BY "Id";
+            """;
+        await using var reader = await command.ExecuteReaderAsync();
+        var statuses = new Dictionary<Guid, (long Status, string? LastError)>();
+        while (await reader.ReadAsync())
+        {
+            statuses[Guid.Parse(reader.GetString(0))] = (reader.GetInt64(1), reader.IsDBNull(2) ? null : reader.GetString(2));
+        }
+
+        Assert.Equal((long)ProvisioningRunStatus.PrecheckQueued, statuses[olderId].Status);
+        Assert.Null(statuses[olderId].LastError);
+        Assert.Equal((long)ProvisioningRunStatus.PrecheckFailed, statuses[newerId].Status);
+        Assert.Contains("quarantined", statuses[newerId].LastError, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task ApplyAsync_Should_Add_Subscription_Lifecycle_Recovery_Columns()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -506,6 +698,24 @@ public class LocalSqliteSchemaRepairTests
             CreatedAt = new DateTimeOffset(2026, 8, 4, 13, 0, 0, TimeSpan.Zero),
             UpdatedAt = new DateTimeOffset(2026, 8, 4, 13, 0, 0, TimeSpan.Zero)
         };
+
+    private static async Task MarkMigrationsBeforeAsync(ApplicationDbContext db, string targetMigration)
+    {
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "__EFMigrationsHistory" (
+                "MigrationId" TEXT NOT NULL CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY,
+                "ProductVersion" TEXT NOT NULL
+            );
+            """);
+        foreach (var migration in db.Database.GetMigrations().TakeWhile(x => x != targetMigration))
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+                VALUES ({migration}, '9.0.16');
+                """);
+        }
+    }
 
     private static async Task<bool> ColumnExistsAsync(SqliteConnection connection, string tableName, string columnName)
     {

@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: SQLite outbox/provisioning temporal preflight
+
+Scope:
+- Historical SQLite outbox/provisioning migrations должны сохранять oldest duplicate по фактическому моменту времени при mixed UTC offsets.
+- Immutable migrations, PostgreSQL path и non-conflicting local rows не должны изменяться.
+
+Results:
+- Roadmap progress: `723/743` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-sqlite-outbox-provisioning-temporal-preflight`, version `0.709.0`.
+- Fail-first: оба upgrade fixture получили `PrepareMigrationsAsync = 0`; historical text ordering сохранял бы более поздний outbox event/provisioning run.
+- After fix: preflight канонизирует только duplicate-group `CreatedAt` в UTC, historical migrations выполняют прежнюю quarantine semantics, local provisioning repair использует `julianday`, invalid timestamp отклоняется; local repair/upgrade `15/15`, backend Debug/Release `1490/1490`, frontend `172/172`, полный Playwright `268/268` за `12.5 min`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: SQLite temporal repair preflight
 
 Scope:

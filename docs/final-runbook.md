@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-13 локально подтверждено:
 
-- backend full suite: 1486/1486;
+- backend full suite: 1490/1490;
 - frontend tests: 172/172;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-13-sqlite-temporal-repair-preflight`, версия `0.708.0`; SQLite migration preflight/local repair хронологически дедуплицирует Telegram links, panel sync runs и default payment accounts.
-- roadmap progress: `722/742` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-13-sqlite-outbox-provisioning-temporal-preflight`, версия `0.709.0`; SQLite migration preflight хронологически дедуплицирует outbox/provisioning conflicts при mixed offsets.
+- roadmap progress: `723/743` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

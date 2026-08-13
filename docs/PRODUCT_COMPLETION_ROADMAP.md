@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-13.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-sqlite-temporal-repair-preflight`, версия `0.708.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `722/742` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-sqlite-outbox-provisioning-temporal-preflight`, версия `0.709.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `723/743` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-13:
 
-- [x] `STATE-001` Backend test suite проходит: `1486/1486`.
+- [x] `STATE-001` Backend test suite проходит: `1490/1490`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2584,6 +2584,10 @@ git diff --check
   - Что сделать: local repair и SQLite migration path должны сохранять newest Telegram link/default payment account и oldest active panel sync по фактическому моменту времени; historical migrations и PostgreSQL ordering должны остаться неизменными.
   - Что сделано: startup вызывает SQLite preflight перед `MigrateAsync`; общий repair использует `julianday` и `Id` tie-break для трех deduplication boundaries, а local repair восстанавливает отсутствующий unique default-payment index. Historical migrations не изменены.
   - Доказательство: fail-first mixed-offset regressions `3/3` выбрали неверные записи; after-fix targeted `23/23`, backend Debug/Release `1486/1486`, frontend `172/172`, docs/current-state/encoding `46/46`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой.
+- [x] `P11-ACC-432` Исправить mixed-offset survivor в historical SQLite outbox/provisioning migrations. 2026-08-13.
+  - Что сделать: migration startup и local repair должны сохранять oldest outbox event/queued provisioning run по фактическому моменту времени, а не по текстовому представлению UTC offset; historical migrations и PostgreSQL path должны остаться неизменными.
+  - Что сделано: preflight канонизирует в UTC только `CreatedAt` конфликтующих outbox/provisioning групп до `MigrateAsync`; historical migrations выполняют прежнюю quarantine semantics над хронологически сопоставимыми значениями. Local provisioning repair использует `julianday(CreatedAt)`; некорректный timestamp останавливает upgrade fail-closed.
+  - Доказательство: fail-first upgrade regressions `0/2` получили `PrepareMigrationsAsync = 0`; after-fix local repair/upgrade `15/15`, backend Debug/Release `1490/1490`, frontend `172/172`, полный Playwright `268/268` за `12.5 min`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
