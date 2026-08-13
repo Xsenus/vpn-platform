@@ -1406,10 +1406,11 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             access = await _db.AccessCredentials.AsNoTracking().FirstOrDefaultAsync(x => x.Id == activation.AccessId.Value, cancellationToken);
         }
 
-        access ??= await _db.AccessCredentials.AsNoTracking()
-            .Where(x => x.SubscriptionId == activation.SubscriptionId)
-            .OrderByDescending(x => x.IssuedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+        access ??= await ProviderAwareTemporalQueries.GetLatestAccessCredentialAsync(
+            _db,
+            activation.SubscriptionId,
+            activeOnly: false,
+            cancellationToken);
 
         var tariffName = subscription?.Tariff?.Name ?? order.TariffId.ToString("N")[..8];
         var expiresAt = subscription is null ? "—" : subscription.EndAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + " UTC";

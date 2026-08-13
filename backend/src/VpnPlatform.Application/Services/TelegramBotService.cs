@@ -1439,7 +1439,20 @@ public class TelegramBotService
             return new RouteResult($"Не удалось создать платёж через {PaymentProviderDisplayName(provider)}. Повторите попытку позже или обратитесь в поддержку.", chatId, await BuildPaymentProvidersKeyboardAsync(orderId, cancellationToken));
         }
 
-        var payment = await _db.Payments.AsNoTracking().Where(x => x.ProviderPaymentId == init.Value.PaymentId).OrderByDescending(x => x.CreatedAt).FirstOrDefaultAsync(cancellationToken);
+        var paymentQuery = UsesSqlite
+            ? _db.Payments.FromSqlInterpolated($"""
+                SELECT *
+                FROM "Payments"
+                WHERE "ProviderPaymentId" = {init.Value.PaymentId}
+                ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                LIMIT 1
+                """)
+            : _db.Payments
+                .Where(x => x.ProviderPaymentId == init.Value.PaymentId)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(1);
+        var payment = await paymentQuery.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
         await SetSessionStateAsync(account.TelegramUserId, BotStates.WaitingForPayment, JsonSerializer.SerializeToNode(new { orderId, provider = provider.ToString(), paymentId = payment?.Id })!.ToJsonString(JsonOptions), cancellationToken);
         await QueueTelegramNotificationAsync(account.TelegramUserId, "payment_pending", $"Платеж ожидает оплаты через {provider}. Заказ {orderId}.", cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
@@ -1972,12 +1985,11 @@ public class TelegramBotService
             return "Сначала зарегистрируйтесь через Telegram или привяжите аккаунт.";
         }
 
-        var subscriptions = await _db.Subscriptions.AsNoTracking()
-            .Include(x => x.Tariff)
-            .Where(x => x.UserId == account.UserId.Value)
-            .OrderByDescending(x => x.EndAt)
-            .Take(5)
-            .ToListAsync(cancellationToken);
+        var subscriptions = await GetRecentSubscriptionsAsync(
+            account.UserId.Value,
+            activeOnly: false,
+            limit: 5,
+            cancellationToken);
         if (subscriptions.Count == 0)
         {
             return "Активных подписок пока нет. Нажмите «Купить VPN», чтобы выбрать тариф.";
@@ -1992,6 +2004,51 @@ public class TelegramBotService
         return "Мои подписки:\n\n" + string.Join("\n\n", lines);
     }
 
+    private async Task<List<Subscription>> GetRecentSubscriptionsAsync(
+        Guid userId,
+        bool activeOnly,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        IQueryable<Subscription> query;
+        if (UsesSqlite)
+        {
+            query = activeOnly
+                ? _db.Subscriptions.FromSqlInterpolated($"""
+                    SELECT *
+                    FROM "Subscriptions"
+                    WHERE "UserId" = {userId}
+                      AND "Status" = {SubscriptionStatus.Active}
+                    ORDER BY julianday("EndAt") DESC, "Id" DESC
+                    LIMIT {limit}
+                    """)
+                : _db.Subscriptions.FromSqlInterpolated($"""
+                    SELECT *
+                    FROM "Subscriptions"
+                    WHERE "UserId" = {userId}
+                    ORDER BY julianday("EndAt") DESC, "Id" DESC
+                    LIMIT {limit}
+                    """);
+        }
+        else
+        {
+            query = _db.Subscriptions.Where(x => x.UserId == userId);
+            if (activeOnly)
+            {
+                query = query.Where(x => x.Status == SubscriptionStatus.Active);
+            }
+
+            query = query
+                .OrderByDescending(x => x.EndAt)
+                .ThenByDescending(x => x.Id)
+                .Take(limit);
+        }
+
+        return await query.AsNoTracking()
+            .Include(x => x.Tariff)
+            .ToListAsync(cancellationToken);
+    }
+
     private async Task<string> BuildOrdersTextAsync(TelegramAccount account, CancellationToken cancellationToken)
     {
         if (!account.UserId.HasValue)
@@ -1999,11 +2056,20 @@ public class TelegramBotService
             return "Сначала зарегистрируйтесь через Telegram или привяжите аккаунт.";
         }
 
-        var orders = await _db.Orders.AsNoTracking()
-            .Where(x => x.UserId == account.UserId.Value)
-            .OrderByDescending(x => x.CreatedAt)
-            .Take(5)
-            .ToListAsync(cancellationToken);
+        var ordersQuery = UsesSqlite
+            ? _db.Orders.FromSqlInterpolated($"""
+                SELECT *
+                FROM "Orders"
+                WHERE "UserId" = {account.UserId.Value}
+                ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                LIMIT 5
+                """)
+            : _db.Orders
+                .Where(x => x.UserId == account.UserId.Value)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(5);
+        var orders = await ordersQuery.AsNoTracking().ToListAsync(cancellationToken);
         return orders.Count == 0
             ? "Заказов пока нет."
             : string.Join("\n", orders.Select(x => $"Заказ {x.Id}: {x.Status}, {x.Amount:0.00} {x.Currency}"));
@@ -2016,22 +2082,30 @@ public class TelegramBotService
             return "Сначала зарегистрируйтесь через Telegram или привяжите аккаунт.";
         }
 
-        var activeSubscriptions = await _db.Subscriptions.AsNoTracking()
-            .Include(x => x.Tariff)
-            .Where(x => x.UserId == account.UserId.Value && x.Status == SubscriptionStatus.Active)
-            .OrderByDescending(x => x.EndAt)
-            .Take(3)
-            .ToListAsync(cancellationToken);
+        var activeSubscriptions = await GetRecentSubscriptionsAsync(
+            account.UserId.Value,
+            activeOnly: true,
+            limit: 3,
+            cancellationToken);
         if (activeSubscriptions.Count == 0)
         {
             return "Активных подписок пока нет. Нажмите «Купить VPN», чтобы выбрать тариф.";
         }
 
         var subscriptionIds = activeSubscriptions.Select(x => x.Id).ToList();
-        var accesses = await _db.AccessCredentials.AsNoTracking()
-            .Where(x => subscriptionIds.Contains(x.SubscriptionId) && x.Status == AccessCredentialStatus.Active)
-            .OrderByDescending(x => x.IssuedAt)
-            .ToListAsync(cancellationToken);
+        var accesses = new List<AccessCredential>(activeSubscriptions.Count);
+        foreach (var subscription in activeSubscriptions)
+        {
+            var access = await ProviderAwareTemporalQueries.GetLatestAccessCredentialAsync(
+                _db,
+                subscription.Id,
+                activeOnly: true,
+                cancellationToken);
+            if (access is not null)
+            {
+                accesses.Add(access);
+            }
+        }
         var clients = await _db.VpnClients.AsNoTracking()
             .Where(x => subscriptionIds.Contains(x.SubscriptionId))
             .ToListAsync(cancellationToken);
@@ -2205,16 +2279,33 @@ public class TelegramBotService
     }
 
     private async Task<List<Subscription>> GetRenewableSubscriptionsAsync(Guid userId, CancellationToken cancellationToken)
-        => await _db.Subscriptions.AsNoTracking()
+    {
+        var query = UsesSqlite
+            ? _db.Subscriptions.FromSqlInterpolated($"""
+                SELECT s.*
+                FROM "Subscriptions" AS s
+                INNER JOIN "Tariffs" AS t ON t."Id" = s."TariffId"
+                WHERE s."UserId" = {userId}
+                  AND s."Status" <> {SubscriptionStatus.Cancelled}
+                  AND s."Status" <> {SubscriptionStatus.Blocked}
+                  AND t."IsActive" = 1
+                ORDER BY julianday(s."EndAt") DESC, s."Id" DESC
+                LIMIT 5
+                """)
+            : _db.Subscriptions
+                .Where(x => x.UserId == userId
+                    && x.Status != SubscriptionStatus.Cancelled
+                    && x.Status != SubscriptionStatus.Blocked
+                    && x.Tariff != null
+                    && x.Tariff.IsActive)
+                .OrderByDescending(x => x.EndAt)
+                .ThenByDescending(x => x.Id)
+                .Take(5);
+
+        return await query.AsNoTracking()
             .Include(x => x.Tariff)
-            .Where(x => x.UserId == userId
-                && x.Status != SubscriptionStatus.Cancelled
-                && x.Status != SubscriptionStatus.Blocked
-                && x.Tariff != null
-                && x.Tariff.IsActive)
-            .OrderByDescending(x => x.EndAt)
-            .Take(5)
             .ToListAsync(cancellationToken);
+    }
 
     private async Task<string> BuildProfileTextAsync(TelegramAccount account, CancellationToken cancellationToken)
     {
@@ -2252,10 +2343,11 @@ public class TelegramBotService
             access = await _db.AccessCredentials.AsNoTracking().FirstOrDefaultAsync(x => x.Id == activation.AccessId.Value, cancellationToken);
         }
 
-        access ??= await _db.AccessCredentials.AsNoTracking()
-            .Where(x => x.SubscriptionId == activation.SubscriptionId)
-            .OrderByDescending(x => x.IssuedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+        access ??= await ProviderAwareTemporalQueries.GetLatestAccessCredentialAsync(
+            _db,
+            activation.SubscriptionId,
+            activeOnly: false,
+            cancellationToken);
 
         var tariffName = subscription?.Tariff?.Name ?? order.TariffId.ToString("N")[..8];
         var until = subscription is null ? "—" : subscription.EndAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + " UTC";
@@ -2374,10 +2466,22 @@ public class TelegramBotService
 
     private async Task EnsureSupportConversationAsync(TelegramAccount account, string text, string attachmentsJson, bool isInternalNote, CancellationToken cancellationToken)
     {
-        var conversation = await _db.SupportConversations
+        var conversationQuery = UsesSqlite
+            ? _db.SupportConversations.FromSqlInterpolated($"""
+                SELECT *
+                FROM "SupportConversations"
+                WHERE "TelegramUserId" = {account.TelegramUserId}
+                  AND ("Status" = 'open' OR "Status" = 'pending')
+                ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                LIMIT 1
+                """)
+            : _db.SupportConversations
+                .Where(x => x.TelegramUserId == account.TelegramUserId && (x.Status == "open" || x.Status == "pending"))
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(1);
+        var conversation = await conversationQuery
             .Include(x => x.Messages)
-            .Where(x => x.TelegramUserId == account.TelegramUserId && (x.Status == "open" || x.Status == "pending"))
-            .OrderByDescending(x => x.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
         var isExistingConversation = conversation is not null;
@@ -2707,6 +2811,10 @@ public class TelegramBotService
             }
         }
     }
+
+    private bool UsesSqlite
+        => _db is DbContext dbContext
+            && string.Equals(dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.Sqlite", StringComparison.Ordinal);
 
     private sealed record RouteResult(
         string ResponseText,

@@ -16556,5 +16556,28 @@
         "text": "Roadmap progress is 718/738 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-telegram-payment-sqlite-temporal-boundaries",
+    "version": "0.705.0",
+    "releasedAt": "2026-08-13T19:01:40+07:00",
+    "title": "Telegram и платежные запросы стабильно работают на SQLite",
+    "summary": "Платежные уведомления и основные сценарии Telegram используют provider-aware temporal queries без неподдерживаемого DateTimeOffset ORDER BY.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Формирование Telegram payload после успешной оплаты больше не падает на SQLite при поиске последнего VPN-ключа."
+      },
+      {
+        "type": "improved",
+        "text": "Платежная ссылка, списки заказов, подписок и ключей, продление и поддержка используют parameterized julianday queries с DB-side LIMIT и стабильным Id tie-break."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 719/739 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

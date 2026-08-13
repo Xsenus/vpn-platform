@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-13-admin-bootstrap-sqlite-runtime-boundaries";
-    private const string CurrentVersion = "0.704.0";
+    private const string CurrentReleaseId = "2026-08-13-telegram-payment-sqlite-temporal-boundaries";
+    private const string CurrentVersion = "0.705.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -17,7 +17,8 @@ public class RoadmapCurrentStateTests
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
 
         Assert.Contains("Дата актуализации: 2026-08-13", roadmap, StringComparison.Ordinal);
-        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1480/1480`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1483/1483`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `P11-ACC-428`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-427`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-426`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-425`", roadmap, StringComparison.Ordinal);
@@ -353,9 +354,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("1480/1480", readme, StringComparison.Ordinal);
-        Assert.Contains("1480/1480", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("1480/1480", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("1483/1483", readme, StringComparison.Ordinal);
+        Assert.Contains("1483/1483", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("1483/1483", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,

@@ -514,6 +514,101 @@ public class TelegramBotPurchaseFlowTests
     }
 
     [Fact]
+    public async Task Account_Views_Renewal_And_Existing_Support_Should_Work_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        var service = CreateBot(db);
+        var now = new FixedClock().UtcNow;
+
+        await service.ProcessUpdateAsync(Update(600, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(601, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(602, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(603, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        var user = await db.Users.SingleAsync();
+        var node = await db.VpnNodes.SingleAsync();
+        var subscription = new Subscription
+        {
+            UserId = user.Id,
+            TariffId = tariff.Id,
+            Status = SubscriptionStatus.Active,
+            StartAt = now,
+            EndAt = now.AddDays(30)
+        };
+        db.Subscriptions.Add(subscription);
+        db.AccessCredentials.AddRange(
+            new AccessCredential
+            {
+                SubscriptionId = subscription.Id,
+                ServerId = node.Id,
+                ProviderAccessId = "sqlite-old",
+                AccessUri = "vless://sqlite-old",
+                Status = AccessCredentialStatus.Active,
+                IssuedAt = now.AddMinutes(-5)
+            },
+            new AccessCredential
+            {
+                SubscriptionId = subscription.Id,
+                ServerId = node.Id,
+                ProviderAccessId = "sqlite-latest",
+                AccessUri = "vless://sqlite-latest",
+                Status = AccessCredentialStatus.Active,
+                IssuedAt = now
+            });
+        await db.SaveChangesAsync();
+
+        var orders = await service.ProcessUpdateAsync(Update(604, "/orders"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var subscriptions = await service.ProcessUpdateAsync(Update(605, "/subscriptions"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var keys = await service.ProcessUpdateAsync(CallbackUpdate(606, "keys"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var renewal = await service.ProcessUpdateAsync(CallbackUpdate(607, "renew"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(Update(608, "/support"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(Update(609, "Первое обращение"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(Update(610, "/support"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var support = await service.ProcessUpdateAsync(Update(611, "Дополнение к обращению"), new Dictionary<string, string>(), null, CancellationToken.None);
+
+        Assert.Contains("Заказ", orders.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(subscription.Id.ToString(), subscriptions.Value!.ResponseText, StringComparison.Ordinal);
+        Assert.Contains("vless://sqlite-latest", keys.Value!.ResponseText, StringComparison.Ordinal);
+        Assert.DoesNotContain("vless://sqlite-old", keys.Value.ResponseText, StringComparison.Ordinal);
+        Assert.Contains(subscription.Id.ToString(), renewal.Value!.ReplyMarkupJson!, StringComparison.Ordinal);
+        Assert.Contains("поддержку", support.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(await db.SupportConversations.ToListAsync());
+        Assert.Equal(2, await db.SupportMessages.CountAsync(x => x.Text == "Первое обращение" || x.Text == "Дополнение к обращению"));
+    }
+
+    [Fact]
+    public async Task Payment_Provider_Callback_Should_Create_Payment_Link_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var tariff = await SeedCatalogAndProvidersAsync(db);
+        var service = CreateBot(db);
+
+        await service.ProcessUpdateAsync(Update(620, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(621, "register_tg"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(622, $"buy:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        await service.ProcessUpdateAsync(CallbackUpdate(623, $"confirm_order:{tariff.Id}"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var order = await db.Orders.SingleAsync();
+
+        var result = await service.ProcessUpdateAsync(
+            CallbackUpdate(624, $"pay:{order.Id}:{PaymentProvider.YooKassa}"),
+            new Dictionary<string, string>(),
+            null,
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Contains("Платеж создан", result.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("payment.test", result.Value.ReplyMarkupJson!, StringComparison.Ordinal);
+        Assert.Single(await db.Payments.ToListAsync());
+    }
+
+    [Fact]
     public async Task Expired_Pending_Order_Should_Create_New_Order()
     {
         await using var db = CreateDbContext();

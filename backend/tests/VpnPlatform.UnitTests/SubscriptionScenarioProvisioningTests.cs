@@ -192,6 +192,64 @@ public class SubscriptionScenarioProvisioningTests
     }
 
     [Fact]
+    public async Task Payment_Succeeded_Telegram_Payload_Should_Select_Latest_Access_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var now = new DateTimeOffset(2026, 8, 13, 10, 0, 0, TimeSpan.Zero);
+        var user = new User { Email = "sqlite-payload@example.test", DisplayName = "SQLite payload", PasswordHash = "hash", ReferralCode = "sqlite-payload" };
+        var tariff = new Tariff { Name = "SQLite payload", Slug = "sqlite-payload", DurationDays = 30, Price = 500m, Currency = "RUB", MaxDevices = 1 };
+        var node = Node(Guid.NewGuid(), "sqlite-payload", "eu", priority: 10, protocol: "vless");
+        var subscription = new Subscription
+        {
+            UserId = user.Id,
+            TariffId = tariff.Id,
+            Status = SubscriptionStatus.Active,
+            StartAt = now,
+            EndAt = now.AddDays(30)
+        };
+        db.AddRange(user, tariff, node, subscription);
+        db.AccessCredentials.AddRange(
+            new AccessCredential
+            {
+                SubscriptionId = subscription.Id,
+                ServerId = node.Id,
+                ProviderAccessId = "older",
+                AccessUri = "vless://older",
+                Status = AccessCredentialStatus.Active,
+                IssuedAt = now.AddMinutes(-10)
+            },
+            new AccessCredential
+            {
+                SubscriptionId = subscription.Id,
+                ServerId = node.Id,
+                ProviderAccessId = "latest",
+                AccessUri = "vless://latest",
+                Status = AccessCredentialStatus.Active,
+                IssuedAt = now
+            });
+        await db.SaveChangesAsync();
+
+        var order = new Order { TariffId = tariff.Id };
+        var activation = new ActivationResult(subscription.Id, AccessId: null);
+        var orchestrator = new PaymentOrchestrator(db, null!, Array.Empty<IPaymentWebhookVerifier>(), null!, null!, new FixedClock(now));
+        var payloadMethod = typeof(PaymentOrchestrator).GetMethod("BuildPaymentSucceededTelegramPayloadAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(payloadMethod);
+
+        var payloadTask = Assert.IsAssignableFrom<Task<string>>(payloadMethod.Invoke(orchestrator, new object[] { order, activation, CancellationToken.None }));
+        var payload = await payloadTask;
+
+        using var payloadJson = System.Text.Json.JsonDocument.Parse(payload);
+        Assert.Contains("vless://latest", payloadJson.RootElement.GetProperty("text").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ActivateOrRenewFromOrderAsync_Should_Reject_Tariff_When_Custom_Scenario_Is_Not_Allowed()
     {
         await using var db = CreateDb();

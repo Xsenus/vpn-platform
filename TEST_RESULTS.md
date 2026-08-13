@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: Telegram/payment SQLite temporal query boundaries
+
+Scope:
+- Telegram payload после успешной оплаты и fallback выбора VPN-ключа не должны падать на SQLite `DateTimeOffset ORDER BY`.
+- Payment link, списки заказов/подписок/ключей, продление и support conversation должны сохранять DB-side order/limit и deterministic latest semantics.
+
+Results:
+- Roadmap progress: `719/739` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-telegram-payment-sqlite-temporal-boundaries`, version `0.705.0`.
+- Fail-first: SQLite regression воспроизвел `NotSupportedException` в `BuildPaymentSucceededTelegramPayloadAsync` на `ORDER BY IssuedAt`; статический follow-up выявил семь аналогичных прямых temporal queries в Telegram payment/account/support flow.
+- After fix: provider-aware latest-access query и Telegram SQLite branches используют parameterized `julianday`, `Id` tie-break и DB-side `LIMIT`; targeted SQLite E2E `3/3`, Telegram/payment/subscription regression `62/62`, backend Debug/Release `1483/1483`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow с latest release, EF drift, docs/encoding `64/64`, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Реальные Telegram Bot API/webhook, provider кабинеты, live payment, VPS/SSH/Ansible, SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: admin bootstrap and SQLite runtime boundaries
 
 Scope:
