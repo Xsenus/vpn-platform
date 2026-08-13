@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: session revocation write boundary
+
+Scope:
+- Logout-all и password reset не должны читать и отслеживать неограниченное число активных refresh-сессий перед отзывом.
+- Multi-device login, audit count, session version, reset optimistic concurrency и атомарность user/reset/session изменений должны сохраниться.
+
+Results:
+- Roadmap progress: `715/735` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-session-revocation-write-boundary`, version `0.702.0`.
+- Fail-first: logout-all с `25` активными сессиями выполнял SELECT всей таблицы пользователя и `25` отдельных UPDATE.
+- After fix: relational providers выполняют один set-based UPDATE в общей транзакции с user/reset/audit changes; tracked session snapshots синхронизируются без повторной записи, InMemory использует fallback. Session/reset/boundary `17/17`, auth/security/admin-session `77/77`, backend Debug/Release `1474/1474`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, docs/encoding `49/49`, secret scan `701/0` и dependency audit `0 vulnerabilities` зеленые.
+
 ## Check 2026-08-13: refresh family query boundary
 
 Scope:

@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-13.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-refresh-family-query-boundary`, версия `0.701.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `714/734` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-session-revocation-write-boundary`, версия `0.702.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `715/735` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-13:
 
-- [x] `STATE-001` Backend test suite проходит: `1473/1473`.
+- [x] `STATE-001` Backend test suite проходит: `1474/1474`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2552,6 +2552,10 @@ git diff --check
   - Что сделать: reuse/logout токена с заполненным `FamilyId` не должен проходить всю rotation chain отдельным SQL-запросом на каждого потомка; active family revocation, optimistic concurrency, replay detection и legacy isolation обязаны сохраниться.
   - Что сделано: современные сессии выбирают все активные записи пользователя/session-version/family одним запросом и отзывают их в той же `SaveChanges` transaction. Linked-chain обход остается только для legacy rows с `FamilyId = null`, поэтому независимые старые семьи не затрагиваются.
   - Доказательство: fail-first семья из шести токенов выполняла `8` чтений `UserRefreshTokens`; after-fix boundary/session `10/10`, auth/security/admin-session regression `85/85`, backend Debug `1473/1473`, frontend `172/172`, typecheck/build, bundle budget и dependency audit `0 vulnerabilities` зеленые. Concurrent refresh/logout и legacy descendants покрыты существующими SQLite regression tests.
+- [x] `P11-ACC-424` Ограничить массовый отзыв пользовательских сессий одним write-запросом. 2026-08-13.
+  - Что сделать: logout-all и завершение password reset не должны материализовывать все активные refresh-сессии и отправлять отдельный UPDATE для каждой строки; multi-device lifecycle, audit count, session version, optimistic reset concurrency и транзакционная целостность обязаны сохраниться.
+  - Что сделано: relational providers отзывают все активные сессии пользователя одним `ExecuteUpdateAsync` внутри общей транзакции с user/reset/audit changes; EF tracker синхронизируется с bulk write без повторного UPDATE. InMemory сохраняет объектный fallback, независимые login families не ограничиваются и refresh rotation не изменена.
+  - Доказательство: fail-first SQLite boundary обнаружил SELECT всех 25 сессий и 25 отдельных UPDATE; after-fix session/reset/boundary `17/17`, auth/security/admin-session `77/77`, backend Debug/Release `1474/1474`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, docs/encoding `49/49`, secret scan `701/0` и dependency audit `0 vulnerabilities` зеленые. Stale reset reissue инъецируется до transaction lock и по-прежнему отклоняет устаревший commit.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

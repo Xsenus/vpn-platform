@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.702.0 - 2026-08-13
+
+Release entry: `2026-08-13-session-revocation-write-boundary`.
+
+### Исправлено
+
+- Logout-all и password reset больше не загружают все активные refresh-сессии в память и не обновляют их по одной.
+
+### Улучшено
+
+- Relational providers отзывают сессии одним set-based UPDATE в общей транзакции с user/reset/audit changes; multi-device login и refresh-family lifecycle сохранены.
+
+### Проверено
+
+- Fail-first: SELECT `25` сессий и `25` отдельных UPDATE; after-fix session/reset/boundary `17/17`, auth/security/admin-session `77/77`, backend Debug/Release `1474/1474`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, docs/encoding `49/49`, secret scan `701/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `715/735` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.701.0 - 2026-08-13
 
 Release entry: `2026-08-13-refresh-family-query-boundary`.

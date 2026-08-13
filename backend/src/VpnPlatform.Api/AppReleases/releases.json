@@ -16487,5 +16487,28 @@
         "text": "Roadmap progress is 714/734 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-session-revocation-write-boundary",
+    "version": "0.702.0",
+    "releasedAt": "2026-08-13T17:56:00+07:00",
+    "title": "Массовый выход отзывает сессии одним запросом",
+    "summary": "Logout-all и password reset больше не материализуют все активные refresh-сессии перед отзывом.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Массовый отзыв пользовательских сессий больше не выполняет SELECT всей active-выборки и отдельный UPDATE для каждой строки."
+      },
+      {
+        "type": "improved",
+        "text": "Relational providers применяют один set-based UPDATE в общей транзакции с user/reset/audit changes; multi-device и refresh-family lifecycle сохранены."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 715/735 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

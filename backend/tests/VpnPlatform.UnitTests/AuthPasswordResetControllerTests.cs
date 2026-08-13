@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Text.Json;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Contracts;
 using VpnPlatform.Api.Controllers.Auth;
@@ -354,10 +356,12 @@ public class AuthPasswordResetControllerTests
                 await setup.SaveChangesAsync();
             }
 
+            var raceInterceptor = new ConcurrentResetReissueTransactionInterceptor(baseOptions, userId, now);
             var raceOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
                 .UseSqlite(connectionString)
+                .AddInterceptors(raceInterceptor)
                 .Options;
-            await using var db = new ConcurrentResetReissueDbContext(raceOptions, baseOptions, userId, now);
+            await using var db = new ApplicationDbContext(raceOptions);
             var controller = CreateAuthController(db, new TestClock(now));
 
             var action = await controller.ResetPassword(
@@ -532,16 +536,17 @@ public class AuthPasswordResetControllerTests
         }
     }
 
-    private sealed class ConcurrentResetReissueDbContext(
-        DbContextOptions<ApplicationDbContext> options,
+    private sealed class ConcurrentResetReissueTransactionInterceptor(
         DbContextOptions<ApplicationDbContext> competitorOptions,
         Guid userId,
-        DateTimeOffset now) : ApplicationDbContext(options)
+        DateTimeOffset now) : DbTransactionInterceptor
     {
         private int _inserted;
 
-        public override async Task<int> SaveChangesAsync(
-            bool acceptAllChangesOnSuccess,
+        public override async ValueTask<InterceptionResult<DbTransaction>> TransactionStartingAsync(
+            DbConnection connection,
+            TransactionStartingEventData eventData,
+            InterceptionResult<DbTransaction> result,
             CancellationToken cancellationToken = default)
         {
             if (Interlocked.Exchange(ref _inserted, 1) == 0)
@@ -573,7 +578,7 @@ public class AuthPasswordResetControllerTests
                 await competitor.SaveChangesAsync(cancellationToken);
             }
 
-            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+            return result;
         }
     }
 }

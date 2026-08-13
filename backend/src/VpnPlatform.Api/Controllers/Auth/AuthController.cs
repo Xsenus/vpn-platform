@@ -160,18 +160,14 @@ public class AuthController : ControllerBase
 
             user.SessionVersion = checked(user.SessionVersion + 1);
             user.UpdatedAt = now;
-            var activeSessions = await _db.UserRefreshTokens
-                .Where(x => x.UserId == userId && x.RevokedAt == null)
-                .ToListAsync(cancellationToken);
-            foreach (var session in activeSessions)
-            {
-                RevokeRefreshSession(session, "logout_all_current_user", now);
-            }
-
-            AddAudit("auth.logout_all", "User", userId, null, new { sessionsRevoked = activeSessions.Count });
             try
             {
-                await _db.SaveChangesAsync(cancellationToken);
+                await RevokeUserSessionsAndSaveAsync(
+                    userId,
+                    "logout_all_current_user",
+                    now,
+                    sessionsRevoked => AddAudit("auth.logout_all", "User", userId, null, new { sessionsRevoked }),
+                    cancellationToken);
                 return Ok(new { status = "ok" });
             }
             catch (DbUpdateConcurrencyException)
@@ -419,11 +415,14 @@ public class AuthController : ControllerBase
             resetState.Revision = checked(resetState.Revision + 1);
             resetState.UpdatedAt = now;
         }
-        await RevokeUserSessionsAsync(user.Id, "password_reset", cancellationToken);
-        AddAudit("auth.password_reset_completed", "User", user.Id, null, new { resetTokenId = reset.Id, siblingTokensInvalidated = siblingTokens.Count });
         try
         {
-            await _db.SaveChangesAsync(cancellationToken);
+            await RevokeUserSessionsAndSaveAsync(
+                user.Id,
+                "password_reset",
+                now,
+                _ => AddAudit("auth.password_reset_completed", "User", user.Id, null, new { resetTokenId = reset.Id, siblingTokensInvalidated = siblingTokens.Count }),
+                cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -627,15 +626,78 @@ public class AuthController : ControllerBase
         }
     }
 
-    private async Task RevokeUserSessionsAsync(Guid userId, string reason, CancellationToken cancellationToken)
+    private async Task<int> RevokeUserSessionsAndSaveAsync(
+        Guid userId,
+        string reason,
+        DateTimeOffset now,
+        Action<int> beforeSave,
+        CancellationToken cancellationToken)
     {
-        var now = _clock.UtcNow;
-        var sessions = await _db.UserRefreshTokens
-            .Where(x => x.UserId == userId && x.RevokedAt == null)
-            .ToListAsync(cancellationToken);
-        foreach (var session in sessions)
+        if (_db is not DbContext dbContext || !dbContext.Database.IsRelational())
         {
-            RevokeRefreshSession(session, reason, now);
+            var sessions = await _db.UserRefreshTokens
+                .Where(x => x.UserId == userId && x.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+            foreach (var session in sessions)
+            {
+                RevokeRefreshSession(session, reason, now);
+            }
+
+            beforeSave(sessions.Count);
+            await _db.SaveChangesAsync(cancellationToken);
+            return sessions.Count;
+        }
+
+        await using var transaction = dbContext.Database.CurrentTransaction is null
+            ? await dbContext.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+        try
+        {
+            var revokedByIp = ResolveIp();
+            var sessionsRevoked = await _db.UserRefreshTokens
+                .Where(x => x.UserId == userId && x.RevokedAt == null)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.RevokedAt, now)
+                    .SetProperty(x => x.RevokedByIp, revokedByIp)
+                    .SetProperty(x => x.RevocationReason, reason)
+                    .SetProperty(x => x.Revision, x => x.Revision + 1)
+                    .SetProperty(x => x.UpdatedAt, now), cancellationToken);
+            SynchronizeTrackedSessionRevocations(dbContext, userId, reason, revokedByIp, now);
+            beforeSave(sessionsRevoked);
+            await _db.SaveChangesAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+            return sessionsRevoked;
+        }
+        catch
+        {
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+            }
+            throw;
+        }
+    }
+
+    private static void SynchronizeTrackedSessionRevocations(
+        DbContext dbContext,
+        Guid userId,
+        string reason,
+        string revokedByIp,
+        DateTimeOffset now)
+    {
+        foreach (var entry in dbContext.ChangeTracker.Entries<UserRefreshToken>()
+                     .Where(x => x.Entity.UserId == userId && x.Entity.RevokedAt is null))
+        {
+            entry.Entity.RevokedAt = now;
+            entry.Entity.RevokedByIp = revokedByIp;
+            entry.Entity.RevocationReason = reason;
+            entry.Entity.Revision = checked(entry.Entity.Revision + 1);
+            entry.Entity.UpdatedAt = now;
+            entry.OriginalValues.SetValues(entry.CurrentValues);
+            entry.State = EntityState.Unchanged;
         }
     }
 
