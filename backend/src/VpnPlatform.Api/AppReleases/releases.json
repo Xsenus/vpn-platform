@@ -16165,5 +16165,28 @@
         "text": "Roadmap progress is 700/720 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-admin-order-read-boundary",
+    "version": "0.688.0",
+    "releasedAt": "2026-08-13T14:07:00+07:00",
+    "title": "Поиск заказов ограничен в БД",
+    "summary": "Заказы, счетчики попыток и последняя оплата формируются без загрузки полной истории.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Admin order status/search/top-300 выполняются до materialization, а payment attempt collection больше не загружается целиком."
+      },
+      {
+        "type": "improved",
+        "text": "Payment counts агрегируются для выбранных заказов, latest payment выбирается SQL window/DISTINCT ON с сохранением readiness и search-контракта."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 701/721 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

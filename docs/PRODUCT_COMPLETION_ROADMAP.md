@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-13.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-admin-finance-read-boundary`, версия `0.687.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `700/720` проверяемых пунктов, готовность `97.2%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-admin-order-read-boundary`, версия `0.688.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `701/721` проверяемых пунктов, готовность `97.2%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-13:
 
-- [x] `STATE-001` Backend test suite проходит: `1463/1463`.
+- [x] `STATE-001` Backend test suite проходит: `1464/1464`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2496,6 +2496,10 @@ git diff --check
   - Что сделать: payments/refunds не должны загружать полные таблицы до latest top-300, order recheck не должен materialize-ить все payment attempts; readiness, audit, DTO и Finance RBAC обязаны сохраниться.
   - Что сделано: SQLite использует `julianday` и `LIMIT 300/1`, PostgreSQL LINQ применяет ordering/`Take`; webhook counts строятся только для selected payments. Refund/recheck readiness и provider lifecycle работают по прежнему контракту.
   - Доказательство: fail-first вернул `305` refunds и SQL без limits; after-fix targeted/adjacent finance backend `69/69`, backend `1463/1463`, frontend `172/172`, finance/recheck/refund lifecycle и FinanceManager RBAC desktop/mobile `8/8`, fresh SQLite full flow, EF drift, secret scan `694/0` и dependency audit `0 vulnerabilities` зеленые. Реальные provider кабинеты, live payment, VPS/SSH/Ansible, Telegram/Bot API/SMTP и production-like 3x-ui evidence остаются внешней проверкой.
+- [x] `P11-ACC-410` Ограничить административный order search и latest-payment read model до materialization. 2026-08-13.
+  - Что сделать: status/search/top-300 orders должны выполняться в БД; count/latest payment нельзя строить через загрузку полной attempt collection. Поиск по GUID/user/tariff/enums/provider payment и readiness должны сохраниться.
+  - Что сделано: SQLite выполняет параметризованный cross-table search с `julianday`/`LIMIT 300`, PostgreSQL применяет translatable LINQ; counts агрегируются только для selected order IDs, latest payments выбираются SQLite `ROW_NUMBER`/PostgreSQL `DISTINCT ON`. DTO и linked renewal contract сохранены.
+  - Доказательство: fail-first имел правильный response, но SQL без limit/window; after-fix targeted order/finance backend `70/70`, backend `1464/1464`, frontend `172/172`, order navigation/recheck/refund и FinanceManager RBAC desktop/mobile `8/8`, fresh SQLite full flow, EF drift, secret scan `695/0` и dependency audit `0 vulnerabilities` зеленые. Реальные provider кабинеты, live payment, VPS/SSH/Ansible, Telegram/Bot API/SMTP и production-like 3x-ui evidence остаются внешней проверкой.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

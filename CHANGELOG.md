@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.688.0 - 2026-08-13
+
+Release entry: `2026-08-13-admin-order-read-boundary`.
+
+### Исправлено
+
+- Admin orders больше не загружают все заказы и все payment attempts до search/top-300.
+- PaymentAttemptsCount и latest-payment readiness строятся отдельными bounded-агрегатами без неограниченного collection `Include`.
+
+### Улучшено
+
+- SQLite выполняет полный cross-table search и UTC-ordering до `LIMIT 300`, latest payment выбирается `ROW_NUMBER`; PostgreSQL использует LINQ/`DISTINCT ON`.
+
+### Проверено
+
+- Fail-first имел корректный response, но SQL без limit/window; after-fix order/finance backend `70/70`, backend `1464/1464`, frontend `172/172`, order/recheck/finance RBAC desktop/mobile `8/8`, fresh SQLite full flow, EF drift, secret scan `695/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `701/721` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider кабинеты, live payment, VPS/SSH/Ansible, Telegram/Bot API/SMTP и production-like 3x-ui evidence локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.687.0 - 2026-08-13
 
 Release entry: `2026-08-13-admin-finance-read-boundary`.

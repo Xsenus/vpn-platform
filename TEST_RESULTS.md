@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: admin order read boundary
+
+Scope:
+- Admin order status/search и latest top-300 должны выполняться до materialization.
+- Payment attempt count/latest readiness не должны требовать загрузки полной attempt history каждого заказа.
+
+Results:
+- Roadmap progress: `701/721` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-admin-order-read-boundary`, version `0.688.0`.
+- Fail-first: response уже возвращал latest `300` и правильный last payment, но единственный SQL загружал все orders/payment attempts без limit/window.
+- After fix: DB-side status/cross-table search/top-300, grouped payment counts и latest-payment SQLite `ROW_NUMBER`/PostgreSQL `DISTINCT ON`; PaymentStatus/providerPaymentId/OrderType search сохранён. Targeted order/finance backend `70/70`, backend `1464/1464`, frontend `172/172`, order/recheck/FinanceManager RBAC desktop/mobile `8/8`, fresh SQLite full flow, EF drift clean, secret scan `695/0`, dependency audit `0 vulnerabilities`. Реальные provider кабинеты, live payment, VPS/SSH/Ansible, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: admin finance read boundary
 
 Scope:

@@ -122,6 +122,7 @@ public class AdminOperationsController : ControllerBase
     private const int SupportMessageListLimit = 200;
     private const int PaymentListLimit = 300;
     private const int RefundListLimit = 300;
+    private const int OrderListLimit = 300;
 
     private static readonly HashSet<string> TariffPatchFields = new(StringComparer.Ordinal)
     {
@@ -1271,36 +1272,115 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "Invalid order status filter." });
         }
 
-        var query = _db.Orders.AsNoTracking()
+        var searchText = NormalizeSearchText(search);
+        var searchEnabled = string.IsNullOrWhiteSpace(searchText) ? 0 : 1;
+        var matchingOrderStatuses = MatchingEnumValues<OrderStatus>(searchText);
+        var matchingOrderTypes = MatchingEnumValues<OrderType>(searchText);
+        var matchingChannels = MatchingEnumValues<ChannelType>(searchText);
+        var matchingProviders = MatchingEnumValues<PaymentProvider>(searchText);
+        var matchingPaymentStatuses = MatchingEnumValues<PaymentStatus>(searchText);
+
+        IQueryable<Order> query;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
+        {
+            var statusPredicate = parsedStatuses.Count == 0
+                ? "1 = 1"
+                : $"customer_order.\"Status\" IN ({string.Join(", ", parsedStatuses.Select(value => (int)value))})";
+            var sql = $$"""
+                SELECT customer_order.*
+                FROM "Orders" AS customer_order
+                LEFT JOIN "Users" AS customer ON customer."Id" = customer_order."UserId"
+                LEFT JOIN "Tariffs" AS tariff ON tariff."Id" = customer_order."TariffId"
+                WHERE {{statusPredicate}}
+                  AND ({0} = 0
+                       OR instr(lower(CAST(customer_order."Id" AS TEXT)), {1}) > 0
+                       OR instr(lower(CAST(customer_order."UserId" AS TEXT)), {1}) > 0
+                       OR instr(lower(CAST(customer_order."TariffId" AS TEXT)), {1}) > 0
+                       OR instr(lower(COALESCE(customer."Email", '')), {1}) > 0
+                       OR instr(lower(COALESCE(customer."DisplayName", '')), {1}) > 0
+                       OR instr(lower(COALESCE(tariff."Name", '')), {1}) > 0
+                       OR customer_order."Status" IN ({{ToSqlEnumList(matchingOrderStatuses)}})
+                       OR customer_order."Type" IN ({{ToSqlEnumList(matchingOrderTypes)}})
+                       OR customer_order."Channel" IN ({{ToSqlEnumList(matchingChannels)}})
+                       OR customer_order."PaymentProvider" IN ({{ToSqlEnumList(matchingProviders)}})
+                       OR instr(lower(customer_order."Currency"), {1}) > 0
+                       OR EXISTS (
+                           SELECT 1
+                           FROM "Payments" AS payment
+                           WHERE payment."OrderId" = customer_order."Id"
+                             AND (instr(lower(CAST(payment."Id" AS TEXT)), {1}) > 0
+                                  OR instr(lower(payment."ProviderPaymentId"), {1}) > 0
+                                  OR payment."Status" IN ({{ToSqlEnumList(matchingPaymentStatuses)}}))))
+                ORDER BY julianday(customer_order."CreatedAt") DESC, customer_order."Id" DESC
+                LIMIT 300
+                """;
+            query = _db.Orders.FromSqlRaw(sql, searchEnabled, searchText);
+        }
+        else
+        {
+            query = _db.Orders;
+            if (parsedStatuses.Count > 0)
+            {
+                query = query.Where(x => parsedStatuses.Contains(x.Status));
+            }
+
+            if (searchEnabled != 0)
+            {
+                query = query.Where(x =>
+                    x.Id.ToString().ToLower().Contains(searchText)
+                    || x.UserId.ToString().ToLower().Contains(searchText)
+                    || x.TariffId.ToString().ToLower().Contains(searchText)
+                    || x.User != null && x.User.Email != null && x.User.Email.ToLower().Contains(searchText)
+                    || x.User != null && x.User.DisplayName.ToLower().Contains(searchText)
+                    || x.Tariff != null && x.Tariff.Name.ToLower().Contains(searchText)
+                    || matchingOrderStatuses.Contains(x.Status)
+                    || matchingOrderTypes.Contains(x.Type)
+                    || matchingChannels.Contains(x.Channel)
+                    || matchingProviders.Contains(x.PaymentProvider)
+                    || x.Currency.ToLower().Contains(searchText)
+                    || x.PaymentAttempts.Any(payment =>
+                        payment.Id.ToString().ToLower().Contains(searchText)
+                        || payment.ProviderPaymentId.ToLower().Contains(searchText)
+                        || matchingPaymentStatuses.Contains(payment.Status)));
+            }
+
+            query = query
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(OrderListLimit);
+        }
+
+        var orders = await query
+            .AsNoTracking()
             .Include(x => x.User)
             .Include(x => x.Tariff)
-            .Include(x => x.PaymentAttempts)
-                .ThenInclude(payment => payment.PaymentProviderAccount)
-            .AsQueryable();
-
-        if (parsedStatuses.Count > 0)
-        {
-            query = query.Where(x => parsedStatuses.Contains(x.Status));
-        }
-
-        var orders = await query.ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
         orders = orders
             .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
             .ToList();
+        var orderIds = orders.Select(x => x.Id).ToList();
+        var paymentCounts = await _db.Payments.AsNoTracking()
+            .Where(x => orderIds.Contains(x.OrderId))
+            .GroupBy(x => x.OrderId)
+            .Select(group => new { OrderId = group.Key, Count = group.Count() })
+            .ToDictionaryAsync(x => x.OrderId, x => x.Count, cancellationToken);
+        var latestPayments = orderIds.Count == 0
+            ? []
+            : _db is DbContext paymentDbContext && (paymentDbContext.Database.IsSqlite() || paymentDbContext.Database.IsNpgsql())
+                ? await LoadLatestOrderPaymentsAsync(paymentDbContext, orderIds, cancellationToken)
+                : (await _db.Payments.AsNoTracking()
+                    .Include(x => x.PaymentProviderAccount)
+                    .Where(x => orderIds.Contains(x.OrderId))
+                    .ToListAsync(cancellationToken))
+                    .GroupBy(x => x.OrderId)
+                    .Select(group => group.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First())
+                    .ToList();
+        var latestPaymentByOrder = latestPayments.ToDictionary(x => x.OrderId);
 
-        var searchText = NormalizeSearchText(search);
-        if (!string.IsNullOrWhiteSpace(searchText))
-        {
-            orders = orders
-                .Where(x => OrderMatchesSearch(x, searchText))
-                .ToList();
-        }
-
-        return Ok(orders.Take(300).Select(x =>
+        return Ok(orders.Select(x =>
             {
-                var lastPayment = x.PaymentAttempts
-                    .OrderByDescending(payment => payment.CreatedAt)
-                    .FirstOrDefault();
+                var lastPayment = latestPaymentByOrder.GetValueOrDefault(x.Id);
                 var recheck = lastPayment is null
                     ? new RecheckReadinessDto(false, false, new[] { "У заказа нет платежной попытки." })
                     : BuildRecheckReadiness(lastPayment);
@@ -1323,7 +1403,7 @@ public class AdminOperationsController : ControllerBase
                     x.ExpiresAt,
                     x.PaidAt,
                     x.IsFirstPurchase,
-                    PaymentAttemptsCount = x.PaymentAttempts.Count,
+                    PaymentAttemptsCount = paymentCounts.GetValueOrDefault(x.Id),
                     LastPaymentId = lastPayment?.Id,
                     LastPaymentStatus = lastPayment?.Status.ToString(),
                     LastPaymentProvider = lastPayment?.Provider.ToString(),
@@ -3576,22 +3656,18 @@ public class AdminOperationsController : ControllerBase
     private static string NormalizeSearchText(string? value)
         => (value ?? string.Empty).Trim().ToLowerInvariant();
 
-    private static bool OrderMatchesSearch(Order order, string searchText)
-        => order.Id.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || order.UserId.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || order.TariffId.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || (order.User?.Email ?? string.Empty).Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || (order.User?.DisplayName ?? string.Empty).Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || (order.Tariff?.Name ?? string.Empty).Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || order.Status.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || order.Type.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || order.Channel.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || order.PaymentProvider.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || order.Currency.Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || order.PaymentAttempts.Any(payment =>
-                payment.Id.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase)
-                || payment.ProviderPaymentId.Contains(searchText, StringComparison.OrdinalIgnoreCase)
-                || payment.Status.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase));
+    private static TEnum[] MatchingEnumValues<TEnum>(string searchText)
+        where TEnum : struct, Enum
+        => Enum.GetValues<TEnum>()
+            .Where(value => value.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+    private static string ToSqlEnumList<TEnum>(IEnumerable<TEnum> values)
+        where TEnum : struct, Enum
+    {
+        var list = values.Select(value => Convert.ToInt32(value)).ToArray();
+        return list.Length == 0 ? "-1" : string.Join(", ", list);
+    }
 
     private RefundReadinessDto BuildRefundReadiness(PaymentAttempt payment)
     {
@@ -4113,6 +4189,39 @@ public class AdminOperationsController : ControllerBase
     }
 
     private static string TrimOrEmpty(string? value) => value?.Trim() ?? string.Empty;
+
+    private async Task<List<PaymentAttempt>> LoadLatestOrderPaymentsAsync(
+        DbContext dbContext,
+        IReadOnlyList<Guid> orderIds,
+        CancellationToken cancellationToken)
+    {
+        var placeholders = string.Join(", ", orderIds.Select((_, index) => $"{{{index}}}"));
+        var parameters = orderIds.Cast<object>().ToArray();
+        var sql = dbContext.Database.IsSqlite()
+            ? $"""
+               SELECT * FROM (
+                   SELECT payments.*, ROW_NUMBER() OVER (
+                       PARTITION BY "OrderId"
+                       ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                   ) AS "_LatestRank"
+                   FROM "Payments" AS payments
+                   WHERE "OrderId" IN ({placeholders})
+               ) AS latest
+               WHERE "_LatestRank" = 1
+               """
+            : $"""
+               SELECT DISTINCT ON ("OrderId") *
+               FROM "Payments"
+               WHERE "OrderId" IN ({placeholders})
+               ORDER BY "OrderId", "CreatedAt" DESC, "Id" DESC
+               """;
+
+        return await _db.Payments
+            .FromSqlRaw(sql, parameters)
+            .AsNoTracking()
+            .Include(x => x.PaymentProviderAccount)
+            .ToListAsync(cancellationToken);
+    }
 
     private async Task<List<NodeHealthCheck>> LoadLatestNodeHealthChecksAsync(
         DbContext dbContext,
