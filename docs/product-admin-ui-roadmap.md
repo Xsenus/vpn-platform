@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `694/714` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `695/715` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,8 +85,8 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1444/1444`.
-- [x] Frontend unit tests: `171/171`.
+- [x] Backend full suite: `1448/1448`.
+- [x] Frontend unit tests: `172/172`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
@@ -167,7 +167,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-13-vpn-panel-management-boundary`, версия `0.681.0`; panel/inbound/client DTO/limits согласованы, diagnostics ограничены, а admin mutations используют optimistic revision с controlled conflict и recovery; backend `1444/1444`.
+- [x] Latest "Что нового": `2026-08-13-provisioning-management-boundary`, версия `0.682.0`; provisioning queue/run actions используют revision, coordinator/admin diagnostics ограничены, exact DTO и controlled conflict recovery согласованы; backend `1448/1448`.
 
 ## Как вести дальше
 

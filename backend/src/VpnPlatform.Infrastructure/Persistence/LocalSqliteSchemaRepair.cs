@@ -333,6 +333,7 @@ public static class LocalSqliteSchemaRepair
         {
             foreach (var (column, sql) in new[]
                      {
+                         ("Revision", """ALTER TABLE "ProvisioningRuns" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
                          ("AttemptCount", """ALTER TABLE "ProvisioningRuns" ADD COLUMN "AttemptCount" INTEGER NOT NULL DEFAULT 0;"""),
                          ("ProcessingStartedAt", """ALTER TABLE "ProvisioningRuns" ADD COLUMN "ProcessingStartedAt" TEXT NULL;"""),
                          ("LeaseExpiresAt", """ALTER TABLE "ProvisioningRuns" ADD COLUMN "LeaseExpiresAt" TEXT NULL;"""),

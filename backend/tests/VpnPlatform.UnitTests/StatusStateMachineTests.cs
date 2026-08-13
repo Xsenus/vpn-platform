@@ -1,4 +1,5 @@
 using VpnPlatform.Application.Common;
+using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using Xunit;
 
@@ -87,4 +88,18 @@ public class StatusStateMachineTests
     [InlineData(ProvisioningRunStatus.Deploying, ProvisioningRunStatus.Cancelled)]
     public void Provisioning_State_Machine_Should_Block_Impossible_Transitions(ProvisioningRunStatus from, ProvisioningRunStatus to)
         => Assert.False(StatusStateMachine.CanTransition(from, to));
+
+    [Fact]
+    public void Provisioning_State_Transition_Should_Advance_Revision()
+    {
+        var run = new ProvisioningRun
+        {
+            Status = ProvisioningRunStatus.PrecheckQueued,
+            Revision = 7
+        };
+
+        StatusStateMachine.SetProvisioningRunStatus(run, ProvisioningRunStatus.Prechecking, DateTimeOffset.UtcNow);
+
+        Assert.Equal(8, run.Revision);
+    }
 }

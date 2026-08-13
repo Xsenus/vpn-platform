@@ -45,13 +45,21 @@ public sealed class ProvisioningRunCoordinator
     public async Task<IReadOnlyList<Guid>> GetClaimableIdsAsync(int take, CancellationToken cancellationToken = default)
     {
         var limit = Math.Clamp(take, 1, 100);
-        var candidates = await _db.ProvisioningRuns.AsNoTracking()
-            .Where(x => QueuedStatuses.Contains(x.Status))
-            .ToListAsync(cancellationToken);
+        var candidates = _db.Database.IsSqlite()
+            ? await _db.ProvisioningRuns.FromSqlInterpolated($$"""
+                SELECT *
+                FROM "ProvisioningRuns"
+                WHERE "Status" IN (0, 8, 12, 15)
+                ORDER BY julianday("CreatedAt"), "Id"
+                LIMIT {{limit}}
+                """).AsNoTracking().ToListAsync(cancellationToken)
+            : await _db.ProvisioningRuns.AsNoTracking()
+                .Where(x => QueuedStatuses.Contains(x.Status))
+                .OrderBy(x => x.CreatedAt)
+                .ThenBy(x => x.Id)
+                .Take(limit)
+                .ToListAsync(cancellationToken);
         return candidates
-            .OrderBy(x => x.CreatedAt)
-            .ThenBy(x => x.Id)
-            .Take(limit)
             .Select(x => x.Id)
             .ToList();
     }
@@ -91,6 +99,7 @@ public sealed class ProvisioningRunCoordinator
                 .SetProperty(x => x.StartedAt, now)
                 .SetProperty(x => x.FinishedAt, (DateTimeOffset?)null)
                 .SetProperty(x => x.LastError, (string?)null)
+                .SetProperty(x => x.Revision, x => x.Revision + 1)
                 .SetProperty(x => x.UpdatedAt, version), cancellationToken);
         return affected == 1;
     }
@@ -99,19 +108,32 @@ public sealed class ProvisioningRunCoordinator
     {
         var now = _clock.UtcNow;
         var legacyStaleBefore = now.Subtract(_leaseDuration);
-        var processing = await _db.ProvisioningRuns.AsNoTracking()
-            .Where(x => ProcessingStatuses.Contains(x.Status))
-            .ToListAsync(cancellationToken);
+        const int recoveryBatchSize = 100;
+        var processing = _db.Database.IsSqlite()
+            ? await _db.ProvisioningRuns.FromSqlInterpolated($$"""
+                SELECT *
+                FROM "ProvisioningRuns"
+                WHERE "Status" IN (1, 9, 13)
+                  AND (("LeaseExpiresAt" IS NOT NULL AND julianday("LeaseExpiresAt") <= julianday({{now}}))
+                    OR ("LeaseExpiresAt" IS NULL AND julianday("UpdatedAt") <= julianday({{legacyStaleBefore}})))
+                ORDER BY julianday(COALESCE("LeaseExpiresAt", "UpdatedAt")), "Id"
+                LIMIT {{recoveryBatchSize}}
+                """).AsNoTracking().ToListAsync(cancellationToken)
+            : await _db.ProvisioningRuns.AsNoTracking()
+                .Where(x => ProcessingStatuses.Contains(x.Status)
+                    && (x.LeaseExpiresAt <= now
+                        || (!x.LeaseExpiresAt.HasValue && x.UpdatedAt <= legacyStaleBefore)))
+                .OrderBy(x => x.LeaseExpiresAt ?? x.UpdatedAt)
+                .ThenBy(x => x.Id)
+                .Take(recoveryBatchSize)
+                .ToListAsync(cancellationToken);
         var recovered = 0;
-        foreach (var run in processing
-                     .Where(x => x.LeaseExpiresAt <= now
-                         || (!x.LeaseExpiresAt.HasValue && x.UpdatedAt <= legacyStaleBefore))
-                     .OrderBy(x => x.CreatedAt)
-                     .ThenBy(x => x.Id))
+        foreach (var run in processing)
         {
             if (await MarkClaimFailedAsync(
                     run.Id,
                     run.Status,
+                    run.Revision,
                     run.UpdatedAt,
                     "Provisioning worker lease expired. Automatic replay is blocked because an external deploy may have partially completed.",
                     "Worker lease recovery",
@@ -135,6 +157,7 @@ public sealed class ProvisioningRunCoordinator
             && await MarkClaimFailedAsync(
                 run.Id,
                 run.Status,
+                run.Revision,
                 run.UpdatedAt,
                 error,
                 "Worker execution failed",
@@ -144,6 +167,7 @@ public sealed class ProvisioningRunCoordinator
     private async Task<bool> MarkClaimFailedAsync(
         Guid runId,
         ProvisioningRunStatus expectedStatus,
+        int expectedRevision,
         DateTimeOffset expectedVersion,
         string error,
         string stepName,
@@ -159,7 +183,7 @@ public sealed class ProvisioningRunCoordinator
         if (IsInMemoryProvider())
         {
             var tracked = await _db.ProvisioningRuns.FirstOrDefaultAsync(x => x.Id == runId, cancellationToken);
-            if (tracked is null || tracked.Status != expectedStatus || tracked.UpdatedAt != expectedVersion)
+            if (tracked is null || tracked.Status != expectedStatus || tracked.Revision != expectedRevision || tracked.UpdatedAt != expectedVersion)
             {
                 return false;
             }
@@ -170,13 +194,14 @@ public sealed class ProvisioningRunCoordinator
         else
         {
             affected = await _db.ProvisioningRuns
-                .Where(x => x.Id == runId && x.Status == expectedStatus && x.UpdatedAt == expectedVersion)
+                .Where(x => x.Id == runId && x.Status == expectedStatus && x.Revision == expectedRevision && x.UpdatedAt == expectedVersion)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(x => x.Status, failedStatus)
                     .SetProperty(x => x.ProcessingStartedAt, (DateTimeOffset?)null)
                     .SetProperty(x => x.LeaseExpiresAt, (DateTimeOffset?)null)
                     .SetProperty(x => x.FinishedAt, now)
                     .SetProperty(x => x.LastError, redactedError)
+                    .SetProperty(x => x.Revision, x => x.Revision + 1)
                     .SetProperty(x => x.UpdatedAt, version), cancellationToken);
         }
 
@@ -186,6 +211,7 @@ public sealed class ProvisioningRunCoordinator
         }
 
         var run = await _db.ProvisioningRuns.FirstAsync(x => x.Id == runId, cancellationToken);
+        await _db.Entry(run).ReloadAsync(cancellationToken);
         run.ExecutionLog = ProvisioningService.AppendLog(run.ExecutionLog, redactedError);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == run.NodeId, cancellationToken);
         if (node is not null)
@@ -193,6 +219,7 @@ public sealed class ProvisioningRunCoordinator
             node.ProvisioningStatus = failedStatus;
             node.Status = NodeStatus.Error;
             node.IsAvailableForNewUsers = false;
+            node.Revision = checked(node.Revision + 1);
             node.UpdatedAt = now;
         }
 
@@ -235,6 +262,7 @@ public sealed class ProvisioningRunCoordinator
         run.StartedAt = now;
         run.FinishedAt = null;
         run.LastError = null;
+        run.Revision = checked(run.Revision + 1);
         run.UpdatedAt = version;
     }
 
@@ -250,6 +278,7 @@ public sealed class ProvisioningRunCoordinator
         run.LeaseExpiresAt = null;
         run.FinishedAt = now;
         run.LastError = error;
+        run.Revision = checked(run.Revision + 1);
         run.UpdatedAt = version;
     }
 

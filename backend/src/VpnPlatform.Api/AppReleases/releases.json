@@ -16027,5 +16027,28 @@
         "text": "Roadmap progress is 694/714 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-provisioning-management-boundary",
+    "version": "0.682.0",
+    "releasedAt": "2026-08-13T12:30:00+07:00",
+    "title": "Provisioning защищён от устаревших действий",
+    "summary": "Очередь подготовки VPS и действия с запусками используют ревизии, ограниченные выборки и безопасное восстановление после конфликтов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Queue, precheck, retry, deploy, cancel и запрос поддержки больше не выполняются по устаревшей версии сервера или запуска: API возвращает controlled conflict."
+      },
+      {
+        "type": "improved",
+        "text": "Worker и coordinator обновляют ревизии, рабочие и диагностические выборки ограничены в БД, а клиент отклоняет неизвестные поля provisioning DTO."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 695/715 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -300,6 +300,7 @@ function provisioningRunFixture(overrides: Record<string, unknown> = {}) {
   return {
     id: 'run-1',
     nodeId: 'node-1',
+    revision: 0,
     nodeName: 'nl-01',
     targetHost: 'nl-01.example.com',
     sshPort: 22,
@@ -1580,10 +1581,10 @@ test('ApiClient provisioning run details and actions are tokenized', async () =>
   const client = new ApiClient('http://localhost:8080')
   await client.getAdminProvisioningRuns('admin-token')
   const details = await client.getAdminProvisioningRun('admin-token', 'run-1')
-  await client.retryAdminProvisioningRun('admin-token', 'run-1')
-  const deploy = await client.deployAdminProvisioningRun('admin-token', 'run-1')
-  await client.cancelAdminProvisioningRun('admin-token', 'run-1')
-  await client.markAdminProvisioningSupportNeeded('admin-token', 'run-1')
+  await client.retryAdminProvisioningRun('admin-token', 'run-1', 4)
+  const deploy = await client.deployAdminProvisioningRun('admin-token', 'run-1', 4)
+  await client.cancelAdminProvisioningRun('admin-token', 'run-1', 4)
+  await client.markAdminProvisioningSupportNeeded('admin-token', 'run-1', 4)
 
   assert.deepEqual(calls.map((call) => new URL(call.url).pathname), [
     '/api/admin/provisioning-runs',
@@ -1594,12 +1595,24 @@ test('ApiClient provisioning run details and actions are tokenized', async () =>
     '/api/admin/provisioning-runs/run-1/support-needed'
   ])
   assert.equal(calls[3]?.init?.method, 'POST')
+  assert.deepEqual(JSON.parse(String(calls[3]?.init?.body)), { revision: 4 })
   assert.equal(new Headers(calls[5]?.init?.headers).get('Authorization'), 'Bearer admin-token')
   assert.equal(details.run.credentialsConfigured, true)
   assert.equal(details.run.mode, 'dry-run')
   assert.equal(details.run.deployMode, 'validation-deploy')
   assert.equal(deploy.mode, 'validation-deploy')
   assert.equal(details.steps[0]?.output, 'credentials=***')
+})
+
+test('ApiClient rejects unknown and secret fields in provisioning responses', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify([
+    provisioningRunFixture({ protectedSshCredential: 'must-not-cross-api-boundary' })
+  ]), { status: 200, headers: { 'Content-Type': 'application/json' } })) as typeof fetch
+
+  await assert.rejects(
+    () => new ApiClient('http://localhost:8080').getAdminProvisioningRuns('admin-token'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+  )
 })
 
 test('ApiClient.queueAdminProvision calls provisioning endpoint', async () => {
@@ -1616,13 +1629,15 @@ test('ApiClient.queueAdminProvision calls provisioning endpoint', async () => {
   }) as typeof fetch
 
   const client = new ApiClient('http://localhost:8080')
-  await client.precheckAdminServer('admin-token', 'node-1')
-  const response = await client.queueAdminProvision('admin-token', 'node-1')
+  await client.precheckAdminServer('admin-token', 'node-1', 3)
+  const response = await client.queueAdminProvision('admin-token', 'node-1', 3)
   const headers = new Headers(calls[0]?.init?.headers)
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/servers/node-1/precheck')
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/servers/node-1/provision')
   assert.equal(calls[0]?.init?.method, 'POST')
+  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), { revision: 3 })
+  assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), { dryRun: false, revision: 3 })
   assert.equal(headers.get('Authorization'), 'Bearer admin-token')
   assert.equal(response.runId, 'run-1')
   assert.equal(response.mode, 'validation-deploy')
@@ -3003,14 +3018,14 @@ test('ApiClient rejects malformed server, provisioning and Telegram bot DTOs', a
     () => client.disableAdminServerAllocation('admin-token', 'node-1'),
     () => client.enableAdminServerMaintenance('admin-token', 'node-1'),
     () => client.disableAdminServerMaintenance('admin-token', 'node-1'),
-    () => client.precheckAdminServer('admin-token', 'node-1'),
-    () => client.queueAdminProvision('admin-token', 'node-1'),
+    () => client.precheckAdminServer('admin-token', 'node-1', 0),
+    () => client.queueAdminProvision('admin-token', 'node-1', 0),
     () => client.getAdminProvisioningRuns('admin-token'),
     () => client.getAdminProvisioningRun('admin-token', 'run-1'),
-    () => client.retryAdminProvisioningRun('admin-token', 'run-1'),
-    () => client.deployAdminProvisioningRun('admin-token', 'run-1'),
-    () => client.cancelAdminProvisioningRun('admin-token', 'run-1'),
-    () => client.markAdminProvisioningSupportNeeded('admin-token', 'run-1'),
+    () => client.retryAdminProvisioningRun('admin-token', 'run-1', 0),
+    () => client.deployAdminProvisioningRun('admin-token', 'run-1', 0),
+    () => client.cancelAdminProvisioningRun('admin-token', 'run-1', 0),
+    () => client.markAdminProvisioningSupportNeeded('admin-token', 'run-1', 0),
     () => client.getAdminTelegramBotSettings('admin-token'),
     () => client.testAdminTelegramBotSettings('admin-token'),
     () => client.updateAdminTelegramBotSettings('admin-token', { enabled: false })

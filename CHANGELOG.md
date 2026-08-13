@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.682.0 - 2026-08-13
+
+Release entry: `2026-08-13-provisioning-management-boundary`.
+
+### Исправлено
+
+- Queue/precheck/retry/deploy/cancel/support-needed больше не выполняются по устаревшему состоянию сервера или provisioning run: HTTP требует revision, backend возвращает controlled `409`, а UI обновляет данные.
+- Worker и coordinator повышают ревизии запуска и сервера при переходах; старые локальные SQLite-схемы получают колонку `ProvisioningRuns.Revision` через repair и миграцию.
+
+### Улучшено
+
+- Очередь claimable runs, lease recovery, admin list и detail steps ограничиваются в БД до materialization с SQLite-совместимой сортировкой.
+- Provisioning list/detail/step/action DTO получили точную fail-closed форму; неизвестные и секретные поля отклоняются API client.
+
+### Проверено
+
+- Backend `1448/1448`, frontend `172/172`, typecheck/build/bundle budget и targeted provisioning browser `2/2` зелёные; fail-first подтвердил отсутствие revision-контракта, SQLite regressions проверяют bounded SQL, schema repair и stale command без side effects.
+- Roadmap `695/715` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider/Telegram/SMTP кабинеты, live payment и production-like 3x-ui evidence локально не проверялись; статус остаётся staging-ready baseline, not production-ready.
+
 ## 0.681.0 - 2026-08-13
 
 Release entry: `2026-08-13-vpn-panel-management-boundary`.

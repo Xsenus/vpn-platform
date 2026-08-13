@@ -48,18 +48,35 @@ public class ProvisioningService
         _secretProtector = secretProtector;
     }
 
-    public async Task<Result<ProvisioningRun>> QueueAsync(Guid nodeId, bool dryRun, Guid? requestedByUserId, CancellationToken cancellationToken = default)
+    public async Task<Result<ProvisioningRun>> QueueAsync(
+        Guid nodeId,
+        bool dryRun,
+        Guid? requestedByUserId,
+        CancellationToken cancellationToken = default,
+        int? expectedNodeRevision = null)
     {
-        return await QueueCoreAsync(nodeId, dryRun, requestedByUserId, requestedByUserId, isRetry: false, cancellationToken);
+        return await QueueCoreAsync(nodeId, dryRun, requestedByUserId, requestedByUserId, isRetry: false, cancellationToken, expectedNodeRevision);
     }
 
-    private async Task<Result<ProvisioningRun>> QueueCoreAsync(Guid nodeId, bool dryRun, Guid? ownerUserId, Guid? actorUserId, bool isRetry, CancellationToken cancellationToken)
+    private async Task<Result<ProvisioningRun>> QueueCoreAsync(
+        Guid nodeId,
+        bool dryRun,
+        Guid? ownerUserId,
+        Guid? actorUserId,
+        bool isRetry,
+        CancellationToken cancellationToken,
+        int? expectedNodeRevision = null)
     {
         await using var gate = await PaymentProcessingGate.AcquireProvisioningNodeAsync(nodeId, cancellationToken);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == nodeId, cancellationToken);
         if (node is null)
         {
             return Result<ProvisioningRun>.Failure("Node not found.");
+        }
+
+        if (expectedNodeRevision.HasValue && node.Revision != expectedNodeRevision.Value)
+        {
+            return Result<ProvisioningRun>.Failure("Server changed. Reload it and retry.", isRetryable: true);
         }
 
         if (node.Status == NodeStatus.Archived)
@@ -152,6 +169,7 @@ public class ProvisioningService
         });
 
         node.ProvisioningStatus = status;
+        node.Revision = checked(node.Revision + 1);
         node.UpdatedAt = now;
         if (!dryRun)
         {
@@ -276,12 +294,21 @@ public class ProvisioningService
         return Result<ProvisioningRun>.Success(run);
     }
 
-    public async Task<Result<ProvisioningRun>> QueueDeployAsync(Guid runId, Guid? requestedByUserId, CancellationToken cancellationToken = default)
+    public async Task<Result<ProvisioningRun>> QueueDeployAsync(
+        Guid runId,
+        Guid? requestedByUserId,
+        CancellationToken cancellationToken = default,
+        int? expectedRevision = null)
     {
         var original = await _db.ProvisioningRuns.AsNoTracking().FirstOrDefaultAsync(x => x.Id == runId, cancellationToken);
         if (original is null)
         {
             return Result<ProvisioningRun>.Failure("Provisioning run not found.");
+        }
+
+        if (expectedRevision.HasValue && original.Revision != expectedRevision.Value)
+        {
+            return Result<ProvisioningRun>.Failure("Provisioning run changed. Reload it and retry.", isRetryable: true);
         }
 
         if (original.Status != ProvisioningRunStatus.ReadyToDeploy && original.Status != ProvisioningRunStatus.Succeeded)
@@ -292,12 +319,21 @@ public class ProvisioningService
         return await QueueCoreAsync(original.NodeId, false, original.RequestedByUserId, requestedByUserId, isRetry: false, cancellationToken);
     }
 
-    public async Task<Result<ProvisioningRun>> RetryAsync(Guid runId, Guid? requestedByUserId, CancellationToken cancellationToken = default)
+    public async Task<Result<ProvisioningRun>> RetryAsync(
+        Guid runId,
+        Guid? requestedByUserId,
+        CancellationToken cancellationToken = default,
+        int? expectedRevision = null)
     {
         var original = await _db.ProvisioningRuns.AsNoTracking().FirstOrDefaultAsync(x => x.Id == runId, cancellationToken);
         if (original is null)
         {
             return Result<ProvisioningRun>.Failure("Provisioning run not found.");
+        }
+
+        if (expectedRevision.HasValue && original.Revision != expectedRevision.Value)
+        {
+            return Result<ProvisioningRun>.Failure("Provisioning run changed. Reload it and retry.", isRetryable: true);
         }
 
         if (original.Status is not (ProvisioningRunStatus.Failed or ProvisioningRunStatus.PrecheckFailed or ProvisioningRunStatus.Cancelled))
@@ -308,12 +344,21 @@ public class ProvisioningService
         return await QueueCoreAsync(original.NodeId, original.DryRun, original.RequestedByUserId, requestedByUserId, isRetry: true, cancellationToken);
     }
 
-    public async Task<Result<string>> CancelAsync(Guid runId, Guid? requestedByUserId, CancellationToken cancellationToken = default)
+    public async Task<Result<string>> CancelAsync(
+        Guid runId,
+        Guid? requestedByUserId,
+        CancellationToken cancellationToken = default,
+        int? expectedRevision = null)
     {
         var run = await _db.ProvisioningRuns.AsNoTracking().FirstOrDefaultAsync(x => x.Id == runId, cancellationToken);
         if (run is null)
         {
             return Result<string>.Failure("Provisioning run not found.");
+        }
+
+        if (expectedRevision.HasValue && run.Revision != expectedRevision.Value)
+        {
+            return Result<string>.Failure("Provisioning run changed. Reload it and retry.", isRetryable: true);
         }
 
         if (run.Status is ProvisioningRunStatus.Prechecking or ProvisioningRunStatus.Deploying or ProvisioningRunStatus.Running)
@@ -338,17 +383,18 @@ public class ProvisioningService
         if (transaction is not null)
         {
             affected = await _db.ProvisioningRuns
-                .Where(x => x.Id == run.Id && x.Status == run.Status && x.UpdatedAt == run.UpdatedAt)
+                .Where(x => x.Id == run.Id && x.Status == run.Status && x.Revision == run.Revision && x.UpdatedAt == run.UpdatedAt)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(x => x.Status, ProvisioningRunStatus.Cancelled)
                     .SetProperty(x => x.FinishedAt, now)
                     .SetProperty(x => x.ExecutionLog, cancelledLog)
+                    .SetProperty(x => x.Revision, x => x.Revision + 1)
                     .SetProperty(x => x.UpdatedAt, version), cancellationToken);
         }
         else
         {
             var trackedRun = await _db.ProvisioningRuns.FirstOrDefaultAsync(x => x.Id == run.Id, cancellationToken);
-            if (trackedRun is not null && trackedRun.Status == run.Status && trackedRun.UpdatedAt == run.UpdatedAt)
+            if (trackedRun is not null && trackedRun.Status == run.Status && trackedRun.Revision == run.Revision && trackedRun.UpdatedAt == run.UpdatedAt)
             {
                 StatusStateMachine.SetProvisioningRunStatus(trackedRun, ProvisioningRunStatus.Cancelled, version);
                 trackedRun.FinishedAt = now;
@@ -367,6 +413,7 @@ public class ProvisioningService
         {
             node.ProvisioningStatus = ProvisioningRunStatus.Cancelled;
             node.Status = NodeStatus.New;
+            node.Revision = checked(node.Revision + 1);
             node.UpdatedAt = now;
         }
         AddAudit("provisioning.cancel", "ProvisioningRun", run.Id, requestedByUserId, "{}", JsonSerializer.Serialize(new { runId }));
@@ -378,12 +425,21 @@ public class ProvisioningService
         return Result<string>.Success("cancelled");
     }
 
-    public async Task<Result<string>> MarkSupportNeededAsync(Guid runId, Guid? requestedByUserId, CancellationToken cancellationToken = default)
+    public async Task<Result<string>> MarkSupportNeededAsync(
+        Guid runId,
+        Guid? requestedByUserId,
+        CancellationToken cancellationToken = default,
+        int? expectedRevision = null)
     {
         var run = await _db.ProvisioningRuns.FirstOrDefaultAsync(x => x.Id == runId, cancellationToken);
         if (run is null)
         {
             return Result<string>.Failure("Provisioning run not found.");
+        }
+
+        if (expectedRevision.HasValue && run.Revision != expectedRevision.Value)
+        {
+            return Result<string>.Failure("Provisioning run changed. Reload it and retry.", isRetryable: true);
         }
 
         var node = await _db.VpnNodes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == run.NodeId, cancellationToken);

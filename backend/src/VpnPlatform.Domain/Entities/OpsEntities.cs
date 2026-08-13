@@ -101,6 +101,7 @@ public class AuditLog : AuditableEntity
 public class ProvisioningRun : AuditableEntity
 {
     public Guid NodeId { get; set; }
+    public int Revision { get; set; }
     public ProvisioningRunStatus Status { get; set; } = ProvisioningRunStatus.Pending;
     public Guid? RequestedByUserId { get; set; }
     public bool DryRun { get; set; }

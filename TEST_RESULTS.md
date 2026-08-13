@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: provisioning management boundary
+
+Scope:
+- Queue/precheck и run actions должны требовать актуальную revision и восстанавливаться после controlled conflict без побочных эффектов.
+- Coordinator/admin diagnostics должны ограничивать runs/leases/steps до materialization; frontend обязан отклонять расширенный provisioning DTO.
+
+Results:
+- Roadmap progress: `695/715` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-provisioning-management-boundary`, version `0.682.0`.
+- Fail-first: новая state-machine проверка не компилировалась без `ProvisioningRun.Revision`; текущие coordinator/admin queries не имели SQL limits.
+- After fix: EF concurrency token и миграция/SQLite repair, revision для server queue и run actions, atomic revision predicates, worker/node revision lifecycle, controlled `409` с русским UI reload, bounded provider-aware queries и exact DTO contracts.
+- Backend `1448/1448`, frontend `172/172`, typecheck/build и admin bundle `560151` raw/`148648` gzip/largest `252784` зелёные. Targeted provisioning lifecycle/conflict Playwright `2/2`; SQLite regressions покрывают SQL bounds, stale command без side effects и legacy schema repair. Реальные VPS/SSH/Ansible, provider/Telegram кабинеты, Bot API, SMTP, live payment и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: 3x-ui panel management boundary
 
 Scope:

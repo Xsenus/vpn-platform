@@ -3629,6 +3629,12 @@ export function App() {
     throw new ApiClientError('Сервер уже изменен другим администратором. Список обновлен. Повторите.', 409, error.payload)
   }
 
+  const throwProvisioningConflict = async (error: unknown, action: AdminActionContext): Promise<never> => {
+    if (!isProvisioningStateConflict(error)) throw error
+    await action.reloadAll()
+    throw new ApiClientError('Запуск уже изменён. Данные обновлены.', 409, null)
+  }
+
   const handleSaveServer = async () => {
     if (!token || !canWriteActiveSection) return
     const editingId = editingServerId
@@ -3688,20 +3694,22 @@ export function App() {
     await action.reloadAll()
   }, serverActionResourceKey(server.id))
 
-  const handleQueuePrecheck = (serverId: string) => runAction('nodes', `precheck-${serverId}`, async (action) => {
-    const response = await api.precheckAdminServer(token, serverId)
+  const handleQueuePrecheck = (server: VpnNodeDto) => runAction('nodes', `precheck-${server.id}`, async (action) => {
+    const response = await api.precheckAdminServer(token, server.id, server.revision)
+      .catch((error: unknown) => throwProvisioningConflict(error, action))
     if (!action.isCurrent()) return
     setNotice(`Проверка поставлена в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}. ID запуска: ${response.runId}`)
     await action.reloadAll()
-  }, serverActionResourceKey(serverId))
+  }, serverActionResourceKey(server.id))
 
-  const handleQueueProvision = async (serverId: string) => {
-    await runAction('nodes', `provision-${serverId}`, async (action) => {
-      const response = await api.queueAdminProvision(token, serverId, false)
+  const handleQueueProvision = async (server: VpnNodeDto) => {
+    await runAction('nodes', `provision-${server.id}`, async (action) => {
+      const response = await api.queueAdminProvision(token, server.id, server.revision, false)
+        .catch((error: unknown) => throwProvisioningConflict(error, action))
       if (!action.isCurrent()) return
       setNotice(`Подготовка сервера поставлена в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}; риск: ${provisioningRiskLabel(response.riskLevel)}. ID запуска: ${response.runId}`)
       await action.reloadAll()
-    }, serverActionResourceKey(serverId))
+    }, serverActionResourceKey(server.id))
   }
 
   const provisioningActionResourceKeys = (runId: string) => {
@@ -3711,12 +3719,13 @@ export function App() {
       : [provisioningRunActionResourceKey(runId)]
   }
 
-  const handleRetryProvisioningRun = (runId: string) => runAction('provisioning', `retry-${runId}`, async (action) => {
-    const response = await api.retryAdminProvisioningRun(token, runId)
+  const handleRetryProvisioningRun = (run: ProvisioningRunDto) => runAction('provisioning', `retry-${run.id}`, async (action) => {
+    const response = await api.retryAdminProvisioningRun(token, run.id, run.revision)
+      .catch((error: unknown) => throwProvisioningConflict(error, action))
     if (!action.isCurrent()) return
     setNotice(`Повтор поставлен в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}. Новый ID запуска: ${response.runId}`)
     await action.reloadAll()
-  }, provisioningActionResourceKeys(runId))
+  }, provisioningActionResourceKeys(run.id))
 
   const handleRetryNotificationDelivery = (deliveryId: string) => runAction('audit', `retry-notification-${deliveryId}`, async (action) => {
     await api.retryAdminNotificationDelivery(token, deliveryId)
@@ -3725,35 +3734,33 @@ export function App() {
     await action.reloadAll()
   }, notificationDeliveryActionResourceKey(deliveryId))
 
-  const handleDeployProvisioningRun = (runId: string) => {
-    return runAction('provisioning', `deploy-run-${runId}`, async (action) => {
-      const response = await api.deployAdminProvisioningRun(token, runId)
+  const handleDeployProvisioningRun = (run: ProvisioningRunDto) => {
+    return runAction('provisioning', `deploy-run-${run.id}`, async (action) => {
+      const response = await api.deployAdminProvisioningRun(token, run.id, run.revision)
+        .catch((error: unknown) => throwProvisioningConflict(error, action))
       if (!action.isCurrent()) return
       setNotice(`Развертывание поставлено в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}; риск: ${provisioningRiskLabel(response.riskLevel)}. ID запуска: ${response.runId}`)
       await action.reloadAll()
-    }, provisioningActionResourceKeys(runId))
+    }, provisioningActionResourceKeys(run.id))
   }
 
-  const handleCancelProvisioningRun = (runId: string) => {
-    return runAction('provisioning', `cancel-run-${runId}`, async (action) => {
-      try {
-        await api.cancelAdminProvisioningRun(token, runId)
-      } catch (error) {
-        if (isProvisioningStateConflict(error)) await action.reloadAll()
-        throw error
-      }
+  const handleCancelProvisioningRun = (run: ProvisioningRunDto) => {
+    return runAction('provisioning', `cancel-run-${run.id}`, async (action) => {
+      await api.cancelAdminProvisioningRun(token, run.id, run.revision)
+        .catch((error: unknown) => throwProvisioningConflict(error, action))
       if (!action.isCurrent()) return
       setNotice('Запуск подготовки сервера отменен.')
       await action.reloadAll()
-    }, provisioningActionResourceKeys(runId))
+    }, provisioningActionResourceKeys(run.id))
   }
 
-  const handleProvisioningSupportNeeded = (runId: string) => runAction('provisioning', `support-run-${runId}`, async (action) => {
-    const response = await api.markAdminProvisioningSupportNeeded(token, runId)
+  const handleProvisioningSupportNeeded = (run: ProvisioningRunDto) => runAction('provisioning', `support-run-${run.id}`, async (action) => {
+    const response = await api.markAdminProvisioningSupportNeeded(token, run.id, run.revision)
+      .catch((error: unknown) => throwProvisioningConflict(error, action))
     if (!action.isCurrent()) return
     setNotice(`Обращение в поддержку: ${response.supportConversationId}`)
     await action.reloadAll()
-  }, provisioningActionResourceKeys(runId))
+  }, provisioningActionResourceKeys(run.id))
 
   const handleSaveBotSettings = () => {
     if (!token || !canWriteSection('bot')) return
@@ -4858,8 +4865,8 @@ export function App() {
                 <div className="toolbar" hidden={!canWriteSection('nodes')}>
                   <PrimaryButton className="button-secondary" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => editServer(server)}>Редактировать</PrimaryButton>
                   <PrimaryButton disabled={isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleCheckServerHealth(server)}>Health-check</PrimaryButton>
-                  <PrimaryButton disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleQueuePrecheck(server.id)}>Precheck VPS</PrimaryButton>
-                  <ConfirmButton className="button-danger" disabled={!serverProvisioningCanDeploy(server) || isActionResourceBusy(serverActionResourceKey(server.id))} message={`Запустить подготовку сервера "${server.name}"? Режим: ${server.provisioningModeTitle || provisioningDeployModeLabel(serverProvisioningMode(server))}. ${server.provisioningOperatorWarning || 'Проверьте precheck перед запуском.'}`} onConfirm={() => handleQueueProvision(server.id)}>Подготовить</ConfirmButton>
+                  <PrimaryButton disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleQueuePrecheck(server)}>Precheck VPS</PrimaryButton>
+                  <ConfirmButton className="button-danger" disabled={!serverProvisioningCanDeploy(server) || isActionResourceBusy(serverActionResourceKey(server.id))} message={`Запустить подготовку сервера "${server.name}"? Режим: ${server.provisioningModeTitle || provisioningDeployModeLabel(serverProvisioningMode(server))}. ${server.provisioningOperatorWarning || 'Проверьте precheck перед запуском.'}`} onConfirm={() => handleQueueProvision(server)}>Подготовить</ConfirmButton>
                   <ConfirmButton className="button-secondary" disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} message="Перевести сервер в обслуживание? Новые пользователи не должны попадать на него." onConfirm={() => handleServerMode(server, 'maintenance')}>В обслуживание</ConfirmButton>
                   <PrimaryButton className="button-secondary" disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton>
                   <ConfirmButton className="button-secondary" disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} message={`${server.isAvailableForNewUsers ? 'Закрыть набор на сервер' : 'Открыть набор на сервер'}? Это изменит распределение новых пользователей.`} onConfirm={() => handleServerMode(server, server.isAvailableForNewUsers ? 'drain' : 'allocate')}>{server.isAvailableForNewUsers ? 'Закрыть набор' : 'Открыть набор'}</ConfirmButton>
@@ -5471,10 +5478,10 @@ export function App() {
                 {run.precheckReportPreview && <pre className="safe-note">{run.precheckReportPreview}</pre>}
                 <div className="muted">{run.lastError || run.errorSummary || run.executionLogPreview || run.executionLog || '—'}</div>
                 <div className="toolbar" hidden={!canWriteSection('provisioning')}>
-                  <PrimaryButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !canRetryProvisioningRun(run.status)} onClick={() => void handleRetryProvisioningRun(run.id)}>Повторить</PrimaryButton>
-                  <ConfirmButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !['ReadyToDeploy', 'Succeeded'].includes(run.status) || run.deployMode === 'live-deploy-blocked'} className="button-danger" message={`Развернуть VPS? Режим: ${run.deployModeTitle || provisioningDeployModeLabel(run.deployMode)}. ${run.deployOperatorWarning || run.operatorWarning || 'В live-режиме это может выполнить реальные SSH/Ansible-действия.'}`} onConfirm={() => handleDeployProvisioningRun(run.id)}>Развернуть</ConfirmButton>
-                  <ConfirmButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !canCancelProvisioningRun(run.status)} className="button-secondary" message="Отменить запуск подготовки VPS?" onConfirm={() => handleCancelProvisioningRun(run.id)}>Отменить</ConfirmButton>
-                  <PrimaryButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId))} onClick={() => void handleProvisioningSupportNeeded(run.id)}>Нужна поддержка</PrimaryButton>
+                  <PrimaryButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !canRetryProvisioningRun(run.status)} onClick={() => void handleRetryProvisioningRun(run)}>Повторить</PrimaryButton>
+                  <ConfirmButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !['ReadyToDeploy', 'Succeeded'].includes(run.status) || run.deployMode === 'live-deploy-blocked'} className="button-danger" message={`Развернуть VPS? Режим: ${run.deployModeTitle || provisioningDeployModeLabel(run.deployMode)}. ${run.deployOperatorWarning || run.operatorWarning || 'В live-режиме это может выполнить реальные SSH/Ansible-действия.'}`} onConfirm={() => handleDeployProvisioningRun(run)}>Развернуть</ConfirmButton>
+                  <ConfirmButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !canCancelProvisioningRun(run.status)} className="button-secondary" message="Отменить запуск подготовки VPS?" onConfirm={() => handleCancelProvisioningRun(run)}>Отменить</ConfirmButton>
+                  <PrimaryButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId))} onClick={() => void handleProvisioningSupportNeeded(run)}>Нужна поддержка</PrimaryButton>
                 </div>
               </div>
             ))}

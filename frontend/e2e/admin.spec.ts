@@ -350,6 +350,7 @@ function provisioningRun(overrides: Record<string, unknown> = {}) {
   return {
     id: 'provisioning-e2e',
     nodeId: 'server-eu',
+    revision: 0,
     nodeName: 'EU Sandbox',
     targetHost: 'eu.example.test',
     sshPort: 22,
@@ -1766,8 +1767,13 @@ async function mockAdminApi(page: Page) {
       }
       const index = provisioningRuns.findIndex((item) => item.id === runId)
       const run = provisioningRuns[index]
+      const requestRevision = Number((body as { revision?: unknown } | null)?.revision)
+      if (!run || requestRevision !== Number(run.revision)) {
+        await fulfillJson(route, { error: 'Provisioning run changed. Reload it and retry.' }, 409)
+        return
+      }
       if (action === 'cancel') {
-        provisioningRuns[index] = provisioningRun({ ...run, status: 'Cancelled', currentStep: 'cancelled', finishedAt: now, updatedAt: now })
+        provisioningRuns[index] = provisioningRun({ ...run, revision: Number(run.revision) + 1, status: 'Cancelled', currentStep: 'cancelled', finishedAt: now, updatedAt: now })
         await fulfillJson(route, { runId, status: 'cancelled' })
         return
       }
@@ -1778,6 +1784,7 @@ async function mockAdminApi(page: Page) {
       const retry = action === 'retry'
       provisioningRuns[index] = provisioningRun({
         ...run,
+        revision: Number(run.revision) + 1,
         status: retry ? 'Retrying' : 'DeployQueued',
         currentStep: retry ? 'retrying' : 'deploy_queued',
         dryRun: false,
@@ -2241,6 +2248,16 @@ async function mockAdminApi(page: Page) {
     releaseVpnClientSync: () => { releaseDelayedVpnClientSync?.() },
     delayNextProvisioningDeploy: () => { delayNextProvisioningDeployResponse = true },
     releaseProvisioningDeploy: () => { releaseDelayedProvisioningDeploy?.() },
+    changeProvisioningRunExternally: (runId: string) => {
+      const index = provisioningRuns.findIndex((item) => item.id === runId)
+      if (index < 0) return
+      provisioningRuns[index] = provisioningRun({
+        ...provisioningRuns[index],
+        revision: Number(provisioningRuns[index].revision) + 1,
+        executionLogPreview: 'Состояние обновлено worker-процессом.',
+        updatedAt: now
+      })
+    },
     preparePaymentLifecycle: () => {
       orders[0] = { ...orders[0], status: 'PendingPayment', lastPaymentStatus: 'Unknown', paidAt: null, updatedAt: now }
       payments[0] = {
@@ -4230,14 +4247,14 @@ test('admin provisioning supports safe validation lifecycle', async ({ page }) =
 
   await serverRow.getByRole('button', { name: 'Precheck VPS' }).click()
   await expect(page.getByText('Проверка поставлена в очередь. Режим: Dry-run precheck. ID запуска: provisioning-precheck-created-e2e')).toBeVisible()
-  expect(api.getLastRequest('/api/admin/servers/server-eu/precheck', 'POST')?.body).toEqual({})
+  expect(api.getLastRequest('/api/admin/servers/server-eu/precheck', 'POST')?.body).toEqual({ revision: 0 })
 
   await serverRow.getByRole('button', { name: 'Подготовить' }).click()
   await expect(nodesPanel.getByRole('dialog')).toContainText('Validation deploy')
   await expect(nodesPanel.getByRole('dialog')).toContainText('не меняет рабочую инфраструктуру')
   await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
   await expect(page.getByText('Подготовка сервера поставлена в очередь. Режим: Validation deploy; риск: низкий риск. ID запуска: provisioning-direct-created-e2e')).toBeVisible()
-  expect(api.getLastRequest('/api/admin/servers/server-eu/provision', 'POST')?.body).toEqual({ dryRun: false })
+  expect(api.getLastRequest('/api/admin/servers/server-eu/provision', 'POST')?.body).toEqual({ dryRun: false, revision: 0 })
 
   await openAdminSection(page, 'Подготовка VPS', 'provisioning')
   const provisioningPanel = page.locator('#provisioning')
@@ -4252,7 +4269,7 @@ test('admin provisioning supports safe validation lifecycle', async ({ page }) =
   await expect(provisioningPanel.getByRole('dialog')).toContainText('не меняет рабочую инфраструктуру')
   await provisioningPanel.getByRole('button', { name: 'Подтвердить' }).click()
   await expect(page.getByText('Развертывание поставлено в очередь. Режим: Validation deploy; риск: низкий риск. ID запуска: provisioning-precheck-created-e2e')).toBeVisible()
-  expect(api.getLastRequest('/api/admin/provisioning-runs/provisioning-precheck-created-e2e/deploy', 'POST')?.body).toEqual({})
+  expect(api.getLastRequest('/api/admin/provisioning-runs/provisioning-precheck-created-e2e/deploy', 'POST')?.body).toEqual({ revision: 0 })
 
   precheckRow = provisioningPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox Precheck E2E' })
   await expect(precheckRow.getByRole('button', { name: 'Развернуть' })).toBeDisabled()
@@ -4274,6 +4291,23 @@ test('admin provisioning supports safe validation lifecycle', async ({ page }) =
   expect(api.getAuthorizedRequestCount('/api/admin/provisioning-runs/provisioning-precheck-created-e2e/support-needed', 'POST', 'Bearer admin-provisioning-token')).toBe(1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
+})
+
+test('admin provisioning action reloads a stale run after revision conflict', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-provisioning-conflict-token', 'admin-provisioning-conflict-refresh')
+  await page.goto('/#provisioning')
+
+  const provisioningPanel = page.locator('#provisioning')
+  const runRow = provisioningPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox' }).first()
+  await expect(runRow).toBeVisible()
+  api.changeProvisioningRunExternally('provisioning-e2e')
+
+  await runRow.getByRole('button', { name: 'Нужна поддержка' }).click()
+
+  await expect(page.locator('.error-block')).toContainText('Запуск уже изменён. Данные обновлены.')
+  await expect(runRow).toContainText('Состояние обновлено worker-процессом.')
+  expect(api.getLastRequest('/api/admin/provisioning-runs/provisioning-e2e/support-needed', 'POST')?.body).toEqual({ revision: 0 })
 })
 
 test('admin 3x-ui client actions persist across reload', async ({ page }) => {

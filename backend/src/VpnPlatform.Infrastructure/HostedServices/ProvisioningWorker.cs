@@ -141,6 +141,8 @@ public sealed class ProvisioningWorker : BackgroundService
             node.Status = NodeStatus.Provisioning;
             node.IsAvailableForNewUsers = false;
         }
+        node.Revision = checked(node.Revision + 1);
+        node.UpdatedAt = now;
 
         AddStep(db, run.Id, run.DryRun ? "Precheck started" : "Deploy started", run.Status, "Worker accepted provisioning run.", string.Empty, now);
         await QueueTelegramNotificationAsync(db, node, run.DryRun ? "own_vps_precheck_started" : "own_vps_deploy_started", run.DryRun
@@ -185,6 +187,7 @@ public sealed class ProvisioningWorker : BackgroundService
         run.LastError = result.Success
             ? null
             : ProvisioningService.RedactSensitiveText(result.ErrorText ?? result.SummaryLog, 1000);
+        node.Revision = checked(node.Revision + 1);
 
         await db.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("Provisioning run {RunId} completed for node {NodeId} with status {Status}", run.Id, node.Id, run.Status);

@@ -759,6 +759,7 @@ export type VpnNodeDto = {
 export type ProvisioningRunDto = {
   id: string
   nodeId: string
+  revision: number
   status: string
   nodeName: string
   targetHost: string
@@ -2719,6 +2720,7 @@ function isProvisioningRunBase(value: unknown): value is Record<string, unknown>
 
   return hasString(value, 'id', true)
     && hasString(value, 'nodeId', true)
+    && hasInteger(value, 'revision', 0)
     && hasString(value, 'nodeName')
     && hasString(value, 'targetHost')
     && hasInteger(value, 'sshPort', 0)
@@ -2755,6 +2757,7 @@ function isProvisioningRunDto(value: unknown): value is ProvisioningRunDto {
   return isProvisioningRunBase(value)
     && hasString(value, 'executionLogPreview')
     && hasString(value, 'precheckReportPreview')
+    && Object.keys(value).length === 40
 }
 
 function isProvisioningStepDto(value: unknown) {
@@ -2772,6 +2775,7 @@ function isProvisioningStepDto(value: unknown) {
     && hasDateString(value, 'createdAt')
     && hasDateString(value, 'updatedAt')
     && Date.parse(value.updatedAt as string) >= Date.parse(value.createdAt as string)
+    && Object.keys(value).length === 10
 }
 
 function isProvisioningRunDetailsDto(value: unknown): value is ProvisioningRunDetailsDto {
@@ -2780,9 +2784,11 @@ function isProvisioningRunDetailsDto(value: unknown): value is ProvisioningRunDe
   if (!isProvisioningRunBase(run)
     || !hasString(run, 'precheckReport')
     || !hasNullableString(run, 'linkedAccessId')
+    || Object.keys(run).length !== 40
     || !Array.isArray(value.steps)
     || !value.steps.every(isProvisioningStepDto)
-    || !hasUniqueStringKey(value.steps, 'id')) return false
+    || !hasUniqueStringKey(value.steps, 'id')
+    || Object.keys(value).length !== 2) return false
 
   return value.steps.every((step) => step.provisioningRunId === run.id)
 }
@@ -2796,18 +2802,21 @@ function isProvisioningCommandResponse(value: unknown): value is ProvisioningCom
     && hasBoolean(value, 'dryRun')
     && hasProvisioningModeDescriptor(value, 'mode', 'modeTitle', 'riskLevel', 'liveDeployAllowed', 'nextAction', 'operatorWarning')
     && ((value.dryRun === true && value.mode === 'dry-run') || (value.dryRun === false && value.mode !== 'dry-run'))
+    && Object.keys(value).length === 10
 }
 
 function isProvisioningCancelResult(value: unknown): value is { runId: string; status: string } {
   return isRecord(value)
     && hasString(value, 'runId', true)
     && value.status === 'cancelled'
+    && Object.keys(value).length === 2
 }
 
 function isProvisioningSupportResult(value: unknown): value is { runId: string; supportConversationId: string } {
   return isRecord(value)
     && hasString(value, 'runId', true)
     && hasString(value, 'supportConversationId', true)
+    && Object.keys(value).length === 2
 }
 
 function isAdminTelegramBotSettingsDto(value: unknown): value is AdminTelegramBotSettingsDto {
@@ -4449,20 +4458,20 @@ export class ApiClient {
     return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable-maintenance`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
   }
 
-  precheckAdminServer(token: string, serverId: string): Promise<ProvisioningCommandResponse> {
+  precheckAdminServer(token: string, serverId: string, revision: number): Promise<ProvisioningCommandResponse> {
     return this.request<ProvisioningCommandResponse>(`/api/admin/servers/${serverId}/precheck`, {
       method: 'POST',
       token,
-      body: JSON.stringify({}),
+      body: JSON.stringify({ revision }),
       errorMessage: apiFallbackErrorMessage
     }, 'object', (value): value is ProvisioningCommandResponse => isProvisioningCommandResponse(value) && value.serverId === serverId && value.dryRun === true)
   }
 
-  queueAdminProvision(token: string, serverId: string, dryRun = false): Promise<ProvisioningCommandResponse> {
+  queueAdminProvision(token: string, serverId: string, revision: number, dryRun = false): Promise<ProvisioningCommandResponse> {
     return this.request<ProvisioningCommandResponse>(`/api/admin/servers/${serverId}/provision`, {
       method: 'POST',
       token,
-      body: JSON.stringify({ dryRun }),
+      body: JSON.stringify({ dryRun, revision }),
       errorMessage: apiFallbackErrorMessage
     }, 'object', (value): value is ProvisioningCommandResponse => isProvisioningCommandResponse(value) && value.serverId === serverId && value.dryRun === dryRun)
   }
@@ -4476,38 +4485,38 @@ export class ApiClient {
     return this.request<ProvisioningRunDetailsDto>(`/api/admin/provisioning-runs/${runId}`, { token, errorMessage: apiFallbackErrorMessage }, 'object', (value): value is ProvisioningRunDetailsDto => isProvisioningRunDetailsDto(value) && value.run.id === runId)
   }
 
-  retryAdminProvisioningRun(token: string, runId: string): Promise<ProvisioningCommandResponse> {
+  retryAdminProvisioningRun(token: string, runId: string, revision: number): Promise<ProvisioningCommandResponse> {
     return this.request<ProvisioningCommandResponse>(`/api/admin/provisioning-runs/${runId}/retry`, {
       method: 'POST',
       token,
-      body: JSON.stringify({}),
+      body: JSON.stringify({ revision }),
       errorMessage: apiFallbackErrorMessage
     }, 'object', (value): value is ProvisioningCommandResponse => isProvisioningCommandResponse(value) && value.runId === runId)
   }
 
-  deployAdminProvisioningRun(token: string, runId: string): Promise<ProvisioningCommandResponse> {
+  deployAdminProvisioningRun(token: string, runId: string, revision: number): Promise<ProvisioningCommandResponse> {
     return this.request<ProvisioningCommandResponse>(`/api/admin/provisioning-runs/${runId}/deploy`, {
       method: 'POST',
       token,
-      body: JSON.stringify({}),
+      body: JSON.stringify({ revision }),
       errorMessage: apiFallbackErrorMessage
     }, 'object', (value): value is ProvisioningCommandResponse => isProvisioningCommandResponse(value) && value.runId === runId && value.dryRun === false)
   }
 
-  cancelAdminProvisioningRun(token: string, runId: string): Promise<{ runId: string; status: string }> {
+  cancelAdminProvisioningRun(token: string, runId: string, revision: number): Promise<{ runId: string; status: string }> {
     return this.request<{ runId: string; status: string }>(`/api/admin/provisioning-runs/${runId}/cancel`, {
       method: 'POST',
       token,
-      body: JSON.stringify({}),
+      body: JSON.stringify({ revision }),
       errorMessage: apiFallbackErrorMessage
     }, 'object', (value): value is { runId: string; status: string } => isProvisioningCancelResult(value) && value.runId === runId)
   }
 
-  markAdminProvisioningSupportNeeded(token: string, runId: string): Promise<{ runId: string; supportConversationId: string }> {
+  markAdminProvisioningSupportNeeded(token: string, runId: string, revision: number): Promise<{ runId: string; supportConversationId: string }> {
     return this.request<{ runId: string; supportConversationId: string }>(`/api/admin/provisioning-runs/${runId}/support-needed`, {
       method: 'POST',
       token,
-      body: JSON.stringify({}),
+      body: JSON.stringify({ revision }),
       errorMessage: apiFallbackErrorMessage
     }, 'object', (value): value is { runId: string; supportConversationId: string } => isProvisioningSupportResult(value) && value.runId === runId)
   }

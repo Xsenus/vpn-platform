@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-13.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-vpn-panel-management-boundary`, версия `0.681.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `694/714` проверяемых пунктов, готовность `97.2%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-provisioning-management-boundary`, версия `0.682.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `695/715` проверяемых пунктов, готовность `97.2%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,8 +37,8 @@ git diff --check
 
 Что подтверждено на 2026-08-13:
 
-- [x] `STATE-001` Backend test suite проходит: `1444/1444`.
-- [x] `STATE-002` Frontend test suite проходит: `171/171`.
+- [x] `STATE-001` Backend test suite проходит: `1448/1448`.
+- [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2472,6 +2472,10 @@ git diff --check
   - Что сделать: panel/inbound/client mutations не должны терять параллельные изменения; HTTP-контракт обязан требовать актуальную revision, диагностические и рабочие списки должны иметь DB-side bound, а границы API, EF и формы должны совпадать.
   - Что сделано: `VpnPanel`, `VpnInbound` и `VpnClient` получили EF concurrency token и миграцию; PATCH/DELETE/default/client actions/migration требуют revision и возвращают controlled `409`. Capacity reservation повторно проверяет client revision до обращения к 3x-ui и освобождает резерв при конфликте. Panel/inbound/client и history queries ограничены до materialization, включая provider-aware SQLite ordering; DTO validators, API payloads и формы согласовали revision и текстовые границы. UI обновляет список и детали и закрывает stale editor после конфликта.
   - Доказательство: fail-first regression не компилировался без revision-контракта; after-fix X3Ui `89/89`, frontend `171/171`, backend `1444/1444`, typecheck/build/bundle budget и PostgreSQL EF drift зелёные. Managed VPN browser regression desktop/mobile `10/10`, focused panel editor responsive/WCAG `1/1` на 320/390/1280 px, fresh SQLite checkout/payment/subscription/VPN flow, strict UTF-8, secret scan `688/0` и dependency audit `0 vulnerabilities` зелёные. Реальные provider/Telegram кабинеты и VPS/staging/payment/production-like 3x-ui evidence остаются внешней проверкой.
+- [x] `P11-ACC-404` Закрыть административную границу provisioning queue и run actions. 2026-08-13.
+  - Что сделать: queue/precheck/retry/deploy/cancel/support-needed не должны выполняться по устаревшему состоянию; coordinator/admin queries не должны materialize-ить неограниченные runs, leases или steps, а frontend не должен принимать расширенный provisioning DTO.
+  - Что сделано: `ProvisioningRun.Revision` защищён EF concurrency token, миграцией и legacy SQLite repair; server queue и run actions требуют revision и возвращают controlled `409`. Worker/coordinator/node lifecycle повышает revision, atomic predicates учитывают status/revision/version. Claimable/expired/list/detail queries получили DB-side limits и SQLite sorting; frontend использует exact DTO и reload с русским сообщением.
+  - Доказательство: fail-first state-machine regression не компилировался без revision; targeted backend/SQLite `54/54`, frontend `172/172`, backend `1448/1448`, typecheck/build/bundle budget зелёные. Provisioning lifecycle/conflict Playwright `2/2`, SQL bounds, stale command без side effects и legacy schema repair покрыты regression-тестами. Реальные VPS/SSH/Ansible, provider/Telegram/SMTP кабинеты и VPS/staging/live payment/production-like 3x-ui evidence остаются внешней проверкой.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

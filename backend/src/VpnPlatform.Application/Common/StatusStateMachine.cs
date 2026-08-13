@@ -101,6 +101,7 @@ public static class StatusStateMachine
         => TrySetStatus(run.Status, to, "Provisioning run", value =>
         {
             run.Status = value;
+            run.Revision = checked(run.Revision + 1);
             run.UpdatedAt = now;
         });
 

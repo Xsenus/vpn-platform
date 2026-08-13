@@ -160,6 +160,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             .HasDatabaseName("IX_ProvisioningRuns_Active_NodeId")
             .HasFilter("\"Status\" IN (0, 1, 8, 9, 12, 13, 15)")
             .IsUnique();
+        modelBuilder.Entity<ProvisioningRun>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<InboxMessage>().HasIndex(x => new { x.Source, x.ExternalKey }).IsUnique();
         modelBuilder.Entity<NotificationDelivery>().HasIndex(x => x.SourceOutboxMessageId).IsUnique();
         modelBuilder.Entity<NotificationDelivery>().HasIndex(x => new { x.Status, x.NextAttemptAt });

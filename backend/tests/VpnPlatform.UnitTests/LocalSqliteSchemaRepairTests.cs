@@ -246,7 +246,8 @@ public class LocalSqliteSchemaRepairTests
 
         var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
 
-        Assert.Equal(5, repaired);
+        Assert.Equal(6, repaired);
+        Assert.True(await ColumnExistsAsync(connection, "ProvisioningRuns", "Revision"));
         Assert.True(await ColumnExistsAsync(connection, "ProvisioningRuns", "AttemptCount"));
         Assert.True(await ColumnExistsAsync(connection, "ProvisioningRuns", "ProcessingStartedAt"));
         Assert.True(await ColumnExistsAsync(connection, "ProvisioningRuns", "LeaseExpiresAt"));

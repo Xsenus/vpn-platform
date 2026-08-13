@@ -91,6 +91,46 @@ public class AdminServerManagementTests
             && command.Contains("WHERE \"_LatestRank\" = 1", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task Provisioning_Reads_Should_Bound_Runs_And_Steps_Before_Materialization()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new CommandCaptureInterceptor();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var run = new ProvisioningRun
+        {
+            NodeId = Guid.NewGuid(),
+            Status = ProvisioningRunStatus.Failed,
+            DryRun = true
+        };
+        db.ProvisioningRuns.Add(run);
+        db.ProvisioningStepRuns.Add(new ProvisioningStepRun
+        {
+            ProvisioningRunId = run.Id,
+            StepName = "bounded-step",
+            Status = ProvisioningRunStatus.Failed
+        });
+        await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
+
+        var controller = CreateController(db);
+        Assert.IsType<OkObjectResult>(await controller.GetProvisioningRuns(CancellationToken.None));
+        Assert.IsType<OkObjectResult>(await controller.GetProvisioningRun(run.Id, CancellationToken.None));
+
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("ProvisioningRuns", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("LIMIT 200", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("ProvisioningStepRuns", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("LIMIT 500", StringComparison.OrdinalIgnoreCase));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

@@ -46,7 +46,8 @@ public sealed record CreateServerHttpRequest(
     string? OwnerType = null,
     int? Revision = null);
 
-public sealed record QueueProvisionHttpRequest(bool DryRun = false);
+public sealed record QueueProvisionHttpRequest(bool DryRun = false, int? Revision = null);
+public sealed record ProvisioningRunActionHttpRequest(int? Revision = null);
 public sealed record RefundPaymentHttpRequest(decimal Amount, string? Reason);
 public sealed record RefundReadinessDto(bool IsSupported, bool CanRefund, decimal RefundableAmount, IReadOnlyList<string> Blockers);
 public sealed record RecheckReadinessDto(bool IsSupported, bool CanRecheck, IReadOnlyList<string> Blockers);
@@ -2128,10 +2129,15 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.ProvisioningManage)]
     public async Task<IActionResult> Provision(Guid id, [FromBody] QueueProvisionHttpRequest? request, CancellationToken cancellationToken)
     {
-        var result = await _provisioningService.QueueAsync(id, request?.DryRun ?? false, ResolveUserId(), cancellationToken);
+        if (request?.Revision is null or < 0)
+        {
+            return BadRequest(new { error = "Server revision is required." });
+        }
+
+        var result = await _provisioningService.QueueAsync(id, request.DryRun, ResolveUserId(), cancellationToken, request.Revision);
         if (!result.IsSuccess)
         {
-            return BadRequest(new { error = result.Error });
+            return result.IsRetryable ? Conflict(new { error = result.Error }) : BadRequest(new { error = result.Error });
         }
 
         var node = await _db.VpnNodes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -2140,12 +2146,20 @@ public class AdminOperationsController : ControllerBase
 
     [HttpPost("servers/{id:guid}/precheck")]
     [Authorize(Policy = AdminPolicies.ProvisioningManage)]
-    public async Task<IActionResult> Precheck(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Precheck(
+        Guid id,
+        CancellationToken cancellationToken,
+        [FromBody] QueueProvisionHttpRequest? request = null)
     {
-        var result = await _provisioningService.QueueAsync(id, true, ResolveUserId(), cancellationToken);
+        if (request?.Revision is null or < 0)
+        {
+            return BadRequest(new { error = "Server revision is required." });
+        }
+
+        var result = await _provisioningService.QueueAsync(id, true, ResolveUserId(), cancellationToken, request.Revision);
         if (!result.IsSuccess)
         {
-            return BadRequest(new { error = result.Error });
+            return result.IsRetryable ? Conflict(new { error = result.Error }) : BadRequest(new { error = result.Error });
         }
 
         var node = await _db.VpnNodes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -2349,15 +2363,24 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.AdminRead)]
     public async Task<IActionResult> GetProvisioningRuns(CancellationToken cancellationToken)
     {
-        var runs = await _db.ProvisioningRuns
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
-        runs = runs.OrderByDescending(x => x.CreatedAt).Take(200).ToList();
+        var runs = _db is DbContext dbContext && dbContext.Database.IsSqlite()
+            ? await _db.ProvisioningRuns.FromSqlRaw("""
+                SELECT *
+                FROM "ProvisioningRuns"
+                ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                LIMIT 200
+                """).AsNoTracking().ToListAsync(cancellationToken)
+            : await _db.ProvisioningRuns.AsNoTracking()
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(200)
+                .ToListAsync(cancellationToken);
         var nodeIds = runs.Select(x => x.NodeId).Distinct().ToList();
         var runIds = runs.Select(x => x.Id).ToList();
         var nodes = await _db.VpnNodes.AsNoTracking().Where(x => nodeIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, cancellationToken);
         var precheckReports = await _db.ProvisioningStepRuns.AsNoTracking()
             .Where(x => runIds.Contains(x.ProvisioningRunId) && x.StepName == PrecheckReportStepName)
+            .Take(1000)
             .ToListAsync(cancellationToken);
         var precheckReportByRunId = precheckReports
             .GroupBy(x => x.ProvisioningRunId)
@@ -2372,6 +2395,7 @@ public class AdminOperationsController : ControllerBase
             {
                 x.Id,
                 x.NodeId,
+                x.Revision,
                 NodeName = node?.Name ?? string.Empty,
                 TargetHost = node?.Host ?? node?.IpAddress ?? string.Empty,
                 SshPort = node?.SshPort ?? 0,
@@ -2423,24 +2447,50 @@ public class AdminOperationsController : ControllerBase
         if (run is null) return NotFound();
 
         var node = await _db.VpnNodes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == run.NodeId, cancellationToken);
-        var steps = await _db.ProvisioningStepRuns.AsNoTracking()
-            .Where(x => x.ProvisioningRunId == id)
-            .ToListAsync(cancellationToken);
-        steps = steps.OrderBy(x => x.CreatedAt).ToList();
+        var steps = _db is DbContext detailDbContext && detailDbContext.Database.IsSqlite()
+            ? await _db.ProvisioningStepRuns.FromSqlInterpolated($$"""
+                SELECT *
+                FROM "ProvisioningStepRuns"
+                WHERE "ProvisioningRunId" = {{id}}
+                ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                LIMIT 500
+                """).AsNoTracking().ToListAsync(cancellationToken)
+            : await _db.ProvisioningStepRuns.AsNoTracking()
+                .Where(x => x.ProvisioningRunId == id)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(500)
+                .ToListAsync(cancellationToken);
+        steps = steps.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToList();
 
-        var access = node is null
-            ? null
-            : await _db.AccessCredentials.AsNoTracking().FirstOrDefaultAsync(x => x.ServerId == node.Id, cancellationToken);
+        AccessCredential? access = null;
+        if (node is not null)
+        {
+            access = _db is DbContext accessDbContext && accessDbContext.Database.IsSqlite()
+                ? await _db.AccessCredentials.FromSqlInterpolated($$"""
+                    SELECT *
+                    FROM "AccessCredentials"
+                    WHERE "ServerId" = {{node.Id}}
+                    ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                    LIMIT 1
+                    """).AsNoTracking().FirstOrDefaultAsync(cancellationToken)
+                : await _db.AccessCredentials.AsNoTracking()
+                    .Where(x => x.ServerId == node.Id)
+                    .OrderByDescending(x => x.CreatedAt)
+                    .ThenByDescending(x => x.Id)
+                    .FirstOrDefaultAsync(cancellationToken);
+        }
 
         var mode = ProvisioningService.DescribeProvisioningMode(node, run.DryRun);
         var deployMode = ProvisioningService.DescribeProvisioningMode(node, dryRun: false);
-        var precheckReport = steps.FirstOrDefault(x => x.StepName == PrecheckReportStepName)?.Output;
+        var precheckReport = steps.LastOrDefault(x => x.StepName == PrecheckReportStepName)?.Output;
         return Ok(new
         {
             Run = new
             {
                 run.Id,
                 run.NodeId,
+                run.Revision,
                 NodeName = node?.Name ?? string.Empty,
                 TargetHost = node?.Host ?? node?.IpAddress ?? string.Empty,
                 SshPort = node?.SshPort ?? 0,
@@ -2497,12 +2547,16 @@ public class AdminOperationsController : ControllerBase
 
     [HttpPost("provisioning-runs/{id:guid}/retry")]
     [Authorize(Policy = AdminPolicies.ProvisioningManage)]
-    public async Task<IActionResult> RetryProvisioningRun(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> RetryProvisioningRun(
+        Guid id,
+        CancellationToken cancellationToken,
+        [FromBody] ProvisioningRunActionHttpRequest? request = null)
     {
-        var result = await _provisioningService.RetryAsync(id, ResolveUserId(), cancellationToken);
+        if (request?.Revision is null or < 0) return BadRequest(new { error = "Provisioning run revision is required." });
+        var result = await _provisioningService.RetryAsync(id, ResolveUserId(), cancellationToken, request.Revision);
         if (!result.IsSuccess)
         {
-            return BadRequest(new { error = result.Error });
+            return result.IsRetryable ? Conflict(new { error = result.Error }) : BadRequest(new { error = result.Error });
         }
 
         var node = await _db.VpnNodes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == result.Value!.NodeId, cancellationToken);
@@ -2511,12 +2565,16 @@ public class AdminOperationsController : ControllerBase
 
     [HttpPost("provisioning-runs/{id:guid}/deploy")]
     [Authorize(Policy = AdminPolicies.ProvisioningManage)]
-    public async Task<IActionResult> DeployProvisioningRun(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeployProvisioningRun(
+        Guid id,
+        CancellationToken cancellationToken,
+        [FromBody] ProvisioningRunActionHttpRequest? request = null)
     {
-        var result = await _provisioningService.QueueDeployAsync(id, ResolveUserId(), cancellationToken);
+        if (request?.Revision is null or < 0) return BadRequest(new { error = "Provisioning run revision is required." });
+        var result = await _provisioningService.QueueDeployAsync(id, ResolveUserId(), cancellationToken, request.Revision);
         if (!result.IsSuccess)
         {
-            return BadRequest(new { error = result.Error });
+            return result.IsRetryable ? Conflict(new { error = result.Error }) : BadRequest(new { error = result.Error });
         }
 
         var node = await _db.VpnNodes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == result.Value!.NodeId, cancellationToken);
@@ -2525,9 +2583,13 @@ public class AdminOperationsController : ControllerBase
 
     [HttpPost("provisioning-runs/{id:guid}/cancel")]
     [Authorize(Policy = AdminPolicies.ProvisioningManage)]
-    public async Task<IActionResult> CancelProvisioningRun(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> CancelProvisioningRun(
+        Guid id,
+        CancellationToken cancellationToken,
+        [FromBody] ProvisioningRunActionHttpRequest? request = null)
     {
-        var result = await _provisioningService.CancelAsync(id, ResolveUserId(), cancellationToken);
+        if (request?.Revision is null or < 0) return BadRequest(new { error = "Provisioning run revision is required." });
+        var result = await _provisioningService.CancelAsync(id, ResolveUserId(), cancellationToken, request.Revision);
         if (result.IsSuccess)
         {
             return Ok(new { runId = id, status = result.Value });
@@ -2540,10 +2602,15 @@ public class AdminOperationsController : ControllerBase
 
     [HttpPost("provisioning-runs/{id:guid}/support-needed")]
     [Authorize(Policy = AdminPolicies.ProvisioningManage)]
-    public async Task<IActionResult> MarkProvisioningSupportNeeded(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> MarkProvisioningSupportNeeded(
+        Guid id,
+        CancellationToken cancellationToken,
+        [FromBody] ProvisioningRunActionHttpRequest? request = null)
     {
-        var result = await _provisioningService.MarkSupportNeededAsync(id, ResolveUserId(), cancellationToken);
-        return result.IsSuccess ? Ok(new { runId = id, supportConversationId = result.Value }) : BadRequest(new { error = result.Error });
+        if (request?.Revision is null or < 0) return BadRequest(new { error = "Provisioning run revision is required." });
+        var result = await _provisioningService.MarkSupportNeededAsync(id, ResolveUserId(), cancellationToken, request.Revision);
+        if (result.IsSuccess) return Ok(new { runId = id, supportConversationId = result.Value });
+        return result.IsRetryable ? Conflict(new { error = result.Error }) : BadRequest(new { error = result.Error });
     }
 
     [HttpPost("servers/{id:guid}/maintenance")]

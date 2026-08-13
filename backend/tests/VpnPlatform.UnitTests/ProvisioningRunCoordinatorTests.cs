@@ -98,6 +98,56 @@ public class ProvisioningRunCoordinatorTests
     }
 
     [Fact]
+    public async Task Coordinator_Queue_And_Lease_Reads_Should_Be_Bounded_In_Sql()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new CommandCaptureInterceptor();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock(new DateTimeOffset(2026, 8, 13, 9, 0, 0, TimeSpan.Zero));
+        var queuedNode = Node();
+        var leasedNode = Node();
+        db.AddRange(
+            queuedNode,
+            leasedNode,
+            new ProvisioningRun
+            {
+                NodeId = queuedNode.Id,
+                Status = ProvisioningRunStatus.PrecheckQueued,
+                DryRun = true,
+                CreatedAt = clock.UtcNow.AddHours(-2)
+            },
+            new ProvisioningRun
+            {
+                NodeId = leasedNode.Id,
+                Status = ProvisioningRunStatus.Prechecking,
+                DryRun = true,
+                LeaseExpiresAt = clock.UtcNow.AddMinutes(-1),
+                UpdatedAt = clock.UtcNow.AddHours(-1)
+            });
+        await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
+
+        var coordinator = Coordinator(db, clock);
+        await coordinator.GetClaimableIdsAsync(10);
+        await coordinator.RecoverExpiredClaimsAsync();
+
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("ProvisioningRuns", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("LIMIT", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(interceptor.Commands, command =>
+            command.Contains("ProvisioningRuns", StringComparison.OrdinalIgnoreCase)
+            && command.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)
+            && !command.Contains("LIMIT", StringComparison.OrdinalIgnoreCase)
+            && !command.Contains("WHERE \"Id\"", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task Worker_Support_Message_Should_Reopen_Pending_Conversation_And_Advance_Revision()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -230,7 +280,10 @@ public class ProvisioningRunCoordinatorTests
                 secretProtector: new TestSecretProtector());
             controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
 
-            var cancel = await controller.CancelProvisioningRun(runId, CancellationToken.None);
+            var cancel = await controller.CancelProvisioningRun(
+                runId,
+                CancellationToken.None,
+                new ProvisioningRunActionHttpRequest(0));
 
             Assert.True(claimBeforeCancel.Claimed);
             var conflict = Assert.IsType<ConflictObjectResult>(cancel);
@@ -246,6 +299,45 @@ public class ProvisioningRunCoordinatorTests
         {
             File.Delete(databasePath);
         }
+    }
+
+    [Fact]
+    public async Task Provisioning_Command_Should_Reject_Stale_Revision_Without_Side_Effects()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateDb(connection);
+        await db.Database.EnsureCreatedAsync();
+        var node = Node();
+        var run = new ProvisioningRun
+        {
+            NodeId = node.Id,
+            Revision = 3,
+            Status = ProvisioningRunStatus.PrecheckQueued,
+            DryRun = true,
+            ExecutionLog = "Precheck queued."
+        };
+        db.AddRange(node, run);
+        await db.SaveChangesAsync();
+        var controller = new AdminOperationsController(
+            db,
+            new ProvisioningService(db, new FixedClock(DateTimeOffset.UtcNow), new TestSecretProtector()),
+            paymentOrchestrator: null!,
+            paymentProviderAccounts: null!,
+            vpnAccessLifecycleService: null,
+            secretProtector: new TestSecretProtector());
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+
+        var response = await controller.CancelProvisioningRun(
+            run.Id,
+            CancellationToken.None,
+            new ProvisioningRunActionHttpRequest(2));
+
+        Assert.IsType<ConflictObjectResult>(response);
+        await db.Entry(run).ReloadAsync();
+        Assert.Equal(ProvisioningRunStatus.PrecheckQueued, run.Status);
+        Assert.Equal(3, run.Revision);
+        Assert.DoesNotContain(await db.AuditLogs.ToListAsync(), x => x.Action == "provisioning.cancel" && x.EntityId == run.Id.ToString());
     }
 
     private static ServiceProvider BuildWorkerServices(string databasePath, IProvisioningExecutor executor)
@@ -348,6 +440,30 @@ public class ProvisioningRunCoordinatorTests
             }
 
             return result;
+        }
+    }
+
+    private sealed class CommandCaptureInterceptor : DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+
+        public override InterceptionResult<DbDataReader> ReaderExecuting(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result)
+        {
+            Commands.Add(command.CommandText);
+            return result;
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
         }
     }
 
