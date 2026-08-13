@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: admin audit read boundary
+
+Scope:
+- Admin audit RBAC, filters, date window и top-500 должны выполняться до materialization.
+- SQLite должен сохранять абсолютную сортировку `DateTimeOffset` без загрузки полной таблицы.
+
+Results:
+- Roadmap progress: `702/722` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-admin-audit-read-boundary`, version `0.689.0`.
+- Fail-first: response правильно возвращал окно из `7` строк, но единственный SQL загружал все `505` audit rows без `LIMIT`.
+- After fix: SQLite применяет scope/user/date filters, `julianday` ordering и `LIMIT` одним параметризованным запросом; PostgreSQL выполняет translatable LINQ/`Take`. Targeted audit/RBAC/redaction `12/12`, backend `1465/1465`, frontend `172/172`, audit RBAC desktop/mobile `4/4`, fresh SQLite full flow, EF drift, encoding `18/18`, secret scan `696/0` и dependency audit `0 vulnerabilities` зеленые. Реальные provider кабинеты, live payment, VPS/SSH/Ansible, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: admin order read boundary
 
 Scope:

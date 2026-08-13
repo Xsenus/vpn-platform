@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.689.0 - 2026-08-13
+
+Release entry: `2026-08-13-admin-audit-read-boundary`.
+
+### Исправлено
+
+- Admin audit больше не загружает всю разрешенную историю до временного окна и top-500.
+
+### Улучшено
+
+- SQLite применяет RBAC, пользовательские фильтры и `julianday`/`LIMIT` одним параметризованным запросом; PostgreSQL использует LINQ/`Take`.
+
+### Проверено
+
+- Fail-first показал SQL без limit на `505` строках; after-fix audit/RBAC/redaction `12/12`, backend `1465/1465`, frontend `172/172`, audit RBAC desktop/mobile `4/4`, fresh SQLite full flow, EF drift, encoding `18/18`, secret scan `696/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `702/722` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider кабинеты, live payment, VPS/SSH/Ansible, Telegram/Bot API/SMTP и production-like 3x-ui evidence локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.688.0 - 2026-08-13
 
 Release entry: `2026-08-13-admin-order-read-boundary`.

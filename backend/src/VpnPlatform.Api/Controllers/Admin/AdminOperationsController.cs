@@ -239,76 +239,131 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> GetAuditLogs([FromQuery] AdminAuditLogFilters filters, CancellationToken cancellationToken)
     {
         var limit = Math.Clamp(filters.Limit, 1, 500);
-        var query = _db.AuditLogs.AsNoTracking().AsQueryable();
         var roles = User?.FindAll(ClaimTypes.Role).Select(claim => claim.Value).ToArray() ?? [];
+        var hasFinanceAccess = AdminPolicies.HasAccess(roles, AdminPolicies.FinanceRead);
+        var hasSupportAccess = AdminPolicies.HasAccess(roles, AdminPolicies.SupportRead);
+        var hasBotAccess = AdminPolicies.HasAccess(roles, AdminPolicies.BotManage);
+        var action = filters.Action?.Trim() ?? string.Empty;
+        var entityType = filters.EntityType?.Trim() ?? string.Empty;
+        var actorType = filters.ActorType?.Trim() ?? string.Empty;
+        var search = filters.Search?.Trim() ?? string.Empty;
+        var from = filters.From;
+        var to = filters.To;
 
-        if (!AdminPolicies.HasAccess(roles, AdminPolicies.FinanceRead))
+        List<AuditLog> rows;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
         {
-            query = query.Where(x =>
-                !x.Action.StartsWith("payment") &&
-                !x.Action.StartsWith("checkout.") &&
-                !x.Action.StartsWith("refund.") &&
-                !x.Action.StartsWith("order.") &&
-                !FinanceAuditEntityTypes.Contains(x.EntityType));
+            rows = await _db.AuditLogs
+                .FromSqlInterpolated($$"""
+                    SELECT *
+                    FROM "AuditLogs"
+                    WHERE ({{(hasFinanceAccess ? 1 : 0)}} = 1 OR (
+                        "Action" NOT LIKE 'payment%'
+                        AND "Action" NOT LIKE 'checkout.%'
+                        AND "Action" NOT LIKE 'refund.%'
+                        AND "Action" NOT LIKE 'order.%'
+                        AND "EntityType" NOT IN (
+                            {{FinanceAuditEntityTypes[0]}}, {{FinanceAuditEntityTypes[1]}},
+                            {{FinanceAuditEntityTypes[2]}}, {{FinanceAuditEntityTypes[3]}},
+                            {{FinanceAuditEntityTypes[4]}}, {{FinanceAuditEntityTypes[5]}},
+                            {{FinanceAuditEntityTypes[6]}}, {{FinanceAuditEntityTypes[7]}}
+                        )
+                    ))
+                    AND ({{(hasSupportAccess ? 1 : 0)}} = 1 OR (
+                        "Action" NOT LIKE 'support.%'
+                        AND "EntityType" NOT IN ({{SupportAuditEntityTypes[0]}}, {{SupportAuditEntityTypes[1]}})
+                    ))
+                    AND ({{(hasBotAccess ? 1 : 0)}} = 1 OR (
+                        "Action" NOT LIKE 'telegram_bot.%'
+                        AND "EntityType" <> 'TelegramBotSettings'
+                    ))
+                    AND ({{(action.Length > 0 ? 1 : 0)}} = 0 OR instr("Action", {{action}}) > 0)
+                    AND ({{(entityType.Length > 0 ? 1 : 0)}} = 0 OR "EntityType" = {{entityType}})
+                    AND ({{(actorType.Length > 0 ? 1 : 0)}} = 0 OR "ActorType" = {{actorType}})
+                    AND ({{(search.Length > 0 ? 1 : 0)}} = 0 OR (
+                        instr("Action", {{search}}) > 0
+                        OR instr("EntityType", {{search}}) > 0
+                        OR instr("EntityId", {{search}}) > 0
+                        OR instr("ActorId", {{search}}) > 0
+                    ))
+                    AND ({{(from.HasValue ? 1 : 0)}} = 0 OR julianday("CreatedAt") >= julianday({{from}}))
+                    AND ({{(to.HasValue ? 1 : 0)}} = 0 OR julianday("CreatedAt") <= julianday({{to}}))
+                    ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                    LIMIT {{limit}}
+                    """)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
         }
-
-        if (!AdminPolicies.HasAccess(roles, AdminPolicies.SupportRead))
+        else
         {
-            query = query.Where(x =>
-                !x.Action.StartsWith("support.") &&
-                !SupportAuditEntityTypes.Contains(x.EntityType));
-        }
+            var query = _db.AuditLogs.AsNoTracking().AsQueryable();
 
-        if (!AdminPolicies.HasAccess(roles, AdminPolicies.BotManage))
-        {
-            query = query.Where(x =>
-                !x.Action.StartsWith("telegram_bot.") &&
-                x.EntityType != "TelegramBotSettings");
-        }
+            if (!hasFinanceAccess)
+            {
+                query = query.Where(x =>
+                    !x.Action.StartsWith("payment") &&
+                    !x.Action.StartsWith("checkout.") &&
+                    !x.Action.StartsWith("refund.") &&
+                    !x.Action.StartsWith("order.") &&
+                    !FinanceAuditEntityTypes.Contains(x.EntityType));
+            }
 
-        if (!string.IsNullOrWhiteSpace(filters.Action))
-        {
-            var action = filters.Action.Trim();
-            query = query.Where(x => x.Action.Contains(action));
-        }
+            if (!hasSupportAccess)
+            {
+                query = query.Where(x =>
+                    !x.Action.StartsWith("support.") &&
+                    !SupportAuditEntityTypes.Contains(x.EntityType));
+            }
 
-        if (!string.IsNullOrWhiteSpace(filters.EntityType))
-        {
-            var entityType = filters.EntityType.Trim();
-            query = query.Where(x => x.EntityType == entityType);
-        }
+            if (!hasBotAccess)
+            {
+                query = query.Where(x =>
+                    !x.Action.StartsWith("telegram_bot.") &&
+                    x.EntityType != "TelegramBotSettings");
+            }
 
-        if (!string.IsNullOrWhiteSpace(filters.ActorType))
-        {
-            var actorType = filters.ActorType.Trim();
-            query = query.Where(x => x.ActorType == actorType);
-        }
+            if (action.Length > 0)
+            {
+                query = query.Where(x => x.Action.Contains(action));
+            }
 
-        if (!string.IsNullOrWhiteSpace(filters.Search))
-        {
-            var search = filters.Search.Trim();
-            query = query.Where(x =>
-                x.Action.Contains(search) ||
-                x.EntityType.Contains(search) ||
-                x.EntityId.Contains(search) ||
-                x.ActorId.Contains(search));
-        }
+            if (entityType.Length > 0)
+            {
+                query = query.Where(x => x.EntityType == entityType);
+            }
 
-        var rows = await query.ToListAsync(cancellationToken);
-        if (filters.From.HasValue)
-        {
-            rows = rows.Where(x => x.CreatedAt >= filters.From.Value).ToList();
-        }
+            if (actorType.Length > 0)
+            {
+                query = query.Where(x => x.ActorType == actorType);
+            }
 
-        if (filters.To.HasValue)
-        {
-            rows = rows.Where(x => x.CreatedAt <= filters.To.Value).ToList();
+            if (search.Length > 0)
+            {
+                query = query.Where(x =>
+                    x.Action.Contains(search) ||
+                    x.EntityType.Contains(search) ||
+                    x.EntityId.Contains(search) ||
+                    x.ActorId.Contains(search));
+            }
+
+            if (from.HasValue)
+            {
+                query = query.Where(x => x.CreatedAt >= from.Value);
+            }
+
+            if (to.HasValue)
+            {
+                query = query.Where(x => x.CreatedAt <= to.Value);
+            }
+
+            rows = await query
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(limit)
+                .ToListAsync(cancellationToken);
         }
 
         var logs = rows
-            .OrderByDescending(x => x.CreatedAt)
-            .ThenByDescending(x => x.Id)
-            .Take(limit)
             .Select(x => new AdminAuditLogDto(
                 x.Id,
                 x.ActorType,

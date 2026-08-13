@@ -16188,5 +16188,28 @@
         "text": "Roadmap progress is 701/721 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-admin-audit-read-boundary",
+    "version": "0.689.0",
+    "releasedAt": "2026-08-13T14:20:00+07:00",
+    "title": "Журнал аудита ограничен в БД",
+    "summary": "Права, фильтры, временное окно и top-500 применяются до загрузки истории.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Admin audit больше не materialize-ит полную таблицу перед временным окном, сортировкой и лимитом."
+      },
+      {
+        "type": "improved",
+        "text": "SQLite использует параметризованные scope-фильтры, julianday и LIMIT; PostgreSQL применяет тот же контракт через LINQ."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 702/722 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
