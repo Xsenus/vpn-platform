@@ -16073,5 +16073,28 @@
         "text": "Roadmap progress is 696/716 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-admin-subscription-access-read-boundary",
+    "version": "0.684.0",
+    "releasedAt": "2026-08-13T13:20:00+07:00",
+    "title": "Списки подписок и VPN-доступов ограничены в БД",
+    "summary": "Административные списки и карточка пользователя больше не загружают полную историю перед применением лимитов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Глобальные subscription/access lists и user overview применяют top-300/top-20 до materialization, сохраняя порядок и terminal masking."
+      },
+      {
+        "type": "improved",
+        "text": "Access history ограничивается top-5 на каждый доступ через SQL window; SQLite и PostgreSQL используют согласованный provider-aware порядок."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 697/717 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

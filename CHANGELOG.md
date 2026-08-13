@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.684.0 - 2026-08-13
+
+Release entry: `2026-08-13-admin-subscription-access-read-boundary`.
+
+### Исправлено
+
+- Глобальные admin subscription/access lists и подписки/доступы user overview больше не загружают полные таблицы до top-300/top-20.
+- Access history ограничивается top-5 на каждый latest access в SQL вместо неограниченного `Include` с последующей обрезкой в памяти.
+
+### Улучшено
+
+- SQLite использует `julianday`, CTE и `ROW_NUMBER`; PostgreSQL сохраняет indexed `ORDER BY/LIMIT`. DTO, terminal secret masking и порядок не изменились.
+
+### Проверено
+
+- Fail-first показывал корректный response count без SQL limits; after-fix SQL/full-flow `11/11`, смежный backend `64/64`, backend `1459/1459`, frontend `172/172`, subscription/access lifecycle desktop/mobile `6/6`, EF drift, secret scan `691/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `697/717` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider/Telegram/SMTP кабинеты, live payment и production-like 3x-ui evidence локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.683.0 - 2026-08-13
 
 Release entry: `2026-08-13-server-mode-action-boundary`.

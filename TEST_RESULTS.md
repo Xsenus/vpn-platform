@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: admin subscription/access read boundary
+
+Scope:
+- Глобальные subscription/access lists и user overview должны применять top-300/top-20 до materialization.
+- Access history должна ограничиваться top-5 на каждый latest access в SQL без изменения DTO, порядка и terminal masking.
+
+Results:
+- Roadmap progress: `697/717` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-admin-subscription-access-read-boundary`, version `0.684.0`.
+- Fail-first: response уже имел `300/5`, но SQL не содержал `LIMIT 300` и window-bound, потому что полные subscription/access/history наборы materialize-ились до обрезки.
+- After fix: provider-aware DB-side limits, SQLite `julianday`, CTE/`ROW_NUMBER` history top-5 и bounded user overview; targeted SQL/full-flow `11/11`, adjacent backend `64/64`, backend `1459/1459`, frontend `172/172`, lifecycle desktop/mobile `6/6`, EF drift clean, secret scan `691/0`, dependency audit `0 vulnerabilities`. Реальные VPS/SSH/Ansible, provider/Telegram кабинеты, Bot API, SMTP, live payment и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: server mode action boundary
 
 Scope:

@@ -163,8 +163,28 @@ public class AdminUsersController : ControllerBase
             : [];
         payments = payments.OrderByDescending(x => x.CreatedAt).Take(20).ToList();
 
-        var subscriptions = await _db.Subscriptions.AsNoTracking()
-            .Where(x => x.UserId == id)
+        var subscriptionEntities = _db is DbContext subscriptionDbContext && subscriptionDbContext.Database.IsSqlite()
+            ? await _db.Subscriptions
+                .FromSqlInterpolated($"""
+                    SELECT *
+                    FROM "Subscriptions"
+                    WHERE "UserId" = {id}
+                    ORDER BY julianday("StartAt") DESC, "Id" DESC
+                    LIMIT 20
+                    """)
+                .AsNoTracking()
+                .Include(x => x.Tariff)
+                .ToListAsync(cancellationToken)
+            : await _db.Subscriptions.AsNoTracking()
+                .Include(x => x.Tariff)
+                .Where(x => x.UserId == id)
+                .OrderByDescending(x => x.StartAt)
+                .ThenByDescending(x => x.Id)
+                .Take(20)
+                .ToListAsync(cancellationToken);
+        var subscriptions = subscriptionEntities
+            .OrderByDescending(x => x.StartAt)
+            .ThenByDescending(x => x.Id)
             .Select(x => new
             {
                 x.Id,
@@ -187,15 +207,31 @@ public class AdminUsersController : ControllerBase
                 x.CreatedAt,
                 x.UpdatedAt
             })
-            .ToListAsync(cancellationToken);
-        subscriptions = subscriptions.OrderByDescending(x => x.StartAt).Take(20).ToList();
+            .ToList();
 
         var now = _clock.UtcNow;
-        var accessEntities = await _db.AccessCredentials.AsNoTracking()
-            .Include(x => x.Subscription)
-            .Include(x => x.Server)
-            .Where(x => x.Subscription != null && x.Subscription.UserId == id)
-            .ToListAsync(cancellationToken);
+        var accessEntities = _db is DbContext accessDbContext && accessDbContext.Database.IsSqlite()
+            ? await _db.AccessCredentials
+                .FromSqlInterpolated($"""
+                    SELECT access.*
+                    FROM "AccessCredentials" AS access
+                    INNER JOIN "Subscriptions" AS subscription ON subscription."Id" = access."SubscriptionId"
+                    WHERE subscription."UserId" = {id}
+                    ORDER BY julianday(access."IssuedAt") DESC, access."Id" DESC
+                    LIMIT 20
+                    """)
+                .AsNoTracking()
+                .Include(x => x.Subscription)
+                .Include(x => x.Server)
+                .ToListAsync(cancellationToken)
+            : await _db.AccessCredentials.AsNoTracking()
+                .Include(x => x.Subscription)
+                .Include(x => x.Server)
+                .Where(x => x.Subscription != null && x.Subscription.UserId == id)
+                .OrderByDescending(x => x.IssuedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(20)
+                .ToListAsync(cancellationToken);
         var accesses = accessEntities.Select(x =>
         {
             var subscriptionAvailable = x.Subscription is not null
@@ -232,7 +268,7 @@ public class AdminUsersController : ControllerBase
                 x.UpdatedAt
             };
         }).ToList();
-        accesses = accesses.OrderByDescending(x => x.IssuedAt).Take(20).ToList();
+        accesses = accesses.OrderByDescending(x => x.IssuedAt).ThenByDescending(x => x.Id).ToList();
 
         var telegramUserIds = telegramAccounts.Select(t => t.TelegramUserId).ToList();
 

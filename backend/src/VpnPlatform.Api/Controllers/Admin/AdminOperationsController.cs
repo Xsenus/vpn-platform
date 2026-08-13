@@ -115,6 +115,9 @@ public class AdminOperationsController : ControllerBase
     private const int ServerListLimit = 300;
     private const int ServerHealthDiagnosticsLimit = 6000;
     private const int TariffListLimit = 200;
+    private const int SubscriptionListLimit = 300;
+    private const int AccessCredentialListLimit = 300;
+    private const int AccessCredentialHistoryLimit = 5;
 
     private static readonly HashSet<string> TariffPatchFields = new(StringComparer.Ordinal)
     {
@@ -417,7 +420,27 @@ public class AdminOperationsController : ControllerBase
     [HttpGet("subscriptions")]
     public async Task<IActionResult> GetSubscriptions(CancellationToken cancellationToken)
     {
-        var subscriptions = await _db.Subscriptions.AsNoTracking()
+        var subscriptions = _db is DbContext dbContext && dbContext.Database.IsSqlite()
+            ? await _db.Subscriptions
+                .FromSqlRaw("""
+                    SELECT *
+                    FROM "Subscriptions"
+                    ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                    LIMIT 300
+                    """)
+                .AsNoTracking()
+                .Include(x => x.Tariff)
+                .ToListAsync(cancellationToken)
+            : await _db.Subscriptions.AsNoTracking()
+                .Include(x => x.Tariff)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(SubscriptionListLimit)
+                .ToListAsync(cancellationToken);
+
+        return Ok(subscriptions
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
             .Select(x => new
             {
                 x.Id,
@@ -445,8 +468,7 @@ public class AdminOperationsController : ControllerBase
                 x.CreatedAt,
                 x.UpdatedAt
             })
-            .ToListAsync(cancellationToken);
-        return Ok(subscriptions.OrderByDescending(x => x.CreatedAt).Take(300).ToList());
+            .ToList());
     }
 
     [HttpGet("access-credentials")]
@@ -454,15 +476,141 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> GetAccessCredentials(CancellationToken cancellationToken)
     {
         var now = _clock.UtcNow;
-        var accessCredentials = await _db.AccessCredentials.AsNoTracking()
-            .Include(x => x.Subscription)
-            .Include(x => x.Server)
-            .Include(x => x.History)
-            .ToListAsync(cancellationToken);
+        var isSqlite = _db is DbContext dbContext && dbContext.Database.IsSqlite();
+        var accessCredentials = isSqlite
+            ? await _db.AccessCredentials
+                .FromSqlRaw("""
+                    SELECT *
+                    FROM "AccessCredentials"
+                    ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                    LIMIT 300
+                    """)
+                .AsNoTracking()
+                .Include(x => x.Subscription)
+                .Include(x => x.Server)
+                .ToListAsync(cancellationToken)
+            : await _db.AccessCredentials.AsNoTracking()
+                .Include(x => x.Subscription)
+                .Include(x => x.Server)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(AccessCredentialListLimit)
+                .ToListAsync(cancellationToken);
+
+        List<AccessCredentialHistory> boundedHistory;
+        if (isSqlite)
+        {
+            boundedHistory = await _db.AccessCredentialHistories
+                .FromSqlRaw("""
+                    WITH "SelectedAccesses" AS (
+                        SELECT "Id"
+                        FROM "AccessCredentials"
+                        ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                        LIMIT 300
+                    ),
+                    "RankedHistory" AS (
+                        SELECT
+                            h."Id",
+                            h."AccessCredentialId",
+                            h."SubscriptionId",
+                            h."EventType",
+                            h."OldValueJson",
+                            h."NewValueJson",
+                            h."CreatedAt",
+                            h."UpdatedAt",
+                            ROW_NUMBER() OVER (
+                                PARTITION BY h."AccessCredentialId"
+                                ORDER BY julianday(h."CreatedAt") DESC, h."Id" DESC
+                            ) AS "_HistoryRank"
+                        FROM "AccessCredentialHistories" AS h
+                        INNER JOIN "SelectedAccesses" AS selected ON selected."Id" = h."AccessCredentialId"
+                    )
+                    SELECT
+                        "Id",
+                        "AccessCredentialId",
+                        "SubscriptionId",
+                        "EventType",
+                        "OldValueJson",
+                        "NewValueJson",
+                        "CreatedAt",
+                        "UpdatedAt"
+                    FROM "RankedHistory"
+                    WHERE "_HistoryRank" <= 5
+                    """)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+        else if (_db is DbContext relationalContext
+                 && relationalContext.Database.IsRelational()
+                 && relationalContext.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            boundedHistory = await _db.AccessCredentialHistories
+                .FromSqlRaw("""
+                    WITH "SelectedAccesses" AS (
+                        SELECT "Id"
+                        FROM "AccessCredentials"
+                        ORDER BY "CreatedAt" DESC, "Id" DESC
+                        LIMIT 300
+                    ),
+                    "RankedHistory" AS (
+                        SELECT
+                            h."Id",
+                            h."AccessCredentialId",
+                            h."SubscriptionId",
+                            h."EventType",
+                            h."OldValueJson",
+                            h."NewValueJson",
+                            h."CreatedAt",
+                            h."UpdatedAt",
+                            ROW_NUMBER() OVER (
+                                PARTITION BY h."AccessCredentialId"
+                                ORDER BY h."CreatedAt" DESC, h."Id" DESC
+                            ) AS "_HistoryRank"
+                        FROM "AccessCredentialHistories" AS h
+                        INNER JOIN "SelectedAccesses" AS selected ON selected."Id" = h."AccessCredentialId"
+                    )
+                    SELECT
+                        "Id",
+                        "AccessCredentialId",
+                        "SubscriptionId",
+                        "EventType",
+                        "OldValueJson",
+                        "NewValueJson",
+                        "CreatedAt",
+                        "UpdatedAt"
+                    FROM "RankedHistory"
+                    WHERE "_HistoryRank" <= 5
+                    """)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+        else
+        {
+            var selectedAccessIds = accessCredentials.Select(x => x.Id).ToList();
+            boundedHistory = (await _db.AccessCredentialHistories.AsNoTracking()
+                    .Where(x => selectedAccessIds.Contains(x.AccessCredentialId))
+                    .ToListAsync(cancellationToken))
+                .GroupBy(x => x.AccessCredentialId)
+                .SelectMany(group => group
+                    .OrderByDescending(x => x.CreatedAt)
+                    .ThenByDescending(x => x.Id)
+                    .Take(AccessCredentialHistoryLimit))
+                .ToList();
+        }
+
+        var historiesByAccess = boundedHistory
+            .GroupBy(x => x.AccessCredentialId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .OrderByDescending(x => x.CreatedAt)
+                    .ThenByDescending(x => x.Id)
+                    .Select(x => new AdminAccessCredentialHistoryDto(x.Id, x.AccessCredentialId, x.SubscriptionId, x.EventType, x.OldValueJson, x.NewValueJson, x.CreatedAt))
+                    .ToList());
 
         return Ok(accessCredentials
             .OrderByDescending(x => x.CreatedAt)
-            .Take(300)
+            .ThenByDescending(x => x.Id)
             .Select(x =>
             {
                 var subscriptionAvailable = x.Subscription is not null
@@ -495,11 +643,7 @@ public class AdminOperationsController : ControllerBase
                     x.DisabledAt,
                     x.LastSyncedAt,
                     x.Revision,
-                    History = x.History
-                        .OrderByDescending(h => h.CreatedAt)
-                        .Take(5)
-                        .Select(h => new AdminAccessCredentialHistoryDto(h.Id, h.AccessCredentialId, h.SubscriptionId, h.EventType, h.OldValueJson, h.NewValueJson, h.CreatedAt))
-                        .ToList(),
+                    History = historiesByAccess.GetValueOrDefault(x.Id) ?? [],
                     x.CreatedAt,
                     x.UpdatedAt
                 };
