@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.701.0 - 2026-08-13
+
+Release entry: `2026-08-13-refresh-family-query-boundary`.
+
+### Исправлено
+
+- Reuse/logout современной refresh family больше не выполняет отдельный SQL-запрос для каждого звена rotation chain.
+
+### Улучшено
+
+- Сессии с `FamilyId` отзывают active family одним query в общей optimistic-concurrency transaction; legacy linked-chain fallback сохранен для старых записей без family ID.
+
+### Проверено
+
+- Fail-first: `8` token-table reads для семьи из шести токенов; after-fix boundary/session `10/10`, auth/security/admin-session `85/85`, backend Debug `1473/1473`, frontend `172/172`, typecheck/build, bundle budget и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `714/734` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.700.0 - 2026-08-13
 
 Release entry: `2026-08-13-own-vps-latest-read-boundary`.

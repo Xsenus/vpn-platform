@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: refresh family query boundary
+
+Scope:
+- Reuse/logout современной refresh family должен отзывать активные записи одним family query вместо N+1 traversal rotation chain.
+- Optimistic concurrency, replay detection, concurrent refresh/logout и legacy `FamilyId = null` isolation должны сохраниться.
+
+Results:
+- Roadmap progress: `714/734` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-refresh-family-query-boundary`, version `0.701.0`.
+- Fail-first: reuse современной семьи из шести токенов корректно отзывал последний активный токен, но выполнял `8` чтений `UserRefreshTokens` вместо постоянной query boundary.
+- After fix: с заполненным `FamilyId` все active family sessions выбираются одним запросом и сохраняются в общей optimistic-concurrency transaction; legacy chain fallback не изменен. Boundary/session `10/10`, auth/security/admin-session `85/85`, backend Debug `1473/1473`, frontend `172/172`, typecheck/build, bundle budget и dependency audit `0 vulnerabilities` зеленые.
+
 ## Check 2026-08-13: own-VPS latest read boundary
 
 Scope:

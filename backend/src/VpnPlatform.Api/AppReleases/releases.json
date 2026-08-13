@@ -16464,5 +16464,28 @@
         "text": "Roadmap progress is 713/733 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-refresh-family-query-boundary",
+    "version": "0.701.0",
+    "releasedAt": "2026-08-13T17:39:00+07:00",
+    "title": "Refresh family отзывается одним запросом",
+    "summary": "Современная rotation family больше не требует SQL traversal каждого потомка.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Reuse/logout токена с FamilyId больше не выполняет отдельный query для каждого звена refresh rotation chain."
+      },
+      {
+        "type": "improved",
+        "text": "Active family sessions выбираются одним запросом в общей optimistic-concurrency transaction; legacy linked-chain fallback сохранен для rows без FamilyId."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 714/734 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -559,6 +559,22 @@ public class AuthController : ControllerBase
     {
         var now = _clock.UtcNow;
         var familyId = reusedSession.FamilyId ?? reusedSession.Id;
+        if (reusedSession.FamilyId.HasValue)
+        {
+            var activeFamilySessions = await _db.UserRefreshTokens
+                .Where(x => x.UserId == reusedSession.UserId
+                    && x.SessionVersion == reusedSession.SessionVersion
+                    && x.FamilyId == familyId
+                    && x.Id != reusedSession.Id
+                    && x.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+            foreach (var session in activeFamilySessions)
+            {
+                RevokeRefreshSession(session, reason, now);
+            }
+            return;
+        }
+
         if (reusedSession.FamilyId != familyId)
         {
             reusedSession.FamilyId = familyId;
