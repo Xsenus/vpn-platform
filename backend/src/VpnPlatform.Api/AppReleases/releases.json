@@ -16142,5 +16142,28 @@
         "text": "Roadmap progress is 699/719 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-admin-finance-read-boundary",
+    "version": "0.687.0",
+    "releasedAt": "2026-08-13T13:55:00+07:00",
+    "title": "Платежные выборки ограничены в БД",
+    "summary": "Платежи, возвраты и последняя попытка заказа выбираются с лимитами до загрузки данных.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Admin payments/refunds применяют latest top-300 в БД, а order recheck выбирает только latest top-1 payment attempt."
+      },
+      {
+        "type": "improved",
+        "text": "Webhook counts ограничены выбранными платежами; refund/recheck readiness, audit и FinanceManager RBAC сохранены."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 700/720 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

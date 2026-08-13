@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.687.0 - 2026-08-13
+
+Release entry: `2026-08-13-admin-finance-read-boundary`.
+
+### Исправлено
+
+- Admin payments и refunds больше не загружают полные таблицы до top-300; webhook counts считаются только для выбранных платежей.
+- Order payment recheck выбирает последнюю попытку top-1 в БД вместо загрузки всей истории заказа.
+
+### Улучшено
+
+- SQLite использует `julianday`/`LIMIT`, PostgreSQL применяет `OrderBy/Take`; refund/recheck readiness, DTO и RBAC не изменились.
+
+### Проверено
+
+- Fail-first вернул `305` refunds и SQL без limits; after-fix finance boundary и смежный backend `69/69`, backend `1463/1463`, frontend `172/172`, finance/recheck/refund lifecycle desktop/mobile `8/8`, fresh SQLite full flow, EF drift, secret scan `694/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `700/720` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider кабинеты, live payment, VPS/SSH/Ansible, Telegram/Bot API/SMTP и production-like 3x-ui evidence локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.686.0 - 2026-08-13
 
 Release entry: `2026-08-13-admin-support-read-boundary`.

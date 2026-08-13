@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: admin finance read boundary
+
+Scope:
+- Admin payments/refunds должны применять latest top-300 до materialization.
+- Order payment recheck должен выбирать latest top-1 в БД без изменения readiness, audit и provider command lifecycle.
+
+Results:
+- Roadmap progress: `700/720` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-admin-finance-read-boundary`, version `0.687.0`.
+- Fail-first: refunds вернули все `305`, payments обрезались после полной загрузки, а order recheck materialize-ил все attempts; SQL не содержал требуемых limits.
+- After fix: SQLite `julianday`/`LIMIT 300/1`, PostgreSQL `OrderBy/Take`, webhook aggregates ограничены selected payments; targeted/adjacent finance backend `69/69`, backend `1463/1463`, frontend `172/172`, finance/recheck/refund lifecycle desktop/mobile `8/8`, fresh SQLite full flow, EF drift clean, secret scan `694/0`, dependency audit `0 vulnerabilities`. Реальные provider кабинеты, live payment, VPS/SSH/Ansible, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: admin support read boundary
 
 Scope:

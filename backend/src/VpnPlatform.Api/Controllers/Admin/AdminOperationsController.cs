@@ -120,6 +120,8 @@ public class AdminOperationsController : ControllerBase
     private const int AccessCredentialHistoryLimit = 5;
     private const int SupportConversationListLimit = 200;
     private const int SupportMessageListLimit = 200;
+    private const int PaymentListLimit = 300;
+    private const int RefundListLimit = 300;
 
     private static readonly HashSet<string> TariffPatchFields = new(StringComparer.Ordinal)
     {
@@ -1340,13 +1342,22 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.FinanceWrite)]
     public async Task<IActionResult> RecheckOrderPayment(Guid id, CancellationToken cancellationToken)
     {
-        var paymentCandidates = await _db.Payments.AsNoTracking()
+        var paymentQuery = _db is DbContext dbContext && dbContext.Database.IsSqlite()
+            ? _db.Payments.FromSqlInterpolated($"""
+                SELECT *
+                FROM "Payments"
+                WHERE "OrderId" = {id}
+                ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                LIMIT 1
+                """)
+            : _db.Payments
+                .Where(x => x.OrderId == id)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(1);
+        var payment = await paymentQuery.AsNoTracking()
             .Include(x => x.PaymentProviderAccount)
-            .Where(x => x.OrderId == id)
-            .ToListAsync(cancellationToken);
-        var payment = paymentCandidates
-            .OrderByDescending(x => x.CreatedAt)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (payment is null)
         {
@@ -1384,7 +1395,18 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.FinanceRead)]
     public async Task<IActionResult> GetPayments(CancellationToken cancellationToken)
     {
-        var payments = await _db.Payments.AsNoTracking()
+        var query = _db is DbContext dbContext && dbContext.Database.IsSqlite()
+            ? _db.Payments.FromSqlRaw("""
+                SELECT *
+                FROM "Payments"
+                ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                LIMIT 300
+                """)
+            : _db.Payments
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(PaymentListLimit);
+        var payments = await query.AsNoTracking()
             .Include(x => x.Order)
                 .ThenInclude(x => x!.User)
             .Include(x => x.PaymentProviderAccount)
@@ -1399,7 +1421,7 @@ public class AdminOperationsController : ControllerBase
 
         return Ok(payments
             .OrderByDescending(x => x.CreatedAt)
-            .Take(300)
+            .ThenByDescending(x => x.Id)
             .Select(x =>
             {
                 var refund = BuildRefundReadiness(x);
@@ -1598,13 +1620,25 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.FinanceRead)]
     public async Task<IActionResult> GetRefunds(CancellationToken cancellationToken)
     {
-        var refunds = await _db.Refunds
+        var query = _db is DbContext dbContext && dbContext.Database.IsSqlite()
+            ? _db.Refunds.FromSqlRaw("""
+                SELECT *
+                FROM "Refunds"
+                ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                LIMIT 300
+                """)
+            : _db.Refunds
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(RefundListLimit);
+        var refunds = await query
             .AsNoTracking()
             .Include(x => x.PaymentAttempt)
                 .ThenInclude(x => x!.PaymentProviderAccount)
             .ToListAsync(cancellationToken);
         return Ok(refunds
             .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
             .Select(x =>
             {
                 var readiness = BuildRefundRecheckReadiness(x);

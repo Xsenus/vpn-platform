@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1462/1462", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-13-admin-support-read-boundary", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1463/1463", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-13-admin-finance-read-boundary", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "1462/1462",
-                     "2026-08-13-admin-support-read-boundary",
-                     "0.686.0",
+                     "1463/1463",
+                     "2026-08-13-admin-finance-read-boundary",
+                     "0.687.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
