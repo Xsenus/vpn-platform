@@ -93,8 +93,9 @@ public class LocalSqliteSchemaRepairTests
 
         var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
 
-        Assert.Equal(1, repaired);
+        Assert.Equal(2, repaired);
         Assert.True(await ColumnExistsAsync(connection, "PaymentProviderAccounts", "WebhookUrl"));
+        Assert.True(await IndexIsUniqueAsync(connection, "PaymentProviderAccounts", "IX_PaymentProviderAccounts_Provider"));
     }
 
     [Fact]
@@ -108,6 +109,7 @@ public class LocalSqliteSchemaRepairTests
         await using var db = new ApplicationDbContext(options);
         await db.Database.EnsureCreatedAsync();
 
+        Assert.Equal(0, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db));
         Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
         Assert.True(await ColumnExistsAsync(connection, "PaymentProviderAccounts", "WebhookUrl"));
     }
@@ -317,28 +319,34 @@ public class LocalSqliteSchemaRepairTests
         var firstId = Guid.NewGuid();
         var duplicateId = Guid.NewGuid();
         var historicalFailureId = Guid.NewGuid();
-        var startedAt = new DateTimeOffset(2026, 8, 4, 12, 0, 0, TimeSpan.Zero);
+        var olderInstant = new DateTimeOffset(2026, 8, 4, 10, 0, 0, TimeSpan.FromHours(5));
+        var newerInstant = new DateTimeOffset(2026, 8, 4, 8, 0, 0, TimeSpan.Zero);
         var summaryJson = "{}";
         await db.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO "PanelSyncRuns"
                 ("Id", "VpnPanelId", "Status", "StartedAt", "FinishedAt", "SummaryJson", "ErrorMessage", "CreatedAt", "UpdatedAt")
             VALUES
-                ({firstId}, {panelId}, 1, {startedAt}, NULL, {summaryJson}, '', {startedAt}, {startedAt}),
-                ({duplicateId}, {panelId}, 1, {startedAt.AddMinutes(1)}, NULL, {summaryJson}, '', {startedAt.AddMinutes(1)}, {startedAt.AddMinutes(1)}),
-                ({historicalFailureId}, {panelId}, 3, {startedAt.AddMinutes(2)}, {startedAt.AddMinutes(2)}, {summaryJson}, 'password=legacy-secret', {startedAt.AddMinutes(2)}, {startedAt.AddMinutes(2)});
+                ({firstId}, {panelId}, 1, {olderInstant}, NULL, {summaryJson}, '', {olderInstant}, {olderInstant}),
+                ({duplicateId}, {panelId}, 1, {newerInstant}, NULL, {summaryJson}, '', {newerInstant}, {newerInstant}),
+                ({historicalFailureId}, {panelId}, 3, {newerInstant.AddMinutes(1)}, {newerInstant.AddMinutes(1)}, {summaryJson}, 'password=legacy-secret', {newerInstant.AddMinutes(1)}, {newerInstant.AddMinutes(1)});
             """);
 
+        Assert.Equal(1, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db));
+        var preparedRuns = await db.PanelSyncRuns.AsNoTracking().ToDictionaryAsync(x => x.Id);
+        Assert.Equal(PanelSyncRunStatus.Running, preparedRuns[firstId].Status);
+        Assert.Equal(PanelSyncRunStatus.Failed, preparedRuns[duplicateId].Status);
+        Assert.Contains("quarantined", preparedRuns[duplicateId].ErrorMessage, StringComparison.OrdinalIgnoreCase);
         var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
 
         Assert.Equal(1, repaired);
         Assert.True(await IndexIsUniqueAsync(connection, "PanelSyncRuns", "IX_PanelSyncRuns_Running_VpnPanelId"));
-        var runs = (await db.PanelSyncRuns.AsNoTracking().ToListAsync()).OrderBy(x => x.StartedAt).ToList();
-        Assert.Equal(PanelSyncRunStatus.Running, runs[0].Status);
-        Assert.Equal(PanelSyncRunStatus.Failed, runs[1].Status);
-        Assert.NotNull(runs[1].FinishedAt);
-        Assert.Contains("quarantined", runs[1].ErrorMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("legacy-secret", runs[2].ErrorMessage, StringComparison.Ordinal);
-        Assert.Contains("redacted", runs[2].ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        var runs = await db.PanelSyncRuns.AsNoTracking().ToDictionaryAsync(x => x.Id);
+        Assert.Equal(PanelSyncRunStatus.Running, runs[firstId].Status);
+        Assert.Equal(PanelSyncRunStatus.Failed, runs[duplicateId].Status);
+        Assert.NotNull(runs[duplicateId].FinishedAt);
+        Assert.Contains("redacted", runs[duplicateId].ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("legacy-secret", runs[historicalFailureId].ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("redacted", runs[historicalFailureId].ErrorMessage, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
     }
 
@@ -385,7 +393,9 @@ public class LocalSqliteSchemaRepairTests
         var oldAccountId = Guid.NewGuid();
         var currentAccountId = Guid.NewGuid();
         var linkId = Guid.NewGuid();
-        var now = new DateTimeOffset(2026, 8, 5, 4, 20, 0, TimeSpan.Zero);
+        var now = new DateTimeOffset(2026, 8, 5, 9, 0, 0, TimeSpan.Zero);
+        var olderInstant = new DateTimeOffset(2026, 8, 5, 10, 0, 0, TimeSpan.FromHours(5));
+        var newerInstant = new DateTimeOffset(2026, 8, 5, 8, 0, 0, TimeSpan.Zero);
         var metadataJson = "{}";
         await db.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO "Users" ("Id", "SessionVersion", "CreatedAt", "UpdatedAt")
@@ -395,10 +405,11 @@ public class LocalSqliteSchemaRepairTests
             VALUES ({linkId}, {userId}, 'legacy-link-hash', 'link_account', {now.AddMinutes(10)}, NULL, NULL, {metadataJson}, {now}, {now});
             INSERT INTO "TelegramAccounts" ("Id", "UserId", "TelegramUserId", "LinkedAt", "CreatedAt", "UpdatedAt")
             VALUES
-                ({oldAccountId}, {userId}, 777301, {now.AddMinutes(-2)}, {now.AddMinutes(-2)}, {now.AddMinutes(-2)}),
-                ({currentAccountId}, {userId}, 777302, {now.AddMinutes(-1)}, {now.AddMinutes(-1)}, {now.AddMinutes(-1)});
+                ({oldAccountId}, {userId}, 777301, {olderInstant}, {olderInstant}, {olderInstant}),
+                ({currentAccountId}, {userId}, 777302, {newerInstant}, {newerInstant}, {newerInstant});
             """);
 
+        Assert.Equal(1, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db));
         var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
 
         Assert.Equal(7, repaired);

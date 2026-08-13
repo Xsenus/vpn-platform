@@ -77,14 +77,16 @@ public class PaymentProviderAccountConcurrencyTests
         await db.Database.EnsureCreatedAsync();
         await db.Database.ExecuteSqlRawAsync("DROP INDEX \"IX_PaymentProviderAccounts_Provider\";");
         var older = Account("older-default");
-        older.CreatedAt = new DateTimeOffset(2026, 8, 4, 10, 0, 0, TimeSpan.Zero);
+        older.CreatedAt = new DateTimeOffset(2026, 8, 4, 10, 0, 0, TimeSpan.FromHours(5));
         older.UpdatedAt = older.CreatedAt;
         var newer = Account("newer-default");
-        newer.CreatedAt = older.CreatedAt.AddMinutes(1);
+        newer.CreatedAt = new DateTimeOffset(2026, 8, 4, 8, 0, 0, TimeSpan.Zero);
         newer.UpdatedAt = newer.CreatedAt;
         db.PaymentProviderAccounts.AddRange(older, newer);
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();
+
+        Assert.Equal(1, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db));
 
         var migrations = db.GetService<IMigrationsAssembly>();
         var migrationEntry = migrations.Migrations.Single(x => x.Key.EndsWith("_PaymentProviderDefaultUniqueness", StringComparison.Ordinal));
@@ -95,14 +97,12 @@ public class PaymentProviderAccountConcurrencyTests
             await db.Database.ExecuteSqlRawAsync(command.CommandText);
         }
 
-        var accounts = (await db.PaymentProviderAccounts.AsNoTracking()
+        var accounts = await db.PaymentProviderAccounts.AsNoTracking()
             .Where(x => x.Provider == PaymentProvider.YooKassa)
-            .ToListAsync())
-            .OrderBy(x => x.CreatedAt)
-            .ToList();
+            .ToListAsync();
         Assert.Equal(2, accounts.Count);
-        Assert.False(accounts[0].IsDefault);
-        Assert.True(accounts[1].IsDefault);
+        Assert.False(accounts.Single(x => x.Id == older.Id).IsDefault);
+        Assert.True(accounts.Single(x => x.Id == newer.Id).IsDefault);
         db.PaymentProviderAccounts.Add(Account("third-default"));
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
     }

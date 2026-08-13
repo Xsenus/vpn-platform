@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.708.0 - 2026-08-13
+
+Release entry: `2026-08-13-sqlite-temporal-repair-preflight`.
+
+### Исправлено
+
+- Local SQLite schema repair больше не выбирает старую Telegram-связь, новый concurrent panel sync или старый default payment account из-за лексикографической сортировки offset timestamps.
+- SQLite migration startup выполняет chronological preflight до immutable migration chain и не позволяет старым migration SQL переопределить правильного победителя.
+
+### Улучшено
+
+- Telegram links, panel sync runs и payment provider defaults дедуплицируются через `julianday` и стабильный `Id` tie-break; PostgreSQL migrations не изменены.
+- Local repair восстанавливает отсутствующий unique default-payment index и остается idempotent на актуальной схеме.
+
+### Проверено
+
+- Fail-first mixed-offset regressions `3/3` воспроизвели неверный выбор; after-fix local repair/payment migration `23/23`, backend Debug/Release `1486/1486`, frontend `172/172`, docs/current-state/encoding `46/46`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `722/742` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.707.0 - 2026-08-13
 
 Release entry: `2026-08-13-x3ui-sqlite-diagnostics-ordering`.

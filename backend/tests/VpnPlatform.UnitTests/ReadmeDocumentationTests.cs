@@ -45,7 +45,7 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-13-x3ui-sqlite-diagnostics-ordering", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-13-sqlite-temporal-repair-preflight", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("268/268", readme, StringComparison.Ordinal);
     }
 
@@ -59,8 +59,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1486/1486",
-                     "2026-08-13-x3ui-sqlite-diagnostics-ordering",
-                     "0.707.0",
+                     "2026-08-13-sqlite-temporal-repair-preflight",
+                     "0.708.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

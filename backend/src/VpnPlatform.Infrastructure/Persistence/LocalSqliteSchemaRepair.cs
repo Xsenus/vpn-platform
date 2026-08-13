@@ -6,6 +6,38 @@ namespace VpnPlatform.Infrastructure.Persistence;
 
 public static class LocalSqliteSchemaRepair
 {
+    public static async Task<int> PrepareMigrationsAsync(ApplicationDbContext db, CancellationToken cancellationToken = default)
+    {
+        if (!db.Database.IsSqlite())
+        {
+            return 0;
+        }
+
+        var prepared = 0;
+        if (await TableExistsAsync(db, "TelegramAccounts", cancellationToken)
+            && !await IndexIsUniqueAsync(db, "TelegramAccounts", "IX_TelegramAccounts_UserId", cancellationToken))
+        {
+            await BackfillDuplicateTelegramAccountLinksAsync(db, cancellationToken);
+            prepared++;
+        }
+
+        if (await TableExistsAsync(db, "PanelSyncRuns", cancellationToken)
+            && !await IndexIsUniqueAsync(db, "PanelSyncRuns", "IX_PanelSyncRuns_Running_VpnPanelId", cancellationToken))
+        {
+            await BackfillDuplicateRunningPanelSyncRunsAsync(db, cancellationToken);
+            prepared++;
+        }
+
+        if (await TableExistsAsync(db, "PaymentProviderAccounts", cancellationToken)
+            && !await IndexIsUniqueAsync(db, "PaymentProviderAccounts", "IX_PaymentProviderAccounts_Provider", cancellationToken))
+        {
+            await BackfillDuplicatePaymentProviderDefaultsAsync(db, cancellationToken);
+            prepared++;
+        }
+
+        return prepared;
+    }
+
     public static async Task<int> ApplyAsync(ApplicationDbContext db, CancellationToken cancellationToken = default)
     {
         if (!db.Database.IsSqlite())
@@ -243,6 +275,19 @@ public static class LocalSqliteSchemaRepair
             repaired++;
         }
 
+        if (await TableExistsAsync(db, "PaymentProviderAccounts", cancellationToken)
+            && !await IndexIsUniqueAsync(db, "PaymentProviderAccounts", "IX_PaymentProviderAccounts_Provider", cancellationToken))
+        {
+            await BackfillDuplicatePaymentProviderDefaultsAsync(db, cancellationToken);
+            await db.Database.ExecuteSqlRawAsync(
+                """DROP INDEX IF EXISTS "IX_PaymentProviderAccounts_Provider";""",
+                cancellationToken);
+            await db.Database.ExecuteSqlRawAsync(
+                """CREATE UNIQUE INDEX "IX_PaymentProviderAccounts_Provider" ON "PaymentProviderAccounts" ("Provider") WHERE "IsDefault" = 1;""",
+                cancellationToken);
+            repaired++;
+        }
+
         if (await TableExistsAsync(db, "TelegramBotNotifications", cancellationToken))
         {
             if (!await ColumnExistsAsync(db, "TelegramBotNotifications", "DeduplicationKey", cancellationToken))
@@ -412,7 +457,7 @@ public static class LocalSqliteSchemaRepair
                     "Id",
                     row_number() OVER (
                         PARTITION BY "UserId"
-                        ORDER BY ("LinkedAt" IS NULL), "LinkedAt" DESC, "UpdatedAt" DESC, "CreatedAt" DESC, "Id") AS link_rank
+                        ORDER BY ("LinkedAt" IS NULL), julianday("LinkedAt") DESC, julianday("UpdatedAt") DESC, julianday("CreatedAt") DESC, "Id") AS link_rank
                 FROM "TelegramAccounts"
                 WHERE "UserId" IS NOT NULL
             ) AS ranked
@@ -442,7 +487,7 @@ public static class LocalSqliteSchemaRepair
                     "Id",
                     row_number() OVER (
                         PARTITION BY "VpnPanelId"
-                        ORDER BY "StartedAt", "CreatedAt", "Id") AS running_rank
+                        ORDER BY julianday("StartedAt"), julianday("CreatedAt"), "Id") AS running_rank
                 FROM "PanelSyncRuns"
                 WHERE "Status" = 1
             ) AS ranked
@@ -457,6 +502,32 @@ public static class LocalSqliteSchemaRepair
             WHERE "Id" IN (SELECT "Id" FROM "__DuplicateRunningPanelSyncRuns");
 
             DROP TABLE "__DuplicateRunningPanelSyncRuns";
+            """,
+            cancellationToken);
+    }
+
+    private static async Task BackfillDuplicatePaymentProviderDefaultsAsync(
+        ApplicationDbContext db,
+        CancellationToken cancellationToken)
+    {
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            WITH ranked_defaults AS (
+                SELECT
+                    "Id",
+                    row_number() OVER (
+                        PARTITION BY "Provider"
+                        ORDER BY julianday("UpdatedAt") DESC, julianday("CreatedAt") DESC, "Id") AS default_rank
+                FROM "PaymentProviderAccounts"
+                WHERE "IsDefault" = 1
+            )
+            UPDATE "PaymentProviderAccounts"
+            SET "IsDefault" = 0
+            WHERE "Id" IN (
+                SELECT "Id"
+                FROM ranked_defaults
+                WHERE default_rank > 1
+            );
             """,
             cancellationToken);
     }

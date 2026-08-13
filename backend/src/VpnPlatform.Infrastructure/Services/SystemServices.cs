@@ -311,6 +311,15 @@ public class DbInitializer : IHostedService
         }
         else if (databaseOptions.ApplyMigrationsOnStartup)
         {
+            if (db.Database.IsSqlite())
+            {
+                var preparedMigrations = await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db, cancellationToken);
+                if (preparedMigrations > 0)
+                {
+                    _logger.LogInformation("Local SQLite migration data prepared. RepairsApplied={RepairsApplied}", preparedMigrations);
+                }
+            }
+
             await db.Database.MigrateAsync(cancellationToken);
         }
 

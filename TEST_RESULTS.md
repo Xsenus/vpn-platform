@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: SQLite temporal repair preflight
+
+Scope:
+- Local schema repair и SQLite migration startup должны сохранять newest Telegram link/default payment account и oldest active panel sync при mixed UTC offsets.
+- Historical migrations должны оставаться immutable, PostgreSQL temporal ordering не должно измениться.
+
+Results:
+- Roadmap progress: `722/742` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-sqlite-temporal-repair-preflight`, version `0.708.0`.
+- Fail-first: SQLite repair оставил Telegram account `777301` вместо newer `777302`, завершил oldest panel sync и сохранил older default payment account; `3/3` regressions упали.
+- After fix: startup preflight/local repair используют `julianday` и deterministic `Id` tie-break, payment unique index восстанавливается idempotently, historical migrations не изменены; targeted `23/23`, backend Debug/Release `1486/1486`, frontend `172/172`, docs/current-state/encoding `46/46`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: X3Ui SQLite diagnostics ordering
 
 Scope:

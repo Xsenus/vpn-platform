@@ -25,8 +25,8 @@ public class ProductAdminUiRoadmapSyncTests
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-13-x3ui-sqlite-diagnostics-ordering",
-                     "0.707.0"
+                     "2026-08-13-sqlite-temporal-repair-preflight",
+                     "0.708.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-13-x3ui-sqlite-diagnostics-ordering", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-13-x3ui-sqlite-diagnostics-ordering", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-13-sqlite-temporal-repair-preflight", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-13-sqlite-temporal-repair-preflight", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -75,8 +75,8 @@ public class ProductAdminUiRoadmapSyncTests
                      "Frontend unit tests: `172/172`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-13-x3ui-sqlite-diagnostics-ordering",
-                     "0.707.0",
+                     "2026-08-13-sqlite-temporal-repair-preflight",
+                     "0.708.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

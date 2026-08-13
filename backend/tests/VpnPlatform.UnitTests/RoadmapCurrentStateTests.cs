@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-13-x3ui-sqlite-diagnostics-ordering";
-    private const string CurrentVersion = "0.707.0";
+    private const string CurrentReleaseId = "2026-08-13-sqlite-temporal-repair-preflight";
+    private const string CurrentVersion = "0.708.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -18,6 +18,7 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("Дата актуализации: 2026-08-13", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1486/1486`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `P11-ACC-431`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-430`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-429`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-428`", roadmap, StringComparison.Ordinal);
