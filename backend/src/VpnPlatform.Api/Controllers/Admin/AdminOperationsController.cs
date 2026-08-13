@@ -386,37 +386,49 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> GetNotificationDeliveries([FromQuery] AdminNotificationDeliveryFilters filters, CancellationToken cancellationToken)
     {
         var limit = Math.Clamp(filters.Limit, 1, 500);
-        var query = _db.NotificationDeliveries.AsNoTracking().AsQueryable();
-        if (!string.IsNullOrWhiteSpace(filters.Status)
-            && Enum.TryParse<NotificationDeliveryStatus>(filters.Status.Trim(), true, out var status))
-        {
-            query = query.Where(x => x.Status == status);
-        }
-
-        if (!string.IsNullOrWhiteSpace(filters.TemplateKey))
-        {
-            var templateKey = filters.TemplateKey.Trim();
-            query = query.Where(x => x.TemplateKey == templateKey);
-        }
-
-        if (!string.IsNullOrWhiteSpace(filters.Search))
-        {
-            var search = filters.Search.Trim();
-            query = query.Where(x => x.TemplateKey.Contains(search) || x.ToAddress.Contains(search));
-        }
+        var status = NotificationDeliveryStatus.Pending;
+        var hasStatus = !string.IsNullOrWhiteSpace(filters.Status)
+            && Enum.TryParse(filters.Status.Trim(), true, out status);
+        var templateKey = filters.TemplateKey?.Trim() ?? string.Empty;
+        var search = filters.Search?.Trim() ?? string.Empty;
 
         List<NotificationDelivery> rows;
-        if (_db is DbContext dbContext
-            && string.Equals(dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.Sqlite", StringComparison.Ordinal))
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
         {
-            rows = (await query.ToListAsync(cancellationToken))
-                .OrderByDescending(x => x.CreatedAt)
-                .ThenByDescending(x => x.Id)
-                .Take(limit)
-                .ToList();
+            rows = await _db.NotificationDeliveries
+                .FromSqlInterpolated($$"""
+                    SELECT *
+                    FROM "NotificationDeliveries"
+                    WHERE ({{(hasStatus ? 1 : 0)}} = 0 OR "Status" = {{(int)status}})
+                      AND ({{(templateKey.Length > 0 ? 1 : 0)}} = 0 OR "TemplateKey" = {{templateKey}})
+                      AND ({{(search.Length > 0 ? 1 : 0)}} = 0 OR (
+                          instr("TemplateKey", {{search}}) > 0
+                          OR instr("ToAddress", {{search}}) > 0
+                      ))
+                    ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                    LIMIT {{limit}}
+                    """)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
         }
         else
         {
+            var query = _db.NotificationDeliveries.AsNoTracking().AsQueryable();
+            if (hasStatus)
+            {
+                query = query.Where(x => x.Status == status);
+            }
+
+            if (templateKey.Length > 0)
+            {
+                query = query.Where(x => x.TemplateKey == templateKey);
+            }
+
+            if (search.Length > 0)
+            {
+                query = query.Where(x => x.TemplateKey.Contains(search) || x.ToAddress.Contains(search));
+            }
+
             rows = await query
                 .OrderByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.Id)

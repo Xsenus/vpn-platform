@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.690.0 - 2026-08-13
+
+Release entry: `2026-08-13-admin-notification-read-boundary`.
+
+### Исправлено
+
+- Admin notification deliveries больше не загружают всю таблицу до latest top-500 на SQLite.
+
+### Улучшено
+
+- Status/template/search и абсолютная сортировка выполняются одним параметризованным SQLite-запросом; PostgreSQL использует LINQ/`Take`.
+
+### Проверено
+
+- Fail-first показал SQL без limit на `505` строках; after-fix notification/audit `12/12`, backend `1466/1466`, frontend `172/172`, masking/retry desktop/mobile `2/2`, fresh SQLite full flow, EF drift, encoding `18/18`, secret scan `697/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `703/723` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider кабинеты, live payment, VPS/SSH/Ansible, Telegram/Bot API/SMTP и production-like 3x-ui evidence локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.689.0 - 2026-08-13
 
 Release entry: `2026-08-13-admin-audit-read-boundary`.

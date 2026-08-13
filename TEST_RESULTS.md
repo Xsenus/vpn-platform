@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: admin notification read boundary
+
+Scope:
+- Admin notification status/template/search и latest top-500 должны выполняться до materialization.
+- SQLite должен сохранять `DateTimeOffset` ordering, masking, redaction и retry lifecycle без полной загрузки таблицы.
+
+Results:
+- Roadmap progress: `703/723` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-admin-notification-read-boundary`, version `0.690.0`.
+- Fail-first: response правильно возвращал последние `7`, но единственный SQL загружал все `505` delivery rows без `LIMIT`.
+- After fix: SQLite применяет status/template/search, `julianday` ordering и `LIMIT` одним параметризованным запросом; PostgreSQL выполняет LINQ/`Take`. Targeted notification/audit `12/12`, backend `1466/1466`, frontend `172/172`, notification masking/retry desktop/mobile `2/2`, fresh SQLite full flow, EF drift, encoding `18/18`, secret scan `697/0` и dependency audit `0 vulnerabilities` зеленые. Реальные provider кабинеты, live payment, VPS/SSH/Ansible, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: admin audit read boundary
 
 Scope:

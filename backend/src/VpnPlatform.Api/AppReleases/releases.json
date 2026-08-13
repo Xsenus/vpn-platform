@@ -16211,5 +16211,28 @@
         "text": "Roadmap progress is 702/722 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-admin-notification-read-boundary",
+    "version": "0.690.0",
+    "releasedAt": "2026-08-13T14:29:00+07:00",
+    "title": "Доставки уведомлений ограничены в БД",
+    "summary": "Фильтры и latest top-500 применяются до загрузки истории доставок.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Admin notification deliveries больше не materialize-ят полную таблицу перед сортировкой и лимитом на SQLite."
+      },
+      {
+        "type": "improved",
+        "text": "Status, template и search применяются в БД; masking, redaction и retry lifecycle сохранены."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 703/723 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

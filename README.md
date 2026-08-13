@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-13 локально подтверждено:
 
-- backend на .NET 9: `1465/1465` unit tests;
+- backend на .NET 9: `1466/1466` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `172/172`;
 - frontend typecheck и production build: OK;
@@ -350,8 +350,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - verified `CHECKOUT.ORDER.APPROVED` запускает server-side PayPal capture с idempotency/reconciliation и не активирует VPN без capture proof;
 - manual recheck Stripe, YooKassa и Т-Банка сверяет фактические provider ID, сумму, валюту, internal order/account и paid marker до активации;
 - refund YooKassa/Stripe/PayPal/Т-Банка применяет результат только после совпадения provider source reference и доступных amount/currency/internal payment proof; последовательные partial refund Т-Банка имеют отдельные operation IDs;
-- backend `1465/1465`, frontend `172/172`, audit RBAC desktop/mobile Playwright `4/4`, order/recheck/finance RBAC desktop/mobile Playwright `8/8`, finance/recheck/refund lifecycle desktop/mobile Playwright `8/8`, support lifecycle desktop/mobile Playwright `8/8`, dependency audit `0 vulnerabilities`;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-13-admin-audit-read-boundary`, версия `0.689.0`;
+- backend `1466/1466`, frontend `172/172`, notification masking/retry desktop/mobile Playwright `2/2`, audit RBAC desktop/mobile Playwright `4/4`, order/recheck/finance RBAC desktop/mobile Playwright `8/8`, finance/recheck/refund lifecycle desktop/mobile Playwright `8/8`, support lifecycle desktop/mobile Playwright `8/8`, dependency audit `0 vulnerabilities`;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-13-admin-notification-read-boundary`, версия `0.690.0`;
 - server API, own-VPS onboarding, queue и executor отклоняют inventory-breaking IP/SSH values; executor использует фиксированный alias и `ArgumentList`, а admin-форма показывает те же diagnostics до submit;
 - 3x-ui panel/inbound/client mutations требуют актуальную revision, diagnostics ограничены до materialization, а stale UI восстанавливает актуальные данные;
 - provisioning queue/run actions требуют актуальную revision, coordinator/admin diagnostics ограничены в БД, а exact DTO отклоняет расширенные ответы;
@@ -362,6 +362,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - admin payments/refunds и order recheck применяют DB-side top-300/top-1 до materialization;
 - admin order status/search/top-300, payment counts и latest-payment read model выполняются без полной attempt history;
 - admin audit RBAC, фильтры, временное окно и top-500 выполняются в БД до materialization;
-- roadmap progress: `702/722` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- admin notification status/template/search и latest top-500 выполняются в БД до materialization;
+- roadmap progress: `703/723` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.
