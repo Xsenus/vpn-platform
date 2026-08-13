@@ -16119,5 +16119,28 @@
         "text": "Roadmap progress is 698/718 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-admin-support-read-boundary",
+    "version": "0.686.0",
+    "releasedAt": "2026-08-13T13:46:00+07:00",
+    "title": "История поддержки ограничена в БД",
+    "summary": "Список обращений и сообщения выбранного диалога применяют top-200 до загрузки данных.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Admin support conversations и messages больше не загружают неограниченную историю перед применением top-200."
+      },
+      {
+        "type": "improved",
+        "text": "SQLite и PostgreSQL выбирают последние строки в БД, а messages возвращаются интерфейсу в привычном хронологическом порядке."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 699/719 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: admin support read boundary
+
+Scope:
+- Admin support conversations должны применять top-200 до materialization.
+- Messages выбранного обращения должны выбирать последние 200 строк в БД и сохранять хронологический порядок ответа.
+
+Results:
+- Roadmap progress: `699/719` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-admin-support-read-boundary`, version `0.686.0`.
+- Fail-first: conversations обрезались после полной загрузки, messages вернули все `205`, оба SQL-запроса не имели limits.
+- After fix: SQLite `julianday`/`LIMIT 200`, PostgreSQL `OrderBy/Take`, последние messages разворачиваются в хронологический response order; targeted/adjacent support backend `26/26`, backend `1462/1462`, frontend `172/172`, support lifecycle desktop/mobile `8/8`, fresh SQLite full flow, EF drift clean, secret scan `693/0`, dependency audit `0 vulnerabilities`. Реальные Telegram/provider delivery, Bot API, SMTP, VPS/SSH/Ansible, live payment и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: admin user overview read boundary
 
 Scope:

@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-13 локально подтверждено:
 
-- backend на .NET 9: `1461/1461` unit tests;
+- backend на .NET 9: `1462/1462` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `172/172`;
 - frontend typecheck и production build: OK;
@@ -350,14 +350,15 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - verified `CHECKOUT.ORDER.APPROVED` запускает server-side PayPal capture с idempotency/reconciliation и не активирует VPN без capture proof;
 - manual recheck Stripe, YooKassa и Т-Банка сверяет фактические provider ID, сумму, валюту, internal order/account и paid marker до активации;
 - refund YooKassa/Stripe/PayPal/Т-Банка применяет результат только после совпадения provider source reference и доступных amount/currency/internal payment proof; последовательные partial refund Т-Банка имеют отдельные operation IDs;
-- backend `1461/1461`, frontend `172/172`, user overview lifecycle desktop/mobile Playwright `6/6`, subscription/access lifecycle desktop/mobile Playwright `6/6`, server mode lifecycle/conflict desktop/mobile Playwright `4/4`, dependency audit `0 vulnerabilities`;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-13-admin-user-overview-read-boundary`, версия `0.685.0`;
+- backend `1462/1462`, frontend `172/172`, support lifecycle desktop/mobile Playwright `8/8`, user overview lifecycle desktop/mobile Playwright `6/6`, subscription/access lifecycle desktop/mobile Playwright `6/6`, dependency audit `0 vulnerabilities`;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-13-admin-support-read-boundary`, версия `0.686.0`;
 - server API, own-VPS onboarding, queue и executor отклоняют inventory-breaking IP/SSH values; executor использует фиксированный alias и `ArgumentList`, а admin-форма показывает те же diagnostics до submit;
 - 3x-ui panel/inbound/client mutations требуют актуальную revision, diagnostics ограничены до materialization, а stale UI восстанавливает актуальные данные;
 - provisioning queue/run actions требуют актуальную revision, coordinator/admin diagnostics ограничены в БД, а exact DTO отклоняет расширенные ответы;
 - disable, maintenance и allocation mode-actions требуют актуальную revision и восстанавливают список после controlled conflict;
 - admin subscription/access lists и user overview ограничиваются в БД, включая top-5 history на каждый доступ;
 - admin users list и user overview orders/payments/support ограничиваются в БД, а role filter сопоставляет полный CSV-токен;
-- roadmap progress: `698/718` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- admin support conversations/messages ограничиваются latest top-200 в БД с хронологическим порядком сообщений;
+- roadmap progress: `699/719` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

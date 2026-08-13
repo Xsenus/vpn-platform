@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.686.0 - 2026-08-13
+
+Release entry: `2026-08-13-admin-support-read-boundary`.
+
+### Исправлено
+
+- Общий список обращений поддержки больше не загружает всю таблицу до top-200.
+- Сообщения выбранного обращения ограничены последними 200 строками в БД и возвращаются UI в хронологическом порядке.
+
+### Улучшено
+
+- SQLite использует `julianday` и `LIMIT`, PostgreSQL применяет `OrderBy/Take`; support DTO, internal-note visibility и optimistic lifecycle не изменились.
+
+### Проверено
+
+- Fail-first вернул `205` сообщений и SQL без limits; after-fix support boundary и смежный backend `26/26`, backend `1462/1462`, frontend `172/172`, support lifecycle desktop/mobile `8/8`, fresh SQLite full flow, EF drift, secret scan `693/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `699/719` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные Telegram/provider delivery, Bot API, SMTP, VPS/SSH/Ansible, live payment и production-like 3x-ui evidence локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.685.0 - 2026-08-13
 
 Release entry: `2026-08-13-admin-user-overview-read-boundary`.

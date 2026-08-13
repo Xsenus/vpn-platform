@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `698/718` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `699/719` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,7 +85,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1461/1461`.
+- [x] Backend full suite: `1462/1462`.
 - [x] Frontend unit tests: `172/172`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -167,7 +167,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-13-admin-user-overview-read-boundary`, версия `0.685.0`; users list и user overview orders/payments/support используют DB-side limits, role filter сопоставляет точный CSV-токен; backend `1461/1461`.
+- [x] Latest "Что нового": `2026-08-13-admin-support-read-boundary`, версия `0.686.0`; support conversations/messages используют DB-side top-200 и сохраняют хронологический message order; backend `1462/1462`.
 
 ## Как вести дальше
 

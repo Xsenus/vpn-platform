@@ -118,6 +118,8 @@ public class AdminOperationsController : ControllerBase
     private const int SubscriptionListLimit = 300;
     private const int AccessCredentialListLimit = 300;
     private const int AccessCredentialHistoryLimit = 5;
+    private const int SupportConversationListLimit = 200;
+    private const int SupportMessageListLimit = 200;
 
     private static readonly HashSet<string> TariffPatchFields = new(StringComparer.Ordinal)
     {
@@ -1748,23 +1750,52 @@ public class AdminOperationsController : ControllerBase
     [Authorize(Policy = AdminPolicies.SupportRead)]
     public async Task<IActionResult> GetSupportConversations(CancellationToken cancellationToken)
     {
-        var conversations = await _db.SupportConversations
+        var query = _db is DbContext dbContext && dbContext.Database.IsSqlite()
+            ? _db.SupportConversations.FromSqlRaw("""
+                SELECT *
+                FROM "SupportConversations"
+                ORDER BY julianday("UpdatedAt") DESC, "Id" DESC
+                LIMIT 200
+                """)
+            : _db.SupportConversations
+                .OrderByDescending(x => x.UpdatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(SupportConversationListLimit);
+        var conversations = await query
             .AsNoTracking()
             .Select(x => new SupportConversationDto(x.Id, x.UserId, x.TelegramUserId, x.Channel, x.Status, x.Subject, x.AssignedToUserId, x.InternalNote, x.Revision, x.ClosedAt, x.CreatedAt, x.UpdatedAt))
             .ToListAsync(cancellationToken);
-        return Ok(conversations.OrderByDescending(x => x.UpdatedAt).Take(200).ToList());
+        return Ok(conversations
+            .OrderByDescending(x => x.UpdatedAt)
+            .ThenByDescending(x => x.Id)
+            .ToList());
     }
 
     [HttpGet("support/conversations/{id:guid}/messages")]
     [Authorize(Policy = AdminPolicies.SupportRead)]
     public async Task<IActionResult> GetSupportMessages(Guid id, CancellationToken cancellationToken)
     {
-        var messages = await _db.SupportMessages
+        var query = _db is DbContext dbContext && dbContext.Database.IsSqlite()
+            ? _db.SupportMessages.FromSqlInterpolated($"""
+                SELECT *
+                FROM "SupportMessages"
+                WHERE "SupportConversationId" = {id}
+                ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                LIMIT 200
+                """)
+            : _db.SupportMessages
+                .Where(x => x.SupportConversationId == id)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(SupportMessageListLimit);
+        var messages = await query
             .AsNoTracking()
-            .Where(x => x.SupportConversationId == id)
             .Select(x => new SupportMessageDto(x.Id, x.SupportConversationId, x.UserId, x.TelegramUserId, x.Direction, x.Text, x.AttachmentsJson, x.IsInternalNote, x.CreatedAt))
             .ToListAsync(cancellationToken);
-        return Ok(messages.OrderBy(x => x.CreatedAt).ToList());
+        return Ok(messages
+            .OrderBy(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
+            .ToList());
     }
 
     [HttpPost("support/conversations/{id:guid}/reply")]
