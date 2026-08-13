@@ -16349,5 +16349,28 @@
         "text": "Roadmap progress is 708/728 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-referral-reward-read-boundary",
+    "version": "0.696.0",
+    "releasedAt": "2026-08-13T15:38:00+07:00",
+    "title": "Реферальные условия фильтруются в БД",
+    "summary": "Relationship top-1 и active program window применяются до materialization reward lifecycle.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Reward outbox больше не загружает все relationships и status-active programs перед first/date filtering."
+      },
+      {
+        "type": "improved",
+        "text": "SQLite использует parameterized julianday queries, PostgreSQL LINQ; все одновременно активные программы и deterministic rewards сохранены."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 709/729 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

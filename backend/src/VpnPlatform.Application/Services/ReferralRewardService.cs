@@ -54,25 +54,45 @@ public sealed class ReferralRewardService
             return Result<int>.Success(0);
         }
 
-        var relationship = (await _db.ReferralRelationships.AsNoTracking()
+        var relationship = IsSqliteProvider()
+            ? await _db.ReferralRelationships.FromSqlInterpolated($$"""
+                    SELECT *
+                    FROM "ReferralRelationships"
+                    WHERE "ReferredUserId" = {{order.UserId}}
+                    ORDER BY julianday("CreatedAt"), "Id"
+                    LIMIT 1
+                    """)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(cancellationToken)
+            : await _db.ReferralRelationships.AsNoTracking()
                 .Where(x => x.ReferredUserId == order.UserId)
-                .ToListAsync(cancellationToken))
-            .OrderBy(x => x.CreatedAt)
-            .ThenBy(x => x.Id)
-            .FirstOrDefault();
+                .OrderBy(x => x.CreatedAt)
+                .ThenBy(x => x.Id)
+                .FirstOrDefaultAsync(cancellationToken);
         if (relationship is null || relationship.IsSuspicious || relationship.ReferrerUserId == relationship.ReferredUserId)
         {
             return Result<int>.Success(0);
         }
 
         var now = _clock.UtcNow;
-        var activePrograms = (await _db.ReferralPrograms.AsNoTracking()
-                .Where(x => x.Status.ToLower() == "active")
-                .ToListAsync(cancellationToken))
-            .Where(x => (!x.StartAt.HasValue || x.StartAt <= now) && (!x.EndAt.HasValue || x.EndAt > now))
-            .OrderBy(x => x.CreatedAt)
-            .ThenBy(x => x.Id)
-            .ToList();
+        var activePrograms = IsSqliteProvider()
+            ? await _db.ReferralPrograms.FromSqlInterpolated($$"""
+                    SELECT *
+                    FROM "ReferralPrograms"
+                    WHERE lower("Status") = 'active'
+                      AND ("StartAt" IS NULL OR julianday("StartAt") <= julianday({{now}}))
+                      AND ("EndAt" IS NULL OR julianday("EndAt") > julianday({{now}}))
+                    ORDER BY julianday("CreatedAt"), "Id"
+                    """)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken)
+            : await _db.ReferralPrograms.AsNoTracking()
+                .Where(x => x.Status.ToLower() == "active"
+                    && (!x.StartAt.HasValue || x.StartAt <= now)
+                    && (!x.EndAt.HasValue || x.EndAt > now))
+                .OrderBy(x => x.CreatedAt)
+                .ThenBy(x => x.Id)
+                .ToListAsync(cancellationToken);
         if (activePrograms.Count == 0)
         {
             return Result<int>.Success(0);
@@ -140,6 +160,10 @@ public sealed class ReferralRewardService
 
         return Result<int>.Success(created);
     }
+
+    private bool IsSqliteProvider()
+        => _db is DbContext dbContext
+            && string.Equals(dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.Sqlite", StringComparison.Ordinal);
 
     public static Result<bool> ValidateProgramConfiguration(
         string? name,

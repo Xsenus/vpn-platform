@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.696.0 - 2026-08-13
+
+Release entry: `2026-08-13-referral-reward-read-boundary`.
+
+### Исправлено
+
+- Referral reward outbox больше не загружает все relationships пользователя и status-active programs перед first/date filtering.
+
+### Улучшено
+
+- SQLite применяет relationship top-1 и program `StartAt/EndAt` через `julianday`; PostgreSQL использует LINQ, все одновременно активные программы сохраняются.
+
+### Проверено
+
+- Fail-first SQL был без top-1/date window; after-fix targeted `1/1`, referral/outbox/auth regression `18/18`, backend `1470/1470`, frontend `172/172`, typecheck/build, fresh SQLite full flow и EF drift зеленые.
+- Roadmap `709/729` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider кабинеты, live payment, Telegram/Bot API/SMTP, VPS/SSH/Ansible и production-like 3x-ui локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.695.0 - 2026-08-13
 
 Release entry: `2026-08-13-node-allocation-selection-boundary`.

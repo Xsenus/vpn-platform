@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: referral reward read boundary
+
+Scope:
+- Referral reward outbox должен выбирать первый relationship и active program date window до materialization.
+- Все одновременно активные программы, deterministic ledgers, promo stacking, idempotency, dead-letter и cabinet redaction обязаны сохраниться.
+
+Results:
+- Roadmap progress: `709/729` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-referral-reward-read-boundary`, version `0.696.0`.
+- Fail-first: lifecycle создавал верные rewards, но SQL capture не находил relationship `LIMIT 1` и `StartAt/EndAt` date predicates.
+- After fix: SQLite использует parameterized `julianday` first/window queries, PostgreSQL/другие providers LINQ filters/order; program count намеренно не ограничен. Targeted `1/1`, referral/outbox/auth regression `18/18`, backend `1470/1470`, frontend `172/172`, typecheck/build, fresh SQLite full flow и EF drift зеленые. Реальные provider кабинеты, live payment, Telegram/Bot API/SMTP, VPS/SSH/Ansible и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: node allocation selection boundary
 
 Scope:

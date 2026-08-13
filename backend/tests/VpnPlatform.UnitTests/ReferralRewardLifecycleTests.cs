@@ -1,9 +1,11 @@
 using System.Security.Claims;
+using System.Data.Common;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using VpnPlatform.Api.Controllers.Me;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Services;
@@ -21,7 +23,8 @@ public class ReferralRewardLifecycleTests
     public async Task Referral_Outbox_Should_Materialize_Both_Rewards_Once_And_Redact_Cabinet_Response()
     {
         await using var connection = await OpenConnectionAsync();
-        await using var db = CreateDb(connection);
+        var interceptor = new CommandCaptureInterceptor();
+        await using var db = CreateDb(connection, interceptor);
         await db.Database.EnsureCreatedAsync();
         var now = new DateTimeOffset(2026, 8, 5, 18, 0, 0, TimeSpan.Zero);
         var (order, message, referrer, referred) = await SeedEligibleRewardAsync(db, now);
@@ -55,6 +58,13 @@ public class ReferralRewardLifecycleTests
         Assert.DoesNotContain(referred.Id.ToString(), json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("metadataJson", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("sourceUserId", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("FROM \"ReferralRelationships\"", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("LIMIT 1", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("FROM \"ReferralPrograms\"", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("julianday(\"StartAt\")", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("julianday(\"EndAt\")", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -239,8 +249,39 @@ public class ReferralRewardLifecycleTests
         return connection;
     }
 
-    private static ApplicationDbContext CreateDb(SqliteConnection connection)
-        => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
+    private static ApplicationDbContext CreateDb(SqliteConnection connection, DbCommandInterceptor? interceptor = null)
+    {
+        var builder = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection);
+        if (interceptor is not null)
+        {
+            builder.AddInterceptors(interceptor);
+        }
+        return new ApplicationDbContext(builder.Options);
+    }
+
+    private sealed class CommandCaptureInterceptor : DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+
+        public override InterceptionResult<DbDataReader> ReaderExecuting(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result)
+        {
+            Commands.Add(command.CommandText);
+            return result;
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
+    }
 
     private sealed class FixedClock(DateTimeOffset now) : IClock
     {
