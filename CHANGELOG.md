@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.700.0 - 2026-08-13
+
+Release entry: `2026-08-13-own-vps-latest-read-boundary`.
+
+### Исправлено
+
+- Own-VPS provisioning worker больше не загружает все подходящие подписки и обращения поддержки перед выбором последней записи.
+
+### Улучшено
+
+- SQLite использует parameterized latest-record queries с `julianday(CreatedAt)`, `Id` и `LIMIT 1`; остальные providers применяют эквивалентный ordered `FirstOrDefaultAsync`.
+
+### Проверено
+
+- Fail-first SQL assertions `0/2`; after-fix targeted `2/2`, own-VPS/provisioning/sandbox regression `72/72`, backend Debug `1472/1472`, frontend `172/172`, typecheck/build, bundle budget и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `713/733` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.699.0 - 2026-08-13
 
 Release entry: `2026-08-13-admin-ready-state-visual-gate`.

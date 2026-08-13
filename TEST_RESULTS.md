@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: own-VPS latest read boundary
+
+Scope:
+- Повторный own-VPS deploy должен выбирать только latest eligible subscription в БД.
+- Provisioning failure должен переиспользовать только latest matching open/pending support conversation без полной materialization и без изменения nullable identity/reopen lifecycle.
+
+Results:
+- Roadmap progress: `713/733` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-own-vps-latest-read-boundary`, version `0.700.0`.
+- Fail-first: обе операции функционально выбирали правильную последнюю запись, но captured SQLite SQL assertions `0/2` не находили `LIMIT 1`.
+- After fix: SQLite применяет parameterized filters, `julianday(CreatedAt)`, `Id` tie-break и `LIMIT 1`; PostgreSQL/другие providers используют ordered `FirstOrDefaultAsync`. Targeted `2/2`, own-VPS/provisioning/sandbox regression `72/72`, backend Debug `1472/1472`, frontend `172/172`, typecheck/build, bundle budget и dependency audit `0 vulnerabilities` зеленые. Реальные VPS/SSH/Ansible и production-like 3x-ui deployment/access локально не проверялись.
+
 ## Check 2026-08-13: admin ready-state visual gate
 
 Scope:

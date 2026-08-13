@@ -384,13 +384,25 @@ public sealed class ProvisioningWorker : BackgroundService
         }
 
         var tariff = await EnsureOwnVpsTariffAsync(db, cancellationToken);
-        var subscriptionCandidates = await db.Subscriptions
-            .Include(x => x.CurrentAccess)
-            .Where(x => x.UserId == run.RequestedByUserId.Value && x.CurrentServerId == node.Id && x.Status != SubscriptionStatus.Cancelled && x.Status != SubscriptionStatus.Blocked)
-            .ToListAsync(cancellationToken);
-        var subscription = subscriptionCandidates
-            .OrderByDescending(x => x.CreatedAt)
-            .FirstOrDefault();
+        var subscription = db.Database.IsSqlite()
+            ? await db.Subscriptions.FromSqlInterpolated($"""
+                SELECT *
+                FROM "Subscriptions"
+                WHERE "UserId" = {run.RequestedByUserId.Value}
+                  AND "CurrentServerId" = {node.Id}
+                  AND "Status" <> {(int)SubscriptionStatus.Cancelled}
+                  AND "Status" <> {(int)SubscriptionStatus.Blocked}
+                ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                LIMIT 1
+                """).FirstOrDefaultAsync(cancellationToken)
+            : await db.Subscriptions
+                .Where(x => x.UserId == run.RequestedByUserId.Value
+                    && x.CurrentServerId == node.Id
+                    && x.Status != SubscriptionStatus.Cancelled
+                    && x.Status != SubscriptionStatus.Blocked)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .FirstOrDefaultAsync(cancellationToken);
 
         if (subscription is null)
         {
@@ -497,12 +509,26 @@ public sealed class ProvisioningWorker : BackgroundService
     private static async Task EnsureSupportConversationAsync(ApplicationDbContext db, VpnNode node, ProvisioningRun run, string subject, string error, IClock clock, CancellationToken cancellationToken)
     {
         var telegramUserId = ProvisioningService.ExtractLongTag(node.TagsCsv, "telegram-user-id");
-        var conversationCandidates = await db.SupportConversations
-            .Where(x => x.UserId == run.RequestedByUserId && x.TelegramUserId == telegramUserId && (x.Status == "open" || x.Status == "pending") && x.Subject == subject)
-            .ToListAsync(cancellationToken);
-        var conversation = conversationCandidates
-            .OrderByDescending(x => x.CreatedAt)
-            .FirstOrDefault();
+        var requestedByUserId = run.RequestedByUserId;
+        var conversation = db.Database.IsSqlite()
+            ? await db.SupportConversations.FromSqlInterpolated($"""
+                SELECT *
+                FROM "SupportConversations"
+                WHERE (({requestedByUserId} IS NULL AND "UserId" IS NULL) OR "UserId" = {requestedByUserId})
+                  AND (({telegramUserId} IS NULL AND "TelegramUserId" IS NULL) OR "TelegramUserId" = {telegramUserId})
+                  AND ("Status" = 'open' OR "Status" = 'pending')
+                  AND "Subject" = {subject}
+                ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                LIMIT 1
+                """).FirstOrDefaultAsync(cancellationToken)
+            : await db.SupportConversations
+                .Where(x => x.UserId == requestedByUserId
+                    && x.TelegramUserId == telegramUserId
+                    && (x.Status == "open" || x.Status == "pending")
+                    && x.Subject == subject)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .FirstOrDefaultAsync(cancellationToken);
         var isExistingConversation = conversation is not null;
         if (conversation is null)
         {

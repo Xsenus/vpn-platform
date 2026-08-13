@@ -16441,5 +16441,28 @@
         "text": "Roadmap progress is 712/732 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-own-vps-latest-read-boundary",
+    "version": "0.700.0",
+    "releasedAt": "2026-08-13T17:29:00+07:00",
+    "title": "Own-VPS worker ограничивает latest reads",
+    "summary": "Повторный deploy и support flow выбирают только последнюю подходящую запись в БД.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Own-VPS provisioning worker больше не загружает все eligible subscriptions и matching support conversations перед выбором последней записи."
+      },
+      {
+        "type": "improved",
+        "text": "SQLite применяет parameterized julianday/Id/LIMIT 1 queries, остальные providers используют ordered FirstOrDefaultAsync; access и support lifecycle сохранены."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 713/733 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
