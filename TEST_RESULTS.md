@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: admin user overview read boundary
+
+Scope:
+- Список пользователей должен применять поиск, status/role filters, порядок и top-300 до materialization.
+- Orders, payments и support conversations в user overview должны применять top-20 в БД без изменения DTO, RBAC и browser lifecycle.
+
+Results:
+- Roadmap progress: `698/718` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-admin-user-overview-read-boundary`, version `0.685.0`.
+- Fail-first `0/2`: response обрезался уже после полной загрузки, SQL не содержал limits, а role filter ошибочно включал `NotAdmin` в выборку `Admin`.
+- After fix: SQLite parameterized `LIMIT`/`julianday`, PostgreSQL `OrderBy/Take`, точный CSV role token и support Telegram link через SQL `EXISTS`; targeted/adjacent backend `15/15`, backend `1461/1461`, frontend `172/172`, user overview lifecycle desktop/mobile `6/6`, fresh SQLite full flow, EF drift clean, secret scan `692/0`, dependency audit `0 vulnerabilities`. Telegram account имеет уникальный `UserId` и уже ограничен схемой одной записью. Реальные VPS/SSH/Ansible, provider/Telegram кабинеты, Bot API, SMTP, live payment и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: admin subscription/access read boundary
 
 Scope:

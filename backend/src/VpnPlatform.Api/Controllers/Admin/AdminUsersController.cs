@@ -28,35 +28,73 @@ public class AdminUsersController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetList([FromQuery] string? search, [FromQuery] string? status, [FromQuery] string? role, CancellationToken cancellationToken)
     {
-        var query = _db.Users.AsNoTracking();
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var normalized = search.Trim().ToLowerInvariant();
-            query = query.Where(x =>
-                x.Email != null && x.Email.ToLower().Contains(normalized)
-                || x.DisplayName.ToLower().Contains(normalized)
-                || x.ReferralCode.ToLower().Contains(normalized));
-        }
-
+        var normalizedSearch = string.IsNullOrWhiteSpace(search)
+            ? null
+            : search.Trim().ToLowerInvariant();
+        UserStatus? parsedStatus = null;
         if (!string.IsNullOrWhiteSpace(status))
         {
-            if (!Enum.TryParse<UserStatus>(status, true, out var parsedStatus) || !Enum.IsDefined(parsedStatus))
+            if (!Enum.TryParse<UserStatus>(status, true, out var value) || !Enum.IsDefined(value))
             {
                 return BadRequest(new { error = "Invalid user status." });
             }
 
-            query = query.Where(x => x.Status == parsedStatus);
+            parsedStatus = value;
         }
 
-        if (!string.IsNullOrWhiteSpace(role))
+        var normalizedRole = string.IsNullOrWhiteSpace(role)
+            ? null
+            : role.Trim().ToLowerInvariant();
+
+        IQueryable<User> query;
+        if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
         {
-            var normalizedRole = role.Trim();
-            query = query.Where(x => x.RolesCsv.Contains(normalizedRole));
+            var statusValue = parsedStatus.HasValue ? (int?)parsedStatus.Value : null;
+            query = _db.Users.FromSqlInterpolated($"""
+                SELECT *
+                FROM "Users"
+                WHERE ({normalizedSearch} IS NULL
+                        OR instr(lower(COALESCE("Email", '')), {normalizedSearch}) > 0
+                        OR instr(lower("DisplayName"), {normalizedSearch}) > 0
+                        OR instr(lower("ReferralCode"), {normalizedSearch}) > 0)
+                  AND ({statusValue} IS NULL OR "Status" = {statusValue})
+                  AND ({normalizedRole} IS NULL
+                       OR instr(',' || lower(replace("RolesCsv", ' ', '')) || ',', ',' || {normalizedRole} || ',') > 0)
+                ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                LIMIT 300
+                """).AsNoTracking();
+        }
+        else
+        {
+            query = _db.Users.AsNoTracking();
+
+            if (normalizedSearch is not null)
+            {
+                query = query.Where(x =>
+                    x.Email != null && x.Email.ToLower().Contains(normalizedSearch)
+                    || x.DisplayName.ToLower().Contains(normalizedSearch)
+                    || x.ReferralCode.ToLower().Contains(normalizedSearch));
+            }
+
+            if (parsedStatus.HasValue)
+            {
+                query = query.Where(x => x.Status == parsedStatus.Value);
+            }
+
+            if (normalizedRole is not null)
+            {
+                var roleToken = $",{normalizedRole},";
+                query = query.Where(x =>
+                    ("," + x.RolesCsv.Replace(" ", string.Empty).ToLower() + ",").Contains(roleToken));
+            }
+
+            query = query
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(300);
         }
 
         var users = await query.ToListAsync(cancellationToken);
-        users = users.OrderByDescending(x => x.CreatedAt).Take(300).ToList();
         return Ok(users.Select(MapUser).ToList());
     }
 
@@ -95,9 +133,21 @@ public class AdminUsersController : ControllerBase
             .ToListAsync(cancellationToken);
         telegramAccounts = telegramAccounts.OrderByDescending(x => x.LastSeenAt ?? x.LinkedAt).ToList();
 
+        var orderQuery = _db is DbContext orderDbContext && orderDbContext.Database.IsSqlite()
+            ? _db.Orders.FromSqlInterpolated($"""
+                SELECT *
+                FROM "Orders"
+                WHERE "UserId" = {id}
+                ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                LIMIT 20
+                """).AsNoTracking()
+            : _db.Orders.AsNoTracking()
+                .Where(x => x.UserId == id)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(20);
         var orders = canReadFinance
-            ? await _db.Orders.AsNoTracking()
-            .Where(x => x.UserId == id)
+            ? await orderQuery
             .Select(x => new
             {
                 x.Id,
@@ -124,11 +174,24 @@ public class AdminUsersController : ControllerBase
             })
             .ToListAsync(cancellationToken)
             : [];
-        orders = orders.OrderByDescending(x => x.CreatedAt).Take(20).ToList();
+        orders = orders.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).ToList();
 
+        var paymentQuery = _db is DbContext paymentDbContext && paymentDbContext.Database.IsSqlite()
+            ? _db.Payments.FromSqlInterpolated($"""
+                SELECT payment.*
+                FROM "Payments" AS payment
+                INNER JOIN "Orders" AS customer_order ON customer_order."Id" = payment."OrderId"
+                WHERE customer_order."UserId" = {id}
+                ORDER BY julianday(payment."CreatedAt") DESC, payment."Id" DESC
+                LIMIT 20
+                """).AsNoTracking()
+            : _db.Payments.AsNoTracking()
+                .Where(x => x.Order != null && x.Order.UserId == id)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(20);
         var payments = canReadFinance
-            ? await _db.Payments.AsNoTracking()
-            .Where(x => x.Order != null && x.Order.UserId == id)
+            ? await paymentQuery
             .Select(x => new
             {
                 x.Id,
@@ -161,7 +224,7 @@ public class AdminUsersController : ControllerBase
             })
             .ToListAsync(cancellationToken)
             : [];
-        payments = payments.OrderByDescending(x => x.CreatedAt).Take(20).ToList();
+        payments = payments.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).ToList();
 
         var subscriptionEntities = _db is DbContext subscriptionDbContext && subscriptionDbContext.Database.IsSqlite()
             ? await _db.Subscriptions
@@ -270,11 +333,28 @@ public class AdminUsersController : ControllerBase
         }).ToList();
         accesses = accesses.OrderByDescending(x => x.IssuedAt).ThenByDescending(x => x.Id).ToList();
 
-        var telegramUserIds = telegramAccounts.Select(t => t.TelegramUserId).ToList();
-
+        var supportQuery = _db is DbContext supportDbContext && supportDbContext.Database.IsSqlite()
+            ? _db.SupportConversations.FromSqlInterpolated($"""
+                SELECT conversation.*
+                FROM "SupportConversations" AS conversation
+                WHERE conversation."UserId" = {id}
+                   OR EXISTS (
+                       SELECT 1
+                       FROM "TelegramAccounts" AS telegram
+                       WHERE telegram."UserId" = {id}
+                         AND telegram."TelegramUserId" = conversation."TelegramUserId")
+                ORDER BY julianday(conversation."UpdatedAt") DESC, conversation."Id" DESC
+                LIMIT 20
+                """).AsNoTracking()
+            : _db.SupportConversations.AsNoTracking()
+                .Where(x => x.UserId == id
+                    || x.TelegramUserId.HasValue && _db.TelegramAccounts.Any(telegram =>
+                        telegram.UserId == id && telegram.TelegramUserId == x.TelegramUserId.Value))
+                .OrderByDescending(x => x.UpdatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(20);
         var supportConversations = canReadSupport
-            ? await _db.SupportConversations.AsNoTracking()
-            .Where(x => x.UserId == id || (x.TelegramUserId.HasValue && telegramUserIds.Contains(x.TelegramUserId.Value)))
+            ? await supportQuery
             .Select(x => new
             {
                 x.Id,
@@ -292,7 +372,10 @@ public class AdminUsersController : ControllerBase
             })
             .ToListAsync(cancellationToken)
             : [];
-        supportConversations = supportConversations.OrderByDescending(x => x.UpdatedAt).Take(20).ToList();
+        supportConversations = supportConversations
+            .OrderByDescending(x => x.UpdatedAt)
+            .ThenByDescending(x => x.Id)
+            .ToList();
 
         return Ok(new
         {

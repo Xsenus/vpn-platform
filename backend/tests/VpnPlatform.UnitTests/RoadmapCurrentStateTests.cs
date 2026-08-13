@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-13-admin-subscription-access-read-boundary";
-    private const string CurrentVersion = "0.684.0";
+    private const string CurrentReleaseId = "2026-08-13-admin-user-overview-read-boundary";
+    private const string CurrentVersion = "0.685.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -17,7 +17,8 @@ public class RoadmapCurrentStateTests
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
 
         Assert.Contains("Дата актуализации: 2026-08-13", roadmap, StringComparison.Ordinal);
-        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1459/1459`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1461/1461`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `P11-ACC-407`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-406`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-405`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-404`", roadmap, StringComparison.Ordinal);
@@ -332,9 +333,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("1459/1459", readme, StringComparison.Ordinal);
-        Assert.Contains("1459/1459", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("1459/1459", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("1461/1461", readme, StringComparison.Ordinal);
+        Assert.Contains("1461/1461", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("1461/1461", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,

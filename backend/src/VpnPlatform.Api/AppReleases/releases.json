@@ -16096,5 +16096,28 @@
         "text": "Roadmap progress is 697/717 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-admin-user-overview-read-boundary",
+    "version": "0.685.0",
+    "releasedAt": "2026-08-13T13:36:00+07:00",
+    "title": "Списки пользователей и их операций ограничены в БД",
+    "summary": "Административный список и карточка пользователя применяют лимиты до загрузки данных и точно фильтруют роли.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Users list и user overview orders/payments/support применяют top-300/top-20 в БД; фильтр роли больше не допускает substring-совпадения."
+      },
+      {
+        "type": "improved",
+        "text": "SQLite и PostgreSQL используют согласованный provider-aware порядок, а support conversations связываются с Telegram через SQL EXISTS без предварительной загрузки ID."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 698/718 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

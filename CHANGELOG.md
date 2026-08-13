@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.685.0 - 2026-08-13
+
+Release entry: `2026-08-13-admin-user-overview-read-boundary`.
+
+### Исправлено
+
+- Список пользователей и заказы, платежи и обращения в user overview больше не загружаются целиком до top-300/top-20.
+- Фильтр роли сопоставляет полный CSV-токен без ложного совпадения `NotAdmin` по запросу `Admin`.
+
+### Улучшено
+
+- SQLite использует параметризованные bounded-запросы и `julianday`, PostgreSQL применяет `OrderBy/Take`; support overview связывает Telegram через SQL `EXISTS`.
+
+### Проверено
+
+- Fail-first `0/2` зафиксировал отсутствие SQL limits и substring role match; after-fix user/overview boundary и смежный backend `15/15`, backend `1461/1461`, frontend `172/172`, user overview lifecycle desktop/mobile `6/6`, fresh SQLite full flow, EF drift, secret scan `692/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `698/718` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider/Telegram/SMTP кабинеты, live payment и production-like 3x-ui evidence локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.684.0 - 2026-08-13
 
 Release entry: `2026-08-13-admin-subscription-access-read-boundary`.
