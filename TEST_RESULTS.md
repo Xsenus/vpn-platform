@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: provisioning precheck selection boundary
+
+Scope:
+- Список последних 200 provisioning runs должен получать ровно последний precheck report каждого запуска без глобального неупорядоченного `Take(1000)`.
+- SQLite/PostgreSQL должны ограничивать выборку до materialization; redaction и DTO-контракт списка обязаны сохраниться.
+
+Results:
+- Roadmap progress: `706/726` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-provisioning-precheck-selection-boundary`, version `0.693.0`.
+- Fail-first: SQLite regression не находил `ROW_NUMBER`/per-run top-1 и подтверждал зависимость результата от неупорядоченного глобального `Take(1000)`.
+- After fix: SQLite применяет partitioned `ROW_NUMBER` с `julianday`, PostgreSQL `DISTINCT ON`, fallback grouped top-1; в память поступает не более одного отчета на запуск. Targeted `2/2`, server/provisioning regression `136/136`, backend `1468/1468`, frontend `172/172`, typecheck/build, Release build `0` warnings/errors, fresh SQLite full flow, EF drift, strict UTF-8, secret scan `698/0` и dependency audit `0 vulnerabilities` зеленые. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: subscription migration selection boundary
 
 Scope:

@@ -131,6 +131,56 @@ public class AdminServerManagementTests
             && command.Contains("LIMIT 500", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task Provisioning_List_Should_Load_Only_The_Latest_Precheck_Report_Per_Run()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new CommandCaptureInterceptor();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var run = new ProvisioningRun
+        {
+            NodeId = Guid.NewGuid(),
+            Status = ProvisioningRunStatus.ReadyToDeploy,
+            DryRun = true
+        };
+        var baseline = DateTimeOffset.UtcNow.AddDays(-2);
+        db.ProvisioningRuns.Add(run);
+        db.ProvisioningStepRuns.AddRange(Enumerable.Range(0, 1000).Select(index => new ProvisioningStepRun
+        {
+            ProvisioningRunId = run.Id,
+            StepName = "Precheck report",
+            Status = ProvisioningRunStatus.ReadyToDeploy,
+            Output = $"stale-report-{index}",
+            CreatedAt = baseline.AddSeconds(index)
+        }));
+        db.ProvisioningStepRuns.Add(new ProvisioningStepRun
+        {
+            ProvisioningRunId = run.Id,
+            StepName = "Precheck report",
+            Status = ProvisioningRunStatus.ReadyToDeploy,
+            Output = "latest-precheck-report",
+            CreatedAt = baseline.AddDays(1)
+        });
+        await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
+
+        var result = Assert.IsType<OkObjectResult>(
+            await CreateController(db).GetProvisioningRuns(CancellationToken.None));
+        var json = System.Text.Json.JsonSerializer.Serialize(result.Value);
+
+        Assert.Contains("latest-precheck-report", json, StringComparison.Ordinal);
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("ProvisioningStepRuns", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("ROW_NUMBER", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("WHERE \"_LatestRank\" = 1", StringComparison.OrdinalIgnoreCase));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

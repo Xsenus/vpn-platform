@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-13.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-subscription-migration-selection-boundary`, версия `0.692.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `705/725` проверяемых пунктов, готовность `97.2%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-provisioning-precheck-selection-boundary`, версия `0.693.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `706/726` проверяемых пунктов, готовность `97.2%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-13:
 
-- [x] `STATE-001` Backend test suite проходит: `1467/1467`.
+- [x] `STATE-001` Backend test suite проходит: `1468/1468`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2516,6 +2516,10 @@ git diff --check
   - Что сделать: миграция не должна загружать все candidate nodes и выполнять panel/inbound N+1; выбор обязан сохранить node load/priority/id, inbound default/load/id, protocol/capacity и явный `PanelInboundId`.
   - Что сделано: node, active healthy panel и compatible inbound выбираются одним ordered join через `FirstOrDefaultAsync`/SQL `LIMIT 1`. Для явного target отдельный fallback сохраняет точные ответы not-found, not-ready и no-compatible-inbound.
   - Доказательство: fail-first full SQLite migration завершалась, но capture не находил общего node/panel/inbound query с `LIMIT`; after-fix operation boundary `11/11`, backend `1467/1467`, frontend `172/172`, auto-target subscription lifecycle desktop/mobile `2/2`, fresh SQLite full flow, EF drift, encoding `18/18`, secret scan `698/0` и dependency audit `0 vulnerabilities` зеленые. Реальная межсерверная 3x-ui миграция на VPS остается внешней проверкой.
+- [x] `P11-ACC-415` Ограничить выбор latest precheck reports в списке provisioning runs. 2026-08-13.
+  - Что сделать: список последних 200 запусков не должен загружать произвольные первые 1000 precheck rows; для каждого запуска нужен ровно последний отчет по `CreatedAt`/`Id`, выбранный в БД.
+  - Что сделано: SQLite применяет `ROW_NUMBER() OVER (PARTITION BY ProvisioningRunId)` с абсолютной сортировкой `julianday(CreatedAt), Id`; PostgreSQL использует `DISTINCT ON`, fallback-провайдеры выполняют grouped top-1. В materialization поступает не более одного отчета на запуск.
+  - Доказательство: fail-first SQLite regression не находил оконную границу и оставлял результат зависимым от неупорядоченного `Take(1000)`; after-fix targeted `2/2`, server/provisioning regression `136/136`, backend `1468/1468`, frontend `172/172`, typecheck/build, Release build `0` warnings/errors, fresh SQLite full flow, EF drift, secret scan `698/0` и dependency audit `0 vulnerabilities` зеленые. Реальные VPS/SSH/Ansible и production-like 3x-ui provisioning остаются внешней проверкой.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

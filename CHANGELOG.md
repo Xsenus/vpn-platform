@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.693.0 - 2026-08-13
+
+Release entry: `2026-08-13-provisioning-precheck-selection-boundary`.
+
+### Исправлено
+
+- Список provisioning runs больше не обрезает precheck history неупорядоченным глобальным `Take(1000)`, который мог скрыть актуальный отчет.
+
+### Улучшено
+
+- SQLite выбирает latest report каждого запуска через partitioned `ROW_NUMBER`/`julianday`, PostgreSQL через `DISTINCT ON`; materialization ограничен одной строкой на run.
+
+### Проверено
+
+- Fail-first не находил DB-side per-run top-1; after-fix targeted `2/2`, server/provisioning regression `136/136`, backend `1468/1468`, frontend `172/172`, typecheck/build, Release build `0` warnings/errors, fresh SQLite full flow, EF drift, strict UTF-8, secret scan `698/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `706/726` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.692.0 - 2026-08-13
 
 Release entry: `2026-08-13-subscription-migration-selection-boundary`.

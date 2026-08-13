@@ -2724,13 +2724,20 @@ public class AdminOperationsController : ControllerBase
         var nodeIds = runs.Select(x => x.NodeId).Distinct().ToList();
         var runIds = runs.Select(x => x.Id).ToList();
         var nodes = await _db.VpnNodes.AsNoTracking().Where(x => nodeIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, cancellationToken);
-        var precheckReports = await _db.ProvisioningStepRuns.AsNoTracking()
-            .Where(x => runIds.Contains(x.ProvisioningRunId) && x.StepName == PrecheckReportStepName)
-            .Take(1000)
-            .ToListAsync(cancellationToken);
+        var precheckReports = _db is DbContext precheckDbContext
+            && runIds.Count > 0
+            && (precheckDbContext.Database.IsSqlite() || precheckDbContext.Database.IsNpgsql())
+                ? await LoadLatestProvisioningPrecheckReportsAsync(precheckDbContext, runIds, cancellationToken)
+                : await _db.ProvisioningStepRuns.AsNoTracking()
+                    .Where(x => runIds.Contains(x.ProvisioningRunId) && x.StepName == PrecheckReportStepName)
+                    .GroupBy(x => x.ProvisioningRunId)
+                    .Select(group => group
+                        .OrderByDescending(x => x.CreatedAt)
+                        .ThenByDescending(x => x.Id)
+                        .First())
+                    .ToListAsync(cancellationToken);
         var precheckReportByRunId = precheckReports
-            .GroupBy(x => x.ProvisioningRunId)
-            .ToDictionary(x => x.Key, x => RedactSensitiveText(x.OrderByDescending(step => step.CreatedAt).First().Output, 4000));
+            .ToDictionary(x => x.ProvisioningRunId, x => RedactSensitiveText(x.Output, 4000));
         return Ok(runs.Select(x =>
         {
             nodes.TryGetValue(x.NodeId, out var node);
@@ -4317,6 +4324,41 @@ public class AdminOperationsController : ControllerBase
                """;
 
         return await _db.NodeHealthChecks
+            .FromSqlRaw(sql, parameters)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
+    private async Task<List<ProvisioningStepRun>> LoadLatestProvisioningPrecheckReportsAsync(
+        DbContext dbContext,
+        IReadOnlyList<Guid> runIds,
+        CancellationToken cancellationToken)
+    {
+        var placeholders = string.Join(", ", runIds.Select((_, index) => $"{{{index}}}"));
+        var stepNameParameter = $"{{{runIds.Count}}}";
+        var parameters = runIds.Cast<object>().Append(PrecheckReportStepName).ToArray();
+        var sql = dbContext.Database.IsSqlite()
+            ? $"""
+               SELECT * FROM (
+                   SELECT steps.*, ROW_NUMBER() OVER (
+                       PARTITION BY "ProvisioningRunId"
+                       ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                   ) AS "_LatestRank"
+                   FROM "ProvisioningStepRuns" AS steps
+                   WHERE "ProvisioningRunId" IN ({placeholders})
+                     AND "StepName" = {stepNameParameter}
+               ) AS latest
+               WHERE "_LatestRank" = 1
+               """
+            : $"""
+               SELECT DISTINCT ON ("ProvisioningRunId") *
+               FROM "ProvisioningStepRuns"
+               WHERE "ProvisioningRunId" IN ({placeholders})
+                 AND "StepName" = {stepNameParameter}
+               ORDER BY "ProvisioningRunId", "CreatedAt" DESC, "Id" DESC
+               """;
+
+        return await _db.ProvisioningStepRuns
             .FromSqlRaw(sql, parameters)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
