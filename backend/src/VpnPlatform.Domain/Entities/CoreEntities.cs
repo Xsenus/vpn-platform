@@ -669,6 +669,7 @@ public class NodeGroup : AuditableEntity
 
 public class VpnNode : AuditableEntity
 {
+    public int Revision { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Host { get; set; } = string.Empty;
     public string IpAddress { get; set; } = string.Empty;

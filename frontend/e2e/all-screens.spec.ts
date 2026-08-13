@@ -643,7 +643,7 @@ async function installApiMock(page: Page) {
 
     if (method === 'GET' && path === '/api/admin/servers') {
       await fulfillJson(route, [{
-        id: 'server-all-screens', name: 'EU Smoke', host: 'vpn.example.test', ipAddress: '203.0.113.10', provider: 'hetzner', region: 'eu', country: 'NL', datacenter: 'fsn1',
+        id: 'server-all-screens', revision: 0, name: 'EU Smoke', host: 'vpn.example.test', ipAddress: '203.0.113.10', provider: 'hetzner', region: 'eu', country: 'NL', datacenter: 'fsn1',
         status: 'Ready', capacity: 100, usedCapacity: 1, supportedProtocolsCsv: 'vless', healthStatus: 'Healthy', lastHealthCheckAt: now, lastHealthLatencyMs: 12,
         lastHealthError: '', lastHealthMetadataJson: '{}', provisioningStatus: 'Succeeded', provisioningMode: 'validation-deploy', provisioningModeTitle: 'Validation deploy',
         provisioningRiskLevel: 'low', liveDeployAllowed: false, provisioningNextAction: 'Проверьте precheck.', provisioningOperatorWarning: 'Validation deploy не меняет рабочую инфраструктуру.',
@@ -1178,6 +1178,37 @@ test('admin controls do not overlap at dense layout boundaries', async ({ page }
     await page.setViewportSize({ width: boundaryCase.width, height: 900 })
     await page.goto(`http://127.0.0.1:5295/#${boundaryCase.section}`)
     await expectResponsiveLayout(page, `admin ${boundaryCase.section} at ${boundaryCase.width}px regression boundary`)
+  }
+
+  expect(browserErrors).toEqual([])
+})
+
+test('admin server editor fits focused mobile and desktop viewports', async ({ page }) => {
+  const browserErrors = collectBrowserErrors(page)
+  await installApiMock(page)
+
+  for (const viewport of [
+    { name: 'compact-mobile', width: 320, height: 568 },
+    { name: 'large-mobile', width: 390, height: 844 },
+    { name: 'wide-layout-boundary', width: 1280, height: 900 }
+  ]) {
+    await page.setViewportSize(viewport)
+    await page.goto('http://127.0.0.1:5295/#nodes')
+    const hasStoredAdminSession = await page.evaluate(() => Boolean(sessionStorage.getItem('vpn-platform-admin-token')))
+    if (!hasStoredAdminSession) {
+      await page.locator('input[type="email"]').fill('admin@example.test')
+      await page.locator('input[type="password"]').fill('Password123!')
+      await page.locator('form').locator('button[type="submit"]').click()
+    }
+    const nodesPanel = page.locator('#nodes')
+    await expect(nodesPanel).toBeVisible()
+    await nodesPanel.locator('.list-item-vertical').first().getByRole('button', { name: 'Редактировать' }).click()
+    await nodesPanel.getByLabel('Название').fill('Длинное имя VPN-сервера для проверки переноса в мобильном редакторе')
+    await nodesPanel.getByLabel('Теги').fill('tier:premium,city:amsterdam,environment:validation,owner:infrastructure-team')
+    await expect(nodesPanel.getByRole('textbox', { name: /^SSH-доступ/ })).toHaveAttribute('maxlength', '16000')
+    await expect(nodesPanel.getByRole('textbox', { name: /^Пароль панели/ })).toHaveAttribute('maxlength', '4096')
+    await expectResponsiveLayout(page, `admin server editor at ${viewport.name}`)
+    if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin server editor at ${viewport.name}`)
   }
 
   expect(browserErrors).toEqual([])

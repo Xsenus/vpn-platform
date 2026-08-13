@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: server management boundary
+
+Scope:
+- Admin API сервера должен иметь точный безопасный DTO, согласованные границы полей и bounded server/health queries.
+- Stale PUT/DELETE не должны терять внешние изменения; editor обязан восстановиться после controlled conflict на desktop/mobile и сохранять адаптивность.
+
+Results:
+- Roadmap progress: `693/713` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-server-management-boundary`, version `0.680.0`.
+- Fail-first: server-management `64/71`, frontend `169/171`; отсутствовали revision concurrency, точная DTO-граница, field limits и query bounds.
+- After fix: обязательная revision для PUT/DELETE, EF concurrency migration, exact 48-field frontend contract, согласованные DB/API/form limits, DB-side node/health bounds и controlled `409` с reload/reset editor.
+- Server-management `75/75`, frontend `171/171`, backend `1435/1435`, typecheck/build/bundle budget, EF drift `2/2`, fresh SQLite full flow, strict UTF-8 `16/16`, secret scan `686/0` и dependency audit `0 vulnerabilities` зеленые. Stateful lifecycle/conflicts desktop/mobile `4/4`, focused server editor responsive/WCAG `1/1` на 320/390/1280 px. Реальные provider/Telegram кабинеты, Bot API, SMTP и VPS/staging/live payment/production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: tariff boundary
 
 Scope:

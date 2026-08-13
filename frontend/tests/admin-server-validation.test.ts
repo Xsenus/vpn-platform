@@ -62,3 +62,22 @@ test('admin server form reports unsafe provisioning fields before submit', () =>
     'Путь к SSH-ключу должен быть абсолютным Unix-путём без пробелов и кавычек.'
   ])
 })
+
+test('admin server form enforces backend text boundaries', () => {
+  const errors = validateServerForm({
+    name: 'n'.repeat(201),
+    host: 'vpn.example.test',
+    provider: 'p'.repeat(121),
+    region: 'r'.repeat(121),
+    country: 'c'.repeat(81),
+    datacenter: 'd'.repeat(121),
+    tagsCsv: 't'.repeat(2001),
+    panelUsername: 'u'.repeat(201),
+    sshPort: 22,
+    capacity: 100,
+    priority: 1,
+    publicPort: 443
+  })
+
+  assert.equal(errors.length, 7)
+})

@@ -229,6 +229,7 @@ function panelHealthCheckFixture(overrides: Record<string, unknown> = {}) {
 function vpnNodeFixture(overrides: Record<string, unknown> = {}) {
   return {
     id: 'node-1',
+    revision: 0,
     name: 'nl-01',
     host: 'nl-01.example.com',
     ipAddress: '203.0.113.10',
@@ -1501,7 +1502,7 @@ test('ApiClient admin server CRUD actions send safe payloads with auth token', a
 
   await client.getAdminServers('admin-token')
   await client.createAdminServer('admin-token', payload)
-  await client.updateAdminServer('admin-token', 'node-1', { ...payload, name: 'nl-01-edited', priority: 200, tagsCsv: 'tier:premium' })
+  await client.updateAdminServer('admin-token', 'node-1', { ...payload, name: 'nl-01-edited', priority: 200, tagsCsv: 'tier:premium' }, 0)
   await client.disableAdminServer('admin-token', 'node-1')
   await client.checkAdminServerHealth('admin-token', 'node-1')
   await client.getAdminServerHealthChecks('admin-token', 'node-1')
@@ -1509,7 +1510,7 @@ test('ApiClient admin server CRUD actions send safe payloads with auth token', a
   await client.disableAdminServerAllocation('admin-token', 'node-1')
   await client.enableAdminServerMaintenance('admin-token', 'node-1')
   await client.disableAdminServerMaintenance('admin-token', 'node-1')
-  const deletion = await client.deleteAdminServer('admin-token', 'node-1')
+  const deletion = await client.deleteAdminServer('admin-token', 'node-1', 0)
 
   const headers = new Headers(calls[0]?.init?.headers)
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/servers')
@@ -1521,6 +1522,7 @@ test('ApiClient admin server CRUD actions send safe payloads with auth token', a
   assert.equal(calls[2]?.init?.method, 'PUT')
   assert.match(String(calls[2]?.init?.body), /nl-01-edited/)
   assert.match(String(calls[2]?.init?.body), /tier:premium/)
+  assert.equal(JSON.parse(String(calls[2]?.init?.body)).revision, 0)
   assert.deepEqual(calls.slice(3, 10).map((call) => new URL(call.url).pathname), [
     '/api/admin/servers/node-1/disable',
     '/api/admin/servers/node-1/health-check',
@@ -1530,12 +1532,23 @@ test('ApiClient admin server CRUD actions send safe payloads with auth token', a
     '/api/admin/servers/node-1/maintenance',
     '/api/admin/servers/node-1/disable-maintenance'
   ])
-  assert.equal(calls[10]?.url, 'http://localhost:8080/api/admin/servers/node-1')
+  assert.equal(calls[10]?.url, 'http://localhost:8080/api/admin/servers/node-1?revision=0')
   assert.equal(calls[10]?.init?.method, 'DELETE')
   assert.equal(new Headers(calls[10]?.init?.headers).get('Authorization'), 'Bearer admin-token')
   assert.equal(deletion.archived, true)
   assert.equal(deletion.linkedHealthChecks, 2)
   assert.equal(deletion.linkedMigrationJobs, 1)
+})
+
+test('ApiClient rejects unknown and secret fields in admin server responses', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify([
+    vpnNodeFixture({ protectedSshCredential: 'must-not-cross-api-boundary' })
+  ]), { status: 200, headers: { 'Content-Type': 'application/json' } })) as typeof fetch
+
+  await assert.rejects(
+    () => new ApiClient('http://localhost:8080').getAdminServers('admin-token'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+  )
 })
 
 test('ApiClient provisioning run details and actions are tokenized', async () => {
@@ -2978,8 +2991,8 @@ test('ApiClient rejects malformed server, provisioning and Telegram bot DTOs', a
   const operations = [
     () => client.getAdminServers('admin-token'),
     () => client.createAdminServer('admin-token', serverPayload),
-    () => client.updateAdminServer('admin-token', 'node-1', serverPayload),
-    () => client.deleteAdminServer('admin-token', 'node-1'),
+    () => client.updateAdminServer('admin-token', 'node-1', serverPayload, 0),
+    () => client.deleteAdminServer('admin-token', 'node-1', 0),
     () => client.disableAdminServer('admin-token', 'node-1'),
     () => client.checkAdminServerHealth('admin-token', 'node-1'),
     () => client.getAdminServerHealthChecks('admin-token', 'node-1'),

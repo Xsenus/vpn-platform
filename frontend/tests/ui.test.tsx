@@ -81,7 +81,7 @@ test('UI polish helpers render loading, empty, error, copy and validation states
       <CopyButton value="vless://sandbox" />
       <PasswordField label="Password" value="secret" onChange={() => {}} help="Use 8 characters" />
       <ConfirmButton message="Удалить запись?" onConfirm={() => {}}>Удалить</ConfirmButton>
-      <SecretField label="Webhook secret" configured={true} value="" />
+      <SecretField label="Webhook secret" configured={true} value="" maxLength={4096} />
     </SectionCard>
   )
 
@@ -102,6 +102,7 @@ test('UI polish helpers render loading, empty, error, copy and validation states
   assert.match(html, /class="form-field"/)
   assert.match(html, /aria-describedby=/)
   assert.match(html, /aria-pressed="false"/)
+  assert.match(html, /maxLength="4096"/)
   assert.match(html, /Показать/)
   assert.doesNotMatch(html, /<label[^>]*>(?:(?!<\/label>)[\s\S])*password-toggle/)
   assert.match(html, /aria-expanded="false"/)

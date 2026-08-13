@@ -43,7 +43,8 @@ public sealed record CreateServerHttpRequest(
     string? SshAuthMethod = null,
     string? SshCredential = null,
     bool ValidationMode = true,
-    string? OwnerType = null);
+    string? OwnerType = null,
+    int? Revision = null);
 
 public sealed record QueueProvisionHttpRequest(bool DryRun = false);
 public sealed record RefundPaymentHttpRequest(decimal Amount, string? Reason);
@@ -109,6 +110,8 @@ public sealed record AdminRewardLedgerDto(
 public class AdminOperationsController : ControllerBase
 {
     private const string PrecheckReportStepName = "Precheck report";
+    private const int ServerListLimit = 300;
+    private const int ServerHealthDiagnosticsLimit = 6000;
     private const int TariffListLimit = 200;
 
     private static readonly HashSet<string> TariffPatchFields = new(StringComparer.Ordinal)
@@ -1831,12 +1834,17 @@ public class AdminOperationsController : ControllerBase
         var nodes = await _db.VpnNodes.AsNoTracking()
             .OrderBy(x => x.Region)
             .ThenBy(x => x.Name)
-            .Take(300)
+            .Take(ServerListLimit)
             .ToListAsync(cancellationToken);
         var nodeIds = nodes.Select(x => x.Id).ToList();
-        var latestChecks = await _db.NodeHealthChecks.AsNoTracking()
-            .Where(x => nodeIds.Contains(x.NodeId))
-            .ToListAsync(cancellationToken);
+        var latestChecks = _db is DbContext dbContext && nodeIds.Count > 0 && (dbContext.Database.IsSqlite() || dbContext.Database.IsNpgsql())
+            ? await LoadLatestNodeHealthChecksAsync(dbContext, nodeIds, cancellationToken)
+            : await _db.NodeHealthChecks.AsNoTracking()
+                .Where(x => nodeIds.Contains(x.NodeId))
+                .OrderByDescending(x => x.CheckedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(ServerHealthDiagnosticsLimit)
+                .ToListAsync(cancellationToken);
         var latestByNode = latestChecks
             .GroupBy(x => x.NodeId)
             .ToDictionary(x => x.Key, x => x.OrderByDescending(check => check.CheckedAt).First());
@@ -1905,16 +1913,20 @@ public class AdminOperationsController : ControllerBase
             : _secretProtector!.Protect(request.PanelPassword.Trim());
 
         var tags = NormalizeServerTags(request.TagsCsv, owner, authMethod, string.IsNullOrWhiteSpace(protectedCredential) ? "missing" : "protected", request.ValidationMode);
+        if (tags.Length > 2000)
+        {
+            return BadRequest(new { error = "Server tagsCsv must not exceed 2000 characters after normalization." });
+        }
 
         var node = new VpnNode
         {
-            Name = request.Name.Trim(),
+            Name = TrimOrEmpty(request.Name),
             Host = host,
-            IpAddress = request.IpAddress.Trim(),
+            IpAddress = TrimOrEmpty(request.IpAddress),
             Provider = string.IsNullOrWhiteSpace(request.Provider) ? "admin-vps" : request.Provider.Trim(),
-            Region = request.Region.Trim(),
-            Country = request.Country.Trim(),
-            Datacenter = request.Datacenter.Trim(),
+            Region = TrimOrEmpty(request.Region),
+            Country = TrimOrEmpty(request.Country),
+            Datacenter = TrimOrEmpty(request.Datacenter),
             Capacity = request.Capacity,
             SupportedProtocolsCsv = NormalizeServerProtocols(request.SupportedProtocolsCsv),
             Priority = request.Priority,
@@ -1966,6 +1978,14 @@ public class AdminOperationsController : ControllerBase
         if (node is null)
         {
             return NotFound(new { error = "Server not found." });
+        }
+        if (!request.Revision.HasValue || request.Revision.Value < 0)
+        {
+            return BadRequest(new { error = "Server revision is required and must be a non-negative integer." });
+        }
+        if (request.Revision.Value != node.Revision)
+        {
+            return Conflict(new { error = "Server changed. Reload it and retry.", revision = node.Revision });
         }
 
         var host = ProvisioningService.NormalizeHost(string.IsNullOrWhiteSpace(request.Host) ? request.IpAddress : request.Host);
@@ -2047,13 +2067,13 @@ public class AdminOperationsController : ControllerBase
             node.PanelPassword = string.Empty;
         }
 
-        node.Name = request.Name.Trim();
+        node.Name = TrimOrEmpty(request.Name);
         node.Host = host;
-        node.IpAddress = request.IpAddress.Trim();
+        node.IpAddress = TrimOrEmpty(request.IpAddress);
         node.Provider = string.IsNullOrWhiteSpace(request.Provider) ? "admin-vps" : request.Provider.Trim();
-        node.Region = request.Region.Trim();
-        node.Country = request.Country.Trim();
-        node.Datacenter = request.Datacenter.Trim();
+        node.Region = TrimOrEmpty(request.Region);
+        node.Country = TrimOrEmpty(request.Country);
+        node.Datacenter = TrimOrEmpty(request.Datacenter);
         node.Capacity = capacity;
         node.SupportedProtocolsCsv = NormalizeServerProtocols(request.SupportedProtocolsCsv);
         node.Priority = request.Priority;
@@ -2067,6 +2087,11 @@ public class AdminOperationsController : ControllerBase
         node.PublicPort = request.PublicPort;
         node.NodeGroupId = request.NodeGroupId;
         node.TagsCsv = NormalizeServerTags(request.TagsCsv, owner, authMethod, ProvisioningService.CredentialsConfigured(node) ? "protected" : "missing", request.ValidationMode);
+        if (node.TagsCsv.Length > 2000)
+        {
+            return BadRequest(new { error = "Server tagsCsv must not exceed 2000 characters after normalization." });
+        }
+        node.Revision = checked(node.Revision + 1);
         node.UpdatedAt = _clock.UtcNow;
 
         AddAuditLog("server.update", "VpnNode", node.Id, JsonSerializer.Serialize(oldSnapshot), JsonSerializer.Serialize(new
@@ -2088,7 +2113,14 @@ public class AdminOperationsController : ControllerBase
             request.ValidationMode
         }));
         AddServerSecretRotationAudit(node, rotatedSshCredential, rotatedPanelPassword, authMethod);
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Server changed. Reload it and retry." });
+        }
         return Ok(MapVpnNode(node));
     }
 
@@ -2132,6 +2164,7 @@ public class AdminOperationsController : ControllerBase
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.Status = NodeStatus.Disabled;
         node.IsAvailableForNewUsers = false;
+        node.Revision = checked(node.Revision + 1);
         node.UpdatedAt = _clock.UtcNow;
         AddAuditLog("server.disable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
         await _db.SaveChangesAsync(cancellationToken);
@@ -2140,13 +2173,21 @@ public class AdminOperationsController : ControllerBase
 
     [HttpDelete("servers/{id:guid}")]
     [Authorize(Policy = AdminPolicies.ProvisioningManage)]
-    public async Task<IActionResult> DeleteServer(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteServer(Guid id, [FromQuery] int? revision, CancellationToken cancellationToken)
     {
         await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (node is null)
         {
             return NotFound(new { error = "Server not found." });
+        }
+        if (!revision.HasValue || revision.Value < 0)
+        {
+            return BadRequest(new { error = "Server revision is required and must be a non-negative integer." });
+        }
+        if (revision.Value != node.Revision)
+        {
+            return Conflict(new { error = "Server changed. Reload it and retry.", revision = node.Revision });
         }
 
         var linkedSubscriptions = await _db.Subscriptions.CountAsync(x => x.CurrentServerId == id, cancellationToken);
@@ -2171,15 +2212,30 @@ public class AdminOperationsController : ControllerBase
         {
             node.Status = NodeStatus.Archived;
             node.IsAvailableForNewUsers = false;
+            node.Revision = checked(node.Revision + 1);
             node.UpdatedAt = _clock.UtcNow;
             AddAuditLog("server.archive", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers, linkedSubscriptions, linkedAccesses, linkedRuns, linkedHealthChecks, linkedMigrationJobs }));
-            await _db.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Conflict(new { error = "Server changed. Reload it and retry." });
+            }
             return Ok(new DeleteServerHttpResponse(id, Deleted: false, Archived: true, linkedSubscriptions, linkedAccesses, linkedRuns, linkedHealthChecks, linkedMigrationJobs));
         }
 
         _db.VpnNodes.Remove(node);
         AddAuditLog("server.delete", "VpnNode", id, before, "{}");
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Server changed. Reload it and retry." });
+        }
         return Ok(new DeleteServerHttpResponse(id, Deleted: true, Archived: false, linkedSubscriptions, linkedAccesses, linkedRuns, linkedHealthChecks, linkedMigrationJobs));
     }
 
@@ -2275,10 +2331,18 @@ public class AdminOperationsController : ControllerBase
             return NotFound(new { error = "Server not found." });
         }
 
-        var checks = await _db.NodeHealthChecks.AsNoTracking()
-            .Where(x => x.NodeId == id)
-            .ToListAsync(cancellationToken);
-        return Ok(checks.OrderByDescending(x => x.CheckedAt).Take(20).Select(MapNodeHealthCheck).ToList());
+        var checks = _db is DbContext dbContext && dbContext.Database.IsSqlite()
+            ? await _db.NodeHealthChecks
+                .FromSqlInterpolated($"SELECT * FROM \"NodeHealthChecks\" WHERE \"NodeId\" = {id} ORDER BY julianday(\"CheckedAt\") DESC, \"Id\" DESC LIMIT 20")
+                .AsNoTracking()
+                .ToListAsync(cancellationToken)
+            : await _db.NodeHealthChecks.AsNoTracking()
+                .Where(x => x.NodeId == id)
+                .OrderByDescending(x => x.CheckedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(20)
+                .ToListAsync(cancellationToken);
+        return Ok(checks.Select(MapNodeHealthCheck).ToList());
     }
 
     [HttpGet("provisioning-runs")]
@@ -2494,6 +2558,7 @@ public class AdminOperationsController : ControllerBase
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.Status = NodeStatus.Maintenance;
         node.IsAvailableForNewUsers = false;
+        node.Revision = checked(node.Revision + 1);
         node.UpdatedAt = _clock.UtcNow;
         AddAuditLog("server.maintenance.enable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
         await _db.SaveChangesAsync(cancellationToken);
@@ -2512,6 +2577,7 @@ public class AdminOperationsController : ControllerBase
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.Status = NodeStatus.Ready;
         node.IsAvailableForNewUsers = true;
+        node.Revision = checked(node.Revision + 1);
         node.UpdatedAt = _clock.UtcNow;
         AddAuditLog("server.maintenance.disable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
         await _db.SaveChangesAsync(cancellationToken);
@@ -2530,6 +2596,7 @@ public class AdminOperationsController : ControllerBase
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.IsAvailableForNewUsers = false;
         node.Status = NodeStatus.Draining;
+        node.Revision = checked(node.Revision + 1);
         node.UpdatedAt = _clock.UtcNow;
         AddAuditLog("server.allocation.disable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
         await _db.SaveChangesAsync(cancellationToken);
@@ -2548,6 +2615,7 @@ public class AdminOperationsController : ControllerBase
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.IsAvailableForNewUsers = true;
         node.Status = NodeStatus.Ready;
+        node.Revision = checked(node.Revision + 1);
         node.UpdatedAt = _clock.UtcNow;
         AddAuditLog("server.allocation.enable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
         await _db.SaveChangesAsync(cancellationToken);
@@ -3761,7 +3829,60 @@ public class AdminOperationsController : ControllerBase
             return "SSH private key path must be an absolute Unix filesystem path without whitespace, control or quote characters. Submit key material through the protected SSH credential field.";
         }
 
+        if (TrimOrEmpty(request.Name).Length > 200) return "Server name must not exceed 200 characters.";
+        if (TrimOrEmpty(request.Host).Length > 253) return "Server host must not exceed 253 characters.";
+        if (TrimOrEmpty(request.IpAddress).Length > 64) return "Server ipAddress must not exceed 64 characters.";
+        if (TrimOrEmpty(request.Provider).Length > 120) return "Server provider must not exceed 120 characters.";
+        if (TrimOrEmpty(request.Region).Length > 120) return "Server region must not exceed 120 characters.";
+        if (TrimOrEmpty(request.Country).Length > 80) return "Server country must not exceed 80 characters.";
+        if (TrimOrEmpty(request.Datacenter).Length > 120) return "Server datacenter must not exceed 120 characters.";
+        if (TrimOrEmpty(request.SupportedProtocolsCsv).Length > 80) return "Server supportedProtocolsCsv must not exceed 80 characters.";
+        if (TrimOrEmpty(request.TagsCsv).Length > 2000) return "Server tagsCsv must not exceed 2000 characters.";
+        if (TrimOrEmpty(request.SshUser).Length > 64) return "Server sshUser must not exceed 64 characters.";
+        if (TrimOrEmpty(request.SshPrivateKeyPath).Length > 4000) return "Server sshPrivateKeyPath must not exceed 4000 characters.";
+        if (TrimOrEmpty(request.SshAuthMethod).Length > 20) return "Server sshAuthMethod must not exceed 20 characters.";
+        if (TrimOrEmpty(request.SshCredential).Length > 16000) return "Server sshCredential must not exceed 16000 characters.";
+        if (TrimOrEmpty(request.OwnerType).Length > 40) return "Server ownerType must not exceed 40 characters.";
+        if (TrimOrEmpty(request.PanelBaseUrl).Length > 2000) return "Server panelBaseUrl must not exceed 2000 characters.";
+        if (TrimOrEmpty(request.PanelUsername).Length > 200) return "Server panelUsername must not exceed 200 characters.";
+        if (TrimOrEmpty(request.PanelPassword).Length > 4096) return "Server panelPassword must not exceed 4096 characters.";
+        if (TrimOrEmpty(request.PublicHostname).Length > 253) return "Server publicHostname must not exceed 253 characters.";
+
         return null;
+    }
+
+    private static string TrimOrEmpty(string? value) => value?.Trim() ?? string.Empty;
+
+    private async Task<List<NodeHealthCheck>> LoadLatestNodeHealthChecksAsync(
+        DbContext dbContext,
+        IReadOnlyList<Guid> nodeIds,
+        CancellationToken cancellationToken)
+    {
+        var placeholders = string.Join(", ", nodeIds.Select((_, index) => $"{{{index}}}"));
+        var parameters = nodeIds.Cast<object>().ToArray();
+        var sql = dbContext.Database.IsSqlite()
+            ? $"""
+               SELECT * FROM (
+                   SELECT checks.*, ROW_NUMBER() OVER (
+                       PARTITION BY "NodeId"
+                       ORDER BY julianday("CheckedAt") DESC, "Id" DESC
+                   ) AS "_LatestRank"
+                   FROM "NodeHealthChecks" AS checks
+                   WHERE "NodeId" IN ({placeholders})
+               ) AS latest
+               WHERE "_LatestRank" = 1
+               """
+            : $"""
+               SELECT DISTINCT ON ("NodeId") *
+               FROM "NodeHealthChecks"
+               WHERE "NodeId" IN ({placeholders})
+               ORDER BY "NodeId", "CheckedAt" DESC, "Id" DESC
+               """;
+
+        return await _db.NodeHealthChecks
+            .FromSqlRaw(sql, parameters)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
     }
 
     private static string NormalizeServerProtocols(string? value)
@@ -3837,6 +3958,7 @@ public class AdminOperationsController : ControllerBase
         return new
         {
             node.Id,
+            node.Revision,
             node.Name,
             node.Host,
             node.IpAddress,

@@ -613,7 +613,7 @@ export function ConfirmButton({ message, onConfirm, children, disabled, style, c
   )
 }
 
-export function SecretField({ label, configured, placeholder = 'Секрет хранится скрыто', value, onChange }: { label: string; configured?: boolean; placeholder?: string; value?: string; onChange?: (value: string) => void }) {
+export function SecretField({ label, configured, placeholder = 'Секрет хранится скрыто', value, maxLength, onChange }: { label: string; configured?: boolean; placeholder?: string; value?: string; maxLength?: number; onChange?: (value: string) => void }) {
   const inputId = useId()
   const helpId = useId()
   const [visible, setVisible] = useState(false)
@@ -630,6 +630,7 @@ export function SecretField({ label, configured, placeholder = 'Секрет х�
           type={visible ? 'text' : 'password'}
           autoComplete="new-password"
           aria-describedby={helpId}
+          maxLength={maxLength}
         />
         <PrimaryButton
           type="button"

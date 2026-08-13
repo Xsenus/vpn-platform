@@ -172,7 +172,8 @@ public class SecurityHardeningMvpTests
             SshAuthMethod: "password",
             SshCredential: "",
             ValidationMode: false,
-            OwnerType: "ops"), CancellationToken.None);
+            OwnerType: "ops",
+            Revision: node.Revision), CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(update);
         Assert.Equal("Edited node", node.Name);
@@ -266,7 +267,8 @@ public class SecurityHardeningMvpTests
             SshAuthMethod: "ssh_key",
             SshCredential: "new-ssh-secret-must-not-leak",
             ValidationMode: true,
-            OwnerType: "admin"), CancellationToken.None);
+            OwnerType: "admin",
+            Revision: node.Revision), CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(update);
         Assert.NotEqual(originalSshSecret, node.ProtectedSshCredential);

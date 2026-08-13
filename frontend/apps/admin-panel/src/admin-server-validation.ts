@@ -4,12 +4,22 @@ export type ServerValidationFields = {
   name: string
   host: string
   ipAddress?: string | null
+  provider?: string | null
+  region?: string | null
+  country?: string | null
+  datacenter?: string | null
+  tagsCsv?: string | null
   sshUser?: string | null
   sshPrivateKeyPath?: string | null
+  sshAuthMethod?: string | null
+  sshCredential?: string | null
+  ownerType?: string | null
   sshPort: number
   capacity: number
   priority: number
   panelBaseUrl?: string | null
+  panelUsername?: string | null
+  panelPassword?: string | null
   supportedProtocolsCsv?: string | null
   panelInboundId?: number | null
   publicHostname?: string | null
@@ -55,7 +65,7 @@ export function isValidSshUsername(value?: string | null) {
 export function isValidLegacySshKeyPath(value?: string | null) {
   const normalized = String(value ?? '').trim()
   return normalized.length > 0
-    && normalized.length <= 4096
+    && normalized.length <= 4000
     && normalized.startsWith('/')
     && !/[\s"\u0000-\u001f\u007f]/.test(normalized)
     && !normalized.startsWith('v1:')
@@ -74,6 +84,18 @@ export function validateServerForm(form: ServerValidationFields) {
     .split(',')
     .map((protocol) => protocol.trim().toLowerCase())
     .filter(Boolean)
+  const textLimits: Array<[unknown, number]> = [
+    [form.name, 200],
+    [form.provider, 120],
+    [form.region, 120],
+    [form.country, 80],
+    [form.datacenter, 120],
+    [form.tagsCsv, 2000],
+    [form.sshCredential, 16000],
+    [form.panelBaseUrl, 2000],
+    [form.panelUsername, 200],
+    [form.panelPassword, 4096]
+  ]
   if (!form.name.trim()) errors.push('Укажите название VPN-сервера.')
   if (!isValidServerHost(form.host)) errors.push('Укажите корректный Host / DNS VPN-сервера.')
   if (form.ipAddress && !isValidServerIpAddress(form.ipAddress)) errors.push('IP-адрес должен быть корректным IPv4 или IPv6 без пробелов.')
@@ -87,5 +109,8 @@ export function validateServerForm(form: ServerValidationFields) {
   if (panelInboundId !== null && (!Number.isInteger(panelInboundId) || panelInboundId <= 0)) errors.push('Inbound ID должен быть целым числом больше 0.')
   if (form.publicHostname && !isValidServerHost(form.publicHostname)) errors.push('Публичный hostname должен быть корректным DNS-именем, IPv4 или IPv6.')
   if (!Number.isInteger(publicPort) || publicPort <= 0 || publicPort > 65535) errors.push('Публичный порт должен быть целым числом в диапазоне 1-65535.')
+  for (const [value, limit] of textLimits) {
+    if (String(value ?? '').trim().length > limit) errors.push(`Поле: не более ${limit} символов.`)
+  }
   return errors
 }

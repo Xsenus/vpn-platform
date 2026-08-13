@@ -15981,5 +15981,28 @@
         "text": "Roadmap progress is 692/712 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-server-management-boundary",
+    "version": "0.680.0",
+    "releasedAt": "2026-08-13T11:00:00+07:00",
+    "title": "Управление VPN-серверами защищено от конфликтов",
+    "summary": "Админка проверяет точный контракт сервера, ограничивает диагностику и сохраняет внешние изменения при параллельной работе.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Устаревшая форма или операция удаления больше не может перезаписать или удалить VPN-сервер после изменения другим администратором: PUT и DELETE требуют актуальную revision."
+      },
+      {
+        "type": "improved",
+        "text": "API и форма согласовали границы полей, write-only секреты и точный DTO; списки серверов и health-диагностика ограничиваются до загрузки в память."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 693/713 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -176,8 +176,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-13 локально подтверждено:
 
-- backend full suite: 1424/1424;
-- frontend tests: 169/169;
+- backend full suite: 1435/1435;
+- frontend tests: 171/171;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-13-tariff-boundary`, версия `0.679.0`; public/admin tariff contracts разделены, списки ограничены DB-side top-200, а revision защищает admin PATCH/DELETE от параллельных изменений.
-- roadmap progress: `692/712` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-13-server-management-boundary`, версия `0.680.0`; server DTO/limits согласованы, диагностика ограничена до materialization, а revision защищает admin PUT/DELETE от параллельных изменений.
+- roadmap progress: `693/713` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

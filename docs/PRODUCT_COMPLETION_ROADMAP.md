@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-13.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-tariff-boundary`, версия `0.679.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `692/712` проверяемых пунктов, готовность `97.2%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-server-management-boundary`, версия `0.680.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `693/713` проверяемых пунктов, готовность `97.2%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,8 +37,8 @@ git diff --check
 
 Что подтверждено на 2026-08-13:
 
-- [x] `STATE-001` Backend test suite проходит: `1424/1424`.
-- [x] `STATE-002` Frontend test suite проходит: `169/169`.
+- [x] `STATE-001` Backend test suite проходит: `1435/1435`.
+- [x] `STATE-002` Frontend test suite проходит: `171/171`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2464,6 +2464,10 @@ git diff --check
   - Что сделать: public API не должен раскрывать publication rules, internal allocation CSV, provisioning key и audit metadata; public/admin lists должны иметь DB-side bound. Create/PATCH не должны допускать overposting, unknown/duplicate/no-op fields и silent data loss, а stale PATCH/DELETE не должны перезаписывать чужую версию.
   - Что сделано: добавлен минимальный `PublicTariffDto`, отдельный exact admin contract с revision и явный `TariffCreateRequest`. SQLite/PostgreSQL ограничивают списки top-200 до materialization; PATCH строго валидирует поля, JSON и границы. `Tariff.Revision` защищён EF concurrency token и migration; admin UI перезагружает актуальный список после controlled `409`, а форма управляет типом и расписанием публикации.
   - Доказательство: fail-first targeted backend `17/27` с 10 ожидаемыми failures; after-fix tariff/SQLite `33/33`, frontend `169/169`, backend `1424/1424`, typecheck/build и bundle budget зелёные. Stateful CRUD desktop/mobile `2/2`, stale PATCH/DELETE desktop/mobile `4/4`, public tariff/checkout desktop/mobile `2/2`, public/admin all-screens render `2/2`, focused tariff responsive/WCAG `1/1` на 320/390/1280 px, file-backed SQLite race, EF migration/drift, fresh SQLite, strict UTF-8, secret scan и dependency audit `0 vulnerabilities` зелёные. Объединённый расширенный Playwright run превысил 5-minute timeout и не засчитывался; реальные provider/Telegram кабинеты и VPS/staging/payment/3x-ui evidence остаются внешней проверкой.
+- [x] `P11-ACC-402` Закрыть административную границу управления VPN-серверами. 2026-08-13.
+  - Что сделать: API не должен принимать или возвращать неожиданные/секретные поля; server/health lists должны иметь DB-side bound, а stale PUT/DELETE не должны перезаписывать или удалять параллельно измененный сервер. Границы формы, API и БД должны совпадать.
+  - Что сделано: `VpnNode.Revision` защищен EF concurrency token и миграцией; PUT/DELETE требуют актуальную revision и возвращают controlled `409`. API client принимает точный 48-field DTO без секретов; серверные строки ограничены в API/EF/form, write-only secret inputs получили `maxLength`. Node/health queries ограничены до materialization, UI перезагружает список и сбрасывает stale editor.
+  - Доказательство: fail-first server-management `64/71`, frontend `169/171`; after-fix server-management `75/75`, frontend `171/171`, backend `1435/1435`, typecheck/build/bundle budget зелёные. Stateful lifecycle/conflicts desktop/mobile `4/4`, focused server editor responsive/WCAG `1/1` на 320/390/1280 px, file-backed SQLite race, EF migration/drift, fresh SQLite full flow, strict UTF-8 `16/16`, secret scan `686/0` и dependency audit `0 vulnerabilities` зелёные. Реальные provider/Telegram кабинеты и VPS/staging/payment/3x-ui evidence остаются внешней проверкой.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

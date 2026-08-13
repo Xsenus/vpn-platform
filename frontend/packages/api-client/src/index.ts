@@ -707,6 +707,7 @@ export type AdminRewardLedgerDto = RewardLedgerDto & {
 
 export type VpnNodeDto = {
   id: string
+  revision: number
   name: string
   host: string
   ipAddress: string
@@ -2619,6 +2620,7 @@ function isVpnNodeDto(value: unknown): value is VpnNodeDto {
   if (!isRecord(value)) return false
 
   return hasString(value, 'id', true)
+    && hasInteger(value, 'revision', 0)
     && hasString(value, 'name', true)
     && hasString(value, 'host')
     && hasString(value, 'ipAddress')
@@ -2669,6 +2671,7 @@ function isVpnNodeDto(value: unknown): value is VpnNodeDto {
     && hasDateString(value, 'createdAt')
     && hasDateString(value, 'updatedAt')
     && Date.parse(value.updatedAt as string) >= Date.parse(value.createdAt as string)
+    && Object.keys(value).length === 48
 }
 
 function isDeleteAdminServerResult(value: unknown): value is DeleteAdminServerResult {
@@ -4387,17 +4390,17 @@ export class ApiClient {
     }, 'object', isVpnNodeDto)
   }
 
-  updateAdminServer(token: string, serverId: string, payload: CreateServerPayload): Promise<VpnNodeDto> {
+  updateAdminServer(token: string, serverId: string, payload: CreateServerPayload, revision: number): Promise<VpnNodeDto> {
     return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}`, {
       method: 'PUT',
       token,
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, revision }),
       errorMessage: apiFallbackErrorMessage
     }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
   }
 
-  deleteAdminServer(token: string, serverId: string): Promise<DeleteAdminServerResult> {
-    return this.request<DeleteAdminServerResult>(`/api/admin/servers/${serverId}`, {
+  deleteAdminServer(token: string, serverId: string, revision: number): Promise<DeleteAdminServerResult> {
+    return this.request<DeleteAdminServerResult>(`/api/admin/servers/${serverId}?revision=${encodeURIComponent(String(revision))}`, {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage

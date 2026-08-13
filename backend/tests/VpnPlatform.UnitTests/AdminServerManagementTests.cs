@@ -1,7 +1,9 @@
+using System.Data.Common;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using VpnPlatform.Api.Controllers.Admin;
@@ -20,6 +22,75 @@ namespace VpnPlatform.UnitTests;
 
 public class AdminServerManagementTests
 {
+    [Fact]
+    public void VpnNode_Revision_Should_Be_A_Concurrency_Token()
+    {
+        using var db = CreateDbContext();
+        var entityType = db.Model.FindEntityType(typeof(VpnNode));
+        var revision = entityType?.FindProperty("Revision");
+
+        Assert.NotNull(revision);
+        Assert.True(revision.IsConcurrencyToken);
+    }
+
+    [Theory]
+    [InlineData("name", 201)]
+    [InlineData("provider", 121)]
+    [InlineData("region", 121)]
+    [InlineData("tags", 2001)]
+    [InlineData("panelUsername", 201)]
+    public async Task Server_Write_Should_Reject_Overlong_Fields(string field, int length)
+    {
+        await using var db = CreateDbContext();
+        var node = NewNode("bounded-server");
+        var request = UpdateRequest(node) with
+        {
+            Name = field == "name" ? new string('n', length) : node.Name,
+            Provider = field == "provider" ? new string('p', length) : node.Provider,
+            Region = field == "region" ? new string('r', length) : node.Region,
+            TagsCsv = field == "tags" ? new string('t', length) : node.TagsCsv,
+            PanelUsername = field == "panelUsername" ? new string('u', length) : node.PanelUsername
+        };
+
+        var result = await CreateController(db).AddServer(request, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(await db.VpnNodes.ToListAsync());
+    }
+
+    [Fact]
+    public async Task GetServers_Should_Bound_Health_Diagnostics_Before_Materialization()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new CommandCaptureInterceptor();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var node = NewNode("bounded-diagnostics");
+        db.VpnNodes.Add(node);
+        db.NodeHealthChecks.AddRange(Enumerable.Range(0, 25).Select(index => new NodeHealthCheck
+        {
+            NodeId = node.Id,
+            Status = HealthStatus.Healthy,
+            CheckedAt = DateTimeOffset.UtcNow.AddMinutes(-index),
+            LatencyMs = index,
+            MetadataJson = "{}"
+        }));
+        await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
+
+        Assert.IsType<OkObjectResult>(await CreateController(db).GetServers(CancellationToken.None));
+
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("NodeHealthChecks", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("ROW_NUMBER", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("WHERE \"_LatestRank\" = 1", StringComparison.OrdinalIgnoreCase));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -366,6 +437,7 @@ public class AdminServerManagementTests
         Assert.IsType<OkObjectResult>(result);
         Assert.Equal(NodeStatus.Disabled, node.Status);
         Assert.False(node.IsAvailableForNewUsers);
+        Assert.Equal(1, node.Revision);
         Assert.Contains(db.AuditLogs, x => x.Action == "server.disable" && x.EntityId == node.Id.ToString());
     }
 
@@ -378,7 +450,7 @@ public class AdminServerManagementTests
         db.VpnNodes.Add(node);
         await db.SaveChangesAsync();
 
-        var result = await controller.DeleteServer(node.Id, CancellationToken.None);
+        var result = await controller.DeleteServer(node.Id, node.Revision, CancellationToken.None);
 
         var response = Assert.IsType<DeleteServerHttpResponse>(Assert.IsType<OkObjectResult>(result).Value);
         Assert.True(response.Deleted);
@@ -424,7 +496,7 @@ public class AdminServerManagementTests
         });
         await db.SaveChangesAsync();
 
-        var result = await controller.DeleteServer(node.Id, CancellationToken.None);
+        var result = await controller.DeleteServer(node.Id, node.Revision, CancellationToken.None);
 
         var response = Assert.IsType<DeleteServerHttpResponse>(Assert.IsType<OkObjectResult>(result).Value);
         Assert.False(response.Deleted);
@@ -479,7 +551,7 @@ public class AdminServerManagementTests
         }
         await db.SaveChangesAsync();
 
-        var result = await controller.DeleteServer(node.Id, CancellationToken.None);
+        var result = await controller.DeleteServer(node.Id, node.Revision, CancellationToken.None);
 
         var response = Assert.IsType<DeleteServerHttpResponse>(Assert.IsType<OkObjectResult>(result).Value);
         Assert.False(response.Deleted);
@@ -712,6 +784,80 @@ public class AdminServerManagementTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Server_Update_And_Delete_Should_Require_Revision(bool delete)
+    {
+        await using var db = CreateDbContext();
+        var node = NewNode("revision-required");
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+
+        var result = delete
+            ? await CreateController(db).DeleteServer(node.Id, null, CancellationToken.None)
+            : await CreateController(db).UpdateServer(
+                node.Id,
+                UpdateRequest(node) with { Revision = null },
+                CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("revision-required", (await db.VpnNodes.AsNoTracking().SingleAsync()).Name);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Stale_Server_Update_And_Delete_Should_Not_Overwrite_External_Changes(bool deleteSecond)
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-node-concurrency-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite($"Data Source={databasePath};Pooling=False")
+                .Options;
+            Guid nodeId;
+            await using (var seed = new ApplicationDbContext(options))
+            {
+                await seed.Database.EnsureCreatedAsync();
+                var node = NewNode("concurrent-server");
+                seed.VpnNodes.Add(node);
+                await seed.SaveChangesAsync();
+                nodeId = node.Id;
+            }
+
+            await using var firstDb = new ApplicationDbContext(options);
+            await using var secondDb = new ApplicationDbContext(options);
+            var first = await firstDb.VpnNodes.SingleAsync(x => x.Id == nodeId);
+            var second = await secondDb.VpnNodes.SingleAsync(x => x.Id == nodeId);
+
+            var firstResult = await CreateController(firstDb).UpdateServer(
+                nodeId,
+                UpdateRequest(first, name: "first-admin-change"),
+                CancellationToken.None);
+            var secondResult = deleteSecond
+                ? await CreateController(secondDb).DeleteServer(nodeId, second.Revision, CancellationToken.None)
+                : await CreateController(secondDb).UpdateServer(
+                    nodeId,
+                    UpdateRequest(second, name: "stale-admin-change"),
+                    CancellationToken.None);
+
+            Assert.IsType<OkObjectResult>(firstResult);
+            Assert.IsType<ConflictObjectResult>(secondResult);
+            await using var verify = new ApplicationDbContext(options);
+            var saved = await verify.VpnNodes.AsNoTracking().SingleAsync(x => x.Id == nodeId);
+            Assert.Equal("first-admin-change", saved.Name);
+            Assert.Equal(1, saved.Revision);
+        }
+        finally
+        {
+            foreach (var path in new[] { databasePath, databasePath + "-shm", databasePath + "-wal" })
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+        }
+    }
+
     private static VpnNode NewNode(string name)
         => new()
         {
@@ -752,7 +898,8 @@ public class AdminServerManagementTests
             node.PanelInboundId,
             node.PublicHostname,
             node.PublicPort,
-            node.NodeGroupId);
+            node.NodeGroupId,
+            Revision: node.Revision);
 
     private static AdminOperationsController CreateController(
         ApplicationDbContext db,
@@ -795,6 +942,30 @@ public class AdminServerManagementTests
 
     private static ApplicationDbContext CreateSqliteDbContext(SqliteConnection connection)
         => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
+
+    private sealed class CommandCaptureInterceptor : DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+
+        public override InterceptionResult<DbDataReader> ReaderExecuting(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result)
+        {
+            Commands.Add(command.CommandText);
+            return result;
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
+    }
 
     private sealed class TestClock : IClock
     {

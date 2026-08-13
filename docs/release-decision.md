@@ -22,9 +22,9 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1424/1424`.
+- Backend full suite: `1435/1435`.
 - API Release build: OK.
-- Frontend unit tests: `169/169`.
+- Frontend unit tests: `171/171`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
 - Browser console smoke: `227/227`; responsive all-screens проверяет content/modal/control geometry на 25 viewport-конфигурациях `305x568..2560x1440`, включая точные пары `N/N+1` для всех CSS-breakpoints; production inventory маршрутов и admin sections, local WebP decode и representative screenshots проверены.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-13-tariff-boundary`, версия `0.679.0`; public tariff API использует минимальный exact contract, списки ограничены DB-side, а admin PATCH/DELETE защищены optimistic revision. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `692/712` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-13-server-management-boundary`, версия `0.680.0`; server DTO/limits согласованы, node/health выборки ограничены, а admin PUT/DELETE защищены optimistic revision. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `693/713` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

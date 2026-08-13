@@ -1184,6 +1184,7 @@ export function App() {
   const isActionResourceBusy = (...resourceKeys: string[]) => resourceKeys.some((key) => actionBusyResourceKeys.has(key))
   const [serverForm, setServerForm] = useState<ServerFormState>(defaultServerForm)
   const [editingServerId, setEditingServerId] = useState<string | null>(null)
+  const [editingServerRevision, setEditingServerRevision] = useState<number | null>(null)
   const [providerForm, setProviderForm] = useState<UpsertPaymentProviderAccountPayload>(defaultProviderForm)
   const [vpnPanelForm, setVpnPanelForm] = useState<CreateVpnPanelPayload>(defaultVpnPanelForm)
   const [editingVpnPanelId, setEditingVpnPanelId] = useState<string | null>(null)
@@ -1720,6 +1721,7 @@ export function App() {
   useEffect(() => {
     if (editingServerId && !servers.some((server) => server.id === editingServerId)) {
       setEditingServerId(null)
+      setEditingServerRevision(null)
       setServerForm(defaultServerForm)
     }
   }, [servers, editingServerId])
@@ -1986,6 +1988,7 @@ export function App() {
     setServers([])
     setServerForm(defaultServerForm)
     setEditingServerId(null)
+    setEditingServerRevision(null)
     setProvisioningRuns([])
     setVpnPanels([])
     selectedVpnPanelIdRef.current = ''
@@ -3545,6 +3548,7 @@ export function App() {
 
   const editServer = (server: VpnNodeDto) => {
     setEditingServerId(server.id)
+    setEditingServerRevision(server.revision)
     setServerForm({
       ...defaultServerForm,
       name: server.name,
@@ -3578,12 +3582,21 @@ export function App() {
 
   const cancelServerEdit = () => {
     setEditingServerId(null)
+    setEditingServerRevision(null)
     setServerForm(defaultServerForm)
+  }
+
+  const throwServerConflict = async (error: unknown, action: AdminActionContext, serverId: string): Promise<never> => {
+    if (!(error instanceof ApiClientError) || error.status !== 409) throw error
+    await action.reloadAll()
+    if (action.isCurrent() && editingServerIdRef.current === serverId) cancelServerEdit()
+    throw new ApiClientError('Сервер уже изменен другим администратором. Список обновлен. Повторите.', 409, error.payload)
   }
 
   const handleSaveServer = async () => {
     if (!token || !canWriteActiveSection) return
     const editingId = editingServerId
+    const submittedRevision = editingServerRevision
     const submittedForm = serverForm
     const validationErrors = validateServerForm(submittedForm)
     if (validationErrors.length > 0) {
@@ -3591,13 +3604,16 @@ export function App() {
       return
     }
     await runAction('nodes', 'server-save', async (action) => {
+      if (editingId && submittedRevision === null) throw new ApiClientError('Не удалось определить ревизию сервера. Откройте его заново.', 409, null)
       const saved = editingId
-        ? await api.updateAdminServer(token, editingId, submittedForm)
+        ? await api.updateAdminServer(token, editingId, submittedForm, submittedRevision as number)
+            .catch((error: unknown) => throwServerConflict(error, action, editingId))
         : await api.createAdminServer(token, submittedForm)
       if (!action.isCurrent()) return
       setNotice(`Сервер ${saved.name} ${editingId ? 'обновлен' : 'создан'}. Секреты не возвращаются из API.`)
       if (serverFormRef.current === submittedForm && editingServerIdRef.current === editingId) {
         setEditingServerId(null)
+        setEditingServerRevision(null)
         setServerForm({ ...defaultServerForm, provider: submittedForm.provider, region: submittedForm.region, country: submittedForm.country, datacenter: submittedForm.datacenter })
       }
       await action.reloadAll()
@@ -3619,7 +3635,8 @@ export function App() {
   }
 
   const handleDeleteServer = (server: VpnNodeDto) => runAction('nodes', `delete-server-${server.id}`, async (action) => {
-    const result = await api.deleteAdminServer(token, server.id)
+    const result = await api.deleteAdminServer(token, server.id, server.revision)
+      .catch((error: unknown) => throwServerConflict(error, action, server.id))
     if (!action.isCurrent()) return
     setNotice(result.archived
       ? `Сервер ${server.name} архивирован: связей ${result.linkedSubscriptions + result.linkedAccesses + result.linkedProvisioningRuns + result.linkedHealthChecks + result.linkedMigrationJobs}.`
@@ -4823,37 +4840,37 @@ export function App() {
             <fieldset className="form-section">
               <legend>Идентификация сервера</legend>
               <div className="form-grid">
-                <label><span>Название</span><input value={serverForm.name} onChange={(e) => updateServerForm('name', e.target.value)} placeholder="nl-01" required /></label>
-                <label><span>Host или DNS</span><input value={serverForm.host} onChange={(e) => updateServerForm('host', e.target.value)} placeholder="vpn.example.com" required /></label>
-                <label><span>IP-адрес</span><input value={serverForm.ipAddress} onChange={(e) => updateServerForm('ipAddress', e.target.value)} placeholder="203.0.113.10" /></label>
-                <label><span>Провайдер</span><input value={serverForm.provider} onChange={(e) => updateServerForm('provider', e.target.value)} placeholder="hetzner" /></label>
-                <label><span>Регион</span><input value={serverForm.region} onChange={(e) => updateServerForm('region', e.target.value)} placeholder="eu" /></label>
-                <label><span>Страна</span><input value={serverForm.country} onChange={(e) => updateServerForm('country', e.target.value)} placeholder="NL" /></label>
-                <label><span>Дата-центр</span><input value={serverForm.datacenter} onChange={(e) => updateServerForm('datacenter', e.target.value)} placeholder="fsn1" /></label>
+                <label><span>Название</span><input value={serverForm.name} onChange={(e) => updateServerForm('name', e.target.value)} placeholder="nl-01" maxLength={200} required /></label>
+                <label><span>Host или DNS</span><input value={serverForm.host} onChange={(e) => updateServerForm('host', e.target.value)} placeholder="vpn.example.com" maxLength={253} required /></label>
+                <label><span>IP-адрес</span><input value={serverForm.ipAddress} onChange={(e) => updateServerForm('ipAddress', e.target.value)} placeholder="203.0.113.10" maxLength={64} /></label>
+                <label><span>Провайдер</span><input value={serverForm.provider} onChange={(e) => updateServerForm('provider', e.target.value)} placeholder="hetzner" maxLength={120} /></label>
+                <label><span>Регион</span><input value={serverForm.region} onChange={(e) => updateServerForm('region', e.target.value)} placeholder="eu" maxLength={120} /></label>
+                <label><span>Страна</span><input value={serverForm.country} onChange={(e) => updateServerForm('country', e.target.value)} placeholder="NL" maxLength={80} /></label>
+                <label><span>Дата-центр</span><input value={serverForm.datacenter} onChange={(e) => updateServerForm('datacenter', e.target.value)} placeholder="fsn1" maxLength={120} /></label>
                 <label><span>Емкость</span><input value={serverForm.capacity} onChange={(e) => updateServerForm('capacity', Number(e.target.value) || 0)} placeholder="5000" type="number" min={1} step="1" /></label>
                 <label><span>Приоритет</span><input value={serverForm.priority} onChange={(e) => updateServerForm('priority', Number(e.target.value) || 0)} placeholder="100" type="number" min={1} step="1" /></label>
                 <label><span>Протоколы</span><select value={serverForm.supportedProtocolsCsv ?? 'vless,vmess,trojan'} onChange={(e) => updateServerForm('supportedProtocolsCsv', e.target.value)}><option value="vless,vmess,trojan">VLESS, VMess, Trojan</option><option value="vless">VLESS</option><option value="vmess">VMess</option><option value="trojan">Trojan</option><option value="vless,vmess">VLESS, VMess</option><option value="vless,trojan">VLESS, Trojan</option><option value="vmess,trojan">VMess, Trojan</option></select></label>
-                <label><span>Теги</span><input value={serverForm.tagsCsv ?? ''} onChange={(e) => updateServerForm('tagsCsv', e.target.value)} placeholder="tier:premium,city:amsterdam" /></label>
+                <label><span>Теги</span><input value={serverForm.tagsCsv ?? ''} onChange={(e) => updateServerForm('tagsCsv', e.target.value)} placeholder="tier:premium,city:amsterdam" maxLength={2000} /></label>
               </div>
             </fieldset>
             <fieldset className="form-section">
               <legend>SSH и режим запуска</legend>
               <div className="form-grid">
-                <label><span>SSH-пользователь</span><input value={serverForm.sshUser ?? ''} onChange={(e) => updateServerForm('sshUser', e.target.value)} placeholder="root" /></label>
+                <label><span>SSH-пользователь</span><input value={serverForm.sshUser ?? ''} onChange={(e) => updateServerForm('sshUser', e.target.value)} placeholder="root" maxLength={64} /></label>
                 <label><span>SSH-порт</span><input value={serverForm.sshPort} onChange={(e) => updateServerForm('sshPort', Number(e.target.value) || 22)} placeholder="22" type="number" min={1} max={65535} step="1" /></label>
                 <label><span>Метод SSH</span><select value={serverForm.sshAuthMethod ?? 'ssh_key'} onChange={(e) => updateServerForm('sshAuthMethod', e.target.value)}><option value="ssh_key">SSH-ключ</option><option value="password">Пароль</option></select></label>
-                <SecretField label="SSH-доступ" value={serverForm.sshCredential ?? ''} onChange={(value) => updateServerForm('sshCredential', value)} />
+                <SecretField label="SSH-доступ" value={serverForm.sshCredential ?? ''} maxLength={16000} onChange={(value) => updateServerForm('sshCredential', value)} />
                 <label><span>Режим запуска</span><select value={serverForm.validationMode ? 'true' : 'false'} onChange={(e) => updateServerForm('validationMode', e.target.value === 'true')}><option value="true">Проверка без реального деплоя</option><option value="false">Рабочий кандидат</option></select></label>
               </div>
             </fieldset>
             <fieldset className="form-section">
               <legend>Панель управления</legend>
               <div className="form-grid">
-                <label><span>URL панели</span><input value={serverForm.panelBaseUrl ?? ''} onChange={(e) => updateServerForm('panelBaseUrl', e.target.value)} placeholder="https://panel.example.com:2053" type="url" inputMode="url" /></label>
-                <label><span>Логин панели</span><input value={serverForm.panelUsername ?? ''} onChange={(e) => updateServerForm('panelUsername', e.target.value)} placeholder="admin" /></label>
-                <SecretField label="Пароль панели" value={serverForm.panelPassword ?? ''} onChange={(value) => updateServerForm('panelPassword', value)} />
+                <label><span>URL панели</span><input value={serverForm.panelBaseUrl ?? ''} onChange={(e) => updateServerForm('panelBaseUrl', e.target.value)} placeholder="https://panel.example.com:2053" type="url" inputMode="url" maxLength={2000} /></label>
+                <label><span>Логин панели</span><input value={serverForm.panelUsername ?? ''} onChange={(e) => updateServerForm('panelUsername', e.target.value)} placeholder="admin" maxLength={200} /></label>
+                <SecretField label="Пароль панели" value={serverForm.panelPassword ?? ''} maxLength={4096} onChange={(value) => updateServerForm('panelPassword', value)} />
                 <label><span>Inbound ID</span><input value={serverForm.panelInboundId ?? ''} onChange={(e) => updateServerForm('panelInboundId', e.target.value ? Number(e.target.value) : null)} type="number" min={1} step="1" /></label>
-                <label><span>Публичный hostname</span><input value={serverForm.publicHostname ?? ''} onChange={(e) => updateServerForm('publicHostname', e.target.value)} placeholder="vpn.example.com" /></label>
+                <label><span>Публичный hostname</span><input value={serverForm.publicHostname ?? ''} onChange={(e) => updateServerForm('publicHostname', e.target.value)} placeholder="vpn.example.com" maxLength={253} /></label>
                 <label><span>Публичный порт</span><input value={serverForm.publicPort} onChange={(e) => updateServerForm('publicPort', Number(e.target.value) || 0)} type="number" min={1} max={65535} step="1" /></label>
               </div>
             </fieldset>

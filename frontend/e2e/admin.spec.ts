@@ -294,6 +294,7 @@ function vpnPanel(overrides: Record<string, unknown> = {}) {
 function vpnServer(overrides: Record<string, unknown> = {}) {
   return {
     id: 'server-eu',
+    revision: 0,
     name: 'EU Sandbox',
     host: 'eu.example.test',
     ipAddress: '10.0.0.1',
@@ -1590,6 +1591,9 @@ async function mockAdminApi(page: Page) {
       delete publicPayload.sshCredential
       delete publicPayload.sshPrivateKeyPath
       delete publicPayload.panelPassword
+      delete publicPayload.validationMode
+      delete publicPayload.ownerType
+      delete publicPayload.revision
       const created = vpnServer({
         ...publicPayload,
         id: 'server-created-e2e',
@@ -1610,16 +1614,24 @@ async function mockAdminApi(page: Page) {
     if (serverMutationMatch && method === 'PUT') {
       const index = servers.findIndex((item) => item.id === serverMutationMatch[1])
       const payload = body as Record<string, unknown>
+      if (index < 0 || payload.revision !== servers[index].revision) {
+        await fulfillJson(route, { error: 'Server changed. Reload it and retry.' }, 409)
+        return
+      }
       const publicPayload = { ...payload }
       const sshCredential = publicPayload.sshCredential
       const panelPassword = publicPayload.panelPassword
       delete publicPayload.sshCredential
       delete publicPayload.sshPrivateKeyPath
       delete publicPayload.panelPassword
+      delete publicPayload.validationMode
+      delete publicPayload.ownerType
+      delete publicPayload.revision
       const updated = vpnServer({
         ...servers[index],
         ...publicPayload,
         id: serverMutationMatch[1],
+        revision: Number(servers[index].revision) + 1,
         sshCredentialConfigured: Boolean(sshCredential) || Boolean(servers[index]?.sshCredentialConfigured),
         panelPasswordConfigured: Boolean(panelPassword) || Boolean(servers[index]?.panelPasswordConfigured),
         updatedAt: now
@@ -1636,6 +1648,7 @@ async function mockAdminApi(page: Page) {
       const action = serverModeMatch[2]
       const updated = vpnServer({
         ...server,
+        revision: Number(server.revision) + 1,
         status: action === 'maintenance' ? 'Maintenance' : action === 'disable' ? 'Disabled' : action === 'disable-maintenance' ? 'Ready' : server.status,
         isAvailableForNewUsers: action === 'enable-allocation' ? true : action === 'disable-allocation' || action === 'maintenance' || action === 'disable' ? false : server.isAvailableForNewUsers,
         updatedAt: now
@@ -1710,12 +1723,22 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'DELETE' && path === '/api/admin/servers/server-eu') {
+      const server = servers.find((item) => item.id === 'server-eu')
+      if (!server || url.searchParams.get('revision') !== String(server.revision)) {
+        await fulfillJson(route, { error: 'Server changed. Reload it and retry.' }, 409)
+        return
+      }
+      Object.assign(server, { status: 'Archived', isAvailableForNewUsers: false, revision: Number(server.revision) + 1, updatedAt: now })
       await fulfillJson(route, { id: 'server-eu', deleted: false, archived: true, linkedSubscriptions: 0, linkedAccesses: 0, linkedProvisioningRuns: 0, linkedHealthChecks: 2, linkedMigrationJobs: 1 })
       return
     }
 
     if (serverMutationMatch && method === 'DELETE') {
       const index = servers.findIndex((item) => item.id === serverMutationMatch[1])
+      if (index < 0 || url.searchParams.get('revision') !== String(servers[index].revision)) {
+        await fulfillJson(route, { error: 'Server changed. Reload it and retry.' }, 409)
+        return
+      }
       if (index >= 0) servers.splice(index, 1)
       await fulfillJson(route, { id: serverMutationMatch[1], deleted: true, archived: false, linkedSubscriptions: 0, linkedAccesses: 0, linkedProvisioningRuns: 0, linkedHealthChecks: 0, linkedMigrationJobs: 0 })
       return
@@ -2072,6 +2095,16 @@ async function mockAdminApi(page: Page) {
         ...tariffs[index],
         name,
         revision: Number(tariffs[index].revision) + 1,
+        updatedAt: now
+      })
+    },
+    changeServerExternally: (id: string, name = 'Сервер изменен извне') => {
+      const index = servers.findIndex((item) => item.id === id)
+      if (index < 0) return
+      servers[index] = vpnServer({
+        ...servers[index],
+        name,
+        revision: Number(servers[index].revision) + 1,
         updatedAt: now
       })
     },
@@ -4050,6 +4083,7 @@ test('admin VPN infrastructure supports secure managed lifecycle', async ({ page
   expect(api.getLastRequest('/api/admin/servers/server-created-e2e', 'PUT')?.body).toMatchObject({
     name: 'E2E NL Node Updated',
     priority: 30,
+    revision: 0,
     sshCredential: '',
     panelPassword: ''
   })
@@ -4722,6 +4756,34 @@ test('admin tariff delete keeps an externally changed tariff', async ({ page }) 
   await expect(page.locator('.error-block')).toContainText('Тариф уже изменен')
   await expect(tariffsPanel.getByText('Актуальный тариф перед удалением', { exact: true })).toBeVisible()
   expect(api.getRequestCount('/api/admin/tariffs/tariff-admin-pro', 'DELETE')).toBe(1)
+})
+
+test('admin server editor and delete recover from stale revisions', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-server-conflict-token', 'admin-server-conflict-refresh')
+  await page.goto('/#nodes')
+
+  const nodesPanel = page.locator('#nodes')
+  let serverRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox' })
+  await serverRow.getByRole('button', { name: 'Редактировать' }).click()
+  await nodesPanel.getByLabel('Название').fill('Устаревшая локальная версия')
+
+  api.changeServerExternally('server-eu', 'Актуальный внешний сервер')
+  await nodesPanel.getByRole('button', { name: 'Сохранить сервер' }).click()
+
+  await expect(page.locator('.error-block')).toContainText('Сервер уже изменен другим администратором')
+  await expect(nodesPanel.getByRole('heading', { name: 'Добавить VPN-сервер' })).toBeVisible()
+  await expect(nodesPanel.getByText('Актуальный внешний сервер', { exact: true })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/servers/server-eu', 'PUT')?.body).toMatchObject({ revision: 0 })
+
+  serverRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'Актуальный внешний сервер' })
+  await serverRow.getByRole('button', { name: 'Удалить' }).click()
+  api.changeServerExternally('server-eu', 'Актуальный сервер перед удалением')
+  await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
+
+  await expect(page.locator('.error-block')).toContainText('Сервер уже изменен другим администратором')
+  await expect(nodesPanel.getByText('Актуальный сервер перед удалением', { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/admin/servers/server-eu', 'DELETE')).toBe(1)
 })
 
 test('admin app release delete keeps an externally changed release', async ({ page }) => {

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.680.0 - 2026-08-13
+
+Release entry: `2026-08-13-server-management-boundary`.
+
+### Исправлено
+
+- Устаревший редактор или диалог удаления больше не перезаписывает и не удаляет VPN-сервер после параллельного изменения: PUT/DELETE требуют актуальную revision и возвращают controlled `409`.
+- Admin API и frontend отклоняют неожиданные или секретные поля ответа сервера; текстовые границы согласованы с БД и формой.
+
+### Улучшено
+
+- Списки серверов и health-диагностика ограничиваются до materialization; `VpnNode.Revision` защищен EF concurrency token и миграцией.
+- Редактор получил согласованные `maxLength`, write-only секреты и восстановление после конфликта на desktop/mobile.
+
+### Проверено
+
+- Server-management `75/75`, frontend `171/171`, backend `1435/1435`, typecheck/build/bundle budget, EF drift, fresh SQLite, strict UTF-8, secret scan `686/0` и dependency audit `0 vulnerabilities` зеленые. Stateful lifecycle/conflicts desktop/mobile `4/4`, focused responsive/WCAG `1/1` на 320/390/1280 px.
+- Roadmap `693/713` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider/Telegram кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались; статус остается staging-ready baseline, not production-ready.
+
 ## 0.679.0 - 2026-08-13
 
 Release entry: `2026-08-13-tariff-boundary`.
