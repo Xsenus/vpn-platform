@@ -16418,5 +16418,28 @@
         "text": "Roadmap progress is 711/731 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-admin-ready-state-visual-gate",
+    "version": "0.699.0",
+    "releasedAt": "2026-08-13T17:16:00+07:00",
+    "title": "Визуальный аудит проверяет готовые разделы",
+    "summary": "Все административные экраны проверяются в ready-state на полной responsive-матрице.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "All-screens больше не принимает общий error boundary или partial-load banner за успешно отрисованный административный раздел."
+      },
+      {
+        "type": "improved",
+        "text": "Exact admin DTO fixtures и ready-state assertions покрывают dashboard и все 17 sections на 25 viewport-конфигурациях; operational E2E учитывает локализацию и revision payload."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 712/732 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

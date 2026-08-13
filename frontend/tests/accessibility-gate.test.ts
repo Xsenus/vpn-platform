@@ -39,6 +39,9 @@ test('all-screens checks content, modal bounds and control overlaps', () => {
   assert.match(allScreens, /viewportBoundElements/)
   assert.match(allScreens, /interactive elements overlap/)
   assert.match(allScreens, /admin controls do not overlap at dense layout boundaries/)
+  assert.match(allScreens, /locator\(`#\$\{section\}`\)\)\.toBeVisible\(\)/)
+  assert.match(allScreens, /locator\('#admin-section-load-error'\)\)\.toHaveCount\(0\)/)
+  assert.match(allScreens, /Не удалось загрузить часть данных/)
 })
 
 test('responsive matrix straddles every CSS breakpoint', () => {

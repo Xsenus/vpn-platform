@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: admin ready-state visual gate
+
+Scope:
+- Все 17 административных разделов должны отрисовываться в ready-state на 25 viewport-конфигурациях `305x568..2560x1440`, а не через общий или partial-load error boundary.
+- Cabinet/admin DTO fixtures, локализация referral reward и optimistic-concurrency payload миграции VPN-клиента должны соответствовать production API-контрактам.
+
+Results:
+- Roadmap progress: `712/732` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-admin-ready-state-visual-gate`, version `0.699.0`.
+- Fail-first: dashboard не имел видимого `#dashboard` из-за malformed admin payment DTO; после первой коррекции `#subscriptions` скрывался partial-load ошибкой из-за cabinet subscription DTO. Первый полный console suite выявил ещё четыре desktop/mobile падения на устаревших assertions `7 days` и migrate payload без `revision` (`264 passed, 4 failed`).
+- After fix: отдельные admin subscription/payment fixtures проходят exact DTO validation; dashboard и каждый section container видимы без `#admin-section-load-error` и partial-load banner. Targeted ready-state `1/1`, visual all-screens `14/14`, целевые operational E2E `4/4`, полный Playwright `268/268` за 15.1 min, frontend `172/172`, backend Debug `1470/1470`, typecheck/build и bundle budget зеленые. Реальные provider кабинеты, live payment, Telegram/Bot API/SMTP, VPS/SSH/Ansible и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: delivery dispatch query boundary
 
 Scope:

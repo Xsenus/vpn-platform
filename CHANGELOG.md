@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.699.0 - 2026-08-13
+
+Release entry: `2026-08-13-admin-ready-state-visual-gate`.
+
+### Исправлено
+
+- Визуальный all-screens аудит больше не принимает admin error boundary или partial-load banner за успешно отрисованный раздел.
+- E2E assertions учитывают русскую локализацию бонусных дней и обязательную `revision` миграции VPN-клиента.
+
+### Улучшено
+
+- Exact admin subscription/payment fixtures отделены от сокращенных cabinet DTO; dashboard и все 17 разделов проверяются в ready-state на 25 viewport-конфигурациях.
+
+### Проверено
+
+- Fail-first обнаружил скрытые dashboard/subscriptions и затем `4` устаревших desktop/mobile assertions; after-fix targeted ready-state `1/1`, visual all-screens `14/14`, operational desktop/mobile `4/4`, полный Playwright `268/268` за 15.1 min, frontend `172/172`, backend Debug `1470/1470`, typecheck/build и bundle budget зеленые.
+- Roadmap `712/732` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider кабинеты, live payment, Telegram/Bot API/SMTP, VPS/SSH/Ansible и production-like 3x-ui локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.698.0 - 2026-08-13
 
 Release entry: `2026-08-13-delivery-dispatch-query-boundary`.

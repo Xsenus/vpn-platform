@@ -45,8 +45,8 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-13-delivery-dispatch-query-boundary", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("227/227", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-13-admin-ready-state-visual-gate", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("268/268", readme, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -59,8 +59,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1470/1470",
-                     "2026-08-13-delivery-dispatch-query-boundary",
-                     "0.698.0",
+                     "2026-08-13-admin-ready-state-visual-gate",
+                     "0.699.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

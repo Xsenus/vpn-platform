@@ -950,7 +950,9 @@ test('cabinet partial load errors stay scoped and recover without false private 
   await expect(page.getByText('NotLinked', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Создать ссылку на бота' })).toHaveCount(0)
   await expect(page.getByText('YooKassa · 490 RUB', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText(/7 days/)).toBeVisible()
+  const referralRewardRow = page.locator('.list-item').filter({ hasText: 'Бонусные дни' })
+  await expect(referralRewardRow.getByText('7 дней', { exact: false })).toBeVisible()
+  await expect(referralRewardRow).not.toContainText('days')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 
   api.allowCabinetLoad('/api/me/subscriptions')

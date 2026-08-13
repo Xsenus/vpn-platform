@@ -131,6 +131,37 @@ const subscription = {
   updatedAt: now
 }
 
+const adminSubscription = {
+  id: subscription.id,
+  userId: user.id,
+  tariffId: subscription.tariffId,
+  tariffName: subscription.tariffName,
+  status: subscription.status,
+  startAt: subscription.startAt,
+  endAt: subscription.endAt,
+  gracePeriodEndAt: subscription.gracePeriodEndAt,
+  autoRenewFlag: false,
+  sourceChannel: 'Web',
+  currentServerId: 'server-all-screens',
+  currentAccessId: subscription.currentAccessId,
+  lastPaymentId: 'payment-all-screens',
+  renewalCount: 0,
+  blockReason: null,
+  suspendedAt: subscription.suspendedAt,
+  cancelledAt: subscription.cancelledAt,
+  lifecycleAttemptCount: 0,
+  lifecycleProcessingStartedAt: null,
+  lifecycleLeaseExpiresAt: null,
+  lifecycleNextAttemptAt: null,
+  lifecycleLastError: null,
+  accessUri: subscription.accessUri,
+  qrCodePath: 'qr://all-screens',
+  configPath: 'config://all-screens',
+  nodeName: subscription.nodeName,
+  createdAt: subscription.createdAt,
+  updatedAt: subscription.updatedAt
+}
+
 const order = {
   id: 'order-all-screens',
   userId: user.id,
@@ -196,6 +227,43 @@ const payment = {
   statusMessage: 'Платёж подтверждён.',
   createdAt: now,
   updatedAt: now
+}
+
+const adminPayment = {
+  id: payment.id,
+  orderId: payment.orderId,
+  userId: payment.userId,
+  userDisplayName: user.displayName,
+  provider: payment.provider,
+  paymentProviderAccountId: 'provider-yookassa',
+  providerMode: payment.providerMode,
+  providerPaymentId: payment.providerPaymentId,
+  externalEventId: 'event-all-screens',
+  idempotencyKey: 'payment-all-screens-idempotency',
+  confirmationUrl: payment.confirmationUrl,
+  returnUrl: 'http://127.0.0.1:5295/payments/return',
+  amount: payment.amount,
+  currency: payment.currency,
+  status: payment.status,
+  signatureValidated: true,
+  isActivationProcessed: payment.isActivationProcessed,
+  activationProcessedAt: payment.activationProcessedAt,
+  paidAt: payment.paidAt,
+  failedAt: payment.failedAt,
+  refundedAt: payment.refundedAt,
+  refundedAmount: payment.refundedAmount,
+  statusReason: null,
+  webhookEventsCount: 1,
+  refundsCount: 0,
+  recheckSupported: true,
+  canRecheck: true,
+  recheckBlockers: [],
+  refundSupported: true,
+  canRefund: true,
+  refundableAmount: payment.amount,
+  refundBlockers: [],
+  createdAt: payment.createdAt,
+  updatedAt: payment.updatedAt
 }
 
 const access = {
@@ -509,8 +577,8 @@ async function installApiMock(page: Page) {
       await fulfillJson(route, {
         user: adminUser,
         orders: [order],
-        subscriptions: [subscription],
-        payments: [payment],
+        subscriptions: [adminSubscription],
+        payments: [adminPayment],
         accessCredentials: [access],
         telegramAccounts: [],
         supportConversations: [],
@@ -520,7 +588,7 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/subscriptions') {
-      await fulfillJson(route, [subscription])
+      await fulfillJson(route, [adminSubscription])
       return
     }
 
@@ -535,7 +603,7 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/payments') {
-      await fulfillJson(route, [payment])
+      await fulfillJson(route, [adminPayment])
       return
     }
 
@@ -1072,10 +1140,16 @@ test('every admin section renders without blank screens or browser errors', asyn
   await page.locator('input[type="password"]').fill('Password123!')
   await page.locator('form').locator('button[type="submit"]').click()
   await expect(page.locator('.admin-shell')).toBeVisible()
+  await expect(page.locator('#dashboard')).toBeVisible()
+  await expect(page.getByText('Всего пользователей', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Готовность к live-продажам' })).toBeVisible()
+  await expect(page.locator('#admin-section-load-error')).toHaveCount(0)
 
   for (const section of adminSections) {
     await page.goto(`http://127.0.0.1:5295/#${section}`)
     await expect(page.locator('.admin-shell')).toBeVisible()
+    await expect(page.locator(`#${section}`)).toBeVisible()
+    await expect(page.locator('#admin-section-load-error')).toHaveCount(0)
     await expect(page).toHaveTitle(`${adminSectionLabels[section]} — Админ-панель VPN Platform`)
     await expectNonBlankPage(page)
     await expectPageQuality(page, `admin ${section}`)
@@ -1084,6 +1158,7 @@ test('every admin section renders without blank screens or browser errors', asyn
       await captureAuditScreenshot(page, testInfo, `admin-${section}-desktop`)
     }
   }
+  await expect(page.getByText(/Не удалось загрузить часть данных/)).toHaveCount(0)
 
   expect(browserErrors).toEqual([])
 })
@@ -1412,6 +1487,9 @@ test('every admin section fits representative responsive viewports', async ({ pa
 
     for (const section of adminSections) {
       await page.goto(`http://127.0.0.1:5295/#${section}`)
+      await expect(page.locator(`#${section}`)).toBeVisible()
+      await expect(page.locator('#admin-section-load-error')).toHaveCount(0)
+      await expect(page.getByText(/Не удалось загрузить часть данных/)).toHaveCount(0)
       await expectResponsiveLayout(page, `admin ${section} at ${viewport.name}`)
       if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin ${section} at ${viewport.name}`)
       if (viewport.name === 'compact-mobile' && (section === 'dashboard' || section === 'panels')) {

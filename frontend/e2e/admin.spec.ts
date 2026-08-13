@@ -5274,7 +5274,10 @@ test('admin panel covers login and critical operational mutations across all sec
   await expect(page.getByText('VPN-клиент client@example.test перенесен: US 3x-ui Sandbox · us-vless.')).toBeVisible()
   await expect(page.locator('#panels').getByRole('combobox', { name: 'Панель' })).toHaveValue('panel-us')
   await expect(page.locator('#panels').getByText('inbound us-vless')).toBeVisible()
-  expect(api.getLastRequest('/api/admin/vpn-clients/client-e2e/migrate')?.body).toEqual({ targetInboundId: 'inbound-us' })
+  expect(api.getLastRequest('/api/admin/vpn-clients/client-e2e/migrate')?.body).toEqual({
+    targetInboundId: 'inbound-us',
+    revision: 0
+  })
   const euPanelRow = page.locator('#panels .list-item-vertical').filter({ has: page.locator('strong', { hasText: 'EU 3x-ui Sandbox' }) })
   const usPanelRow = page.locator('#panels .list-item-vertical').filter({ has: page.locator('strong', { hasText: 'US 3x-ui Sandbox' }) })
   await expect(euPanelRow).toContainText('Емкость 11/1000')

@@ -27,7 +27,7 @@ Production-ready решение заблокировано следующими 
 - Frontend unit tests: `172/172`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `227/227`; responsive all-screens проверяет content/modal/control geometry на 25 viewport-конфигурациях `305x568..2560x1440`, включая точные пары `N/N+1` для всех CSS-breakpoints; production inventory маршрутов и admin sections, local WebP decode и representative screenshots проверены.
+- Browser console smoke: `268/268`; responsive all-screens `14/14` проверяет ready-state, content/modal/control geometry на 25 viewport-конфигурациях `305x568..2560x1440`, включая точные пары `N/N+1` для всех CSS-breakpoints; production inventory маршрутов и admin sections, local WebP decode и representative screenshots проверены.
 - Actual PowerShell secret scan: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 - UTF-8/encoding guard: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-13-delivery-dispatch-query-boundary`, версия `0.698.0`; SQLite delivery queues применяют due/stale window и limit в БД. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `711/731` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-13-admin-ready-state-visual-gate`, версия `0.699.0`; all-screens требует ready-state всех 17 admin sections на 25 viewport-конфигурациях. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `712/732` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 
