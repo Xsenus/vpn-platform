@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `693/713` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `694/714` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,7 +85,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1435/1435`.
+- [x] Backend full suite: `1444/1444`.
 - [x] Frontend unit tests: `171/171`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -151,7 +151,7 @@
 - [x] Subscription actions проходят activate/extend/sync/block/reload/unblock/migrate/reload/cancel lifecycle с persisted access state и terminal masking на desktop/mobile.
 - [x] Payment refund lifecycle сохраняет partial/full refund state, автоматически подставляет остаток и блокирует повторный полный возврат на desktop/mobile.
 - [x] Notification retry сохраняет Pending state, attempts reset/error cleanup и masked recipient; finance/support роли остаются read-only.
-- [x] Admin production bundle budget: `5` chunks, largest `219849`, total raw `514172`, gzip `138052`.
+- [x] Admin production bundle budget: `5` chunks, largest `252482`, total raw `559564`, gzip `148564`.
 - [x] Public catch-all `404` recovery проходит desktop/mobile, Axe и 25 viewport-конфигураций без blank screen/overflow.
 - [x] Public route metadata/focus lifecycle проходит direct load, navigation и browser Back на desktop/mobile.
 - [x] Admin metadata lifecycle проходит hydration/login, deep-link, 17 sections и logout на desktop/mobile.
@@ -167,7 +167,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-13-server-management-boundary`, версия `0.680.0`; server DTO/limits согласованы, диагностика ограничена, а admin PUT/DELETE используют optimistic revision с controlled conflict; backend `1435/1435`.
+- [x] Latest "Что нового": `2026-08-13-vpn-panel-management-boundary`, версия `0.681.0`; panel/inbound/client DTO/limits согласованы, diagnostics ограничены, а admin mutations используют optimistic revision с controlled conflict и recovery; backend `1444/1444`.
 
 ## Как вести дальше
 

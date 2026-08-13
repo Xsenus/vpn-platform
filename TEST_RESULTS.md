@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: 3x-ui panel management boundary
+
+Scope:
+- 3x-ui panel/inbound/client mutations должны требовать актуальную revision и не обращаться к provider после обнаружения stale state.
+- Panel/inbound/client/history queries должны ограничиваться до materialization; EF/API/form limits и browser recovery должны совпадать.
+
+Results:
+- Roadmap progress: `694/714` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-vpn-panel-management-boundary`, version `0.681.0`.
+- Fail-first: новые regression tests не компилировались без revision properties/commands; SQLite history regression выявил неподдерживаемый `ORDER BY DateTimeOffset`.
+- After fix: три EF concurrency token, обязательная HTTP revision, controlled `409` с UI reload/reset, post-reservation revision recheck и capacity release, bounded provider-aware queries, согласованные limits и migration.
+- X3Ui `89/89`, frontend `171/171`, backend `1444/1444`, typecheck/build и admin bundle `559564` raw/`148564` gzip/largest `252482`, PostgreSQL EF drift clean, fresh SQLite full flow, strict UTF-8 guards, secret scan `688/0`, TelegramBot Release build `0` warnings/errors и dependency audit `0 vulnerabilities` зеленые. Managed VPN regression desktop/mobile `10/10`, focused panel editor responsive/WCAG `1/1` на 320/390/1280 px. Реальные provider/Telegram кабинеты, Bot API, SMTP и VPS/staging/live payment/production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: server management boundary
 
 Scope:

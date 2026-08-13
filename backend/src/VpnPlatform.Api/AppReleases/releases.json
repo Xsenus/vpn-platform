@@ -16004,5 +16004,28 @@
         "text": "Roadmap progress is 693/713 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-vpn-panel-management-boundary",
+    "version": "0.681.0",
+    "releasedAt": "2026-08-13T12:00:00+07:00",
+    "title": "Управление 3x-ui защищено от конфликтов",
+    "summary": "Админка сохраняет параллельные изменения панелей, inbound-правил и клиентов и ограничивает рабочие выборки.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Устаревшие операции панели, inbound-правила или клиента больше не перезаписывают новую версию: API требует revision и возвращает controlled conflict."
+      },
+      {
+        "type": "improved",
+        "text": "Списки и диагностика ограничены до загрузки в память, границы полей согласованы, а админка обновляет данные и закрывает устаревшую форму после конфликта."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 694/714 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

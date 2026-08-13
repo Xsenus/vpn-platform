@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1435/1435`.
+- Backend full suite: `1444/1444`.
 - API Release build: OK.
 - Frontend unit tests: `171/171`.
 - Frontend typecheck/build: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-13-server-management-boundary`, версия `0.680.0`; server DTO/limits согласованы, node/health выборки ограничены, а admin PUT/DELETE защищены optimistic revision. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `693/713` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-13-vpn-panel-management-boundary`, версия `0.681.0`; panel/inbound/client mutations защищены optimistic revision, diagnostics ограничены, а stale UI обновляет данные. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `694/714` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

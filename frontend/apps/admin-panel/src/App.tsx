@@ -722,6 +722,7 @@ const inboundToForm = (inbound: VpnInboundDto, patch: Partial<CreateVpnInboundPa
   isDefault: inbound.isDefault,
   capacity: inbound.capacity,
   isActive: inbound.isActive,
+  revision: inbound.revision,
   ...patch
 })
 
@@ -987,15 +988,21 @@ function validateVpnPanelForm(form: CreateVpnPanelPayload, isEditing: boolean) {
   const errors: string[] = []
   const capacity = Number(form.capacity)
   if (!form.name.trim()) errors.push('Укажите название 3x-ui панели.')
+  if (form.name.trim().length > 200) errors.push('Название 3x-ui панели не должно превышать 200 символов.')
+  if (form.baseUrl.trim().length > 2048) errors.push('Адрес 3x-ui панели не должен превышать 2048 символов.')
   if (!form.baseUrl.trim()) {
     errors.push('Укажите адрес 3x-ui панели.')
   } else if (!isOptionalSafeAdminHttpUrl(form.baseUrl)) {
     errors.push('Адрес 3x-ui панели должен быть корректным http/https URL без логина и пароля.')
   }
   if (!form.login.trim()) errors.push('Укажите логин 3x-ui панели.')
+  if (form.login.trim().length > 200) errors.push('Логин 3x-ui панели не должен превышать 200 символов.')
+  if ((form.password?.length ?? 0) > 4096) errors.push('Пароль 3x-ui панели не должен превышать 4096 символов.')
+  if (form.region.trim().length > 120) errors.push('Регион 3x-ui панели не должен превышать 120 символов.')
   if (!isEditing && !form.password?.trim()) errors.push('Укажите пароль 3x-ui панели.')
   if (!Number.isInteger(capacity) || capacity <= 0) errors.push('Емкость 3x-ui панели должна быть целым числом больше 0.')
-  if (!parseJsonObject(form.defaultInboundTemplateJson)) errors.push('Шаблон inbound должен быть корректным JSON-объектом.')
+  if (form.defaultInboundTemplateJson.length > 32768) errors.push('Шаблон inbound не должен превышать 32768 символов.')
+  else if (!parseJsonObject(form.defaultInboundTemplateJson)) errors.push('Шаблон inbound должен быть корректным JSON-объектом.')
   return errors
 }
 
@@ -1005,18 +1012,23 @@ function validateInboundForm(form: CreateVpnInboundPayload, selectedVpnPanelId: 
   const capacity = Number(form.capacity)
   if (!selectedVpnPanelId) errors.push('Выберите 3x-ui панель перед созданием inbound.')
   if (!form.name.trim()) errors.push('Укажите название inbound-правила.')
+  if (form.name.trim().length > 200) errors.push('Название inbound-правила не должно превышать 200 символов.')
+  if (form.listen.trim().length > 255) errors.push('Listen inbound не должен превышать 255 символов.')
   if (!Number.isInteger(port) || port <= 0 || port > 65535) errors.push('Порт inbound должен быть целым числом в диапазоне 1-65535.')
   if (!['vless', 'vmess', 'trojan'].includes(form.protocol.trim().toLowerCase())) errors.push('Протокол inbound должен быть VLESS, VMess или Trojan.')
   if (!Number.isInteger(capacity) || capacity <= 0) errors.push('Емкость inbound должна быть целым числом больше 0.')
   if (form.isDefault && !form.isActive) errors.push('Основной inbound должен быть активен.')
-  if (!parseJsonObject(form.settingsJson)) errors.push('settingsJson должен быть корректным JSON-объектом.')
-  const streamSettings = parseJsonObject(form.streamSettingsJson)
+  if (form.settingsJson.length > 32768) errors.push('settingsJson не должен превышать 32768 символов.')
+  else if (!parseJsonObject(form.settingsJson)) errors.push('settingsJson должен быть корректным JSON-объектом.')
+  const streamSettings = form.streamSettingsJson.length <= 32768 ? parseJsonObject(form.streamSettingsJson) : null
+  if (form.streamSettingsJson.length > 32768) errors.push('streamSettingsJson не должен превышать 32768 символов.')
   if (!streamSettings) {
     errors.push('streamSettingsJson должен быть корректным JSON-объектом.')
   } else if (typeof streamSettings.network !== 'string' || !streamSettings.network.trim()) {
     errors.push('streamSettingsJson должен содержать непустое поле network.')
   }
-  if (!parseJsonObject(form.sniffingJson)) errors.push('sniffingJson должен быть корректным JSON-объектом.')
+  if (form.sniffingJson.length > 32768) errors.push('sniffingJson не должен превышать 32768 символов.')
+  else if (!parseJsonObject(form.sniffingJson)) errors.push('sniffingJson должен быть корректным JSON-объектом.')
   return errors
 }
 
@@ -3349,13 +3361,28 @@ export function App() {
       sslVerificationMode: panel.sslVerificationMode || 'Strict',
       apiVariant: panel.apiVariant || 'X3UiOfficial',
       autoCreateInbound: panel.autoCreateInbound,
-      defaultInboundTemplateJson: panel.defaultInboundTemplateJson || '{}'
+      defaultInboundTemplateJson: panel.defaultInboundTemplateJson || '{}',
+      revision: panel.revision
     })
   }
 
   const cancelVpnPanelEdit = () => {
     setEditingVpnPanelId(null)
     setVpnPanelForm(defaultVpnPanelForm)
+  }
+
+  const throwVpnPanelConflict = async (
+    error: unknown,
+    action: AdminActionContext
+  ): Promise<never> => {
+    if (!(error instanceof ApiClientError) || error.status !== 409) throw error
+    await action.reloadAll()
+    if (action.isCurrent()) {
+      cancelVpnPanelEdit()
+      cancelInboundEdit()
+      await loadVpnPanelDetails(selectedVpnPanelIdRef.current, token, action.operationId)
+    }
+    throw new ApiClientError('VPN-объект уже изменен другим администратором. Данные обновлены: повторите действие с актуальной версией.', 409, error.payload)
   }
 
   const handleSaveVpnPanel = async () => {
@@ -3371,6 +3398,7 @@ export function App() {
     await runAction('panels', 'vpn-panel-save', async (action) => {
       const saved = editingId
         ? await api.updateAdminVpnPanel(token, editingId, submittedForm)
+            .catch((error: unknown) => throwVpnPanelConflict(error, action))
         : await api.createAdminVpnPanel(token, submittedForm)
       if (!action.isCurrent()) return
       setNotice(`VPN-панель ${saved.name} ${editingId ? 'обновлена' : 'сохранена'}. Пароль не возвращается из API.`)
@@ -3406,7 +3434,8 @@ export function App() {
   }, vpnPanelActionResourceKey(panelId))
 
   const handleSetVpnPanelStatus = (panel: VpnPanelDto, status: 'Active' | 'Disabled') => runAction('panels', `panel-status-${panel.id}`, async (action) => {
-    const saved = await api.updateAdminVpnPanel(token, panel.id, { status })
+    const saved = await api.updateAdminVpnPanel(token, panel.id, { status, revision: panel.revision })
+      .catch((error: unknown) => throwVpnPanelConflict(error, action))
     if (!action.isCurrent()) return
     setNotice(`Панель ${saved.name}: статус ${saved.status}.`)
     await action.reloadAll()
@@ -3414,7 +3443,8 @@ export function App() {
   }, vpnPanelActionResourceKey(panel.id))
 
   const handleDeleteVpnPanel = (panel: VpnPanelDto) => runAction('panels', `panel-delete-${panel.id}`, async (action) => {
-    const result = await api.deleteAdminVpnPanel(token, panel.id)
+    const result = await api.deleteAdminVpnPanel(token, panel.id, panel.revision)
+      .catch((error: unknown) => throwVpnPanelConflict(error, action))
     if (!action.isCurrent()) return
     setNotice(result.archived
       ? `Панель ${panel.name} отключена и сохранена в истории: связей ${result.linkedInbounds + result.linkedClients + result.linkedSyncRuns + result.linkedHealthChecks}.`
@@ -3440,6 +3470,7 @@ export function App() {
     return runAction('panels', editingId ? `update-inbound-${editingId}` : 'create-inbound', async (action) => {
       const saved = editingId
         ? await api.updateAdminVpnInbound(token, editingId, submittedForm)
+            .catch((error: unknown) => throwVpnPanelConflict(error, action))
         : await api.createAdminVpnPanelInbound(token, panelId, submittedForm)
       if (!action.isCurrent()) return
       setNotice(editingId ? `Inbound-правило ${saved.name} обновлено.` : `Inbound-правило ${saved.name} создано.`)
@@ -3454,7 +3485,10 @@ export function App() {
   }
 
   const handleSetDefaultInbound = (inboundId: string) => runAction('panels', inboundId, async (action) => {
-    await api.setAdminVpnInboundDefault(token, inboundId)
+    const inbound = vpnInbounds.find((item) => item.id === inboundId)
+    if (!inbound) throw new ApiClientError('Inbound больше не найден. Обновите список.', 409, null)
+    await api.setAdminVpnInboundDefault(token, inboundId, inbound.revision)
+      .catch((error: unknown) => throwVpnPanelConflict(error, action))
     if (!action.isCurrent()) return
     setNotice('Основное inbound-правило обновлено.')
     await loadVpnPanelDetails(selectedVpnPanelId, token, action.operationId)
@@ -3465,7 +3499,7 @@ export function App() {
     const saved = await api.updateAdminVpnInbound(token, inbound.id, inboundToForm(inbound, {
       isActive: nextIsActive,
       isDefault: nextIsActive ? inbound.isDefault : false
-    }))
+    })).catch((error: unknown) => throwVpnPanelConflict(error, action))
     if (!action.isCurrent()) return
     setNotice(nextIsActive ? `Inbound-правило ${saved.name} включено.` : `Inbound-правило ${saved.name} выключено.`)
     if (editingInboundIdRef.current === inbound.id) {
@@ -3487,13 +3521,14 @@ export function App() {
 
   const handleVpnClientAction = (client: VpnClientDto, action: 'enable' | 'disable' | 'sync' | 'reset') => runAction('panels', `vpn-client-${action}-${client.id}`, async (adminAction) => {
     try {
-      const saved = action === 'enable'
-        ? await api.enableAdminVpnClient(token, client.id)
+      const saved = await (action === 'enable'
+        ? api.enableAdminVpnClient(token, client.id, client.revision)
         : action === 'disable'
-          ? await api.disableAdminVpnClient(token, client.id)
+          ? api.disableAdminVpnClient(token, client.id, client.revision)
           : action === 'sync'
-            ? await api.syncAdminVpnClient(token, client.id)
-            : await api.resetAdminVpnClientTraffic(token, client.id)
+            ? api.syncAdminVpnClient(token, client.id, client.revision)
+            : api.resetAdminVpnClientTraffic(token, client.id, client.revision))
+        .catch((error: unknown) => throwVpnPanelConflict(error, adminAction))
       if (!adminAction.isCurrent()) return
       setNotice(`VPN-клиент ${saved.email} обновлен: ${saved.syncStatus}.`)
     } finally {
@@ -3513,7 +3548,8 @@ export function App() {
       ...(targetInbound ? [vpnPanelActionResourceKey(targetInbound.vpnPanelId), vpnInboundActionResourceKey(targetInbound.id)] : [])
     ]
     return runAction('panels', `vpn-client-migrate-${client.id}`, async (action) => {
-      const saved = await api.migrateAdminVpnClient(token, client.id, targetInboundId)
+      const saved = await api.migrateAdminVpnClient(token, client.id, targetInboundId, client.revision)
+        .catch((error: unknown) => throwVpnPanelConflict(error, action))
       if (!action.isCurrent()) return
       if (client.vpnPanelId !== saved.vpnPanelId) {
         setVpnPanels((current) => current.map((panel) => {
@@ -4892,22 +4928,22 @@ export function App() {
             <fieldset className="form-section">
               <legend>Доступ к панели</legend>
               <div className="form-grid">
-                <label><span>Название панели</span><input value={vpnPanelForm.name} onChange={(e) => updateVpnPanelForm('name', e.target.value)} placeholder="main-3xui" required /></label>
-                <label><span>Адрес панели</span><input value={vpnPanelForm.baseUrl} onChange={(e) => updateVpnPanelForm('baseUrl', e.target.value)} placeholder="https://panel.example.com:2053" type="url" inputMode="url" required /></label>
-                <label><span>Логин</span><input value={vpnPanelForm.login} onChange={(e) => updateVpnPanelForm('login', e.target.value)} placeholder="admin" /></label>
-                <PasswordField label="Пароль панели" value={vpnPanelForm.password ?? ''} onChange={(value) => updateVpnPanelForm('password', value)} placeholder={editingVpnPanelId ? 'Оставьте пустым, чтобы сохранить текущий пароль' : 'Хранится зашифрованным'} autoComplete="new-password" />
+                <label><span>Название панели</span><input value={vpnPanelForm.name} onChange={(e) => updateVpnPanelForm('name', e.target.value)} placeholder="main-3xui" maxLength={200} required /></label>
+                <label><span>Адрес панели</span><input value={vpnPanelForm.baseUrl} onChange={(e) => updateVpnPanelForm('baseUrl', e.target.value)} placeholder="https://panel.example.com:2053" type="url" inputMode="url" maxLength={2048} required /></label>
+                <label><span>Логин</span><input value={vpnPanelForm.login} onChange={(e) => updateVpnPanelForm('login', e.target.value)} placeholder="admin" maxLength={200} /></label>
+                <PasswordField label="Пароль панели" value={vpnPanelForm.password ?? ''} maxLength={4096} onChange={(value) => updateVpnPanelForm('password', value)} placeholder={editingVpnPanelId ? 'Оставьте пустым, чтобы сохранить текущий пароль' : 'Хранится зашифрованным'} autoComplete="new-password" />
               </div>
             </fieldset>
             <fieldset className="form-section">
               <legend>Распределение нагрузки</legend>
               <div className="form-grid">
-                <label><span>Регион</span><input value={vpnPanelForm.region} onChange={(e) => updateVpnPanelForm('region', e.target.value)} placeholder="eu" /></label>
+                <label><span>Регион</span><input value={vpnPanelForm.region} onChange={(e) => updateVpnPanelForm('region', e.target.value)} placeholder="eu" maxLength={120} /></label>
                 <label><span>Емкость</span><input value={vpnPanelForm.capacity} onChange={(e) => updateVpnPanelForm('capacity', Number(e.target.value) || 0)} placeholder="5000" type="number" min={1} step="1" /></label>
                 <label><span>Проверка SSL</span><select value={vpnPanelForm.sslVerificationMode} onChange={(e) => updateVpnPanelForm('sslVerificationMode', e.target.value)}><option value="Strict">Strict</option><option value="AllowSelfSigned">AllowSelfSigned</option><option value="Disabled">Disabled</option></select></label>
                 <label><span>Вариант API</span><select value={vpnPanelForm.apiVariant} onChange={(e) => updateVpnPanelForm('apiVariant', e.target.value)}><option value="X3UiOfficial">X3UiOfficial</option><option value="ThreeXUi">ThreeXUi</option><option value="LegacyXUi">LegacyXUi</option><option value="Custom">Custom</option></select></label>
               </div>
               <label className="checkbox-row"><input checked={vpnPanelForm.autoCreateInbound} onChange={(e) => updateVpnPanelForm('autoCreateInbound', e.target.checked)} type="checkbox" /> Автоматически создавать inbound при выдаче доступа</label>
-              <label><span>Шаблон inbound JSON</span><textarea value={vpnPanelForm.defaultInboundTemplateJson} onChange={(e) => updateVpnPanelForm('defaultInboundTemplateJson', e.target.value)} rows={4} placeholder='{"remark":"default-vless","protocol":"vless","port":443}' /></label>
+              <label><span>Шаблон inbound JSON</span><textarea value={vpnPanelForm.defaultInboundTemplateJson} onChange={(e) => updateVpnPanelForm('defaultInboundTemplateJson', e.target.value)} rows={4} maxLength={32768} placeholder='{"remark":"default-vless","protocol":"vless","port":443}' /></label>
             </fieldset>
             <FormValidationSummary errors={vpnPanelFormErrors} />
             <div className="form-footer">
@@ -4937,19 +4973,19 @@ export function App() {
             <fieldset className="form-section">
               <legend>{editingInboundId ? 'Редактирование inbound-правила' : 'Параметры нового inbound-правила'}</legend>
               <div className="form-grid">
-                <label><span>Название inbound-правила</span><input value={inboundForm.name} onChange={(e) => updateInboundForm('name', e.target.value)} placeholder="default-vless" required /></label>
+                <label><span>Название inbound-правила</span><input value={inboundForm.name} onChange={(e) => updateInboundForm('name', e.target.value)} placeholder="default-vless" maxLength={200} required /></label>
                 <label><span>Протокол</span><select value={inboundForm.protocol} onChange={(e) => updateInboundForm('protocol', e.target.value)}><option value="vless">VLESS</option><option value="vmess">VMess</option><option value="trojan">Trojan</option></select></label>
                 <label><span>Порт</span><input value={inboundForm.port} onChange={(e) => updateInboundForm('port', Number(e.target.value) || 0)} placeholder="443" type="number" min={1} max={65535} step="1" /></label>
-                <label><span>Listen</span><input value={inboundForm.listen} onChange={(e) => updateInboundForm('listen', e.target.value)} placeholder="0.0.0.0 или пусто" /></label>
+                <label><span>Listen</span><input value={inboundForm.listen} onChange={(e) => updateInboundForm('listen', e.target.value)} placeholder="0.0.0.0 или пусто" maxLength={255} /></label>
                 <label><span>Емкость</span><input value={inboundForm.capacity} onChange={(e) => updateInboundForm('capacity', Number(e.target.value) || 0)} placeholder="5000" type="number" min={1} step="1" /></label>
               </div>
               <div className="form-grid mt-12">
                 <label className="checkbox-row"><input checked={inboundForm.isActive} onChange={(e) => setInboundForm((current) => ({ ...current, isActive: e.target.checked, isDefault: e.target.checked ? current.isDefault : false }))} type="checkbox" /> Активен и доступен для выдачи</label>
                 <label className="checkbox-row"><input checked={inboundForm.isDefault} disabled={!inboundForm.isActive} onChange={(e) => updateInboundForm('isDefault', e.target.checked)} type="checkbox" /> Основной inbound для панели</label>
               </div>
-              <label className="mt-12"><span>settingsJson</span><textarea value={inboundForm.settingsJson} onChange={(e) => updateInboundForm('settingsJson', e.target.value)} rows={4} spellCheck={false} placeholder='{"clients":[]}' /></label>
-              <label><span>streamSettingsJson</span><textarea value={inboundForm.streamSettingsJson} onChange={(e) => updateInboundForm('streamSettingsJson', e.target.value)} rows={4} spellCheck={false} placeholder='{"network":"tcp","security":"tls"}' /></label>
-              <label><span>sniffingJson</span><textarea value={inboundForm.sniffingJson} onChange={(e) => updateInboundForm('sniffingJson', e.target.value)} rows={3} spellCheck={false} placeholder="{}" /></label>
+              <label className="mt-12"><span>settingsJson</span><textarea value={inboundForm.settingsJson} onChange={(e) => updateInboundForm('settingsJson', e.target.value)} rows={4} maxLength={32768} spellCheck={false} placeholder='{"clients":[]}' /></label>
+              <label><span>streamSettingsJson</span><textarea value={inboundForm.streamSettingsJson} onChange={(e) => updateInboundForm('streamSettingsJson', e.target.value)} rows={4} maxLength={32768} spellCheck={false} placeholder='{"network":"tcp","security":"tls"}' /></label>
+              <label><span>sniffingJson</span><textarea value={inboundForm.sniffingJson} onChange={(e) => updateInboundForm('sniffingJson', e.target.value)} rows={3} maxLength={32768} spellCheck={false} placeholder="{}" /></label>
             </fieldset>
             <FormValidationSummary errors={inboundFormErrors} />
             <div className="form-footer">

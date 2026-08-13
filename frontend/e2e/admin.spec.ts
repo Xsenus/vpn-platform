@@ -285,6 +285,7 @@ function vpnPanel(overrides: Record<string, unknown> = {}) {
     lastSyncAt: now,
     version: '2.4.8',
     lastError: 'Panel sync lease expired before completion.',
+    revision: 0,
     createdAt: now,
     updatedAt: now,
     ...overrides
@@ -552,11 +553,11 @@ async function mockAdminApi(page: Page) {
     { id: 'access-cancelled-stale', subscriptionId: 'sub-cancelled', subscriptionStatus: 'Cancelled', isTerminal: true, userId: 'user-e2e', providerType: 'X3UI', providerAccessId: 'client-cancelled-stale', serverId: 'server-eu', serverName: 'EU Sandbox', accessUri: 'vless://cancelled-access-stale-secret@example.test', qrCodePayload: 'vless://cancelled-access-stale-secret@example.test', qrCodePath: 'qr://cancelled-access-stale-secret', configPath: 'config://cancelled-access-stale-secret', status: 'Active', issuedAt: now, expiryDate: now, disabledAt: null, lastSyncedAt: now, revision: 1, history: [], createdAt: now, updatedAt: now }
   ]
   const inbounds: Array<Record<string, unknown>> = [
-    { id: 'inbound-default', vpnPanelId: 'panel-eu', externalInboundId: '1', name: 'default-vless', protocol: 'vless', port: 443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: true, isActive: true, capacity: 1000, usedCapacity: 12 },
-    { id: 'inbound-backup', vpnPanelId: 'panel-eu', externalInboundId: '2', name: 'backup-vless', protocol: 'vless', port: 8443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: false, isActive: true, capacity: 20, usedCapacity: 3 },
-    { id: 'inbound-us', vpnPanelId: 'panel-us', externalInboundId: '1', name: 'us-vless', protocol: 'vless', port: 9443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: true, isActive: true, capacity: 100, usedCapacity: 4 }
+    { id: 'inbound-default', vpnPanelId: 'panel-eu', externalInboundId: '1', name: 'default-vless', protocol: 'vless', port: 443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: true, isActive: true, capacity: 1000, usedCapacity: 12, revision: 0 },
+    { id: 'inbound-backup', vpnPanelId: 'panel-eu', externalInboundId: '2', name: 'backup-vless', protocol: 'vless', port: 8443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: false, isActive: true, capacity: 20, usedCapacity: 3, revision: 0 },
+    { id: 'inbound-us', vpnPanelId: 'panel-us', externalInboundId: '1', name: 'us-vless', protocol: 'vless', port: 9443, listen: '0.0.0.0', settingsJson: '{"clients":[]}', streamSettingsJson: '{"network":"tcp","security":"reality"}', sniffingJson: '{}', isDefault: true, isActive: true, capacity: 100, usedCapacity: 4, revision: 0 }
   ]
-  const clients: Array<Record<string, unknown>> = [{ id: 'client-e2e', userId: 'user-e2e', subscriptionId: 'sub-e2e', vpnPanelId: 'panel-eu', vpnInboundId: 'inbound-default', externalClientId: 'client-e2e', email: 'client@example.test', uuid: '00000000-0000-4000-8000-000000000001', flow: 'xtls-rprx-vision', limitIp: 3, totalGb: null, expiryTime: '2026-07-13T07:00:00Z', enable: true, configUri: 'vless://client@example.test', qrCodePayload: 'vless://client@example.test', syncStatus: 'Synced', lastSyncedAt: now }]
+  const clients: Array<Record<string, unknown>> = [{ id: 'client-e2e', userId: 'user-e2e', subscriptionId: 'sub-e2e', vpnPanelId: 'panel-eu', vpnInboundId: 'inbound-default', externalClientId: 'client-e2e', email: 'client@example.test', uuid: '00000000-0000-4000-8000-000000000001', flow: 'xtls-rprx-vision', limitIp: 3, totalGb: null, expiryTime: '2026-07-13T07:00:00Z', enable: true, configUri: 'vless://client@example.test', qrCodePayload: 'vless://client@example.test', syncStatus: 'Synced', lastSyncedAt: now, revision: 0 }]
 
   await page.route('**/api/**', async (route) => {
     const request = route.request()
@@ -1830,9 +1831,13 @@ async function mockAdminApi(page: Page) {
     if (panelMutationMatch && method === 'PATCH') {
       const index = panels.findIndex((item) => item.id === panelMutationMatch[1])
       const payload = body as Record<string, unknown>
+      if (index >= 0 && Number(payload.revision) !== Number(panels[index].revision)) {
+        await fulfillJson(route, { error: 'VPN panel changed. Reload it and retry.' }, 409)
+        return
+      }
       const publicPayload = { ...payload }
       delete publicPayload.password
-      const updated = vpnPanel({ ...panels[index], ...publicPayload, id: panelMutationMatch[1], updatedAt: now })
+      const updated = vpnPanel({ ...panels[index], ...publicPayload, id: panelMutationMatch[1], revision: Number(panels[index]?.revision ?? 0) + 1, updatedAt: now })
       if (index >= 0) panels[index] = updated
       await fulfillJson(route, updated)
       return
@@ -1886,6 +1891,7 @@ async function mockAdminApi(page: Page) {
         vpnPanelId: panelInboundsMatch[1],
         externalInboundId: '99',
         usedCapacity: 0,
+        revision: 0,
         ...payload
       }
       inbounds.push(created)
@@ -1915,7 +1921,7 @@ async function mockAdminApi(page: Page) {
           if (item.vpnPanelId === inbounds[index]?.vpnPanelId) item.isDefault = false
         })
       }
-      const updated = { ...inbounds[index], ...payload, id: inboundMutationMatch[1] }
+      const updated = { ...inbounds[index], ...payload, id: inboundMutationMatch[1], revision: Number(inbounds[index]?.revision ?? 0) + 1 }
       if (index >= 0) inbounds[index] = updated
       await fulfillJson(route, updated)
       return
@@ -1928,6 +1934,7 @@ async function mockAdminApi(page: Page) {
       inbounds.forEach((item) => {
         if (item.vpnPanelId === panelId) item.isDefault = item.id === inboundDefaultMatch[1]
       })
+      if (inbounds[index]) inbounds[index].revision = Number(inbounds[index].revision ?? 0) + 1
       await fulfillJson(route, inbounds[index])
       return
     }
@@ -1951,7 +1958,8 @@ async function mockAdminApi(page: Page) {
         ...clients[index],
         enable: action === 'enable' ? true : action === 'disable' ? false : clients[index]?.enable,
         syncStatus: action === 'reset-traffic' ? 'traffic-reset' : action === 'sync' ? 'synced' : action,
-        lastSyncedAt: now
+        lastSyncedAt: now,
+        revision: Number(clients[index]?.revision ?? 0) + 1
       }
       if (index >= 0) clients[index] = updated
       await fulfillJson(route, updated)
@@ -1975,7 +1983,7 @@ async function mockAdminApi(page: Page) {
         if (sourcePanel) sourcePanel.usedCapacity = Math.max(0, Number(sourcePanel.usedCapacity) - 1)
         if (targetPanel) targetPanel.usedCapacity = Number(targetPanel.usedCapacity) + 1
       }
-      clients[0] = { ...clients[0], vpnPanelId: target.vpnPanelId, vpnInboundId: target.id, syncStatus: 'migrated', configUri: 'vless://client@us.example.test:9443', qrCodePayload: 'vless://client@us.example.test:9443', lastSyncedAt: now }
+      clients[0] = { ...clients[0], vpnPanelId: target.vpnPanelId, vpnInboundId: target.id, syncStatus: 'migrated', configUri: 'vless://client@us.example.test:9443', qrCodePayload: 'vless://client@us.example.test:9443', lastSyncedAt: now, revision: Number(clients[0].revision ?? 0) + 1 }
       await fulfillJson(route, clients[0])
       return
     }
@@ -2105,6 +2113,16 @@ async function mockAdminApi(page: Page) {
         ...servers[index],
         name,
         revision: Number(servers[index].revision) + 1,
+        updatedAt: now
+      })
+    },
+    changeVpnPanelExternally: (id: string, name = 'VPN-панель изменена извне') => {
+      const index = panels.findIndex((item) => item.id === id)
+      if (index < 0) return
+      panels[index] = vpnPanel({
+        ...panels[index],
+        name,
+        revision: Number(panels[index].revision) + 1,
         updatedAt: now
       })
     },
@@ -4784,6 +4802,25 @@ test('admin server editor and delete recover from stale revisions', async ({ pag
   await expect(page.locator('.error-block')).toContainText('Сервер уже изменен другим администратором')
   await expect(nodesPanel.getByText('Актуальный сервер перед удалением', { exact: true })).toBeVisible()
   expect(api.getRequestCount('/api/admin/servers/server-eu', 'DELETE')).toBe(1)
+})
+
+test('admin VPN panel editor recovers from a stale revision', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-vpn-panel-conflict-token', 'admin-vpn-panel-conflict-refresh')
+  await page.goto('/#panels')
+
+  const panelsPanel = page.locator('#panels')
+  const panelRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'EU 3x-ui Sandbox' }).first()
+  await panelRow.getByRole('button', { name: 'Редактировать' }).click()
+  await panelsPanel.getByLabel('Название панели').fill('Устаревшая локальная панель')
+
+  api.changeVpnPanelExternally('panel-eu', 'Актуальная внешняя VPN-панель')
+  await panelsPanel.getByRole('button', { name: 'Сохранить панель' }).click()
+
+  await expect(page.locator('.error-block')).toContainText('VPN-объект уже изменен другим администратором')
+  await expect(panelsPanel.getByRole('heading', { name: '3x-ui панели' })).toBeVisible()
+  await expect(panelsPanel.locator('.list-item-vertical strong').filter({ hasText: 'Актуальная внешняя VPN-панель' })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/vpn-panels/panel-eu', 'PATCH')?.body).toMatchObject({ revision: 0 })
 })
 
 test('admin app release delete keeps an externally changed release', async ({ page }) => {

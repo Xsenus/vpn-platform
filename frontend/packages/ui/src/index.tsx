@@ -510,6 +510,7 @@ export function PasswordField({
   placeholder,
   autoComplete,
   minLength,
+  maxLength,
   required,
   help
 }: {
@@ -519,6 +520,7 @@ export function PasswordField({
   placeholder?: string
   autoComplete?: string
   minLength?: number
+  maxLength?: number
   required?: boolean
   help?: string
 }) {
@@ -538,6 +540,7 @@ export function PasswordField({
           type={visible ? 'text' : 'password'}
           autoComplete={autoComplete}
           minLength={minLength}
+          maxLength={maxLength}
           required={required}
           aria-describedby={help ? helpId : undefined}
         />

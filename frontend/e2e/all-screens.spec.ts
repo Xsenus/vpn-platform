@@ -679,6 +679,7 @@ async function installApiMock(page: Page) {
         lastSyncAt: now,
         version: '1.8.0',
         lastError: '',
+        revision: 0,
         createdAt: now,
         updatedAt: now
       }])
@@ -1209,6 +1210,37 @@ test('admin server editor fits focused mobile and desktop viewports', async ({ p
     await expect(nodesPanel.getByRole('textbox', { name: /^Пароль панели/ })).toHaveAttribute('maxlength', '4096')
     await expectResponsiveLayout(page, `admin server editor at ${viewport.name}`)
     if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin server editor at ${viewport.name}`)
+  }
+
+  expect(browserErrors).toEqual([])
+})
+
+test('admin VPN panel editor fits focused mobile and desktop viewports', async ({ page }) => {
+  const browserErrors = collectBrowserErrors(page)
+  await installApiMock(page)
+
+  for (const viewport of [
+    { name: 'compact-mobile', width: 320, height: 568 },
+    { name: 'large-mobile', width: 390, height: 844 },
+    { name: 'wide-layout-boundary', width: 1280, height: 900 }
+  ]) {
+    await page.setViewportSize(viewport)
+    await page.goto('http://127.0.0.1:5295/#panels')
+    const hasStoredAdminSession = await page.evaluate(() => Boolean(sessionStorage.getItem('vpn-platform-admin-token')))
+    if (!hasStoredAdminSession) {
+      await page.locator('input[type="email"]').fill('admin@example.test')
+      await page.locator('input[type="password"]').fill('Password123!')
+      await page.locator('form').locator('button[type="submit"]').click()
+    }
+    const panelsPanel = page.locator('#panels')
+    await expect(panelsPanel).toBeVisible()
+    await panelsPanel.locator('.list-item-vertical').first().getByRole('button', { name: 'Редактировать' }).click()
+    await expect(panelsPanel.getByLabel('Название панели')).toHaveAttribute('maxlength', '200')
+    await expect(panelsPanel.getByLabel('Адрес панели')).toHaveAttribute('maxlength', '2048')
+    await expect(panelsPanel.getByRole('textbox', { name: /^Пароль панели/ })).toHaveAttribute('maxlength', '4096')
+    await expect(panelsPanel.getByLabel('Шаблон inbound JSON')).toHaveAttribute('maxlength', '32768')
+    await expectResponsiveLayout(page, `admin VPN panel editor at ${viewport.name}`)
+    if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin VPN panel editor at ${viewport.name}`)
   }
 
   expect(browserErrors).toEqual([])

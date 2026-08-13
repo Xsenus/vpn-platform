@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-13 локально подтверждено:
 
-- backend full suite: 1435/1435;
+- backend full suite: 1444/1444;
 - frontend tests: 171/171;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -216,7 +216,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Public session hydration: StrictMode выполняет одну refresh-token rotation, transient profile failure сохраняет токены для ручного retry, logout инвалидирует late response.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft; reset-code request и password confirmation имеют независимые формы и корректный Enter submit.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- admin production bundle budget: `5` JS chunks, largest `219849`, total raw `517701`, gzip `138757`.
+- admin production bundle budget: `5` JS chunks, largest `252482`, total raw `559564`, gzip `148564`.
 - unknown public route: доступное `404` recovery, desktop/mobile и 18 responsive viewport-конфигураций: OK.
 - public route title/meta/focus: direct load, SPA navigation и browser Back desktop/mobile: OK.
 - admin section metadata: hydration/login, deep-link, 17 sections и logout desktop/mobile: OK.
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-13-server-management-boundary`, версия `0.680.0`; server DTO/limits согласованы, диагностика ограничена до materialization, а revision защищает admin PUT/DELETE от параллельных изменений.
-- roadmap progress: `693/713` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-13-vpn-panel-management-boundary`, версия `0.681.0`; panel/inbound/client mutations требуют revision, diagnostics ограничены до materialization, а UI восстанавливается после controlled conflict.
+- roadmap progress: `694/714` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

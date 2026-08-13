@@ -42,16 +42,24 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> UpdatePanel(Guid id, [FromBody] UpdateVpnPanelCommand request, CancellationToken cancellationToken)
     {
+        if (!request.Revision.HasValue || request.Revision.Value < 0)
+        {
+            return BadRequest(new { error = "VPN panel revision is required and must be a non-negative integer." });
+        }
         var result = await _panels.UpdatePanelAsync(id, request, ResolveUserId(), cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        return MutationResult(result);
     }
 
     [HttpDelete("vpn-panels/{id:guid}")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
-    public async Task<IActionResult> DeletePanel(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeletePanel(Guid id, CancellationToken cancellationToken, [FromQuery] int? revision = null)
     {
-        var result = await _panels.DeletePanelAsync(id, ResolveUserId(), cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        if (!revision.HasValue || revision.Value < 0)
+        {
+            return BadRequest(new { error = "VPN panel revision is required and must be a non-negative integer." });
+        }
+        var result = await _panels.DeletePanelAsync(id, revision, ResolveUserId(), cancellationToken);
+        return MutationResult(result);
     }
 
     [HttpPost("vpn-panels/{id:guid}/test-connection")]
@@ -98,16 +106,24 @@ public class AdminVpnPanelsController : ControllerBase
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> PatchInbound(Guid id, [FromBody] CreateVpnInboundCommand request, CancellationToken cancellationToken)
     {
+        if (!request.Revision.HasValue || request.Revision.Value < 0)
+        {
+            return BadRequest(new { error = "VPN inbound revision is required and must be a non-negative integer." });
+        }
         var result = await _panels.PatchInboundAsync(id, request, ResolveUserId(), cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        return MutationResult(result);
     }
 
     [HttpPost("vpn-inbounds/{id:guid}/set-default")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
-    public async Task<IActionResult> SetDefaultInbound(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> SetDefaultInbound(Guid id, CancellationToken cancellationToken, [FromQuery] int? revision = null)
     {
-        var result = await _panels.SetDefaultInboundAsync(id, ResolveUserId(), cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        if (!revision.HasValue || revision.Value < 0)
+        {
+            return BadRequest(new { error = "VPN inbound revision is required and must be a non-negative integer." });
+        }
+        var result = await _panels.SetDefaultInboundAsync(id, revision, ResolveUserId(), cancellationToken);
+        return MutationResult(result);
     }
 
     [HttpGet("vpn-panels/{id:guid}/clients")]
@@ -116,42 +132,47 @@ public class AdminVpnPanelsController : ControllerBase
 
     [HttpPost("vpn-clients/{id:guid}/enable")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
-    public async Task<IActionResult> EnableClient(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> EnableClient(Guid id, CancellationToken cancellationToken, [FromQuery] int? revision = null)
     {
-        var result = await _panels.EnableClientAsync(id, ResolveUserId(), cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        if (!revision.HasValue || revision.Value < 0) return BadRequest(new { error = "VPN client revision is required and must be a non-negative integer." });
+        var result = await _panels.EnableClientAsync(id, revision, ResolveUserId(), cancellationToken);
+        return MutationResult(result);
     }
 
     [HttpPost("vpn-clients/{id:guid}/disable")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
-    public async Task<IActionResult> DisableClient(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> DisableClient(Guid id, CancellationToken cancellationToken, [FromQuery] int? revision = null)
     {
-        var result = await _panels.DisableClientAsync(id, ResolveUserId(), cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        if (!revision.HasValue || revision.Value < 0) return BadRequest(new { error = "VPN client revision is required and must be a non-negative integer." });
+        var result = await _panels.DisableClientAsync(id, revision, ResolveUserId(), cancellationToken);
+        return MutationResult(result);
     }
 
     [HttpPost("vpn-clients/{id:guid}/sync")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
-    public async Task<IActionResult> SyncClient(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> SyncClient(Guid id, CancellationToken cancellationToken, [FromQuery] int? revision = null)
     {
-        var result = await _panels.SyncClientAsync(id, ResolveUserId(), cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        if (!revision.HasValue || revision.Value < 0) return BadRequest(new { error = "VPN client revision is required and must be a non-negative integer." });
+        var result = await _panels.SyncClientAsync(id, revision, ResolveUserId(), cancellationToken);
+        return MutationResult(result);
     }
 
     [HttpPost("vpn-clients/{id:guid}/reset-traffic")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
-    public async Task<IActionResult> ResetClientTraffic(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> ResetClientTraffic(Guid id, CancellationToken cancellationToken, [FromQuery] int? revision = null)
     {
-        var result = await _panels.ResetClientTrafficAsync(id, ResolveUserId(), cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        if (!revision.HasValue || revision.Value < 0) return BadRequest(new { error = "VPN client revision is required and must be a non-negative integer." });
+        var result = await _panels.ResetClientTrafficAsync(id, revision, ResolveUserId(), cancellationToken);
+        return MutationResult(result);
     }
 
     [HttpPost("vpn-clients/{id:guid}/migrate")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
     public async Task<IActionResult> MigrateClient(Guid id, [FromBody] MigrateVpnClientCommand request, CancellationToken cancellationToken)
     {
+        if (!request.Revision.HasValue || request.Revision.Value < 0) return BadRequest(new { error = "VPN client revision is required and must be a non-negative integer." });
         var result = await _panels.MigrateClientAsync(id, request, ResolveUserId(), cancellationToken);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+        return MutationResult(result);
     }
 
     [HttpGet("vpn-panels/{id:guid}/sync-runs")]
@@ -172,4 +193,11 @@ public class AdminVpnPanelsController : ControllerBase
         var raw = principal?.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal?.FindFirstValue("sub");
         return Guid.TryParse(raw, out var userId) ? userId : null;
     }
+
+    private IActionResult MutationResult<T>(Result<T> result)
+        => result.IsSuccess
+            ? Ok(result.Value)
+            : result.Error?.Contains("changed. Reload it and retry.", StringComparison.Ordinal) == true
+                ? Conflict(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 }

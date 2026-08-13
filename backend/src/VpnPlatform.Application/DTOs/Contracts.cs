@@ -469,7 +469,8 @@ public sealed record UpdateVpnPanelCommand(
     string? ApiVariant,
     bool? AutoCreateInbound,
     string? DefaultInboundTemplateJson,
-    string? Status);
+    string? Status,
+    int? Revision = null);
 
 public sealed record VpnPanelDto(
     Guid Id,
@@ -489,6 +490,7 @@ public sealed record VpnPanelDto(
     DateTimeOffset? LastSyncAt,
     string Version,
     string LastError,
+    int Revision,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
@@ -506,7 +508,8 @@ public sealed record VpnInboundDto(
     bool IsDefault,
     bool IsActive,
     int Capacity,
-    int UsedCapacity);
+    int UsedCapacity,
+    int Revision);
 
 public sealed record CreateVpnInboundCommand(
     string Name,
@@ -518,7 +521,8 @@ public sealed record CreateVpnInboundCommand(
     string SniffingJson,
     bool IsDefault,
     int Capacity,
-    bool IsActive = true);
+    bool IsActive = true,
+    int? Revision = null);
 
 public sealed record VpnClientDto(
     Guid Id,
@@ -537,9 +541,10 @@ public sealed record VpnClientDto(
     string ConfigUri,
     string QrCodePayload,
     string SyncStatus,
-    DateTimeOffset? LastSyncedAt);
+    DateTimeOffset? LastSyncedAt,
+    int Revision);
 
-public sealed record MigrateVpnClientCommand(Guid TargetInboundId, Guid? TargetNodeId = null);
+public sealed record MigrateVpnClientCommand(Guid TargetInboundId, Guid? TargetNodeId = null, int? Revision = null);
 
 public sealed record PanelHealthCheckDto(Guid Id, Guid VpnPanelId, string Status, long? LatencyMs, string Version, string ErrorMessage, DateTimeOffset CheckedAt);
 public sealed record PanelSyncRunDto(Guid Id, Guid VpnPanelId, string Status, DateTimeOffset StartedAt, DateTimeOffset? FinishedAt, string SummaryJson, string ErrorMessage);

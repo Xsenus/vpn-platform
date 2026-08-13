@@ -474,6 +474,7 @@ public class SupportMessage : AuditableEntity
 
 public class VpnPanel : AuditableEntity
 {
+    public int Revision { get; set; }
     public string Name { get; set; } = string.Empty;
     public string BaseUrl { get; set; } = string.Empty;
     public string Region { get; set; } = string.Empty;
@@ -500,6 +501,7 @@ public class VpnPanel : AuditableEntity
 
 public class VpnInbound : AuditableEntity
 {
+    public int Revision { get; set; }
     public Guid VpnPanelId { get; set; }
     public string ExternalInboundId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
@@ -520,6 +522,7 @@ public class VpnInbound : AuditableEntity
 
 public class VpnClient : AuditableEntity
 {
+    public int Revision { get; set; }
     public Guid UserId { get; set; }
     public Guid SubscriptionId { get; set; }
     public Guid VpnPanelId { get; set; }

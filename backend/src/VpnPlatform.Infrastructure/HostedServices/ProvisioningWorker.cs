@@ -348,6 +348,7 @@ public sealed class ProvisioningWorker : BackgroundService
             panel.LastHealthCheckAt = now;
             panel.LastSyncAt = now;
             panel.UpdatedAt = now;
+            panel.Revision = checked(panel.Revision + 1);
         }
 
         var inbound = await db.VpnInbounds.FirstOrDefaultAsync(x => x.VpnPanelId == panel.Id && x.ExternalInboundId == $"own-vps-inbound-{node.Id:N}", cancellationToken);

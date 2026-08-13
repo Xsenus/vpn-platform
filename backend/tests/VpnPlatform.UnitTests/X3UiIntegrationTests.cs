@@ -1,10 +1,12 @@
 using System.Security.Claims;
+using System.Data.Common;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Application.Abstractions;
@@ -21,6 +23,170 @@ namespace VpnPlatform.UnitTests;
 
 public class X3UiIntegrationTests
 {
+    [Theory]
+    [InlineData(typeof(VpnPanel))]
+    [InlineData(typeof(VpnInbound))]
+    [InlineData(typeof(VpnClient))]
+    public void Managed_Vpn_Entity_Revision_Should_Be_A_Concurrency_Token(Type entityType)
+    {
+        using var db = CreateDbContext();
+
+        var revision = db.Model.FindEntityType(entityType)?.FindProperty("Revision");
+
+        Assert.NotNull(revision);
+        Assert.True(revision.IsConcurrencyToken);
+    }
+
+    [Fact]
+    public void Managed_Vpn_Text_Limits_Should_Override_The_Global_String_Convention()
+    {
+        using var db = CreateDbContext();
+        var expected = new Dictionary<Type, IReadOnlyDictionary<string, int>>
+        {
+            [typeof(VpnPanel)] = new Dictionary<string, int> { [nameof(VpnPanel.Name)] = 200, [nameof(VpnPanel.BaseUrl)] = 2048, [nameof(VpnPanel.Region)] = 120, [nameof(VpnPanel.Login)] = 200, [nameof(VpnPanel.EncryptedPassword)] = 8192, [nameof(VpnPanel.DefaultInboundTemplateJson)] = 32768, [nameof(VpnPanel.LastError)] = 2000, [nameof(VpnPanel.Version)] = 120 },
+            [typeof(VpnInbound)] = new Dictionary<string, int> { [nameof(VpnInbound.ExternalInboundId)] = 200, [nameof(VpnInbound.Name)] = 200, [nameof(VpnInbound.Protocol)] = 32, [nameof(VpnInbound.Listen)] = 255, [nameof(VpnInbound.SettingsJson)] = 32768, [nameof(VpnInbound.StreamSettingsJson)] = 32768, [nameof(VpnInbound.SniffingJson)] = 32768 },
+            [typeof(VpnClient)] = new Dictionary<string, int> { [nameof(VpnClient.ExternalClientId)] = 200, [nameof(VpnClient.Email)] = 320, [nameof(VpnClient.Uuid)] = 100, [nameof(VpnClient.Flow)] = 100, [nameof(VpnClient.ConfigUri)] = 8192, [nameof(VpnClient.QrCodePayload)] = 8192, [nameof(VpnClient.SyncStatus)] = 100 }
+        };
+
+        foreach (var (entityType, properties) in expected)
+        {
+            var entity = Assert.IsAssignableFrom<Microsoft.EntityFrameworkCore.Metadata.IReadOnlyEntityType>(db.Model.FindEntityType(entityType));
+            foreach (var (propertyName, maxLength) in properties)
+            {
+                Assert.Equal(maxLength, entity.FindProperty(propertyName)?.GetMaxLength());
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Panel_Update_Should_Reject_A_Stale_Revision_Without_Mutation()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var panel = new VpnPanel
+        {
+            Name = "revision-panel",
+            BaseUrl = "https://revision-panel.example.test",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "eu",
+            Status = VpnPanelStatus.Active,
+            Capacity = 100,
+            Revision = 3
+        };
+        db.VpnPanels.Add(panel);
+        await db.SaveChangesAsync();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.UpdatePanelAsync(panel.Id, new UpdateVpnPanelCommand(
+            "stale-name", null, null, null, null, null, null, null, null, null, null, Revision: 2), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("changed", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("revision-panel", panel.Name);
+        Assert.Equal(3, panel.Revision);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Inbound_Update_Should_Reject_A_Stale_Revision_Before_Provider_Mutation()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var inbound = await db.VpnInbounds.SingleAsync(x => x.Id == ids.InboundId);
+        inbound.Revision = 4;
+        await db.SaveChangesAsync();
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.PatchInboundAsync(inbound.Id, NewInboundCommand(name: "stale-inbound") with { Revision = 3 }, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("changed", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, remote.UpdateInboundCalls);
+        Assert.Equal("vless", inbound.Name);
+        Assert.Equal(4, inbound.Revision);
+    }
+
+    [Fact]
+    public async Task Client_Action_Should_Reject_A_Stale_Revision_Before_Provider_Mutation()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var client = await db.VpnClients.SingleAsync(x => x.Id == ids.ClientId);
+        client.Enable = false;
+        client.Revision = 5;
+        await db.SaveChangesAsync();
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.EnableClientAsync(client.Id, expectedRevision: 4, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("changed", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, remote.UpdateClientCalls);
+        Assert.False(client.Enable);
+        Assert.Equal(5, client.Revision);
+    }
+
+    [Fact]
+    public async Task Client_Migration_Should_Release_Reservation_When_Revision_Changes_During_Reservation()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+        await using var db = new RevisionChangingSaveApplicationDbContext(options);
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var target = CreateMigrationInbound(ids.PanelId, "2", "migration-target", capacity: 10);
+        db.VpnInbounds.Add(target);
+        var client = await db.VpnClients.SingleAsync(x => x.Id == ids.ClientId);
+        client.Revision = 6;
+        await db.SaveChangesAsync();
+        db.ChangeClientRevisionOnNextSave = client.Id;
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.MigrateClientAsync(client.Id, new MigrateVpnClientCommand(target.Id, Revision: 6), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("changed", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, remote.AddClientCalls);
+        db.ChangeTracker.Clear();
+        Assert.Equal(7, (await db.VpnClients.SingleAsync(x => x.Id == client.Id)).Revision);
+        Assert.Equal(0, (await db.VpnPanels.SingleAsync(x => x.Id == ids.PanelId)).UsedCapacity);
+        Assert.Equal(0, (await db.VpnInbounds.SingleAsync(x => x.Id == target.Id)).UsedCapacity);
+    }
+
+    [Fact]
+    public async Task Panel_Diagnostics_Should_Be_Bounded_In_Sql_Before_Materialization()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new QueryCaptureInterceptor();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var panel = new VpnPanel { Name = "bounded-panel", BaseUrl = "https://bounded-panel.example.test", Login = "admin", EncryptedPassword = "secret", Capacity = 100 };
+        db.VpnPanels.Add(panel);
+        db.PanelSyncRuns.AddRange(Enumerable.Range(0, 60).Select(index => new PanelSyncRun { VpnPanelId = panel.Id, StartedAt = DateTimeOffset.UtcNow.AddMinutes(-index) }));
+        db.PanelHealthChecks.AddRange(Enumerable.Range(0, 60).Select(index => new PanelHealthCheck { VpnPanelId = panel.Id, CheckedAt = DateTimeOffset.UtcNow.AddMinutes(-index) }));
+        await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(DateTimeOffset.UtcNow), new TestSecretProtector(), new FixedClock());
+
+        Assert.Equal(50, (await service.GetSyncRunsAsync(panel.Id)).Count);
+        Assert.Equal(50, (await service.GetHealthChecksAsync(panel.Id)).Count);
+
+        Assert.Contains(interceptor.Commands, command => command.Contains("PanelSyncRuns", StringComparison.OrdinalIgnoreCase) && command.Contains("LIMIT", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(interceptor.Commands, command => command.Contains("PanelHealthChecks", StringComparison.OrdinalIgnoreCase) && command.Contains("LIMIT", StringComparison.OrdinalIgnoreCase));
+    }
+
     [Fact]
     public void Vless_Config_Generator_Should_Use_Panel_And_Inbound_Data()
     {
@@ -586,7 +752,8 @@ public class X3UiIntegrationTests
             ApiVariant: "ThreeXUi",
             AutoCreateInbound: true,
             DefaultInboundTemplateJson: "{\"remark\":\"auto-vless\"}",
-            Status: "Active"), CancellationToken.None)).Value);
+            Status: "Active",
+            Revision: created.Revision), CancellationToken.None)).Value);
 
         Assert.Equal("edited-panel", panel.Name);
         Assert.Equal("https://edited-panel.example.test:2053", panel.BaseUrl);
@@ -627,7 +794,7 @@ public class X3UiIntegrationTests
         });
         await db.SaveChangesAsync();
 
-        var result = Assert.IsType<DeleteVpnPanelResultDto>(Assert.IsType<OkObjectResult>(await controller.DeletePanel(panelId, CancellationToken.None)).Value);
+        var result = Assert.IsType<DeleteVpnPanelResultDto>(Assert.IsType<OkObjectResult>(await controller.DeletePanel(panelId, CancellationToken.None, revision: 0)).Value);
 
         Assert.True(result.Deleted);
         Assert.False(result.Archived);
@@ -1011,13 +1178,14 @@ public class X3UiIntegrationTests
             protocol: "vmess",
             port: 8443,
             isDefault: false,
-            isActive: false), CancellationToken.None)).Value);
+            isActive: false) with
+        { Revision = second.Revision }, CancellationToken.None)).Value);
 
         Assert.False(disabled.IsActive);
         Assert.False(disabled.IsDefault);
         Assert.False((await db.VpnInbounds.SingleAsync(x => x.Id == secondInbound.Id)).IsDefault);
 
-        var defaultResult = await controller.SetDefaultInbound(secondInbound.Id, CancellationToken.None);
+        var defaultResult = await controller.SetDefaultInbound(secondInbound.Id, CancellationToken.None, disabled.Revision);
 
         Assert.IsType<BadRequestObjectResult>(defaultResult);
         var audits = await db.AuditLogs.ToListAsync();
@@ -1063,11 +1231,11 @@ public class X3UiIntegrationTests
         await db.SaveChangesAsync();
 
         Assert.IsType<OkObjectResult>(await controller.GetClients(ids.PanelId, CancellationToken.None));
-        var disabled = Assert.IsType<VpnClientDto>(Assert.IsType<OkObjectResult>(await controller.DisableClient(ids.ClientId, CancellationToken.None)).Value);
-        var enabled = Assert.IsType<VpnClientDto>(Assert.IsType<OkObjectResult>(await controller.EnableClient(ids.ClientId, CancellationToken.None)).Value);
-        var synced = Assert.IsType<VpnClientDto>(Assert.IsType<OkObjectResult>(await controller.SyncClient(ids.ClientId, CancellationToken.None)).Value);
-        var reset = Assert.IsType<VpnClientDto>(Assert.IsType<OkObjectResult>(await controller.ResetClientTraffic(ids.ClientId, CancellationToken.None)).Value);
-        var migrated = Assert.IsType<VpnClientDto>(Assert.IsType<OkObjectResult>(await controller.MigrateClient(ids.ClientId, new MigrateVpnClientCommand(targetInboundId), CancellationToken.None)).Value);
+        var disabled = Assert.IsType<VpnClientDto>(Assert.IsType<OkObjectResult>(await controller.DisableClient(ids.ClientId, CancellationToken.None, revision: 0)).Value);
+        var enabled = Assert.IsType<VpnClientDto>(Assert.IsType<OkObjectResult>(await controller.EnableClient(ids.ClientId, CancellationToken.None, disabled.Revision)).Value);
+        var synced = Assert.IsType<VpnClientDto>(Assert.IsType<OkObjectResult>(await controller.SyncClient(ids.ClientId, CancellationToken.None, enabled.Revision)).Value);
+        var reset = Assert.IsType<VpnClientDto>(Assert.IsType<OkObjectResult>(await controller.ResetClientTraffic(ids.ClientId, CancellationToken.None, synced.Revision)).Value);
+        var migrated = Assert.IsType<VpnClientDto>(Assert.IsType<OkObjectResult>(await controller.MigrateClient(ids.ClientId, new MigrateVpnClientCommand(targetInboundId, Revision: reset.Revision), CancellationToken.None)).Value);
 
         Assert.False(disabled.Enable);
         Assert.True(enabled.Enable);
@@ -2477,11 +2645,55 @@ public class X3UiIntegrationTests
         }
     }
 
+    private sealed class RevisionChangingSaveApplicationDbContext : ApplicationDbContext
+    {
+        public RevisionChangingSaveApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+
+        public Guid? ChangeClientRevisionOnNextSave { get; set; }
+
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            var result = await base.SaveChangesAsync(cancellationToken);
+            if (!ChangeClientRevisionOnNextSave.HasValue) return result;
+
+            var clientId = ChangeClientRevisionOnNextSave.Value;
+            ChangeClientRevisionOnNextSave = null;
+            var client = await VpnClients.SingleAsync(x => x.Id == clientId, cancellationToken);
+            client.Revision = checked(client.Revision + 1);
+            await base.SaveChangesAsync(cancellationToken);
+            return result;
+        }
+    }
+
     private sealed class TestSecretProtector : ISecretProtector
     {
         public string Protect(string plaintext) => plaintext;
         public string Unprotect(string protectedValue) => protectedValue;
         public string Mask(string? value, int visibleTail = 4) => string.IsNullOrEmpty(value) ? string.Empty : new string('*', Math.Max(0, value.Length - visibleTail)) + value[^Math.Min(visibleTail, value.Length)..];
+    }
+
+    private sealed class QueryCaptureInterceptor : DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+
+        public override InterceptionResult<DbDataReader> ReaderExecuting(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result)
+        {
+            Commands.Add(command.CommandText);
+            return result;
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
     }
 
     private sealed class SingleVpnProviderFactory(IVpnProvider provider) : IVpnProviderFactory

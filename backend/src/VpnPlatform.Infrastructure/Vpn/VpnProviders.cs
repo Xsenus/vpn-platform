@@ -86,6 +86,7 @@ public class X3UiVpnProvider : IVpnProvider
         var previousStatus = vpnClient.SyncStatus;
         var previousSyncedAt = vpnClient.LastSyncedAt;
         var previousUpdatedAt = vpnClient.UpdatedAt;
+        var previousRevision = vpnClient.Revision;
         var remoteMutationAttempted = false;
         try
         {
@@ -109,6 +110,7 @@ public class X3UiVpnProvider : IVpnProvider
                 : (enabled ? "enabled" : "disabled");
             vpnClient.LastSyncedAt = _clock.UtcNow;
             vpnClient.UpdatedAt = _clock.UtcNow;
+            vpnClient.Revision = checked(vpnClient.Revision + 1);
             await _db.SaveChangesAsync(cancellationToken);
         }
         catch (Exception mutationError)
@@ -117,6 +119,7 @@ public class X3UiVpnProvider : IVpnProvider
             vpnClient.SyncStatus = previousStatus;
             vpnClient.LastSyncedAt = previousSyncedAt;
             vpnClient.UpdatedAt = previousUpdatedAt;
+            vpnClient.Revision = previousRevision;
             if (remoteMutationAttempted && vpnClient.VpnPanel is not null && vpnClient.VpnInbound is not null)
             {
                 try
@@ -168,11 +171,13 @@ public class X3UiVpnProvider : IVpnProvider
             if (vpnClient.VpnPanel is not null && vpnClient.VpnPanel.UsedCapacity > 0)
             {
                 vpnClient.VpnPanel.UsedCapacity -= 1;
+                vpnClient.VpnPanel.Revision = checked(vpnClient.VpnPanel.Revision + 1);
                 panelCapacityReleased = true;
             }
             if (vpnClient.VpnInbound is not null && vpnClient.VpnInbound.UsedCapacity > 0)
             {
                 vpnClient.VpnInbound.UsedCapacity -= 1;
+                vpnClient.VpnInbound.Revision = checked(vpnClient.VpnInbound.Revision + 1);
                 inboundCapacityReleased = true;
             }
             _db.VpnClients.Remove(vpnClient);
@@ -183,10 +188,12 @@ public class X3UiVpnProvider : IVpnProvider
             if (panelCapacityReleased && vpnClient.VpnPanel is not null)
             {
                 vpnClient.VpnPanel.UsedCapacity += 1;
+                vpnClient.VpnPanel.Revision = Math.Max(0, vpnClient.VpnPanel.Revision - 1);
             }
             if (inboundCapacityReleased && vpnClient.VpnInbound is not null)
             {
                 vpnClient.VpnInbound.UsedCapacity += 1;
+                vpnClient.VpnInbound.Revision = Math.Max(0, vpnClient.VpnInbound.Revision - 1);
             }
 
             if (remoteMutationAttempted && vpnClient.VpnPanel is not null && vpnClient.VpnInbound is not null)
@@ -232,6 +239,7 @@ public class X3UiVpnProvider : IVpnProvider
             vpnClient.LastSyncedAt = usage.SyncedAt;
             vpnClient.SyncStatus = IsSandboxClient(vpnClient) ? "sandbox-synced" : "synced";
             vpnClient.UpdatedAt = _clock.UtcNow;
+            vpnClient.Revision = checked(vpnClient.Revision + 1);
             await _db.SaveChangesAsync(cancellationToken);
         }
         return usage;
@@ -260,6 +268,7 @@ public class X3UiVpnProvider : IVpnProvider
             vpnClient.SyncStatus = isSandboxClient ? "sandbox-traffic-reset" : "traffic-reset";
             vpnClient.LastSyncedAt = _clock.UtcNow;
             vpnClient.UpdatedAt = _clock.UtcNow;
+            vpnClient.Revision = checked(vpnClient.Revision + 1);
             await _db.SaveChangesAsync(cancellationToken);
         }
         catch when (remoteMutationAttempted)
@@ -285,6 +294,7 @@ public class X3UiVpnProvider : IVpnProvider
         persistedClient.SyncStatus = "traffic-reset-uncertain";
         persistedClient.LastSyncedAt = _clock.UtcNow;
         persistedClient.UpdatedAt = _clock.UtcNow;
+        persistedClient.Revision = checked(persistedClient.Revision + 1);
         var accesses = await _db.AccessCredentials
             .Where(x => x.SubscriptionId == persistedClient.SubscriptionId
                 && (x.ProviderAccessId == persistedClient.ExternalClientId || x.ProviderAccessId == persistedClient.Id.ToString()))
@@ -381,6 +391,8 @@ public class X3UiVpnProvider : IVpnProvider
             _db.VpnClients.Add(createdClient);
             panel.UsedCapacity += 1;
             inbound.UsedCapacity += 1;
+            panel.Revision = checked(panel.Revision + 1);
+            inbound.Revision = checked(inbound.Revision + 1);
             localCapacityReserved = true;
 
             var uri = X3UiConfigUriGenerator.BuildUri(panel, inbound, createdClient);
@@ -411,8 +423,16 @@ public class X3UiVpnProvider : IVpnProvider
                 _db.TelegramBotNotifications.RemoveRange(pendingNotifications);
                 _db.VpnClients.Remove(createdClient);
             }
-            if (localCapacityReserved && panel.UsedCapacity > 0) panel.UsedCapacity -= 1;
-            if (localCapacityReserved && inbound.UsedCapacity > 0) inbound.UsedCapacity -= 1;
+            if (localCapacityReserved && panel.UsedCapacity > 0)
+            {
+                panel.UsedCapacity -= 1;
+                panel.Revision = Math.Max(0, panel.Revision - 1);
+            }
+            if (localCapacityReserved && inbound.UsedCapacity > 0)
+            {
+                inbound.UsedCapacity -= 1;
+                inbound.Revision = Math.Max(0, inbound.Revision - 1);
+            }
 
             try
             {
@@ -550,6 +570,8 @@ public class X3UiVpnProvider : IVpnProvider
             _db.VpnClients.Add(existing);
             panel.UsedCapacity += 1;
             inbound.UsedCapacity += 1;
+            panel.Revision = checked(panel.Revision + 1);
+            inbound.Revision = checked(inbound.Revision + 1);
         }
         else
         {
@@ -567,6 +589,7 @@ public class X3UiVpnProvider : IVpnProvider
             existing.LastSyncedAt = _clock.UtcNow;
             existing.SyncStatus = "sandbox-synced";
             existing.UpdatedAt = _clock.UtcNow;
+            existing.Revision = checked(existing.Revision + 1);
         }
 
         await QueueAccessReadyNotificationAsync(existing, cancellationToken);

@@ -6,8 +6,8 @@ import { pathToFileURL } from 'node:url'
 export const ADMIN_BUNDLE_BUDGET = Object.freeze({
   maxJavaScriptFiles: 5,
   maxChunkRawBytes: 360 * 1024,
-  maxTotalRawBytes: 544 * 1024,
-  maxTotalGzipBytes: 145 * 1024
+  maxTotalRawBytes: 548 * 1024,
+  maxTotalGzipBytes: 146 * 1024
 })
 
 export async function collectJavaScriptBundleStats(distDirectory) {

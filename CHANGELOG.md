@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.681.0 - 2026-08-13
+
+Release entry: `2026-08-13-vpn-panel-management-boundary`.
+
+### Исправлено
+
+- Устаревшие PATCH/DELETE/default/client action/migration больше не перезаписывают параллельно измененные 3x-ui панели, inbound-правила и клиентов: HTTP требует актуальную revision и возвращает controlled `409`.
+- Миграция клиента повторно проверяет revision после capacity reservation, освобождает резерв при конфликте и не вызывает 3x-ui с устаревшими данными.
+
+### Улучшено
+
+- Panel/inbound/client/history выборки получили DB-side bounds и SQLite-совместимую сортировку diagnostics; текстовые границы согласованы между EF, API client и формой.
+- Админка после конфликта обновляет список и детали, закрывает stale editor и требует повторить действие с актуальной версией.
+
+### Проверено
+
+- X3Ui `89/89`, frontend `171/171`, backend `1444/1444`, typecheck/build/bundle budget, PostgreSQL EF drift, fresh SQLite, strict UTF-8, secret scan `688/0` и dependency audit `0 vulnerabilities` зеленые. Managed VPN lifecycle/conflicts desktop/mobile `10/10`, focused panel editor responsive/WCAG `1/1` на 320/390/1280 px.
+- Roadmap `694/714` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider/Telegram кабинеты и VPS/staging/payment/production-like 3x-ui evidence локально не закрывались; статус остается staging-ready baseline, not production-ready.
+
 ## 0.680.0 - 2026-08-13
 
 Release entry: `2026-08-13-server-management-boundary`.

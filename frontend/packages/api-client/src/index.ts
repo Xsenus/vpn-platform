@@ -900,6 +900,7 @@ export type VpnPanelDto = {
   lastSyncAt: string | null
   version: string
   lastError: string
+  revision: number
   createdAt: string
   updatedAt: string
 }
@@ -915,6 +916,7 @@ export type CreateVpnPanelPayload = {
   apiVariant: string
   autoCreateInbound: boolean
   defaultInboundTemplateJson: string
+  revision?: number
 }
 
 export type UpdateVpnPanelPayload = Partial<CreateVpnPanelPayload> & { status?: string | null }
@@ -944,6 +946,7 @@ export type VpnInboundDto = {
   isActive: boolean
   capacity: number
   usedCapacity: number
+  revision: number
 }
 
 export type CreateVpnInboundPayload = {
@@ -957,6 +960,7 @@ export type CreateVpnInboundPayload = {
   isDefault: boolean
   capacity: number
   isActive: boolean
+  revision?: number
 }
 
 export type VpnClientDto = {
@@ -977,6 +981,7 @@ export type VpnClientDto = {
   qrCodePayload: string
   syncStatus: string
   lastSyncedAt: string | null
+  revision: number
 }
 
 export type PanelSyncRunDto = {
@@ -2506,6 +2511,7 @@ function isVpnPanelDto(value: unknown): value is VpnPanelDto {
     && hasNullableDateString(value, 'lastSyncAt')
     && hasString(value, 'version')
     && hasString(value, 'lastError')
+    && hasInteger(value, 'revision', 0)
     && hasDateString(value, 'createdAt')
     && hasDateString(value, 'updatedAt')
     && Date.parse(value.updatedAt as string) >= Date.parse(value.createdAt as string)
@@ -2551,6 +2557,7 @@ function isVpnInboundDto(value: unknown): value is VpnInboundDto {
     && hasInteger(value, 'capacity', 1)
     && hasInteger(value, 'usedCapacity', 0)
     && (value.usedCapacity as number) <= (value.capacity as number)
+    && hasInteger(value, 'revision', 0)
 }
 
 function isVpnClientDto(value: unknown): value is VpnClientDto {
@@ -2573,6 +2580,7 @@ function isVpnClientDto(value: unknown): value is VpnClientDto {
     && hasString(value, 'qrCodePayload')
     && hasString(value, 'syncStatus', true)
     && hasNullableDateString(value, 'lastSyncedAt')
+    && hasInteger(value, 'revision', 0)
 }
 
 function isPanelSyncRunDto(value: unknown): value is PanelSyncRunDto {
@@ -4029,8 +4037,8 @@ export class ApiClient {
     }, 'object', (value): value is VpnPanelDto => isVpnPanelDto(value) && value.id === id)
   }
 
-  deleteAdminVpnPanel(token: string, id: string): Promise<DeleteVpnPanelResult> {
-    return this.request<DeleteVpnPanelResult>(`/api/admin/vpn-panels/${id}`, {
+  deleteAdminVpnPanel(token: string, id: string, revision: number): Promise<DeleteVpnPanelResult> {
+    return this.request<DeleteVpnPanelResult>(`/api/admin/vpn-panels/${id}?revision=${encodeURIComponent(String(revision))}`, {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage
@@ -4085,8 +4093,8 @@ export class ApiClient {
     }, 'object', (value): value is VpnInboundDto => isVpnInboundDto(value) && value.vpnPanelId === id)
   }
 
-  setAdminVpnInboundDefault(token: string, id: string): Promise<VpnInboundDto> {
-    return this.request<VpnInboundDto>(`/api/admin/vpn-inbounds/${id}/set-default`, {
+  setAdminVpnInboundDefault(token: string, id: string, revision: number): Promise<VpnInboundDto> {
+    return this.request<VpnInboundDto>(`/api/admin/vpn-inbounds/${id}/set-default?revision=${encodeURIComponent(String(revision))}`, {
       method: 'POST',
       token,
       body: JSON.stringify({}),
@@ -4109,8 +4117,8 @@ export class ApiClient {
       && items.every((item) => item.vpnPanelId === id))
   }
 
-  enableAdminVpnClient(token: string, id: string): Promise<VpnClientDto> {
-    return this.request<VpnClientDto>(`/api/admin/vpn-clients/${id}/enable`, {
+  enableAdminVpnClient(token: string, id: string, revision: number): Promise<VpnClientDto> {
+    return this.request<VpnClientDto>(`/api/admin/vpn-clients/${id}/enable?revision=${encodeURIComponent(String(revision))}`, {
       method: 'POST',
       token,
       body: JSON.stringify({}),
@@ -4118,8 +4126,8 @@ export class ApiClient {
     }, 'object', (value): value is VpnClientDto => isVpnClientDto(value) && value.id === id)
   }
 
-  disableAdminVpnClient(token: string, id: string): Promise<VpnClientDto> {
-    return this.request<VpnClientDto>(`/api/admin/vpn-clients/${id}/disable`, {
+  disableAdminVpnClient(token: string, id: string, revision: number): Promise<VpnClientDto> {
+    return this.request<VpnClientDto>(`/api/admin/vpn-clients/${id}/disable?revision=${encodeURIComponent(String(revision))}`, {
       method: 'POST',
       token,
       body: JSON.stringify({}),
@@ -4127,8 +4135,8 @@ export class ApiClient {
     }, 'object', (value): value is VpnClientDto => isVpnClientDto(value) && value.id === id)
   }
 
-  syncAdminVpnClient(token: string, id: string): Promise<VpnClientDto> {
-    return this.request<VpnClientDto>(`/api/admin/vpn-clients/${id}/sync`, {
+  syncAdminVpnClient(token: string, id: string, revision: number): Promise<VpnClientDto> {
+    return this.request<VpnClientDto>(`/api/admin/vpn-clients/${id}/sync?revision=${encodeURIComponent(String(revision))}`, {
       method: 'POST',
       token,
       body: JSON.stringify({}),
@@ -4136,8 +4144,8 @@ export class ApiClient {
     }, 'object', (value): value is VpnClientDto => isVpnClientDto(value) && value.id === id)
   }
 
-  resetAdminVpnClientTraffic(token: string, id: string): Promise<VpnClientDto> {
-    return this.request<VpnClientDto>(`/api/admin/vpn-clients/${id}/reset-traffic`, {
+  resetAdminVpnClientTraffic(token: string, id: string, revision: number): Promise<VpnClientDto> {
+    return this.request<VpnClientDto>(`/api/admin/vpn-clients/${id}/reset-traffic?revision=${encodeURIComponent(String(revision))}`, {
       method: 'POST',
       token,
       body: JSON.stringify({}),
@@ -4145,11 +4153,11 @@ export class ApiClient {
     }, 'object', (value): value is VpnClientDto => isVpnClientDto(value) && value.id === id)
   }
 
-  migrateAdminVpnClient(token: string, id: string, targetInboundId: string): Promise<VpnClientDto> {
+  migrateAdminVpnClient(token: string, id: string, targetInboundId: string, revision: number): Promise<VpnClientDto> {
     return this.request<VpnClientDto>(`/api/admin/vpn-clients/${id}/migrate`, {
       method: 'POST',
       token,
-      body: JSON.stringify({ targetInboundId }),
+      body: JSON.stringify({ targetInboundId, revision }),
       errorMessage: apiFallbackErrorMessage
     }, 'object', (value): value is VpnClientDto => isVpnClientDto(value) && value.id === id)
   }
