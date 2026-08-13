@@ -1199,7 +1199,7 @@ public class X3UiPanelService
             ? await dbContext.Set<VpnClient>().FromSqlInterpolated($"""
                 SELECT * FROM "VpnClients"
                 WHERE "VpnPanelId" = {panelId}
-                ORDER BY "CreatedAt" DESC
+                ORDER BY julianday("CreatedAt") DESC, "Id" DESC
                 LIMIT {ClientListLimit}
                 """).AsNoTracking().ToListAsync(cancellationToken)
             : await _db.VpnClients.AsNoTracking().Where(x => x.VpnPanelId == panelId).OrderByDescending(x => x.CreatedAt).Take(ClientListLimit).ToListAsync(cancellationToken);
@@ -1648,7 +1648,7 @@ public class X3UiPanelService
             ? await dbContext.Set<PanelSyncRun>().FromSqlInterpolated($"""
                 SELECT * FROM "PanelSyncRuns"
                 WHERE "VpnPanelId" = {panelId}
-                ORDER BY "StartedAt" DESC
+                ORDER BY julianday("StartedAt") DESC, "Id" DESC
                 LIMIT {DiagnosticsListLimit}
                 """).AsNoTracking().ToListAsync(cancellationToken)
             : await _db.PanelSyncRuns.AsNoTracking().Where(x => x.VpnPanelId == panelId).OrderByDescending(x => x.StartedAt).Take(DiagnosticsListLimit).ToListAsync(cancellationToken);
@@ -1661,7 +1661,7 @@ public class X3UiPanelService
             ? await dbContext.Set<PanelSyncEvent>().FromSqlInterpolated($"""
                 SELECT * FROM "PanelSyncEvents"
                 WHERE "PanelSyncRunId" = {runId}
-                ORDER BY "CreatedAt"
+                ORDER BY julianday("CreatedAt"), "Id"
                 LIMIT {SyncEventListLimit}
                 """).AsNoTracking().ToListAsync(cancellationToken)
             : await _db.PanelSyncEvents.AsNoTracking().Where(x => x.PanelSyncRunId == runId).OrderBy(x => x.CreatedAt).Take(SyncEventListLimit).ToListAsync(cancellationToken);
@@ -1674,7 +1674,7 @@ public class X3UiPanelService
             ? await dbContext.Set<PanelHealthCheck>().FromSqlInterpolated($"""
                 SELECT * FROM "PanelHealthChecks"
                 WHERE "VpnPanelId" = {panelId}
-                ORDER BY "CheckedAt" DESC
+                ORDER BY julianday("CheckedAt") DESC, "Id" DESC
                 LIMIT {DiagnosticsListLimit}
                 """).AsNoTracking().ToListAsync(cancellationToken)
             : await _db.PanelHealthChecks.AsNoTracking().Where(x => x.VpnPanelId == panelId).OrderByDescending(x => x.CheckedAt).Take(DiagnosticsListLimit).ToListAsync(cancellationToken);

@@ -16602,5 +16602,28 @@
         "text": "Roadmap progress is 720/740 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-x3ui-sqlite-diagnostics-ordering",
+    "version": "0.707.0",
+    "releasedAt": "2026-08-13T19:26:48+07:00",
+    "title": "Диагностика 3x-ui использует корректную хронологию",
+    "summary": "SQLite списки клиентов, sync runs, events и health checks сортируются по моменту времени, а не по текстовому представлению offset.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Admin VPN diagnostics больше не показывают более старые mixed-offset записи раньше новых из-за лексикографической SQLite-сортировки."
+      },
+      {
+        "type": "improved",
+        "text": "Clients, sync runs, sync events и health checks используют julianday, стабильный Id tie-break и прежние DB-side limits."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 721/741 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

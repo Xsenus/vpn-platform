@@ -188,6 +188,79 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Panel_Diagnostics_Should_Order_Mixed_Offsets_By_Instant_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new QueryCaptureInterceptor();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var panel = new VpnPanel { Name = "offset-panel", BaseUrl = "https://offset-panel.example.test", Login = "admin", EncryptedPassword = "secret", Capacity = 100 };
+        var olderInstant = new DateTimeOffset(2026, 8, 13, 10, 0, 0, TimeSpan.FromHours(5));
+        var newerInstant = new DateTimeOffset(2026, 8, 13, 8, 0, 0, TimeSpan.Zero);
+        var olderRun = new PanelSyncRun { VpnPanelId = panel.Id, StartedAt = olderInstant, CreatedAt = olderInstant, UpdatedAt = olderInstant };
+        var newerRun = new PanelSyncRun { VpnPanelId = panel.Id, StartedAt = newerInstant, CreatedAt = newerInstant, UpdatedAt = newerInstant };
+        var olderHealth = new PanelHealthCheck { VpnPanelId = panel.Id, CheckedAt = olderInstant, CreatedAt = olderInstant, UpdatedAt = olderInstant };
+        var newerHealth = new PanelHealthCheck { VpnPanelId = panel.Id, CheckedAt = newerInstant, CreatedAt = newerInstant, UpdatedAt = newerInstant };
+        var olderEvent = new PanelSyncEvent { PanelSyncRunId = newerRun.Id, EventType = "older", CreatedAt = olderInstant, UpdatedAt = olderInstant };
+        var newerEvent = new PanelSyncEvent { PanelSyncRunId = newerRun.Id, EventType = "newer", CreatedAt = newerInstant, UpdatedAt = newerInstant };
+        var user = new User { Email = "offset-client@example.test", DisplayName = "Offset client", PasswordHash = "hash", ReferralCode = "OFFSETCLIENT" };
+        var tariff = new Tariff { Name = "Offset", Slug = "offset", DurationDays = 30, Price = 500m, Currency = "RUB", MaxDevices = 2 };
+        var inbound = new VpnInbound { VpnPanelId = panel.Id, ExternalInboundId = "offset-inbound", Name = "Offset inbound", Port = 443 };
+        var olderSubscription = new Subscription { UserId = user.Id, TariffId = tariff.Id, Status = SubscriptionStatus.Active, StartAt = olderInstant, EndAt = newerInstant.AddDays(30) };
+        var newerSubscription = new Subscription { UserId = user.Id, TariffId = tariff.Id, Status = SubscriptionStatus.Active, StartAt = newerInstant, EndAt = newerInstant.AddDays(30) };
+        var olderClient = new VpnClient
+        {
+            UserId = user.Id,
+            SubscriptionId = olderSubscription.Id,
+            VpnPanelId = panel.Id,
+            VpnInboundId = inbound.Id,
+            ExternalClientId = "offset-older",
+            Email = "offset-older@example.test",
+            Uuid = Guid.NewGuid().ToString(),
+            ExpiryTime = newerInstant.AddDays(30),
+            CreatedAt = olderInstant,
+            UpdatedAt = olderInstant
+        };
+        var newerClient = new VpnClient
+        {
+            UserId = user.Id,
+            SubscriptionId = newerSubscription.Id,
+            VpnPanelId = panel.Id,
+            VpnInboundId = inbound.Id,
+            ExternalClientId = "offset-newer",
+            Email = "offset-newer@example.test",
+            Uuid = Guid.NewGuid().ToString(),
+            ExpiryTime = newerInstant.AddDays(30),
+            CreatedAt = newerInstant,
+            UpdatedAt = newerInstant
+        };
+        db.AddRange(panel, olderRun, newerRun, olderHealth, newerHealth, olderEvent, newerEvent, user, tariff, inbound, olderSubscription, newerSubscription, olderClient, newerClient);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        interceptor.Commands.Clear();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(DateTimeOffset.UtcNow), new TestSecretProtector(), new FixedClock());
+
+        var runs = (await service.GetSyncRunsAsync(panel.Id)).ToList();
+        var healthChecks = (await service.GetHealthChecksAsync(panel.Id)).ToList();
+        var events = (await service.GetSyncEventsAsync(newerRun.Id)).ToList();
+        var clients = (await service.GetClientsAsync(panel.Id)).ToList();
+
+        Assert.Equal(newerRun.Id, runs[0].Id);
+        Assert.Equal(newerHealth.Id, healthChecks[0].Id);
+        Assert.Equal(olderEvent.Id, events[0].Id);
+        Assert.Equal(newerClient.Id, clients[0].Id);
+        Assert.Contains(interceptor.Commands, command => command.Contains("PanelSyncRuns", StringComparison.OrdinalIgnoreCase) && command.Contains("julianday", StringComparison.OrdinalIgnoreCase) && command.Contains("\"Id\" DESC", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(interceptor.Commands, command => command.Contains("PanelHealthChecks", StringComparison.OrdinalIgnoreCase) && command.Contains("julianday", StringComparison.OrdinalIgnoreCase) && command.Contains("\"Id\" DESC", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(interceptor.Commands, command => command.Contains("PanelSyncEvents", StringComparison.OrdinalIgnoreCase) && command.Contains("julianday", StringComparison.OrdinalIgnoreCase) && command.Contains("\"Id\"", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(interceptor.Commands, command => command.Contains("VpnClients", StringComparison.OrdinalIgnoreCase) && command.Contains("julianday", StringComparison.OrdinalIgnoreCase) && command.Contains("\"Id\" DESC", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Vless_Config_Generator_Should_Use_Panel_And_Inbound_Data()
     {
         var panel = new VpnPanel { BaseUrl = "https://vpn.example.com:2053", Name = "EU" };

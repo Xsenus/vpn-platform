@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-13 локально подтверждено:
 
-- backend full suite: 1485/1485;
+- backend full suite: 1486/1486;
 - frontend tests: 172/172;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-13-provisioning-support-sqlite-latest-boundary`, версия `0.706.0`; provisioning support переиспользует latest open/pending conversation через nullable-safe `julianday` query с `LIMIT 1` на SQLite.
-- roadmap progress: `720/740` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-13-x3ui-sqlite-diagnostics-ordering`, версия `0.707.0`; 3x-ui clients, sync runs/events и health checks используют chronological SQLite ordering с `julianday` и стабильным tie-break.
+- roadmap progress: `721/741` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

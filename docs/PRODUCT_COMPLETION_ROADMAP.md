@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-13.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-provisioning-support-sqlite-latest-boundary`, версия `0.706.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `720/740` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-x3ui-sqlite-diagnostics-ordering`, версия `0.707.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `721/741` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-13:
 
-- [x] `STATE-001` Backend test suite проходит: `1485/1485`.
+- [x] `STATE-001` Backend test suite проходит: `1486/1486`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2576,6 +2576,10 @@ git diff --check
   - Что сделать: публичная `MarkSupportNeededAsync` не должна падать на SQLite `DateTimeOffset ORDER BY` или создавать duplicate conversation при nullable user/Telegram identity; latest open/pending read обязан оставаться DB-side bounded.
   - Что сделано: SQLite использует parameterized nullable identity, subject/status filters, `julianday(CreatedAt)`, `Id` tie-break и `LIMIT 1`; PostgreSQL/другие providers сохраняют LINQ ordering. Existing conversation reopen/revision, support message, redaction, audit и save lifecycle не изменены.
   - Доказательство: fail-first SQLite regression воспроизвел `NotSupportedException`; after-fix latest/non-null/null identity `3/3`, provisioning/own-VPS/admin regression `150/150`, backend Debug/Release `1485/1485`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow с latest release, EF drift, docs/encoding `64/64`, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Реальные VPS/SSH/Ansible, Telegram Bot API, provider кабинеты, live payment, SMTP и production-like 3x-ui остаются внешней проверкой.
+- [x] `P11-ACC-430` Исправить mixed-offset ordering в SQLite 3x-ui diagnostics. 2026-08-13.
+  - Что сделать: admin lists клиентов, sync runs, sync events и panel health checks должны сортироваться по фактическому моменту времени при любом сохраненном UTC offset; DB-side limits и deterministic ordering обязаны сохраниться.
+  - Что сделано: четыре SQLite query используют `julianday(CreatedAt/StartedAt/CheckedAt)`, `Id` tie-break и прежние `LIMIT`; PostgreSQL/другие providers сохраняют LINQ ordering. API DTO и diagnostics limits не изменены.
+  - Доказательство: fail-first mixed-offset SQLite regression вернул более старый sync run первым; after-fix chronological SQL regression `1/1`, X3Ui/admin VPN regression `100/100`, backend Debug/Release `1486/1486`, frontend `172/172`, docs/current-state/encoding `64/64`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Реальные 3x-ui панели, VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API и SMTP остаются внешней проверкой.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

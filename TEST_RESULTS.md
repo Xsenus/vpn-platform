@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: X3Ui SQLite diagnostics ordering
+
+Scope:
+- Admin lists клиентов, sync runs, sync events и panel health checks должны сохранять реальную хронологию при mixed UTC offsets.
+- SQLite DB-side limits и deterministic tie-break не должны заменяться client-side sorting.
+
+Results:
+- Roadmap progress: `721/741` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-x3ui-sqlite-diagnostics-ordering`, version `0.707.0`.
+- Fail-first: реальная SQLite БД вернула более старый sync run первым, потому что raw query сортировал offset timestamp как текст; captured SQL также не содержал `julianday`/стабильный tie-break.
+- After fix: clients/sync runs/events/health checks используют `julianday`, `Id` tie-break и прежние DB-side `LIMIT`; chronological SQL regression `1/1`, X3Ui/admin VPN regression `100/100`, backend Debug/Release `1486/1486`, frontend `172/172`, docs/current-state/encoding `64/64`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Реальные 3x-ui панели, VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API и SMTP локально не проверялись.
+
 ## Check 2026-08-13: provisioning support SQLite latest boundary
 
 Scope:

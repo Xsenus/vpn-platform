@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.707.0 - 2026-08-13
+
+Release entry: `2026-08-13-x3ui-sqlite-diagnostics-ordering`.
+
+### Исправлено
+
+- SQLite admin VPN diagnostics больше не сортирует offset timestamps лексикографически и не показывает старые записи раньше новых.
+- Clients, sync runs, sync events и health checks используют корректный chronological order.
+
+### Улучшено
+
+- Все четыре SQLite query используют `julianday`, стабильный `Id` tie-break и прежние DB-side limits; другие providers сохраняют LINQ ordering.
+
+### Проверено
+
+- Fail-first mixed-offset regression вернул более старый sync run первым; after-fix chronological SQL `1/1`, X3Ui/admin VPN regression `100/100`, backend Debug/Release `1486/1486`, frontend `172/172`, docs/current-state/encoding `64/64`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `721/741` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные 3x-ui панели, VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API и SMTP локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.706.0 - 2026-08-13
 
 Release entry: `2026-08-13-provisioning-support-sqlite-latest-boundary`.
