@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: work scenario boundary
+
+Scope:
+- Admin list должен иметь DB-side bound, а API client должен принимать только точный контракт сценария.
+- Admin PUT/DELETE должны отклонять stale revision; форма должна восстанавливать актуальный сценарий на desktop/mobile и проверять фактические границы БД до запроса.
+
+Results:
+- Roadmap progress: `691/711` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-work-scenario-boundary`, version `0.678.0`.
+- Fail-first: backend `0/3`, frontend `165/166`; список возвращал 205 строк, unknown response fields принимались, а второй SQLite DbContext мог перезаписать или удалить первую правку.
+- After fix: DB-side top-200, exact frontend validator, обязательная revision, EF concurrency migration, controlled `409` с reload/recovery формы и списка, согласованные name/key/rule/tariff/text limits.
+- Targeted backend/SQLite `28/28`, EF drift `2/2`, frontend `167/167`; backend `1409/1409`, typecheck/build и bundle budget зелёные. Stale PUT/DELETE desktop/mobile `4/4`, file-backed SQLite race и fresh SQLite checkout-payment-subscription-VPN flow зелёные. Strict UTF-8 without BOM, secret scan и dependency audit `0 vulnerabilities` зелёные. Полный ранее подтверждённый browser inventory `227/227` остаётся применимым; реальные provider/Telegram кабинеты, Bot API, SMTP и VPS/staging/live payment/production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: site content boundary
 
 Scope:

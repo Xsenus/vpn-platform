@@ -15,6 +15,27 @@ namespace VpnPlatform.UnitTests;
 public class WorkScenarioControllerTests
 {
     [Fact]
+    public async Task AdminWorkScenarios_Should_Limit_List()
+    {
+        await using var db = CreateDb();
+        db.WorkScenarios.AddRange(Enumerable.Range(0, 205)
+            .Select(index =>
+            {
+                var scenario = Scenario($"scenario-{index:D3}");
+                scenario.SortOrder = index;
+                return scenario;
+            }));
+        await db.SaveChangesAsync();
+        var controller = CreateController(db);
+
+        var list = AssertOk<List<WorkScenarioDto>>(await controller.Get(CancellationToken.None));
+
+        Assert.Equal(200, list.Count);
+        Assert.Equal("scenario-000", list[0].Key);
+        Assert.Equal("scenario-199", list[^1].Key);
+    }
+
+    [Fact]
     public async Task AdminWorkScenarios_Should_Create_Update_And_Delete_Scenario()
     {
         await using var db = CreateDb();
@@ -23,11 +44,13 @@ public class WorkScenarioControllerTests
 
         var created = AssertOk<WorkScenarioDto>(await controller.Create(request, CancellationToken.None));
         var list = AssertOk<List<WorkScenarioDto>>(await controller.Get(CancellationToken.None));
-        var updated = AssertOk<WorkScenarioDto>(await controller.Update(created.Id, request with { Name = "Premium auto", MaxDevices = 5, GenerateQrCode = false }, CancellationToken.None));
-        var deleted = await controller.Delete(created.Id, CancellationToken.None);
+        var updated = AssertOk<WorkScenarioDto>(await controller.Update(created.Id, request with { Name = "Premium auto", MaxDevices = 5, GenerateQrCode = false, Revision = created.Revision }, CancellationToken.None));
+        var deleted = await controller.Delete(created.Id, updated.Revision, CancellationToken.None);
 
         Assert.Contains(list, x => x.Key == "auto-premium");
+        Assert.Equal(0, created.Revision);
         Assert.Equal("Premium auto", updated.Name);
+        Assert.Equal(created.Revision + 1, updated.Revision);
         Assert.Equal(5, updated.MaxDevices);
         Assert.False(updated.GenerateQrCode);
         Assert.IsType<OkObjectResult>(deleted);
@@ -49,7 +72,7 @@ public class WorkScenarioControllerTests
 
         var duplicateCreate = await controller.Create(Request("auto"), CancellationToken.None);
         var premium = await db.WorkScenarios.SingleAsync(x => x.Key == "premium-auto");
-        var duplicateUpdate = await controller.Update(premium.Id, Request("auto") with { Name = "Duplicate" }, CancellationToken.None);
+        var duplicateUpdate = await controller.Update(premium.Id, Request("auto") with { Name = "Duplicate", Revision = premium.Revision }, CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(duplicateCreate);
         Assert.IsType<BadRequestObjectResult>(duplicateUpdate);
@@ -78,7 +101,7 @@ public class WorkScenarioControllerTests
         await db.SaveChangesAsync();
         var controller = CreateController(db);
 
-        var result = await controller.Delete(scenario.Id, CancellationToken.None);
+        var result = await controller.Delete(scenario.Id, scenario.Revision, CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
         Assert.True(await db.WorkScenarios.AnyAsync(x => x.Id == scenario.Id));
@@ -106,7 +129,7 @@ public class WorkScenarioControllerTests
 
         var result = await controller.Update(
             scenario.Id,
-            Request("renamed-auto") with { Name = "Mutated name", MaxDevices = 9 },
+            Request("renamed-auto") with { Name = "Mutated name", MaxDevices = 9, Revision = scenario.Revision },
             CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
@@ -180,6 +203,182 @@ public class WorkScenarioControllerTests
         Assert.Equal("premium-auto", created.Key);
         Assert.Equal("auto", created.ProvisioningMode);
         Assert.Equal($"[\"{tariffId}\"]", created.AllowedTariffIdsJson);
+    }
+
+    [Fact]
+    public async Task AdminWorkScenarios_Should_Require_Revision_For_Update_And_Delete()
+    {
+        await using var db = CreateDb();
+        var scenario = Scenario("auto");
+        db.WorkScenarios.Add(scenario);
+        await db.SaveChangesAsync();
+        var controller = CreateController(db);
+
+        var update = await controller.Update(
+            scenario.Id,
+            Request(scenario.Key) with { Name = "Новое имя" },
+            CancellationToken.None);
+        var delete = await controller.Delete(scenario.Id, revision: null, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(update);
+        Assert.IsType<BadRequestObjectResult>(delete);
+        Assert.Equal("Автоматическая выдача", (await db.WorkScenarios.SingleAsync()).Name);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData(201, 10)]
+    [InlineData(10, 121)]
+    public async Task AdminWorkScenarios_Should_Reject_Fields_That_Exceed_Database_Limits(int nameLength, int keyLength)
+    {
+        await using var db = CreateDb();
+        var controller = CreateController(db);
+
+        var result = await controller.Create(
+            Request(new string('a', keyLength)) with { Name = new string('n', nameLength) },
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(await db.WorkScenarios.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData("serverSelectionRule")]
+    [InlineData("inboundSelectionRule")]
+    [InlineData("provisioningMode")]
+    [InlineData("onPaymentSucceeded")]
+    [InlineData("onPaymentFailed")]
+    [InlineData("onRefund")]
+    [InlineData("onSubscriptionExpired")]
+    [InlineData("onRenewal")]
+    [InlineData("cabinetText")]
+    [InlineData("telegramText")]
+    public async Task AdminWorkScenarios_Should_Reject_Oversized_Rule_And_Text_Fields(string field)
+    {
+        await using var db = CreateDb();
+        var controller = CreateController(db);
+        var request = Request("oversized-field");
+        request = field switch
+        {
+            "serverSelectionRule" => request with { ServerSelectionRule = new string('s', 121) },
+            "inboundSelectionRule" => request with { InboundSelectionRule = new string('i', 121) },
+            "provisioningMode" => request with { ProvisioningMode = new string('m', 41) },
+            "onPaymentSucceeded" => request with { OnPaymentSucceeded = new string('a', 4001) },
+            "onPaymentFailed" => request with { OnPaymentFailed = new string('a', 4001) },
+            "onRefund" => request with { OnRefund = new string('a', 4001) },
+            "onSubscriptionExpired" => request with { OnSubscriptionExpired = new string('a', 4001) },
+            "onRenewal" => request with { OnRenewal = new string('a', 4001) },
+            "cabinetText" => request with { CabinetText = new string('a', 4001) },
+            "telegramText" => request with { TelegramText = new string('a', 4001) },
+            _ => throw new ArgumentOutOfRangeException(nameof(field), field, null)
+        };
+
+        var result = await controller.Create(request, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(await db.WorkScenarios.ToListAsync());
+    }
+
+    [Fact]
+    public async Task AdminWorkScenarios_Should_Reject_Oversized_Allowed_Tariff_List()
+    {
+        await using var db = CreateDb();
+        var controller = CreateController(db);
+        var tariffIds = Enumerable.Range(0, 110).Select(_ => Guid.NewGuid());
+        var request = Request("oversized-tariffs") with
+        {
+            AllowedTariffIdsJson = System.Text.Json.JsonSerializer.Serialize(tariffIds)
+        };
+
+        var result = await controller.Create(request, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(await db.WorkScenarios.ToListAsync());
+    }
+
+    [Fact]
+    public async Task AdminWorkScenarios_Should_Reject_Cross_Context_Concurrent_Update()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-work-scenario-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite($"Data Source={databasePath}")
+                .Options;
+            await using (var setup = new ApplicationDbContext(options))
+            {
+                await setup.Database.EnsureCreatedAsync();
+                setup.WorkScenarios.Add(Scenario("auto"));
+                await setup.SaveChangesAsync();
+            }
+
+            await using var firstDb = new ApplicationDbContext(options);
+            await using var secondDb = new ApplicationDbContext(options);
+            var first = await firstDb.WorkScenarios.SingleAsync();
+            var second = await secondDb.WorkScenarios.SingleAsync();
+            var firstController = CreateController(firstDb);
+            var secondController = CreateController(secondDb);
+
+            var firstResult = await firstController.Update(
+                first.Id,
+                Request(first.Key) with { Name = "Первое изменение", Revision = first.Revision },
+                CancellationToken.None);
+            var secondResult = await secondController.Update(
+                second.Id,
+                Request(second.Key) with { Name = "Второе изменение", Revision = second.Revision },
+                CancellationToken.None);
+
+            Assert.IsType<OkObjectResult>(firstResult);
+            Assert.IsType<ConflictObjectResult>(secondResult);
+            await using var verify = new ApplicationDbContext(options);
+            Assert.Equal("Первое изменение", (await verify.WorkScenarios.SingleAsync()).Name);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (File.Exists(databasePath)) File.Delete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task AdminWorkScenarios_Should_Reject_Cross_Context_Concurrent_Delete()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-work-scenario-delete-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite($"Data Source={databasePath}")
+                .Options;
+            await using (var setup = new ApplicationDbContext(options))
+            {
+                await setup.Database.EnsureCreatedAsync();
+                setup.WorkScenarios.Add(Scenario("auto"));
+                await setup.SaveChangesAsync();
+            }
+
+            await using var firstDb = new ApplicationDbContext(options);
+            await using var secondDb = new ApplicationDbContext(options);
+            var first = await firstDb.WorkScenarios.SingleAsync();
+            var second = await secondDb.WorkScenarios.SingleAsync();
+            var firstController = CreateController(firstDb);
+            var secondController = CreateController(secondDb);
+
+            var firstResult = await firstController.Update(
+                first.Id,
+                Request(first.Key) with { Name = "Первое изменение", Revision = first.Revision },
+                CancellationToken.None);
+            var secondResult = await secondController.Delete(second.Id, second.Revision, CancellationToken.None);
+
+            Assert.IsType<OkObjectResult>(firstResult);
+            Assert.IsType<ConflictObjectResult>(secondResult);
+            await using var verify = new ApplicationDbContext(options);
+            Assert.Equal("Первое изменение", (await verify.WorkScenarios.SingleAsync()).Name);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (File.Exists(databasePath)) File.Delete(databasePath);
+        }
     }
 
     private static WorkScenarioUpsertRequest Request(string key)

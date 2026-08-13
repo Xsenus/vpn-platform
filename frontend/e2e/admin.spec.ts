@@ -204,6 +204,7 @@ function release(overrides: Record<string, unknown> = {}) {
 function workScenario(overrides: Record<string, unknown> = {}) {
   return {
     id: 'scenario-auto',
+    revision: 0,
     name: 'Автовыдача E2E',
     key: 'auto',
     isActive: true,
@@ -1538,7 +1539,7 @@ async function mockAdminApi(page: Page) {
     }
 
     if (method === 'POST' && path === '/api/admin/work-scenarios') {
-      const created = workScenario({ ...(body as Record<string, unknown>), id: 'scenario-created-e2e', createdAt: now, updatedAt: now })
+      const created = workScenario({ ...(body as Record<string, unknown>), id: 'scenario-created-e2e', revision: 0, createdAt: now, updatedAt: now })
       scenarios.push(created)
       await fulfillJson(route, created, 201)
       return
@@ -1547,7 +1548,12 @@ async function mockAdminApi(page: Page) {
     const workScenarioMutationMatch = path.match(/^\/api\/admin\/work-scenarios\/([^/]+)$/)
     if (workScenarioMutationMatch && method === 'PUT') {
       const index = scenarios.findIndex((item) => item.id === workScenarioMutationMatch[1])
-      const updated = workScenario({ ...scenarios[index], ...(body as Record<string, unknown>), id: workScenarioMutationMatch[1], updatedAt: now })
+      const scenarioBody = body as Record<string, unknown>
+      if (index < 0 || scenarioBody.revision !== scenarios[index].revision) {
+        await fulfillJson(route, { error: 'Work scenario changed. Reload it and retry.' }, 409)
+        return
+      }
+      const updated = workScenario({ ...scenarios[index], ...scenarioBody, id: workScenarioMutationMatch[1], revision: Number(scenarios[index].revision) + 1, updatedAt: now })
       if (index >= 0) scenarios[index] = updated
       await fulfillJson(route, updated)
       return
@@ -1555,6 +1561,11 @@ async function mockAdminApi(page: Page) {
 
     if (workScenarioMutationMatch && method === 'DELETE') {
       const index = scenarios.findIndex((item) => item.id === workScenarioMutationMatch[1])
+      const revision = new URL(request.url()).searchParams.get('revision')
+      if (index < 0 || revision !== String(scenarios[index].revision)) {
+        await fulfillJson(route, { error: 'Work scenario changed. Reload it and retry.' }, 409)
+        return
+      }
       if (index >= 0) scenarios.splice(index, 1)
       await fulfillJson(route, { id: workScenarioMutationMatch[1], deleted: true })
       return
@@ -2247,6 +2258,16 @@ async function mockAdminApi(page: Page) {
         revision: Number(siteContentBlocks[index].revision) + 1,
         updatedAt: now
       }
+    },
+    changeWorkScenarioExternally: (id: string, name: string) => {
+      const index = scenarios.findIndex((item) => item.id === id)
+      if (index < 0) throw new Error(`Work scenario fixture ${id} was not found.`)
+      scenarios[index] = workScenario({
+        ...scenarios[index],
+        name,
+        revision: Number(scenarios[index].revision) + 1,
+        updatedAt: now
+      })
     },
     updateFirstDetailFixture: (userDisplayName: string, messageText: string) => {
       const nextUser = adminUser('user-first', userDisplayName, 'first@example.test')
@@ -4738,6 +4759,45 @@ test('admin site content delete keeps an externally changed block', async ({ pag
   await expect(page.getByRole('alert')).toContainText('не был удален')
   await expect(contentPanel.getByText('Актуальный текст перед удалением', { exact: true })).toBeVisible()
   expect(api.getRequestCount('/api/admin/site-content/content-created-e2e', 'DELETE')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin work scenario editor recovers from a stale revision', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page)
+  await page.goto('/#scenarios')
+
+  const scenariosPanel = page.locator('#scenarios')
+  const scenarioRow = scenariosPanel.locator('.list-item-vertical').filter({ hasText: 'Автовыдача E2E' })
+  await scenarioRow.getByRole('button', { name: 'Редактировать' }).click()
+  await scenariosPanel.getByLabel('Название').fill('Устаревшая локальная версия')
+
+  api.changeWorkScenarioExternally('scenario-auto', 'Актуальный внешний сценарий')
+  await scenariosPanel.getByRole('button', { name: 'Сохранить сценарий' }).click()
+
+  await expect(page.getByRole('alert')).toContainText('Сценарий уже изменен другим администратором')
+  await expect(scenariosPanel.getByRole('heading', { name: 'Редактировать сценарий' })).toBeVisible()
+  await expect(scenariosPanel.getByLabel('Название')).toHaveValue('Актуальный внешний сценарий')
+  await expect(scenariosPanel.getByText('Актуальный внешний сценарий', { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/admin/work-scenarios/scenario-auto', 'PUT')).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin work scenario delete keeps an externally changed scenario', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page)
+  await page.goto('/#scenarios')
+
+  const scenariosPanel = page.locator('#scenarios')
+  const scenarioRow = scenariosPanel.locator('.list-item-vertical').filter({ hasText: 'Автовыдача E2E' })
+  await scenarioRow.getByRole('button', { name: 'Удалить' }).click()
+  api.changeWorkScenarioExternally('scenario-auto', 'Актуальный сценарий перед удалением')
+  await scenariosPanel.getByRole('button', { name: 'Подтвердить' }).click()
+
+  await expect(page.locator('.error-block')).toContainText('не был удален')
+  await expect(scenariosPanel.getByText('Актуальный сценарий перед удалением', { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/admin/work-scenarios/scenario-auto', 'DELETE')).toBe(1)
+  expect(api.getRequestCount('/api/admin/work-scenarios', 'GET')).toBe(2)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

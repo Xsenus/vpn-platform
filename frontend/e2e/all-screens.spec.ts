@@ -597,6 +597,7 @@ async function installApiMock(page: Page) {
     if (method === 'GET' && path === '/api/admin/work-scenarios') {
       await fulfillJson(route, [{
         id: 'scenario-auto',
+        revision: 0,
         key: 'auto',
         name: 'Auto provisioning',
         isActive: true,

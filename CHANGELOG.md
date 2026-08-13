@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.678.0 - 2026-08-13
+
+Release entry: `2026-08-13-work-scenario-boundary`.
+
+### Исправлено
+
+- Устаревшая admin-форма больше не перезаписывает и не удаляет сценарий после параллельного изменения: PUT/DELETE требуют revision и возвращают controlled `409`.
+- Поля сценария проверяются до записи по фактическим ограничениям БД; admin-форма показывает те же границы и ограничивает ввод.
+
+### Улучшено
+
+- Admin list ограничен DB-side top-200, `WorkScenario.Revision` защищён EF concurrency token и migration.
+- Frontend принимает точный allow-list контракт сценария, а при конфликте перезагружает актуальную форму или список без потери внешнего изменения.
+
+### Проверено
+
+- Fail-first backend `0/3`, frontend `165/166`; targeted backend/SQLite `28/28`, EF drift `2/2`, frontend `167/167`, backend `1409/1409`, typecheck/build и bundle budget зелёные. Stale PUT/DELETE desktop/mobile `4/4`, file-backed SQLite race, fresh SQLite full flow, strict UTF-8, secret scan и dependency audit `0 vulnerabilities` зелёные.
+- Roadmap `691/711` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider/Telegram кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались; статус остается staging-ready baseline, not production-ready.
+
 ## 0.677.0 - 2026-08-13
 
 Release entry: `2026-08-13-site-content-boundary`.

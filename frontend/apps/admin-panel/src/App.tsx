@@ -63,6 +63,7 @@ import { isOptionalSafeAdminHttpUrl, validateTelegramBotUrlFields } from './admi
 import { validateServerForm } from './admin-server-validation'
 import { getAdminOrderPaymentRecheckBlocker, getAdminPaymentRecheckBlocker } from './admin-payments'
 import { buildReferralProgramPayload, defaultReferralProgramForm, referralProgramToForm, validateReferralProgramForm, type ReferralProgramFormState } from './admin-referrals'
+import { validateWorkScenarioForm } from './admin-work-scenarios'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
 const TOKEN_STORAGE_KEY = 'vpn-platform-admin-token'
@@ -929,19 +930,6 @@ function parseWorkScenarioTariffIds(value?: string | null) {
 
 function scenarioTariffIdsToJson(ids: string[]) {
   return JSON.stringify(Array.from(new Set(ids.filter(Boolean))))
-}
-
-function validateWorkScenarioForm(form: WorkScenarioUpsertPayload) {
-  const errors: string[] = []
-  const key = form.key.trim()
-
-  if (!form.name.trim()) errors.push('Укажите название сценария.')
-  if (!key) errors.push('Укажите ключ сценария.')
-  if (key && !/^[a-z0-9_-]+(?:-[a-z0-9_-]+)*$/i.test(key)) errors.push('Ключ может содержать латинские буквы, цифры, дефис и подчёркивание.')
-  if (Number(form.maxDevices) <= 0) errors.push('Количество устройств должно быть больше 0.')
-  if (!['auto', 'manual', 'hybrid'].includes(String(form.provisioningMode || '').trim().toLowerCase())) errors.push('Режим выдачи должен быть одним из вариантов: автоматически, вручную или гибридно.')
-
-  return errors
 }
 
 function validatePaymentProviderForm(
@@ -2964,7 +2952,22 @@ export function App() {
 
     await runAction('scenarios', editingId ? `scenario-update-${editingId}` : 'scenario-create', async (action) => {
       if (editingId) {
-        await api.updateAdminWorkScenario(token, editingId, payload)
+        const current = workScenarios.find((scenario) => scenario.id === editingId)
+        if (!current) throw new ApiClientError('Редактируемый сценарий больше не найден. Список обновлен.', 409, null)
+        try {
+          await api.updateAdminWorkScenario(token, editingId, payload, current.revision)
+        } catch (error) {
+          if (error instanceof ApiClientError && error.status === 409) {
+            const latest = await api.getAdminWorkScenarios(token)
+            if (!action.isCurrent()) return
+            setWorkScenarios(latest)
+            const refreshed = latest.find((scenario) => scenario.id === editingId)
+            if (refreshed) editWorkScenario(refreshed)
+            else resetWorkScenarioForm()
+            throw new ApiClientError('Сценарий уже изменен другим администратором. Форма обновлена актуальными данными.', 409, error.payload)
+          }
+          throw error
+        }
       } else {
         await api.createAdminWorkScenario(token, payload)
       }
@@ -2977,7 +2980,22 @@ export function App() {
 
   const handleDeleteWorkScenario = async (scenario: WorkScenarioDto) => {
     await runAction('scenarios', `scenario-delete-${scenario.id}`, async (action) => {
-      await api.deleteAdminWorkScenario(token, scenario.id)
+      try {
+        await api.deleteAdminWorkScenario(token, scenario.id, scenario.revision)
+      } catch (error) {
+        if (error instanceof ApiClientError && error.status === 409) {
+          const latest = await api.getAdminWorkScenarios(token)
+          if (!action.isCurrent()) return
+          setWorkScenarios(latest)
+          if (editingWorkScenarioIdRef.current === scenario.id) {
+            const refreshed = latest.find((item) => item.id === scenario.id)
+            if (refreshed) editWorkScenario(refreshed)
+            else resetWorkScenarioForm()
+          }
+          throw new ApiClientError('Сценарий уже изменен другим администратором и не был удален. Список обновлен.', 409, error.payload)
+        }
+        throw error
+      }
       if (!action.isCurrent()) return
       if (editingWorkScenarioIdRef.current === scenario.id) resetWorkScenarioForm()
       setNotice('Сценарий работы удален.')
@@ -5254,12 +5272,12 @@ export function App() {
             <fieldset className="form-section">
               <legend>Основные параметры</legend>
               <div className="form-grid">
-                <label><span>Название</span><input value={workScenarioForm.name} onChange={(e) => updateWorkScenarioForm('name', e.target.value)} placeholder="Автоматическая выдача VPN" required /></label>
-                <label><span>Ключ</span><input value={workScenarioForm.key} onChange={(e) => updateWorkScenarioForm('key', e.target.value)} placeholder="auto" required /></label>
+                <label><span>Название</span><input value={workScenarioForm.name} onChange={(e) => updateWorkScenarioForm('name', e.target.value)} placeholder="Автоматическая выдача VPN" maxLength={200} required /></label>
+                <label><span>Ключ</span><input value={workScenarioForm.key} onChange={(e) => updateWorkScenarioForm('key', e.target.value)} placeholder="auto" maxLength={120} required /></label>
                 <label><span>VPN-протокол</span><select value={workScenarioForm.vpnProtocol} onChange={(e) => updateWorkScenarioForm('vpnProtocol', e.target.value)}><option value="vless">VLESS</option><option value="vmess">VMess</option><option value="trojan">Trojan</option></select></label>
                 <label><span>Режим выдачи</span><select value={workScenarioForm.provisioningMode} onChange={(e) => updateWorkScenarioForm('provisioningMode', e.target.value)}><option value="auto">Автоматически</option><option value="manual">Вручную</option><option value="hybrid">Гибридно</option></select></label>
-                <label><span>Правило сервера</span><input value={workScenarioForm.serverSelectionRule} onChange={(e) => updateWorkScenarioForm('serverSelectionRule', e.target.value)} placeholder="least-loaded" /></label>
-                <label><span>Правило inbound</span><input value={workScenarioForm.inboundSelectionRule} onChange={(e) => updateWorkScenarioForm('inboundSelectionRule', e.target.value)} placeholder="default" /></label>
+                <label><span>Правило сервера</span><input value={workScenarioForm.serverSelectionRule} onChange={(e) => updateWorkScenarioForm('serverSelectionRule', e.target.value)} placeholder="least-loaded" maxLength={120} /></label>
+                <label><span>Правило inbound</span><input value={workScenarioForm.inboundSelectionRule} onChange={(e) => updateWorkScenarioForm('inboundSelectionRule', e.target.value)} placeholder="default" maxLength={120} /></label>
                 <label><span>Устройств</span><input value={workScenarioForm.maxDevices} onChange={(e) => updateWorkScenarioForm('maxDevices', Number(e.target.value) || 1)} type="number" min={1} step="1" /></label>
                 <label><span>Лимит трафика, ГБ</span><input value={workScenarioForm.trafficLimit ? Math.round(workScenarioForm.trafficLimit / 1024 / 1024 / 1024) : ''} onChange={(e) => updateWorkScenarioForm('trafficLimit', e.target.value ? Number(e.target.value) * 1024 * 1024 * 1024 : null)} type="number" min={0} step="1" placeholder="Без лимита" /></label>
                 <label><span>Порядок</span><input value={workScenarioForm.sortOrder} onChange={(e) => updateWorkScenarioForm('sortOrder', Number(e.target.value) || 0)} type="number" step="1" /></label>
@@ -5283,16 +5301,16 @@ export function App() {
             </fieldset>
             <fieldset className="form-section">
               <legend>Поведение системы</legend>
-              <label><span>После успешной оплаты</span><textarea value={workScenarioForm.onPaymentSucceeded} onChange={(e) => updateWorkScenarioForm('onPaymentSucceeded', e.target.value)} rows={2} /></label>
-              <label><span>После ошибки оплаты</span><textarea value={workScenarioForm.onPaymentFailed} onChange={(e) => updateWorkScenarioForm('onPaymentFailed', e.target.value)} rows={2} /></label>
-              <label><span>После возврата</span><textarea value={workScenarioForm.onRefund} onChange={(e) => updateWorkScenarioForm('onRefund', e.target.value)} rows={2} /></label>
-              <label><span>После окончания подписки</span><textarea value={workScenarioForm.onSubscriptionExpired} onChange={(e) => updateWorkScenarioForm('onSubscriptionExpired', e.target.value)} rows={2} /></label>
-              <label><span>После продления</span><textarea value={workScenarioForm.onRenewal} onChange={(e) => updateWorkScenarioForm('onRenewal', e.target.value)} rows={2} /></label>
+              <label><span>После успешной оплаты</span><textarea value={workScenarioForm.onPaymentSucceeded} onChange={(e) => updateWorkScenarioForm('onPaymentSucceeded', e.target.value)} rows={2} maxLength={4000} /></label>
+              <label><span>После ошибки оплаты</span><textarea value={workScenarioForm.onPaymentFailed} onChange={(e) => updateWorkScenarioForm('onPaymentFailed', e.target.value)} rows={2} maxLength={4000} /></label>
+              <label><span>После возврата</span><textarea value={workScenarioForm.onRefund} onChange={(e) => updateWorkScenarioForm('onRefund', e.target.value)} rows={2} maxLength={4000} /></label>
+              <label><span>После окончания подписки</span><textarea value={workScenarioForm.onSubscriptionExpired} onChange={(e) => updateWorkScenarioForm('onSubscriptionExpired', e.target.value)} rows={2} maxLength={4000} /></label>
+              <label><span>После продления</span><textarea value={workScenarioForm.onRenewal} onChange={(e) => updateWorkScenarioForm('onRenewal', e.target.value)} rows={2} maxLength={4000} /></label>
             </fieldset>
             <fieldset className="form-section">
               <legend>Тексты для пользователя</legend>
-              <label><span>Текст для кабинета</span><textarea value={workScenarioForm.cabinetText} onChange={(e) => updateWorkScenarioForm('cabinetText', e.target.value)} rows={3} /></label>
-              <label><span>Текст для Telegram</span><textarea value={workScenarioForm.telegramText} onChange={(e) => updateWorkScenarioForm('telegramText', e.target.value)} rows={3} /></label>
+              <label><span>Текст для кабинета</span><textarea value={workScenarioForm.cabinetText} onChange={(e) => updateWorkScenarioForm('cabinetText', e.target.value)} rows={3} maxLength={4000} /></label>
+              <label><span>Текст для Telegram</span><textarea value={workScenarioForm.telegramText} onChange={(e) => updateWorkScenarioForm('telegramText', e.target.value)} rows={3} maxLength={4000} /></label>
             </fieldset>
             <FormValidationSummary errors={workScenarioFormErrors} />
             <div className="form-footer">

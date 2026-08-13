@@ -1138,7 +1138,7 @@ test('ApiClient rejects unknown extensions in admin site content responses', asy
 
 test('ApiClient work scenario endpoints cover admin CRUD', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
-  const scenario = { id: 'scenario-1', name: 'Auto', key: 'auto', isActive: true, allowedTariffIdsJson: '[]', vpnProtocol: 'vless', serverSelectionRule: 'least-loaded', inboundSelectionRule: 'default', provisioningMode: 'auto', onPaymentSucceeded: 'create_subscription_and_access', onPaymentFailed: 'keep_order_pending', onRefund: 'disable_access', onSubscriptionExpired: 'disable_access_after_grace', onRenewal: 'extend_subscription', cabinetText: 'ready', telegramText: 'ready', generateQrCode: true, maxDevices: 3, trafficLimit: null, sortOrder: 10, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  const scenario = { id: 'scenario-1', revision: 3, name: 'Auto', key: 'auto', isActive: true, allowedTariffIdsJson: '[]', vpnProtocol: 'vless', serverSelectionRule: 'least-loaded', inboundSelectionRule: 'default', provisioningMode: 'auto', onPaymentSucceeded: 'create_subscription_and_access', onPaymentFailed: 'keep_order_pending', onRefund: 'disable_access', onSubscriptionExpired: 'disable_access_after_grace', onRenewal: 'extend_subscription', cabinetText: 'ready', telegramText: 'ready', generateQrCode: true, maxDevices: 3, trafficLimit: null, sortOrder: 10, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     if (init?.method === 'DELETE') {
@@ -1151,14 +1151,53 @@ test('ApiClient work scenario endpoints cover admin CRUD', async () => {
   const client = new ApiClient('http://localhost:8080')
   await client.getAdminWorkScenarios('admin-token')
   await client.createAdminWorkScenario('admin-token', scenario)
-  await client.updateAdminWorkScenario('admin-token', 'scenario-1', { ...scenario, name: 'Auto updated' })
-  await client.deleteAdminWorkScenario('admin-token', 'scenario-1')
+  await client.updateAdminWorkScenario('admin-token', 'scenario-1', { ...scenario, name: 'Auto updated' }, scenario.revision)
+  await client.deleteAdminWorkScenario('admin-token', 'scenario-1', scenario.revision)
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/work-scenarios')
   assert.equal(calls[1]?.init?.method, 'POST')
   assert.equal(calls[2]?.init?.method, 'PUT')
   assert.equal(calls[3]?.init?.method, 'DELETE')
+  assert.equal(JSON.parse(String(calls[2]?.init?.body)).revision, 3)
+  assert.match(calls[3]?.url ?? '', /\?revision=3$/)
   assert.equal(new Headers(calls[3]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+})
+
+test('ApiClient rejects unknown extensions in admin work scenario responses', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify([{
+    id: 'scenario-1',
+    revision: 0,
+    name: 'Auto',
+    key: 'auto',
+    isActive: true,
+    allowedTariffIdsJson: '[]',
+    vpnProtocol: 'vless',
+    serverSelectionRule: 'least-loaded',
+    inboundSelectionRule: 'default',
+    provisioningMode: 'auto',
+    onPaymentSucceeded: 'create_subscription_and_access',
+    onPaymentFailed: 'keep_order_pending',
+    onRefund: 'disable_access',
+    onSubscriptionExpired: 'disable_access_after_grace',
+    onRenewal: 'extend_subscription',
+    cabinetText: 'ready',
+    telegramText: 'ready',
+    generateQrCode: true,
+    maxDevices: 3,
+    trafficLimit: null,
+    sortOrder: 10,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    internalNote: 'diagnostic'
+  }]), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  await assert.rejects(
+    () => new ApiClient('http://localhost:8080').getAdminWorkScenarios('admin-token'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502
+  )
 })
 
 test('ApiClient admin tariff endpoints cover extended CRUD', async () => {
@@ -2757,8 +2796,8 @@ test('ApiClient rejects malformed admin content and app release DTOs', async () 
     () => client.deleteAdminSiteContent('admin-token', 'content-1', 0),
     () => client.getAdminWorkScenarios('admin-token'),
     () => client.createAdminWorkScenario('admin-token', scenarioPayload),
-    () => client.updateAdminWorkScenario('admin-token', 'scenario-1', scenarioPayload),
-    () => client.deleteAdminWorkScenario('admin-token', 'scenario-1')
+    () => client.updateAdminWorkScenario('admin-token', 'scenario-1', scenarioPayload, 0),
+    () => client.deleteAdminWorkScenario('admin-token', 'scenario-1', 0)
   ]
   const isInvalidResponseDataError = (error: unknown) =>
     error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)

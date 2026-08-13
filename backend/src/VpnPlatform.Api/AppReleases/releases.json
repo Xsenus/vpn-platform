@@ -15935,5 +15935,28 @@
         "text": "Roadmap progress is 690/710 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-work-scenario-boundary",
+    "version": "0.678.0",
+    "releasedAt": "2026-08-13T03:30:00+07:00",
+    "title": "Сценарии работы защищены от конфликтов",
+    "summary": "Админка ограничивает список сценариев, проверяет границы формы и сохраняет внешние изменения при параллельной работе.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Устаревшая форма больше не может перезаписать или удалить сценарий, который изменил другой администратор: PUT и DELETE требуют актуальную revision."
+      },
+      {
+        "type": "improved",
+        "text": "Список ограничен 200 сценариями до materialization, API-контракт стал точным, а длины названия, ключа, правил, тарифов и пользовательских текстов согласованы с базой данных и формой."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 691/711 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

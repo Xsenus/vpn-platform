@@ -42,6 +42,7 @@ public sealed record SiteContentBlockUpsertRequest(string Key, string Value, str
 
 public sealed record WorkScenarioDto(
     Guid Id,
+    int Revision,
     string Name,
     string Key,
     bool IsActive,
@@ -83,7 +84,8 @@ public sealed record WorkScenarioUpsertRequest(
     bool GenerateQrCode,
     int MaxDevices,
     long? TrafficLimit,
-    int SortOrder);
+    int SortOrder,
+    int? Revision = null);
 
 public sealed record AppReleaseItemDto(Guid? Id, string Type, string Text, int SortOrder);
 public sealed record AppReleaseDto(

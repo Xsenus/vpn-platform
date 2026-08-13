@@ -1254,6 +1254,7 @@ export type SiteContentDefaultsResultDto = {
 
 export type WorkScenarioDto = {
   id: string
+  revision: number
   name: string
   key: string
   isActive: boolean
@@ -1277,7 +1278,7 @@ export type WorkScenarioDto = {
   updatedAt: string
 }
 
-export type WorkScenarioUpsertPayload = Omit<WorkScenarioDto, 'id' | 'createdAt' | 'updatedAt'>
+export type WorkScenarioUpsertPayload = Omit<WorkScenarioDto, 'id' | 'revision' | 'createdAt' | 'updatedAt'>
 
 export type CreateCheckoutSessionPayload = {
   tariffId: string
@@ -2397,7 +2398,15 @@ function isSiteContentDefaultsResultDto(value: unknown): value is SiteContentDef
 function isWorkScenarioDto(value: unknown): value is WorkScenarioDto {
   if (!isRecord(value)) return false
 
+  const allowedFields = new Set([
+    'id', 'revision', 'name', 'key', 'isActive', 'allowedTariffIdsJson', 'vpnProtocol',
+    'serverSelectionRule', 'inboundSelectionRule', 'provisioningMode', 'onPaymentSucceeded',
+    'onPaymentFailed', 'onRefund', 'onSubscriptionExpired', 'onRenewal', 'cabinetText',
+    'telegramText', 'generateQrCode', 'maxDevices', 'trafficLimit', 'sortOrder', 'createdAt', 'updatedAt'
+  ])
+
   return hasString(value, 'id', true)
+    && hasInteger(value, 'revision', 0)
     && hasString(value, 'name', true)
     && hasString(value, 'key', true)
     && hasBoolean(value, 'isActive')
@@ -2419,6 +2428,7 @@ function isWorkScenarioDto(value: unknown): value is WorkScenarioDto {
     && hasInteger(value, 'sortOrder')
     && hasDateString(value, 'createdAt')
     && hasDateString(value, 'updatedAt')
+    && Object.keys(value).every((key) => allowedFields.has(key))
 }
 
 function isDeleteResultDto(value: unknown): value is { id: string; deleted: boolean } {
@@ -4217,17 +4227,17 @@ export class ApiClient {
     }, 'object', isWorkScenarioDto)
   }
 
-  updateAdminWorkScenario(token: string, id: string, payload: WorkScenarioUpsertPayload): Promise<WorkScenarioDto> {
+  updateAdminWorkScenario(token: string, id: string, payload: WorkScenarioUpsertPayload, revision: number): Promise<WorkScenarioDto> {
     return this.request<WorkScenarioDto>(`/api/admin/work-scenarios/${id}`, {
       method: 'PUT',
       token,
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, revision }),
       errorMessage: apiFallbackErrorMessage
     }, 'object', isWorkScenarioDto)
   }
 
-  deleteAdminWorkScenario(token: string, id: string): Promise<{ id: string; deleted: boolean }> {
-    return this.request<{ id: string; deleted: boolean }>(`/api/admin/work-scenarios/${id}`, {
+  deleteAdminWorkScenario(token: string, id: string, revision: number): Promise<{ id: string; deleted: boolean }> {
+    return this.request<{ id: string; deleted: boolean }>(`/api/admin/work-scenarios/${id}?revision=${encodeURIComponent(String(revision))}`, {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage

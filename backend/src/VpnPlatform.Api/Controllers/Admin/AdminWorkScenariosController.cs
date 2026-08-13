@@ -15,6 +15,7 @@ namespace VpnPlatform.Api.Controllers.Admin;
 [Route("api/admin/work-scenarios")]
 public class AdminWorkScenariosController : ControllerBase
 {
+    private const int ListLimit = 200;
     private readonly IApplicationDbContext _db;
 
     public AdminWorkScenariosController(IApplicationDbContext db)
@@ -29,6 +30,8 @@ public class AdminWorkScenariosController : ControllerBase
             .AsNoTracking()
             .OrderBy(x => x.SortOrder)
             .ThenBy(x => x.Name)
+            .ThenBy(x => x.Id)
+            .Take(ListLimit)
             .ToListAsync(cancellationToken);
 
         return Ok(scenarios.Select(Map).ToList());
@@ -59,6 +62,14 @@ public class AdminWorkScenariosController : ControllerBase
     {
         var scenario = await _db.WorkScenarios.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (scenario is null) return NotFound();
+        if (!request.Revision.HasValue || request.Revision.Value < 0)
+        {
+            return BadRequest(new { error = "Work scenario revision is required and must be a non-negative integer." });
+        }
+        if (request.Revision.Value != scenario.Revision)
+        {
+            return Conflict(new { error = "Work scenario changed. Reload it and retry.", revision = scenario.Revision });
+        }
 
         var candidate = new WorkScenario();
         var error = Apply(candidate, request);
@@ -77,18 +88,34 @@ public class AdminWorkScenariosController : ControllerBase
 
         var before = Map(scenario);
         Copy(candidate, scenario);
+        scenario.Revision = checked(scenario.Revision + 1);
         scenario.UpdatedAt = DateTimeOffset.UtcNow;
         AdminAuditLogWriter.Add(_db, this, "work_scenario.update", "WorkScenario", scenario.Id, before, Map(scenario));
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Work scenario changed. Reload it and retry." });
+        }
         return Ok(Map(scenario));
     }
 
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = AdminPolicies.AdminWrite)]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(Guid id, [FromQuery] int? revision, CancellationToken cancellationToken)
     {
         var scenario = await _db.WorkScenarios.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (scenario is null) return NotFound();
+        if (!revision.HasValue || revision.Value < 0)
+        {
+            return BadRequest(new { error = "Work scenario revision is required and must be a non-negative integer." });
+        }
+        if (revision.Value != scenario.Revision)
+        {
+            return Conflict(new { error = "Work scenario changed. Reload it and retry.", revision = scenario.Revision });
+        }
 
         var linkedTariffs = await _db.Tariffs.AnyAsync(x => x.ProvisioningScenario == scenario.Key, cancellationToken);
         if (linkedTariffs)
@@ -99,7 +126,14 @@ public class AdminWorkScenariosController : ControllerBase
         var before = Map(scenario);
         _db.WorkScenarios.Remove(scenario);
         AdminAuditLogWriter.Add(_db, this, "work_scenario.delete", "WorkScenario", scenario.Id, before, null);
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Work scenario changed. Reload it and retry." });
+        }
         return Ok(new { id, deleted = true });
     }
 
@@ -108,11 +142,13 @@ public class AdminWorkScenariosController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Name)) return "Scenario name is required.";
         if (string.IsNullOrWhiteSpace(request.Key)) return "Scenario key is required.";
         if (request.MaxDevices <= 0) return "Scenario maxDevices must be positive.";
+        if (request.Name.Trim().Length > 200) return "Scenario name must not exceed 200 characters.";
         var vpnProtocol = string.IsNullOrWhiteSpace(request.VpnProtocol) ? "vless" : VpnProtocolPolicy.Normalize(request.VpnProtocol);
         if (!VpnProtocolPolicy.IsSupported(vpnProtocol)) return "VPN protocol must be vless, vmess or trojan.";
 
         scenario.Name = request.Name.Trim();
         scenario.Key = NormalizeKey(request.Key);
+        if (scenario.Key.Length > 120) return "Scenario key must not exceed 120 characters.";
         scenario.IsActive = request.IsActive;
         var allowedTariffIds = NormalizeGuidArrayJson(request.AllowedTariffIdsJson);
         if (allowedTariffIds.Error is not null) return allowedTariffIds.Error;
@@ -133,6 +169,14 @@ public class AdminWorkScenariosController : ControllerBase
         scenario.MaxDevices = request.MaxDevices;
         scenario.TrafficLimit = request.TrafficLimit;
         scenario.SortOrder = request.SortOrder;
+        if (scenario.AllowedTariffIdsJson.Length > 4000) return "Allowed tariff ids must not exceed 4000 characters.";
+        if (scenario.ServerSelectionRule.Length > 120) return "Server selection rule must not exceed 120 characters.";
+        if (scenario.InboundSelectionRule.Length > 120) return "Inbound selection rule must not exceed 120 characters.";
+        if (scenario.ProvisioningMode.Length > 40) return "Provisioning mode must not exceed 40 characters.";
+        if (new[] { scenario.OnPaymentSucceeded, scenario.OnPaymentFailed, scenario.OnRefund, scenario.OnSubscriptionExpired, scenario.OnRenewal, scenario.CabinetText, scenario.TelegramText }.Any(value => value.Length > 4000))
+        {
+            return "Scenario text fields must not exceed 4000 characters.";
+        }
         return null;
     }
 
@@ -210,6 +254,7 @@ public class AdminWorkScenariosController : ControllerBase
     private static WorkScenarioDto Map(WorkScenario scenario)
         => new(
             scenario.Id,
+            scenario.Revision,
             scenario.Name,
             scenario.Key,
             scenario.IsActive,
