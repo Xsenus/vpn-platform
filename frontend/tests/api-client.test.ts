@@ -1507,13 +1507,13 @@ test('ApiClient admin server CRUD actions send safe payloads with auth token', a
   await client.getAdminServers('admin-token')
   await client.createAdminServer('admin-token', payload)
   await client.updateAdminServer('admin-token', 'node-1', { ...payload, name: 'nl-01-edited', priority: 200, tagsCsv: 'tier:premium' }, 0)
-  await client.disableAdminServer('admin-token', 'node-1')
+  await client.disableAdminServer('admin-token', 'node-1', 3)
   await client.checkAdminServerHealth('admin-token', 'node-1')
   await client.getAdminServerHealthChecks('admin-token', 'node-1')
-  await client.enableAdminServerAllocation('admin-token', 'node-1')
-  await client.disableAdminServerAllocation('admin-token', 'node-1')
-  await client.enableAdminServerMaintenance('admin-token', 'node-1')
-  await client.disableAdminServerMaintenance('admin-token', 'node-1')
+  await client.enableAdminServerAllocation('admin-token', 'node-1', 4)
+  await client.disableAdminServerAllocation('admin-token', 'node-1', 5)
+  await client.enableAdminServerMaintenance('admin-token', 'node-1', 6)
+  await client.disableAdminServerMaintenance('admin-token', 'node-1', 7)
   const deletion = await client.deleteAdminServer('admin-token', 'node-1', 0)
 
   const headers = new Headers(calls[0]?.init?.headers)
@@ -1535,6 +1535,15 @@ test('ApiClient admin server CRUD actions send safe payloads with auth token', a
     '/api/admin/servers/node-1/disable-allocation',
     '/api/admin/servers/node-1/maintenance',
     '/api/admin/servers/node-1/disable-maintenance'
+  ])
+  assert.deepEqual(calls.slice(3, 10).map((call) => call.init?.body ? JSON.parse(String(call.init.body)) : null), [
+    { revision: 3 },
+    {},
+    null,
+    { revision: 4 },
+    { revision: 5 },
+    { revision: 6 },
+    { revision: 7 }
   ])
   assert.equal(calls[10]?.url, 'http://localhost:8080/api/admin/servers/node-1?revision=0')
   assert.equal(calls[10]?.init?.method, 'DELETE')
@@ -3011,13 +3020,13 @@ test('ApiClient rejects malformed server, provisioning and Telegram bot DTOs', a
     () => client.createAdminServer('admin-token', serverPayload),
     () => client.updateAdminServer('admin-token', 'node-1', serverPayload, 0),
     () => client.deleteAdminServer('admin-token', 'node-1', 0),
-    () => client.disableAdminServer('admin-token', 'node-1'),
+    () => client.disableAdminServer('admin-token', 'node-1', 0),
     () => client.checkAdminServerHealth('admin-token', 'node-1'),
     () => client.getAdminServerHealthChecks('admin-token', 'node-1'),
-    () => client.enableAdminServerAllocation('admin-token', 'node-1'),
-    () => client.disableAdminServerAllocation('admin-token', 'node-1'),
-    () => client.enableAdminServerMaintenance('admin-token', 'node-1'),
-    () => client.disableAdminServerMaintenance('admin-token', 'node-1'),
+    () => client.enableAdminServerAllocation('admin-token', 'node-1', 0),
+    () => client.disableAdminServerAllocation('admin-token', 'node-1', 0),
+    () => client.enableAdminServerMaintenance('admin-token', 'node-1', 0),
+    () => client.disableAdminServerMaintenance('admin-token', 'node-1', 0),
     () => client.precheckAdminServer('admin-token', 'node-1', 0),
     () => client.queueAdminProvision('admin-token', 'node-1', 0),
     () => client.getAdminProvisioningRuns('admin-token'),

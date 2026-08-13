@@ -3665,11 +3665,16 @@ export function App() {
   const handleServerMode = async (server: VpnNodeDto, action: 'maintenance' | 'ready' | 'drain' | 'allocate' | 'disable') => {
     const actionLabel = action === 'maintenance' ? 'перевести в обслуживание' : action === 'ready' ? 'вернуть в работу' : action === 'drain' ? 'закрыть набор пользователей' : action === 'disable' ? 'отключить сервер' : 'открыть набор пользователей'
     await runAction('nodes', `${action}-${server.id}`, async (adminAction) => {
-      if (action === 'maintenance') await api.enableAdminServerMaintenance(token, server.id)
-      if (action === 'ready') await api.disableAdminServerMaintenance(token, server.id)
-      if (action === 'drain') await api.disableAdminServerAllocation(token, server.id)
-      if (action === 'allocate') await api.enableAdminServerAllocation(token, server.id)
-      if (action === 'disable') await api.disableAdminServer(token, server.id)
+      const command = action === 'maintenance'
+        ? api.enableAdminServerMaintenance(token, server.id, server.revision)
+        : action === 'ready'
+          ? api.disableAdminServerMaintenance(token, server.id, server.revision)
+          : action === 'drain'
+            ? api.disableAdminServerAllocation(token, server.id, server.revision)
+            : action === 'allocate'
+              ? api.enableAdminServerAllocation(token, server.id, server.revision)
+              : api.disableAdminServer(token, server.id, server.revision)
+      await command.catch((error: unknown) => throwServerConflict(error, adminAction, server.id))
       if (!adminAction.isCurrent()) return
       setNotice(`Сервер ${server.name}: ${actionLabel}.`)
       await adminAction.reloadAll()

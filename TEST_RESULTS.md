@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: server mode action boundary
+
+Scope:
+- Disable, maintenance on/off и allocation on/off должны требовать актуальную revision и не превращать межконтекстную гонку в HTTP 500.
+- Typed API client и админка должны отправлять snapshot revision и восстанавливаться после controlled conflict на desktop/mobile.
+
+Results:
+- Roadmap progress: `696/716` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-server-mode-action-boundary`, version `0.683.0`.
+- Fail-first: file-backed SQLite `0/5`; все пять действий выбрасывали необработанный `DbUpdateConcurrencyException` после параллельного изменения.
+- After fix: общий revision-aware command-handler, controlled `409`, точные client payloads и UI reload; server/operation boundary `97/97`, backend `1458/1458`, frontend `172/172`, typecheck/build и admin bundle `560247` raw/`148650` gzip/largest `252820` зеленые. Валидный lifecycle и stale conflict desktop/mobile Playwright `4/4`; EF drift clean, secret scan `690/0`, dependency audit `0 vulnerabilities`. Реальные VPS/SSH/Ansible, provider/Telegram кабинеты, Bot API, SMTP, live payment и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: provisioning management boundary
 
 Scope:

@@ -250,11 +250,11 @@ public class AdminOperationBoundaryTests
         await db.SaveChangesAsync();
         var controller = CreateController(db, Guid.NewGuid(), new FixedClock(DateTimeOffset.UtcNow));
 
-        Assert.IsType<ConflictObjectResult>(await controller.Maintenance(archived.Id, CancellationToken.None));
-        Assert.IsType<ConflictObjectResult>(await controller.DisableMaintenance(archived.Id, CancellationToken.None));
-        Assert.IsType<ConflictObjectResult>(await controller.DisableAllocation(archived.Id, CancellationToken.None));
-        Assert.IsType<ConflictObjectResult>(await controller.EnableAllocation(archived.Id, CancellationToken.None));
-        Assert.IsType<ConflictObjectResult>(await controller.DisableServer(archived.Id, CancellationToken.None));
+        Assert.IsType<ConflictObjectResult>(await controller.Maintenance(archived.Id, new ServerStateActionHttpRequest(archived.Revision), CancellationToken.None));
+        Assert.IsType<ConflictObjectResult>(await controller.DisableMaintenance(archived.Id, new ServerStateActionHttpRequest(archived.Revision), CancellationToken.None));
+        Assert.IsType<ConflictObjectResult>(await controller.DisableAllocation(archived.Id, new ServerStateActionHttpRequest(archived.Revision), CancellationToken.None));
+        Assert.IsType<ConflictObjectResult>(await controller.EnableAllocation(archived.Id, new ServerStateActionHttpRequest(archived.Revision), CancellationToken.None));
+        Assert.IsType<ConflictObjectResult>(await controller.DisableServer(archived.Id, new ServerStateActionHttpRequest(archived.Revision), CancellationToken.None));
         Assert.IsType<BadRequestObjectResult>(await controller.Precheck(archived.Id, CancellationToken.None));
         Assert.IsType<BadRequestObjectResult>(await controller.Provision(archived.Id, new QueueProvisionHttpRequest(DryRun: true), CancellationToken.None));
 
@@ -278,23 +278,23 @@ public class AdminOperationBoundaryTests
         await db.SaveChangesAsync();
         var controller = CreateController(db, Guid.NewGuid(), new FixedClock(new DateTimeOffset(2026, 8, 4, 8, 0, 0, TimeSpan.Zero)));
 
-        Assert.IsType<OkObjectResult>(await controller.Maintenance(node.Id, CancellationToken.None));
+        Assert.IsType<OkObjectResult>(await controller.Maintenance(node.Id, new ServerStateActionHttpRequest(node.Revision), CancellationToken.None));
         Assert.Equal(NodeStatus.Maintenance, node.Status);
         Assert.False(node.IsAvailableForNewUsers);
 
-        Assert.IsType<OkObjectResult>(await controller.DisableMaintenance(node.Id, CancellationToken.None));
+        Assert.IsType<OkObjectResult>(await controller.DisableMaintenance(node.Id, new ServerStateActionHttpRequest(node.Revision), CancellationToken.None));
         Assert.Equal(NodeStatus.Ready, node.Status);
         Assert.True(node.IsAvailableForNewUsers);
 
-        Assert.IsType<OkObjectResult>(await controller.DisableAllocation(node.Id, CancellationToken.None));
+        Assert.IsType<OkObjectResult>(await controller.DisableAllocation(node.Id, new ServerStateActionHttpRequest(node.Revision), CancellationToken.None));
         Assert.Equal(NodeStatus.Draining, node.Status);
         Assert.False(node.IsAvailableForNewUsers);
 
-        Assert.IsType<OkObjectResult>(await controller.EnableAllocation(node.Id, CancellationToken.None));
+        Assert.IsType<OkObjectResult>(await controller.EnableAllocation(node.Id, new ServerStateActionHttpRequest(node.Revision), CancellationToken.None));
         Assert.Equal(NodeStatus.Ready, node.Status);
         Assert.True(node.IsAvailableForNewUsers);
 
-        Assert.IsType<OkObjectResult>(await controller.DisableServer(node.Id, CancellationToken.None));
+        Assert.IsType<OkObjectResult>(await controller.DisableServer(node.Id, new ServerStateActionHttpRequest(node.Revision), CancellationToken.None));
         Assert.Equal(NodeStatus.Disabled, node.Status);
         Assert.False(node.IsAvailableForNewUsers);
 

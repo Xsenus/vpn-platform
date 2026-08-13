@@ -48,6 +48,7 @@ public sealed record CreateServerHttpRequest(
 
 public sealed record QueueProvisionHttpRequest(bool DryRun = false, int? Revision = null);
 public sealed record ProvisioningRunActionHttpRequest(int? Revision = null);
+public sealed record ServerStateActionHttpRequest(int? Revision = null);
 public sealed record RefundPaymentHttpRequest(decimal Amount, string? Reason);
 public sealed record RefundReadinessDto(bool IsSupported, bool CanRefund, decimal RefundableAmount, IReadOnlyList<string> Blockers);
 public sealed record RecheckReadinessDto(bool IsSupported, bool CanRecheck, IReadOnlyList<string> Blockers);
@@ -2168,22 +2169,11 @@ public class AdminOperationsController : ControllerBase
 
     [HttpPost("servers/{id:guid}/disable")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
-    public async Task<IActionResult> DisableServer(Guid id, CancellationToken cancellationToken)
-    {
-        await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
-        var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (node is null) return NotFound();
-        if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
-
-        var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
-        node.Status = NodeStatus.Disabled;
-        node.IsAvailableForNewUsers = false;
-        node.Revision = checked(node.Revision + 1);
-        node.UpdatedAt = _clock.UtcNow;
-        AddAuditLog("server.disable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
-        await _db.SaveChangesAsync(cancellationToken);
-        return Ok(MapVpnNode(node));
-    }
+    public Task<IActionResult> DisableServer(
+        Guid id,
+        [FromBody] ServerStateActionHttpRequest? request,
+        CancellationToken cancellationToken)
+        => ChangeServerStateAsync(id, request, NodeStatus.Disabled, false, "server.disable", cancellationToken);
 
     [HttpDelete("servers/{id:guid}")]
     [Authorize(Policy = AdminPolicies.ProvisioningManage)]
@@ -2615,77 +2605,72 @@ public class AdminOperationsController : ControllerBase
 
     [HttpPost("servers/{id:guid}/maintenance")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
-    public async Task<IActionResult> Maintenance(Guid id, CancellationToken cancellationToken)
-    {
-        await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
-        var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (node is null) return NotFound();
-        if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
-
-        var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
-        node.Status = NodeStatus.Maintenance;
-        node.IsAvailableForNewUsers = false;
-        node.Revision = checked(node.Revision + 1);
-        node.UpdatedAt = _clock.UtcNow;
-        AddAuditLog("server.maintenance.enable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
-        await _db.SaveChangesAsync(cancellationToken);
-        return Ok(MapVpnNode(node));
-    }
+    public Task<IActionResult> Maintenance(
+        Guid id,
+        [FromBody] ServerStateActionHttpRequest? request,
+        CancellationToken cancellationToken)
+        => ChangeServerStateAsync(id, request, NodeStatus.Maintenance, false, "server.maintenance.enable", cancellationToken);
 
     [HttpPost("servers/{id:guid}/disable-maintenance")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
-    public async Task<IActionResult> DisableMaintenance(Guid id, CancellationToken cancellationToken)
-    {
-        await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
-        var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (node is null) return NotFound();
-        if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
-
-        var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
-        node.Status = NodeStatus.Ready;
-        node.IsAvailableForNewUsers = true;
-        node.Revision = checked(node.Revision + 1);
-        node.UpdatedAt = _clock.UtcNow;
-        AddAuditLog("server.maintenance.disable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
-        await _db.SaveChangesAsync(cancellationToken);
-        return Ok(MapVpnNode(node));
-    }
+    public Task<IActionResult> DisableMaintenance(
+        Guid id,
+        [FromBody] ServerStateActionHttpRequest? request,
+        CancellationToken cancellationToken)
+        => ChangeServerStateAsync(id, request, NodeStatus.Ready, true, "server.maintenance.disable", cancellationToken);
 
     [HttpPost("servers/{id:guid}/disable-allocation")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
-    public async Task<IActionResult> DisableAllocation(Guid id, CancellationToken cancellationToken)
-    {
-        await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
-        var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (node is null) return NotFound();
-        if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
-
-        var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
-        node.IsAvailableForNewUsers = false;
-        node.Status = NodeStatus.Draining;
-        node.Revision = checked(node.Revision + 1);
-        node.UpdatedAt = _clock.UtcNow;
-        AddAuditLog("server.allocation.disable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
-        await _db.SaveChangesAsync(cancellationToken);
-        return Ok(MapVpnNode(node));
-    }
+    public Task<IActionResult> DisableAllocation(
+        Guid id,
+        [FromBody] ServerStateActionHttpRequest? request,
+        CancellationToken cancellationToken)
+        => ChangeServerStateAsync(id, request, NodeStatus.Draining, false, "server.allocation.disable", cancellationToken);
 
     [HttpPost("servers/{id:guid}/enable-allocation")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
-    public async Task<IActionResult> EnableAllocation(Guid id, CancellationToken cancellationToken)
+    public Task<IActionResult> EnableAllocation(
+        Guid id,
+        [FromBody] ServerStateActionHttpRequest? request,
+        CancellationToken cancellationToken)
+        => ChangeServerStateAsync(id, request, NodeStatus.Ready, true, "server.allocation.enable", cancellationToken);
+
+    private async Task<IActionResult> ChangeServerStateAsync(
+        Guid id,
+        ServerStateActionHttpRequest? request,
+        NodeStatus status,
+        bool isAvailableForNewUsers,
+        string auditAction,
+        CancellationToken cancellationToken)
     {
+        if (request?.Revision is null or < 0)
+        {
+            return BadRequest(new { error = "Server revision is required." });
+        }
+
         await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (node is null) return NotFound();
+        if (node is null) return NotFound(new { error = "Server not found." });
+        if (request.Revision.Value != node.Revision)
+        {
+            return Conflict(new { error = "Server changed. Reload it and retry.", revision = node.Revision });
+        }
         if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
 
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
-        node.IsAvailableForNewUsers = true;
-        node.Status = NodeStatus.Ready;
+        node.Status = status;
+        node.IsAvailableForNewUsers = isAvailableForNewUsers;
         node.Revision = checked(node.Revision + 1);
         node.UpdatedAt = _clock.UtcNow;
-        AddAuditLog("server.allocation.enable", "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
-        await _db.SaveChangesAsync(cancellationToken);
+        AddAuditLog(auditAction, "VpnNode", id, before, JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers }));
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Server changed. Reload it and retry." });
+        }
         return Ok(MapVpnNode(node));
     }
 

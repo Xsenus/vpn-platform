@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.683.0 - 2026-08-13
+
+Release entry: `2026-08-13-server-mode-action-boundary`.
+
+### Исправлено
+
+- Disable, maintenance on/off и allocation on/off требуют актуальную revision сервера; stale request и EF race возвращают controlled `409` без изменения состояния или audit trail.
+- Browser mock повторяет backend state machine для `Draining`/`Ready`, поэтому lifecycle-тест проверяет фактические переходы статуса и доступности.
+
+### Улучшено
+
+- Пять mode-actions используют единый command-handler с одинаковой проверкой revision, повышением версии и обработкой `DbUpdateConcurrencyException`.
+- Typed API client отправляет revision, а админка после конфликта загружает актуальный список и просит повторить действие.
+
+### Проверено
+
+- Fail-first SQLite `0/5`; after-fix server/operation boundary `97/97`, backend `1458/1458`, frontend `172/172`, typecheck/build, bundle `560247` raw/`148650` gzip, EF drift, secret scan `690/0` и dependency audit `0 vulnerabilities` зеленые. Валидный lifecycle и stale conflict desktop/mobile Playwright `4/4`.
+- Roadmap `696/716` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider/Telegram/SMTP кабинеты, live payment и production-like 3x-ui evidence локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.682.0 - 2026-08-13
 
 Release entry: `2026-08-13-provisioning-management-boundary`.

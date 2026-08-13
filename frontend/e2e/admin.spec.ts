@@ -1648,10 +1648,15 @@ async function mockAdminApi(page: Page) {
       const index = servers.findIndex((item) => item.id === serverModeMatch[1])
       const server = servers[index]
       const action = serverModeMatch[2]
+      const payload = body as { revision?: unknown } | null
+      if (!server || payload?.revision !== server.revision) {
+        await fulfillJson(route, { error: 'Server changed. Reload it and retry.', revision: server?.revision ?? 0 }, 409)
+        return
+      }
       const updated = vpnServer({
         ...server,
         revision: Number(server.revision) + 1,
-        status: action === 'maintenance' ? 'Maintenance' : action === 'disable' ? 'Disabled' : action === 'disable-maintenance' ? 'Ready' : server.status,
+        status: action === 'maintenance' ? 'Maintenance' : action === 'disable' ? 'Disabled' : action === 'disable-allocation' ? 'Draining' : action === 'disable-maintenance' || action === 'enable-allocation' ? 'Ready' : server.status,
         isAvailableForNewUsers: action === 'enable-allocation' ? true : action === 'disable-allocation' || action === 'maintenance' || action === 'disable' ? false : server.isAvailableForNewUsers,
         updatedAt: now
       })
@@ -4836,6 +4841,22 @@ test('admin server editor and delete recover from stale revisions', async ({ pag
   await expect(page.locator('.error-block')).toContainText('Сервер уже изменен другим администратором')
   await expect(nodesPanel.getByText('Актуальный сервер перед удалением', { exact: true })).toBeVisible()
   expect(api.getRequestCount('/api/admin/servers/server-eu', 'DELETE')).toBe(1)
+})
+
+test('admin server mode action reloads after a stale revision', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-server-mode-conflict-token', 'admin-server-mode-conflict-refresh')
+  await page.goto('/#nodes')
+
+  const nodesPanel = page.locator('#nodes')
+  const serverRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox' })
+  await serverRow.getByRole('button', { name: 'В обслуживание' }).click()
+  api.changeServerExternally('server-eu', 'Актуальный сервер перед сменой режима')
+  await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
+
+  await expect(page.locator('.error-block')).toContainText('Сервер уже изменен другим администратором')
+  await expect(nodesPanel.getByText('Актуальный сервер перед сменой режима', { exact: true })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/servers/server-eu/maintenance', 'POST')?.body).toMatchObject({ revision: 0 })
 })
 
 test('admin VPN panel editor recovers from a stale revision', async ({ page }) => {

@@ -472,7 +472,7 @@ public class AdminServerManagementTests
         db.VpnNodes.Add(node);
         await db.SaveChangesAsync();
 
-        var result = await controller.DisableServer(node.Id, CancellationToken.None);
+        var result = await controller.DisableServer(node.Id, new ServerStateActionHttpRequest(node.Revision), CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);
         Assert.Equal(NodeStatus.Disabled, node.Status);
@@ -846,6 +846,38 @@ public class AdminServerManagementTests
     }
 
     [Theory]
+    [InlineData("maintenance")]
+    [InlineData("disable-maintenance")]
+    [InlineData("disable-allocation")]
+    [InlineData("enable-allocation")]
+    [InlineData("disable")]
+    public async Task Server_Mode_Action_Should_Require_Revision(string action)
+    {
+        await using var db = CreateDbContext();
+        var node = NewNode($"mode-revision-required-{action}");
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        var controller = CreateController(db);
+        var request = new ServerStateActionHttpRequest();
+
+        var result = action switch
+        {
+            "maintenance" => await controller.Maintenance(node.Id, request, CancellationToken.None),
+            "disable-maintenance" => await controller.DisableMaintenance(node.Id, request, CancellationToken.None),
+            "disable-allocation" => await controller.DisableAllocation(node.Id, request, CancellationToken.None),
+            "enable-allocation" => await controller.EnableAllocation(node.Id, request, CancellationToken.None),
+            "disable" => await controller.DisableServer(node.Id, request, CancellationToken.None),
+            _ => throw new ArgumentOutOfRangeException(nameof(action), action, null)
+        };
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(NodeStatus.Ready, node.Status);
+        Assert.True(node.IsAvailableForNewUsers);
+        Assert.Equal(0, node.Revision);
+        Assert.Empty(db.AuditLogs);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task Stale_Server_Update_And_Delete_Should_Not_Overwrite_External_Changes(bool deleteSecond)
@@ -887,6 +919,68 @@ public class AdminServerManagementTests
             await using var verify = new ApplicationDbContext(options);
             var saved = await verify.VpnNodes.AsNoTracking().SingleAsync(x => x.Id == nodeId);
             Assert.Equal("first-admin-change", saved.Name);
+            Assert.Equal(1, saved.Revision);
+        }
+        finally
+        {
+            foreach (var path in new[] { databasePath, databasePath + "-shm", databasePath + "-wal" })
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData("maintenance")]
+    [InlineData("disable-maintenance")]
+    [InlineData("disable-allocation")]
+    [InlineData("enable-allocation")]
+    [InlineData("disable")]
+    public async Task Stale_Server_Mode_Action_Should_Return_Conflict_Without_Overwriting_External_Changes(string action)
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-platform-node-mode-concurrency-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite($"Data Source={databasePath};Pooling=False")
+                .Options;
+            Guid nodeId;
+            await using (var seed = new ApplicationDbContext(options))
+            {
+                await seed.Database.EnsureCreatedAsync();
+                var node = NewNode($"concurrent-mode-{action}");
+                seed.VpnNodes.Add(node);
+                await seed.SaveChangesAsync();
+                nodeId = node.Id;
+            }
+
+            await using var firstDb = new ApplicationDbContext(options);
+            await using var staleDb = new ApplicationDbContext(options);
+            var first = await firstDb.VpnNodes.SingleAsync(x => x.Id == nodeId);
+            _ = await staleDb.VpnNodes.SingleAsync(x => x.Id == nodeId);
+
+            var firstResult = await CreateController(firstDb).UpdateServer(
+                nodeId,
+                UpdateRequest(first, name: "first-admin-mode-change"),
+                CancellationToken.None);
+            var staleController = CreateController(staleDb);
+            var staleResult = action switch
+            {
+                "maintenance" => await staleController.Maintenance(nodeId, new ServerStateActionHttpRequest(0), CancellationToken.None),
+                "disable-maintenance" => await staleController.DisableMaintenance(nodeId, new ServerStateActionHttpRequest(0), CancellationToken.None),
+                "disable-allocation" => await staleController.DisableAllocation(nodeId, new ServerStateActionHttpRequest(0), CancellationToken.None),
+                "enable-allocation" => await staleController.EnableAllocation(nodeId, new ServerStateActionHttpRequest(0), CancellationToken.None),
+                "disable" => await staleController.DisableServer(nodeId, new ServerStateActionHttpRequest(0), CancellationToken.None),
+                _ => throw new ArgumentOutOfRangeException(nameof(action), action, null)
+            };
+
+            Assert.IsType<OkObjectResult>(firstResult);
+            Assert.IsType<ConflictObjectResult>(staleResult);
+            await using var verify = new ApplicationDbContext(options);
+            var saved = await verify.VpnNodes.AsNoTracking().SingleAsync(x => x.Id == nodeId);
+            Assert.Equal("first-admin-mode-change", saved.Name);
+            Assert.Equal(NodeStatus.Ready, saved.Status);
+            Assert.True(saved.IsAvailableForNewUsers);
             Assert.Equal(1, saved.Revision);
         }
         finally

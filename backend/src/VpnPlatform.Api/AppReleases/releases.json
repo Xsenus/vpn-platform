@@ -16050,5 +16050,28 @@
         "text": "Roadmap progress is 695/715 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-server-mode-action-boundary",
+    "version": "0.683.0",
+    "releasedAt": "2026-08-13T13:05:00+07:00",
+    "title": "Команды VPN-сервера защищены от устаревших действий",
+    "summary": "Смена режима и доступности сервера требует актуальную ревизию и безопасно восстанавливает админку после параллельного изменения.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Disable, maintenance on/off и allocation on/off больше не выполняются по устаревшему snapshot и возвращают controlled conflict вместо необработанной ошибки конкурентной записи."
+      },
+      {
+        "type": "improved",
+        "text": "Typed API client передаёт revision для всех пяти команд, а админка обновляет серверы и предлагает повторить действие по актуальной версии."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 696/716 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

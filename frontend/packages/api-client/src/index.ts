@@ -4424,8 +4424,8 @@ export class ApiClient {
     }, 'object', (value): value is DeleteAdminServerResult => isDeleteAdminServerResult(value) && value.id === serverId)
   }
 
-  disableAdminServer(token: string, serverId: string): Promise<VpnNodeDto> {
-    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
+  disableAdminServer(token: string, serverId: string, revision: number): Promise<VpnNodeDto> {
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable`, { method: 'POST', token, body: JSON.stringify({ revision }), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
   }
 
   checkAdminServerHealth(token: string, serverId: string): Promise<NodeHealthCheckDto> {
@@ -4442,20 +4442,20 @@ export class ApiClient {
       && items.every((item) => item.nodeId === serverId))
   }
 
-  enableAdminServerAllocation(token: string, serverId: string): Promise<VpnNodeDto> {
-    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/enable-allocation`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
+  enableAdminServerAllocation(token: string, serverId: string, revision: number): Promise<VpnNodeDto> {
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/enable-allocation`, { method: 'POST', token, body: JSON.stringify({ revision }), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
   }
 
-  disableAdminServerAllocation(token: string, serverId: string): Promise<VpnNodeDto> {
-    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable-allocation`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
+  disableAdminServerAllocation(token: string, serverId: string, revision: number): Promise<VpnNodeDto> {
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable-allocation`, { method: 'POST', token, body: JSON.stringify({ revision }), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
   }
 
-  enableAdminServerMaintenance(token: string, serverId: string): Promise<VpnNodeDto> {
-    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/maintenance`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
+  enableAdminServerMaintenance(token: string, serverId: string, revision: number): Promise<VpnNodeDto> {
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/maintenance`, { method: 'POST', token, body: JSON.stringify({ revision }), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
   }
 
-  disableAdminServerMaintenance(token: string, serverId: string): Promise<VpnNodeDto> {
-    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable-maintenance`, { method: 'POST', token, body: JSON.stringify({}), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
+  disableAdminServerMaintenance(token: string, serverId: string, revision: number): Promise<VpnNodeDto> {
+    return this.request<VpnNodeDto>(`/api/admin/servers/${serverId}/disable-maintenance`, { method: 'POST', token, body: JSON.stringify({ revision }), errorMessage: apiFallbackErrorMessage }, 'object', (value): value is VpnNodeDto => isVpnNodeDto(value) && value.id === serverId)
   }
 
   precheckAdminServer(token: string, serverId: string, revision: number): Promise<ProvisioningCommandResponse> {
