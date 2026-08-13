@@ -16579,5 +16579,28 @@
         "text": "Roadmap progress is 719/739 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-provisioning-support-sqlite-latest-boundary",
+    "version": "0.706.0",
+    "releasedAt": "2026-08-13T19:14:56+07:00",
+    "title": "Provisioning support стабильно переиспользует последнюю беседу",
+    "summary": "MarkSupportNeeded работает на SQLite и выбирает последнюю подходящую support conversation без загрузки всей истории.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "MarkSupportNeeded больше не падает на SQLite из-за DateTimeOffset ORDER BY при поиске open/pending support conversation."
+      },
+      {
+        "type": "improved",
+        "text": "SQLite использует parameterized nullable identity/subject filters, julianday(CreatedAt), Id tie-break и LIMIT 1; системные беседы с null identity переиспользуются без дублей."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 720/740 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

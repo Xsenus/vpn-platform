@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.DTOs;
+using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.HostedServices;
@@ -93,6 +94,82 @@ public class OwnVpsProvisioningReadBoundaryTests
             && command.Contains("LIMIT 1", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task MarkSupportNeeded_Should_Select_Latest_Conversation_In_Sql_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new CommandCaptureInterceptor();
+        await using var db = CreateDb(connection, interceptor);
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 13, 19, 15, 0, TimeSpan.Zero);
+        var user = new User { Email = "provisioning-service-support@example.test", PasswordHash = "hash", RolesCsv = "User", ReferralCode = "PROVSERVSUPPORT" };
+        var node = new VpnNode { Name = "Provisioning service support", Host = "provisioning-support.example.test", SshUser = "root", SshPort = 22, TagsCsv = "telegram-user-id:5050" };
+        var run = new ProvisioningRun
+        {
+            NodeId = node.Id,
+            RequestedByUserId = user.Id,
+            Status = ProvisioningRunStatus.PrecheckFailed,
+            ExecutionLog = "Precheck failed."
+        };
+        var older = ServiceConversationFor(user.Id, now.AddDays(-2), revision: 2);
+        var latest = ServiceConversationFor(user.Id, now.AddDays(-1), revision: 4);
+        db.AddRange(user, node, run, older, latest);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        interceptor.Commands.Clear();
+
+        var result = await new ProvisioningService(db, new FixedClock(now))
+            .MarkSupportNeededAsync(run.Id, user.Id);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(latest.Id.ToString(), result.Value);
+        Assert.Equal(2, await db.SupportConversations.CountAsync());
+        Assert.Equal(2, (await db.SupportConversations.AsNoTracking().SingleAsync(x => x.Id == older.Id)).Revision);
+        Assert.Equal(5, (await db.SupportConversations.AsNoTracking().SingleAsync(x => x.Id == latest.Id)).Revision);
+        Assert.Equal(latest.Id, (await db.SupportMessages.AsNoTracking().SingleAsync()).SupportConversationId);
+        Assert.Contains(interceptor.Commands, command =>
+            IsSelectFor(command, "SupportConversations")
+            && command.Contains("julianday", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("LIMIT 1", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task MarkSupportNeeded_Should_Reuse_Conversation_With_Null_Identities_On_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new CommandCaptureInterceptor();
+        await using var db = CreateDb(connection, interceptor);
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 13, 19, 20, 0, TimeSpan.Zero);
+        var node = new VpnNode { Name = "System provisioning support", Host = "system-support.example.test", SshUser = "root", SshPort = 22 };
+        var run = new ProvisioningRun
+        {
+            NodeId = node.Id,
+            Status = ProvisioningRunStatus.PrecheckFailed,
+            ExecutionLog = "System precheck failed."
+        };
+        var conversation = ServiceConversationFor(userId: null, createdAt: now.AddDays(-1), revision: 3, telegramUserId: null);
+        db.AddRange(node, run, conversation);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        interceptor.Commands.Clear();
+
+        var result = await new ProvisioningService(db, new FixedClock(now))
+            .MarkSupportNeededAsync(run.Id, requestedByUserId: null);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(conversation.Id.ToString(), result.Value);
+        Assert.Single(await db.SupportConversations.ToListAsync());
+        Assert.Equal(4, (await db.SupportConversations.AsNoTracking().SingleAsync()).Revision);
+        Assert.Equal(conversation.Id, (await db.SupportMessages.AsNoTracking().SingleAsync()).SupportConversationId);
+        Assert.Contains(interceptor.Commands, command =>
+            IsSelectFor(command, "SupportConversations")
+            && command.Contains("IS NULL", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("LIMIT 1", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static Subscription SubscriptionFor(Guid userId, Guid nodeId, Guid tariffId, DateTimeOffset createdAt)
         => new()
         {
@@ -114,6 +191,19 @@ public class OwnVpsProvisioningReadBoundaryTests
             Channel = "telegram",
             Status = status,
             Subject = "Own VPS precheck failed",
+            Revision = revision,
+            CreatedAt = createdAt,
+            UpdatedAt = createdAt
+        };
+
+    private static SupportConversation ServiceConversationFor(Guid? userId, DateTimeOffset createdAt, int revision, long? telegramUserId = 5050)
+        => new()
+        {
+            UserId = userId,
+            TelegramUserId = telegramUserId,
+            Channel = "telegram",
+            Status = "pending",
+            Subject = "Own VPS provisioning needs support",
             Revision = revision,
             CreatedAt = createdAt,
             UpdatedAt = createdAt

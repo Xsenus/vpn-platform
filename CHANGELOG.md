@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.706.0 - 2026-08-13
+
+Release entry: `2026-08-13-provisioning-support-sqlite-latest-boundary`.
+
+### Исправлено
+
+- `MarkSupportNeededAsync` больше не падает на SQLite при поиске последней open/pending support conversation.
+- System support conversations без user/Telegram identity переиспользуются по прежней null-семантике и не дублируются.
+
+### Улучшено
+
+- SQLite query использует parameterized identity/subject filters, `julianday(CreatedAt)`, стабильный `Id` tie-break и DB-side `LIMIT 1`; другие providers сохраняют LINQ ordering.
+
+### Проверено
+
+- Fail-first SQLite regression воспроизвел `NotSupportedException`; after-fix targeted `3/3`, provisioning/own-VPS/admin regression `150/150`, backend Debug/Release `1485/1485`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow с latest release, EF drift, docs/encoding `64/64`, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `720/740` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.705.0 - 2026-08-13
 
 Release entry: `2026-08-13-telegram-payment-sqlite-temporal-boundaries`.

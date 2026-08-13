@@ -793,10 +793,23 @@ public class ProvisioningService
 
     private async Task<SupportConversation> EnsureSupportConversationAsync(Guid? userId, long? telegramUserId, string subject, string message, CancellationToken cancellationToken)
     {
-        var conversation = await _db.SupportConversations
-            .Where(x => x.UserId == userId && x.TelegramUserId == telegramUserId && (x.Status == "open" || x.Status == "pending") && x.Subject == subject)
-            .OrderByDescending(x => x.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+        var conversationQuery = IsSqliteProvider()
+            ? _db.SupportConversations.FromSqlInterpolated($"""
+                SELECT *
+                FROM "SupportConversations"
+                WHERE (("UserId" = {userId}) OR ("UserId" IS NULL AND {userId} IS NULL))
+                  AND (("TelegramUserId" = {telegramUserId}) OR ("TelegramUserId" IS NULL AND {telegramUserId} IS NULL))
+                  AND ("Status" = 'open' OR "Status" = 'pending')
+                  AND "Subject" = {subject}
+                ORDER BY julianday("CreatedAt") DESC, "Id" DESC
+                LIMIT 1
+                """)
+            : _db.SupportConversations
+                .Where(x => x.UserId == userId && x.TelegramUserId == telegramUserId && (x.Status == "open" || x.Status == "pending") && x.Subject == subject)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .Take(1);
+        var conversation = await conversationQuery.FirstOrDefaultAsync(cancellationToken);
 
         var isExistingConversation = conversation is not null;
         if (conversation is null)
@@ -831,6 +844,10 @@ public class ProvisioningService
         conversation.UpdatedAt = _clock.UtcNow;
         return conversation;
     }
+
+    private bool IsSqliteProvider()
+        => _db is DbContext dbContext
+            && string.Equals(dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.Sqlite", StringComparison.Ordinal);
 
     private void AddAudit(string action, string entityType, Guid entityId, Guid? actorId, string beforeJson, string afterJson)
     {

@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: provisioning support SQLite latest boundary
+
+Scope:
+- `MarkSupportNeededAsync` должна переиспользовать последнюю open/pending support conversation на SQLite без `DateTimeOffset ORDER BY` runtime failure.
+- Nullable user/Telegram identity, subject/status filters, reopen/revision, message, audit и bounded latest read должны сохраниться.
+
+Results:
+- Roadmap progress: `720/740` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-provisioning-support-sqlite-latest-boundary`, version `0.706.0`.
+- Fail-first: реальный SQLite regression воспроизвел `NotSupportedException` в `ProvisioningService.EnsureSupportConversationAsync` до reopen/audit/save.
+- After fix: SQLite использует parameterized nullable identity/subject filters, `julianday(CreatedAt)`, `Id` tie-break и `LIMIT 1`; targeted latest/non-null/null identity `3/3`, provisioning/own-VPS/admin regression `150/150`, backend Debug/Release `1485/1485`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow с latest release, EF drift, docs/encoding `64/64`, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Реальные VPS/SSH/Ansible, Telegram Bot API, provider кабинеты, live payment, SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: Telegram/payment SQLite temporal query boundaries
 
 Scope:
