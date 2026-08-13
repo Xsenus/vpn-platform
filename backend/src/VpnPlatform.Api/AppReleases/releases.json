@@ -16303,5 +16303,28 @@
         "text": "Roadmap progress is 706/726 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-lifecycle-worker-query-boundary",
+    "version": "0.694.0",
+    "releasedAt": "2026-08-13T15:16:00+07:00",
+    "title": "Lifecycle worker ограничен в БД",
+    "summary": "Order expiry выполняется атомарно, а subscription lifecycle читает только актуальные due-batches.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Фоновый цикл больше не materialize-ит все orders и все active/grace subscriptions перед временной фильтрацией."
+      },
+      {
+        "type": "improved",
+        "text": "Pending orders истекают одним conditional update; subscription queues ограничены due-only batches по 200 с сохранением retry/lease semantics."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 707/727 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

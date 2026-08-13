@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-13-provisioning-precheck-selection-boundary";
-    private const string CurrentVersion = "0.693.0";
+    private const string CurrentReleaseId = "2026-08-13-lifecycle-worker-query-boundary";
+    private const string CurrentVersion = "0.694.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -18,6 +18,7 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("Дата актуализации: 2026-08-13", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1468/1468`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `P11-ACC-416`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-415`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-413`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-414`", roadmap, StringComparison.Ordinal);

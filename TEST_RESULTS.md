@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: lifecycle worker query boundary
+
+Scope:
+- Пятиминутный worker не должен загружать всю таблицу orders или все active/grace subscriptions перед temporal filtering.
+- Order expiry должен быть атомарным, а subscription expiry/retry/lease semantics и provider lifecycle обязаны сохраниться.
+
+Results:
+- Roadmap progress: `707/727` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-lifecycle-worker-query-boundary`, version `0.694.0`.
+- Fail-first: SQLite SQL assertions `0/2` фиксировали full-table reads, per-row order update и отсутствие temporal `LIMIT` у обеих subscription queues.
+- After fix: relational order expiry выполняется atomic conditional update; active/grace queues выбираются due-only batches по 200 с SQLite `julianday` или provider LINQ. Targeted `2/2`, order/promo/subscription/worker regression `34/34`, backend `1468/1468`, frontend `172/172`, typecheck/build, fresh SQLite full flow и EF drift зеленые. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: provisioning precheck selection boundary
 
 Scope:

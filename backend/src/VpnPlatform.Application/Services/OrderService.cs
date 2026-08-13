@@ -442,7 +442,34 @@ public class OrderService
     public async Task<int> ExpirePendingOrdersAsync(CancellationToken cancellationToken = default)
     {
         var now = _clock.UtcNow;
-        var orders = await _db.Orders.ToListAsync(cancellationToken);
+        if (_db is DbContext dbContext && dbContext.Database.IsRelational())
+        {
+            if (string.Equals(
+                    dbContext.Database.ProviderName,
+                    "Microsoft.EntityFrameworkCore.Sqlite",
+                    StringComparison.Ordinal))
+            {
+                return await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+                    UPDATE "Orders"
+                    SET "Status" = {(int)OrderStatus.Expired},
+                        "UpdatedAt" = {now}
+                    WHERE "Status" = {(int)OrderStatus.PendingPayment}
+                      AND julianday("ExpiresAt") <= julianday({now})
+                    """, cancellationToken);
+            }
+
+            return await _db.Orders
+                .Where(x => x.Status == OrderStatus.PendingPayment && x.ExpiresAt <= now)
+                .ExecuteUpdateAsync(
+                    setters => setters
+                        .SetProperty(x => x.Status, OrderStatus.Expired)
+                        .SetProperty(x => x.UpdatedAt, now),
+                    cancellationToken);
+        }
+
+        var orders = await _db.Orders
+            .Where(x => x.Status == OrderStatus.PendingPayment)
+            .ToListAsync(cancellationToken);
 
         var expired = 0;
         foreach (var order in orders.Where(x => x.Status == OrderStatus.PendingPayment && x.ExpiresAt <= now))

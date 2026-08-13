@@ -11,6 +11,7 @@ namespace VpnPlatform.Application.Services;
 public class SubscriptionService
 {
     private static readonly TimeSpan LifecycleLeaseDuration = TimeSpan.FromMinutes(5);
+    private const int LifecycleCandidateBatchSize = 200;
 
     private readonly IApplicationDbContext _db;
     private readonly IClock _clock;
@@ -345,15 +346,11 @@ public class SubscriptionService
     public async Task<int> ProcessLifecycleAsync(CancellationToken cancellationToken = default)
     {
         var now = _clock.UtcNow;
-        var activeCandidates = await _db.Subscriptions.AsNoTracking()
-            .Where(x => x.Status == SubscriptionStatus.Active)
-            .ToListAsync(cancellationToken);
-        var expirationCandidates = await _db.Subscriptions.AsNoTracking()
-            .Where(x => x.Status == SubscriptionStatus.GracePeriod)
-            .ToListAsync(cancellationToken);
+        var activeCandidates = await LoadActiveLifecycleCandidatesAsync(now, cancellationToken);
+        var expirationCandidates = await LoadExpirationLifecycleCandidatesAsync(now, cancellationToken);
         var processed = 0;
 
-        foreach (var candidate in activeCandidates.Where(x => x.EndAt <= now).OrderBy(x => x.EndAt).ThenBy(x => x.Id))
+        foreach (var candidate in activeCandidates)
         {
             await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(candidate.Id, cancellationToken);
             var item = await _db.Subscriptions
@@ -371,13 +368,7 @@ public class SubscriptionService
             processed++;
         }
 
-        foreach (var candidate in expirationCandidates
-                     .Where(x => x.GracePeriodEndAt.HasValue
-                         && x.GracePeriodEndAt <= now
-                         && (!x.LifecycleNextAttemptAt.HasValue || x.LifecycleNextAttemptAt <= now)
-                         && (!x.LifecycleLeaseExpiresAt.HasValue || x.LifecycleLeaseExpiresAt <= now))
-                     .OrderBy(x => x.GracePeriodEndAt)
-                     .ThenBy(x => x.Id))
+        foreach (var candidate in expirationCandidates)
         {
             await using var gate = await PaymentProcessingGate.AcquireSubscriptionLifecycleAsync(candidate.Id, cancellationToken);
             if (!await TryClaimLifecycleAsync(candidate.Id, now, cancellationToken))
@@ -419,6 +410,65 @@ public class SubscriptionService
         }
 
         return processed;
+    }
+
+    private async Task<List<Subscription>> LoadActiveLifecycleCandidatesAsync(
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (IsSqliteProvider())
+        {
+            return await _db.Subscriptions.FromSqlInterpolated($$"""
+                    SELECT *
+                    FROM "Subscriptions"
+                    WHERE "Status" = {{(int)SubscriptionStatus.Active}}
+                      AND julianday("EndAt") <= julianday({{now}})
+                    ORDER BY julianday("EndAt"), "Id"
+                    LIMIT 200
+                    """)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+
+        return await _db.Subscriptions.AsNoTracking()
+            .Where(x => x.Status == SubscriptionStatus.Active && x.EndAt <= now)
+            .OrderBy(x => x.EndAt)
+            .ThenBy(x => x.Id)
+            .Take(LifecycleCandidateBatchSize)
+            .ToListAsync(cancellationToken);
+    }
+
+    private async Task<List<Subscription>> LoadExpirationLifecycleCandidatesAsync(
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (IsSqliteProvider())
+        {
+            return await _db.Subscriptions.FromSqlInterpolated($$"""
+                    SELECT *
+                    FROM "Subscriptions"
+                    WHERE "Status" = {{(int)SubscriptionStatus.GracePeriod}}
+                      AND "GracePeriodEndAt" IS NOT NULL
+                      AND julianday("GracePeriodEndAt") <= julianday({{now}})
+                      AND ("LifecycleNextAttemptAt" IS NULL OR julianday("LifecycleNextAttemptAt") <= julianday({{now}}))
+                      AND ("LifecycleLeaseExpiresAt" IS NULL OR julianday("LifecycleLeaseExpiresAt") <= julianday({{now}}))
+                    ORDER BY julianday("GracePeriodEndAt"), "Id"
+                    LIMIT 200
+                    """)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+
+        return await _db.Subscriptions.AsNoTracking()
+            .Where(x => x.Status == SubscriptionStatus.GracePeriod
+                && x.GracePeriodEndAt.HasValue
+                && x.GracePeriodEndAt <= now
+                && (!x.LifecycleNextAttemptAt.HasValue || x.LifecycleNextAttemptAt <= now)
+                && (!x.LifecycleLeaseExpiresAt.HasValue || x.LifecycleLeaseExpiresAt <= now))
+            .OrderBy(x => x.GracePeriodEndAt)
+            .ThenBy(x => x.Id)
+            .Take(LifecycleCandidateBatchSize)
+            .ToListAsync(cancellationToken);
     }
 
     private async Task<bool> TryClaimLifecycleAsync(Guid subscriptionId, DateTimeOffset now, CancellationToken cancellationToken)
@@ -588,6 +638,10 @@ public class SubscriptionService
     private bool IsInMemoryProvider()
         => _db is DbContext dbContext
             && string.Equals(dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal);
+
+    private bool IsSqliteProvider()
+        => _db is DbContext dbContext
+            && string.Equals(dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.Sqlite", StringComparison.Ordinal);
 
     private async Task<string?> TryReleaseNodeCapacityAsync(Guid? nodeId)
     {

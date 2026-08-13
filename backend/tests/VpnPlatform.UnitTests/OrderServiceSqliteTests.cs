@@ -1,5 +1,7 @@
+using System.Data.Common;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
@@ -18,8 +20,10 @@ public class OrderServiceSqliteTests
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
 
+        var interceptor = new CommandCaptureInterceptor();
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseSqlite(connection)
+            .AddInterceptors(interceptor)
             .Options;
 
         await using var db = new ApplicationDbContext(options);
@@ -36,6 +40,7 @@ public class OrderServiceSqliteTests
             new Order { Id = Guid.NewGuid(), UserId = userId, TariffId = tariffId, Amount = 100, Currency = "RUB", Status = OrderStatus.Completed, ExpiresAt = now.AddMinutes(-1) },
             new Order { Id = Guid.NewGuid(), UserId = userId, TariffId = tariffId, Amount = 100, Currency = "RUB", Status = OrderStatus.PendingPayment, ExpiresAt = now.AddMinutes(5) });
         await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
 
         var service = new OrderService(db, new FixedClock(now));
 
@@ -45,6 +50,10 @@ public class OrderServiceSqliteTests
         Assert.Equal(1, await db.Orders.CountAsync(x => x.Status == OrderStatus.Expired));
         Assert.Equal(1, await db.Orders.CountAsync(x => x.Status == OrderStatus.Completed));
         Assert.Equal(1, await db.Orders.CountAsync(x => x.Status == OrderStatus.PendingPayment));
+        Assert.Contains(interceptor.Commands, command =>
+            command.StartsWith("UPDATE \"Orders\"", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("\"Status\"", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("julianday(\"ExpiresAt\")", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -332,8 +341,10 @@ public class OrderServiceSqliteTests
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
 
+        var interceptor = new CommandCaptureInterceptor();
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseSqlite(connection)
+            .AddInterceptors(interceptor)
             .Options;
 
         await using var db = new ApplicationDbContext(options);
@@ -350,6 +361,7 @@ public class OrderServiceSqliteTests
             new Subscription { Id = Guid.NewGuid(), UserId = userId, TariffId = tariffId, Status = SubscriptionStatus.GracePeriod, StartAt = now.AddDays(-40), EndAt = now.AddDays(-4), GracePeriodEndAt = now.AddMinutes(-1), SourceChannel = ChannelType.Web },
             new Subscription { Id = Guid.NewGuid(), UserId = userId, TariffId = tariffId, Status = SubscriptionStatus.Active, StartAt = now.AddDays(-1), EndAt = now.AddDays(1), GracePeriodEndAt = now.AddDays(4), SourceChannel = ChannelType.Web });
         await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
 
         var service = new SubscriptionService(db, new FixedClock(now), new NodeAllocationService(db), new TestVpnProviderFactory());
 
@@ -359,6 +371,57 @@ public class OrderServiceSqliteTests
         Assert.Equal(1, await db.Subscriptions.CountAsync(x => x.Status == SubscriptionStatus.GracePeriod));
         Assert.Equal(1, await db.Subscriptions.CountAsync(x => x.Status == SubscriptionStatus.Expired));
         Assert.Equal(1, await db.Subscriptions.CountAsync(x => x.Status == SubscriptionStatus.Active));
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("FROM \"Subscriptions\"", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("julianday(\"EndAt\")", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("LIMIT 200", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("FROM \"Subscriptions\"", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("julianday(\"GracePeriodEndAt\")", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("LIMIT 200", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private sealed class CommandCaptureInterceptor : DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+
+        public override InterceptionResult<int> NonQueryExecuting(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<int> result)
+        {
+            Commands.Add(command.CommandText);
+            return result;
+        }
+
+        public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
+
+        public override InterceptionResult<DbDataReader> ReaderExecuting(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result)
+        {
+            Commands.Add(command.CommandText);
+            return result;
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
     }
 
     private sealed class FixedClock(DateTimeOffset now) : IClock

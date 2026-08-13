@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.694.0 - 2026-08-13
+
+Release entry: `2026-08-13-lifecycle-worker-query-boundary`.
+
+### Исправлено
+
+- Пятиминутный lifecycle worker больше не загружает все orders и все active/grace subscriptions перед проверкой сроков.
+
+### Улучшено
+
+- Pending orders истекают atomic conditional update; subscription queues читаются due-only batches по 200 с сохранением retry, lease, gate и provider lifecycle.
+
+### Проверено
+
+- Fail-first SQL assertions `0/2`; after-fix targeted `2/2`, order/promo/subscription/worker regression `34/34`, backend `1468/1468`, frontend `172/172`, typecheck/build, fresh SQLite full flow и EF drift зеленые.
+- Roadmap `707/727` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.693.0 - 2026-08-13
 
 Release entry: `2026-08-13-provisioning-precheck-selection-boundary`.
