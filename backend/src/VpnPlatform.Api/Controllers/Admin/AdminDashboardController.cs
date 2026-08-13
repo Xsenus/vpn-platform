@@ -44,38 +44,81 @@ public class AdminDashboardController : ControllerBase
         var canReadFinance = AdminPolicies.HasAccess(roles, AdminPolicies.FinanceRead);
         var canReadSupport = AdminPolicies.HasAccess(roles, AdminPolicies.SupportRead);
         var canManageBot = AdminPolicies.HasAccess(roles, AdminPolicies.BotManage);
-        var subscriptionCandidates = await _db.Subscriptions
-            .AsNoTracking()
-            .Where(x => x.Status == SubscriptionStatus.Active || x.Status == SubscriptionStatus.GracePeriod)
-            .Select(x => new { x.Status, x.EndAt, x.GracePeriodEndAt })
-            .ToListAsync(cancellationToken);
-        var activeSubscriptionEndDates = subscriptionCandidates
-            .Where(x => BusinessRules.IsSubscriptionAccessAvailable(x.Status, x.EndAt, x.GracePeriodEndAt, now))
-            .Select(x => BusinessRules.GetSubscriptionAccessEnd(x.EndAt, x.GracePeriodEndAt))
-            .ToList();
-        var recentPaymentDates = canReadFinance
-            ? await _db.Payments
-            .AsNoTracking()
-            .Select(x => x.CreatedAt)
-            .ToListAsync(cancellationToken)
-            : [];
-        var recentOrderDates = canReadFinance
-            ? await _db.Orders
-            .AsNoTracking()
-            .Select(x => x.CreatedAt)
-            .ToListAsync(cancellationToken)
-            : [];
+        var isSqlite = _db is DbContext dbContext && dbContext.Database.IsSqlite();
+        int activeSubscriptions;
+        int expiringSubscriptions;
+        int recentPayments;
+        int recentOrders;
+        if (isSqlite)
+        {
+            var activeSubscriptionQuery = _db.Subscriptions
+                .FromSqlInterpolated($$"""
+                    SELECT *
+                    FROM "Subscriptions"
+                    WHERE "Status" IN ({{(int)SubscriptionStatus.Active}}, {{(int)SubscriptionStatus.GracePeriod}})
+                      AND julianday(COALESCE("GracePeriodEndAt", "EndAt")) > julianday({{now}})
+                    """)
+                .AsNoTracking();
+            activeSubscriptions = await activeSubscriptionQuery.CountAsync(cancellationToken);
+            expiringSubscriptions = await _db.Subscriptions
+                .FromSqlInterpolated($$"""
+                    SELECT *
+                    FROM "Subscriptions"
+                    WHERE "Status" IN ({{(int)SubscriptionStatus.Active}}, {{(int)SubscriptionStatus.GracePeriod}})
+                      AND julianday(COALESCE("GracePeriodEndAt", "EndAt")) > julianday({{now}})
+                      AND julianday(COALESCE("GracePeriodEndAt", "EndAt")) <= julianday({{expiringAt}})
+                    """)
+                .AsNoTracking()
+                .CountAsync(cancellationToken);
+            recentPayments = canReadFinance
+                ? await _db.Payments
+                    .FromSqlInterpolated($$"""
+                        SELECT *
+                        FROM "Payments"
+                        WHERE julianday("CreatedAt") >= julianday({{recentSince}})
+                        """)
+                    .AsNoTracking()
+                    .CountAsync(cancellationToken)
+                : 0;
+            recentOrders = canReadFinance
+                ? await _db.Orders
+                    .FromSqlInterpolated($$"""
+                        SELECT *
+                        FROM "Orders"
+                        WHERE julianday("CreatedAt") >= julianday({{recentSince}})
+                        """)
+                    .AsNoTracking()
+                    .CountAsync(cancellationToken)
+                : 0;
+        }
+        else
+        {
+            var activeSubscriptionQuery = _db.Subscriptions
+                .AsNoTracking()
+                .Where(x =>
+                    (x.Status == SubscriptionStatus.Active || x.Status == SubscriptionStatus.GracePeriod)
+                    && (x.GracePeriodEndAt ?? x.EndAt) > now);
+            activeSubscriptions = await activeSubscriptionQuery.CountAsync(cancellationToken);
+            expiringSubscriptions = await activeSubscriptionQuery
+                .CountAsync(x => (x.GracePeriodEndAt ?? x.EndAt) <= expiringAt, cancellationToken);
+            recentPayments = canReadFinance
+                ? await _db.Payments.AsNoTracking().CountAsync(x => x.CreatedAt >= recentSince, cancellationToken)
+                : 0;
+            recentOrders = canReadFinance
+                ? await _db.Orders.AsNoTracking().CountAsync(x => x.CreatedAt >= recentSince, cancellationToken)
+                : 0;
+        }
 
         var summary = new AdminDashboardSummaryDto(
             await _db.Users.AsNoTracking().CountAsync(cancellationToken),
             await _db.TelegramAccounts.AsNoTracking().CountAsync(cancellationToken),
-            activeSubscriptionEndDates.Count,
-            activeSubscriptionEndDates.Count(x => x <= expiringAt),
+            activeSubscriptions,
+            expiringSubscriptions,
             canReadFinance ? await _db.Orders.AsNoTracking().CountAsync(x => x.Status == OrderStatus.PaymentReceived || x.Status == OrderStatus.Completed, cancellationToken) : 0,
             canReadFinance ? await _db.Orders.AsNoTracking().CountAsync(x => x.Status == OrderStatus.PendingPayment || x.Status == OrderStatus.Draft, cancellationToken) : 0,
             canReadFinance ? await _db.Payments.AsNoTracking().CountAsync(x => x.Status == PaymentStatus.Failed || x.Status == PaymentStatus.Cancelled, cancellationToken) : 0,
-            recentPaymentDates.Count(x => x >= recentSince),
-            recentOrderDates.Count(x => x >= recentSince),
+            recentPayments,
+            recentOrders,
             await _db.AccessCredentials.AsNoTracking().CountAsync(cancellationToken),
             await _db.VpnNodes.AsNoTracking().CountAsync(cancellationToken),
             await _db.VpnNodes.AsNoTracking().CountAsync(x => x.HealthStatus == HealthStatus.Healthy, cancellationToken),
@@ -95,19 +138,22 @@ public class AdminDashboardController : ControllerBase
         bool canManageBot,
         CancellationToken cancellationToken)
     {
-        var productionPaymentAccounts = canReadFinance
-            ? await _db.PaymentProviderAccounts
+        var productionPaymentAccounts = _db.PaymentProviderAccounts
             .AsNoTracking()
-            .Where(x => x.IsEnabled && x.Mode == PaymentProviderMode.Production && x.Provider != PaymentProvider.TelegramStars)
-            .ToListAsync(cancellationToken)
-            : [];
-        var livePaymentProviders = productionPaymentAccounts.Count(x =>
-            x.SecretKeyProtected != string.Empty &&
-            (x.ShopId != string.Empty || x.Provider == PaymentProvider.Stripe || x.Provider == PaymentProvider.PayPal));
-        var livePaymentWebhooks = productionPaymentAccounts.Count(x =>
-            x.SecretKeyProtected != string.Empty &&
-            !string.IsNullOrWhiteSpace(x.WebhookUrl) &&
-            (x.ShopId != string.Empty || x.Provider == PaymentProvider.Stripe || x.Provider == PaymentProvider.PayPal));
+            .Where(x => x.IsEnabled && x.Mode == PaymentProviderMode.Production && x.Provider != PaymentProvider.TelegramStars);
+        var livePaymentProviders = canReadFinance
+            ? await productionPaymentAccounts.CountAsync(x =>
+                x.SecretKeyProtected != string.Empty &&
+                (x.ShopId != string.Empty || x.Provider == PaymentProvider.Stripe || x.Provider == PaymentProvider.PayPal),
+                cancellationToken)
+            : 0;
+        var livePaymentWebhooks = canReadFinance
+            ? await productionPaymentAccounts.CountAsync(x =>
+                x.SecretKeyProtected != string.Empty &&
+                x.WebhookUrl != string.Empty &&
+                (x.ShopId != string.Empty || x.Provider == PaymentProvider.Stripe || x.Provider == PaymentProvider.PayPal),
+                cancellationToken)
+            : 0;
 
         var activePaidTariffs = await _db.Tariffs
             .AsNoTracking()

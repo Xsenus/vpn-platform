@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.691.0 - 2026-08-13
+
+Release entry: `2026-08-13-admin-dashboard-aggregate-boundary`.
+
+### Исправлено
+
+- Admin dashboard больше не загружает subscription/payment/order/account rows для count-метрик.
+
+### Улучшено
+
+- SQLite считает временные окна через `julianday`/`COUNT(*)`, PostgreSQL использует LINQ aggregates; protected payment account fields не materialize-ятся для readiness.
+
+### Проверено
+
+- Fail-first показал row-select вместо aggregate; after-fix dashboard boundary/RBAC `4/4`, backend `1467/1467`, frontend `172/172`, dashboard desktop/mobile `4/4`, fresh SQLite full flow, EF drift, encoding `18/18`, secret scan `698/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `704/724` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider кабинеты, live payment, VPS/SSH/Ansible, Telegram/Bot API/SMTP и production-like 3x-ui evidence локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.690.0 - 2026-08-13
 
 Release entry: `2026-08-13-admin-notification-read-boundary`.

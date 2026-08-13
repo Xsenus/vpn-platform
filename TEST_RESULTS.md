@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: admin dashboard aggregate boundary
+
+Scope:
+- Active/expiring subscriptions и recent order/payment metrics должны считаться агрегатами в БД.
+- Production payment readiness не должна загружать account rows или protected fields; role redaction и временные границы сохраняются.
+
+Results:
+- Roadmap progress: `704/724` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-admin-dashboard-aggregate-boundary`, version `0.691.0`.
+- Fail-first: response имел правильные значения, но SQL выбирал subscription end dates, все order/payment dates и production account rows без `COUNT`.
+- After fix: SQLite использует параметризованные `julianday` subqueries/`COUNT(*)`, PostgreSQL LINQ `CountAsync`; provider/webhook readiness считает только агрегаты. Targeted dashboard boundary/RBAC `4/4`, backend `1467/1467`, frontend `172/172`, dashboard FinanceManager/SupportAgent desktop/mobile `4/4`, fresh SQLite full flow, EF drift, encoding `18/18`, secret scan `698/0` и dependency audit `0 vulnerabilities` зеленые. Реальные provider кабинеты, live payment, VPS/SSH/Ansible, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: admin notification read boundary
 
 Scope:

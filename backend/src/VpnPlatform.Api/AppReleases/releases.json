@@ -16234,5 +16234,28 @@
         "text": "Roadmap progress is 703/723 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-admin-dashboard-aggregate-boundary",
+    "version": "0.691.0",
+    "releasedAt": "2026-08-13T14:39:00+07:00",
+    "title": "Метрики дашборда считаются в БД",
+    "summary": "Подписки, недавние операции и payment readiness формируются SQL-агрегатами.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Admin dashboard больше не materialize-ит subscription/payment/order/account rows для count-метрик."
+      },
+      {
+        "type": "improved",
+        "text": "SQLite использует julianday/COUNT, PostgreSQL LINQ aggregates; role redaction и точные временные границы сохранены."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 704/724 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
