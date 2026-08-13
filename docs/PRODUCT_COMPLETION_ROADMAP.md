@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-13.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-session-revocation-write-boundary`, версия `0.702.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `715/735` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-admin-user-session-revocation-write-boundary`, версия `0.703.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `716/736` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-13:
 
-- [x] `STATE-001` Backend test suite проходит: `1474/1474`.
+- [x] `STATE-001` Backend test suite проходит: `1475/1475`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2556,6 +2556,10 @@ git diff --check
   - Что сделать: logout-all и завершение password reset не должны материализовывать все активные refresh-сессии и отправлять отдельный UPDATE для каждой строки; multi-device lifecycle, audit count, session version, optimistic reset concurrency и транзакционная целостность обязаны сохраниться.
   - Что сделано: relational providers отзывают все активные сессии пользователя одним `ExecuteUpdateAsync` внутри общей транзакции с user/reset/audit changes; EF tracker синхронизируется с bulk write без повторного UPDATE. InMemory сохраняет объектный fallback, независимые login families не ограничиваются и refresh rotation не изменена.
   - Доказательство: fail-first SQLite boundary обнаружил SELECT всех 25 сессий и 25 отдельных UPDATE; after-fix session/reset/boundary `17/17`, auth/security/admin-session `77/77`, backend Debug/Release `1474/1474`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, docs/encoding `49/49`, secret scan `701/0` и dependency audit `0 vulnerabilities` зеленые. Stale reset reissue инъецируется до transaction lock и по-прежнему отклоняет устаревший commit.
+- [x] `P11-ACC-425` Ограничить отзыв сессий при admin user deactivation одним write-запросом. 2026-08-13.
+  - Что сделать: блокировка или перевод пользователя в неактивный статус не должны материализовывать все активные refresh-сессии и обновлять их по одной; `SessionVersion`, audit, block/unblock lifecycle, concurrent rotation и время операции обязаны сохраниться.
+  - Что сделано: relational providers отзывают active sessions одним `ExecuteUpdateAsync` в общей транзакции с user/audit changes; tracked rows синхронизируются без повторной записи, InMemory использует объектный fallback. Patch применяет внедрённый `IClock`, а уже конкурентно отозванная сессия не перезаписывается.
+  - Доказательство: fail-first SQLite boundary при 25 сессиях обнаружил SELECT всей коллекции и 25 UPDATE; after-fix admin user boundary/controller `13/13`, admin/auth/security/session regression `90/90`, backend Debug/Release `1475/1475`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, docs/encoding `49/49`, secret scan `702/0` и dependency audit `0 vulnerabilities` зеленые.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

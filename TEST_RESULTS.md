@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: admin user session revocation write boundary
+
+Scope:
+- Admin user deactivation не должен читать и отслеживать неограниченное число активных refresh-сессий перед отзывом.
+- Session version, audit, block/unblock lifecycle, concurrent rotation и детерминированное время должны сохраниться.
+
+Results:
+- Roadmap progress: `716/736` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-admin-user-session-revocation-write-boundary`, version `0.703.0`.
+- Fail-first: деактивация пользователя с `25` активными сессиями выполняла SELECT всей token collection и `25` отдельных UPDATE.
+- After fix: relational providers выполняют один set-based UPDATE в общей транзакции с user/audit changes; EF tracker синхронизируется без повторной записи, InMemory сохраняет fallback, Patch использует `IClock`. Admin user boundary/controller `13/13`, admin/auth/security/session `90/90`, backend Debug/Release `1475/1475`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, docs/encoding `49/49`, secret scan `702/0` и dependency audit `0 vulnerabilities` зеленые.
+
 ## Check 2026-08-13: session revocation write boundary
 
 Scope:

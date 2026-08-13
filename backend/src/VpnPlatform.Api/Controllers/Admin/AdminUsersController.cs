@@ -445,7 +445,7 @@ public class AdminUsersController : ControllerBase
 
         var before = MapUser(user);
         var wasActive = !user.IsBlocked && user.Status == UserStatus.Active;
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
         if (nextDisplayName is not null) user.DisplayName = nextDisplayName;
         if (nextIsBlocked.HasValue) user.IsBlocked = nextIsBlocked.Value;
         if (nextStatus.HasValue) user.Status = nextStatus.Value;
@@ -456,27 +456,11 @@ public class AdminUsersController : ControllerBase
             user.SessionVersion = checked(user.SessionVersion + 1);
         }
 
-        if (!isActive)
-        {
-            var sessions = await _db.UserRefreshTokens
-                .Where(x => x.UserId == user.Id && x.RevokedAt == null)
-                .ToListAsync(cancellationToken);
-            var revokedByIp = ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
-            foreach (var session in sessions)
-            {
-                session.RevokedAt = now;
-                session.RevokedByIp = revokedByIp;
-                session.RevocationReason = "admin_user_deactivated";
-                session.Revision = checked(session.Revision + 1);
-                session.UpdatedAt = now;
-            }
-        }
-
         user.UpdatedAt = now;
         AdminAuditLogWriter.Add(_db, this, "user.update", "User", user.Id, before, MapUser(user));
         try
         {
-            await _db.SaveChangesAsync(cancellationToken);
+            await SaveUserPatchAsync(user.Id, !isActive, now, cancellationToken);
         }
         catch (DbUpdateConcurrencyException) when (attempt < 4)
         {
@@ -495,6 +479,87 @@ public class AdminUsersController : ControllerBase
             return Conflict(new { error = "User state changed concurrently. Retry the operation." });
         }
         return Ok(MapUser(user));
+    }
+
+    private async Task SaveUserPatchAsync(
+        Guid userId,
+        bool revokeSessions,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (!revokeSessions)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        var revokedByIp = ControllerContext.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
+        if (_db is not DbContext dbContext || !dbContext.Database.IsRelational())
+        {
+            var sessions = await _db.UserRefreshTokens
+                .Where(x => x.UserId == userId && x.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+            foreach (var session in sessions)
+            {
+                RevokeSession(session, revokedByIp, now);
+            }
+
+            await _db.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        await using var transaction = dbContext.Database.CurrentTransaction is null
+            ? await dbContext.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+        try
+        {
+            await _db.UserRefreshTokens
+                .Where(x => x.UserId == userId && x.RevokedAt == null)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.RevokedAt, now)
+                    .SetProperty(x => x.RevokedByIp, revokedByIp)
+                    .SetProperty(x => x.RevocationReason, "admin_user_deactivated")
+                    .SetProperty(x => x.Revision, x => x.Revision + 1)
+                    .SetProperty(x => x.UpdatedAt, now), cancellationToken);
+            SynchronizeTrackedSessionRevocations(dbContext, userId, revokedByIp, now);
+            await _db.SaveChangesAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+        }
+        catch
+        {
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+            }
+            throw;
+        }
+    }
+
+    private static void SynchronizeTrackedSessionRevocations(
+        DbContext dbContext,
+        Guid userId,
+        string revokedByIp,
+        DateTimeOffset now)
+    {
+        foreach (var entry in dbContext.ChangeTracker.Entries<UserRefreshToken>()
+                     .Where(x => x.Entity.UserId == userId && x.Entity.RevokedAt is null))
+        {
+            RevokeSession(entry.Entity, revokedByIp, now);
+            entry.OriginalValues.SetValues(entry.CurrentValues);
+            entry.State = EntityState.Unchanged;
+        }
+    }
+
+    private static void RevokeSession(UserRefreshToken session, string revokedByIp, DateTimeOffset now)
+    {
+        session.RevokedAt = now;
+        session.RevokedByIp = revokedByIp;
+        session.RevocationReason = "admin_user_deactivated";
+        session.Revision = checked(session.Revision + 1);
+        session.UpdatedAt = now;
     }
 
     private static AdminUserDto MapUser(User user)

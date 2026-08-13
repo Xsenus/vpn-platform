@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1474/1474`.
+- Backend full suite: `1475/1475`.
 - API Release build: OK.
 - Frontend unit tests: `172/172`.
 - Frontend typecheck/build: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-13-session-revocation-write-boundary`, версия `0.702.0`; logout-all и password reset отзывают active sessions одним set-based write в общей транзакции, сохраняя multi-device lifecycle. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `715/735` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-13-admin-user-session-revocation-write-boundary`, версия `0.703.0`; деактивация пользователя отзывает active sessions одним set-based write в общей транзакции с user/audit changes. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `716/736` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

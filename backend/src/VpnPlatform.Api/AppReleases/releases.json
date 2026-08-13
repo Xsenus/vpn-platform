@@ -16510,5 +16510,28 @@
         "text": "Roadmap progress is 715/735 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-admin-user-session-revocation-write-boundary",
+    "version": "0.703.0",
+    "releasedAt": "2026-08-13T18:14:00+07:00",
+    "title": "Деактивация пользователя отзывает сессии одним запросом",
+    "summary": "Admin user Patch больше не материализует все активные refresh-сессии перед отзывом.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Блокировка или деактивация пользователя больше не выполняет SELECT всей active session collection и отдельный UPDATE для каждой строки."
+      },
+      {
+        "type": "improved",
+        "text": "Relational providers применяют один set-based UPDATE в общей транзакции с user/audit changes; deterministic clock и concurrent rotation semantics сохранены."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 716/736 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

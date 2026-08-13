@@ -1,9 +1,11 @@
+using System.Data.Common;
 using System.Text.Json;
 using System.Security.Claims;
 using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Api.Security;
 using VpnPlatform.Application.Common;
@@ -134,8 +136,9 @@ public class AdminUsersControllerTests
         var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-admin-user-session-race-{Guid.NewGuid():N}.db");
         try
         {
+            var connectionString = $"Data Source={databasePath}";
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseSqlite($"Data Source={databasePath}")
+                .UseSqlite(connectionString)
                 .Options;
             var userId = Guid.NewGuid();
             await using (var seed = new ApplicationDbContext(options))
@@ -160,7 +163,7 @@ public class AdminUsersControllerTests
                 await seed.SaveChangesAsync();
             }
 
-            await using var db = new BeforeFirstSaveDbContext(options, async () =>
+            var interceptor = new BeforeTransactionInterceptor(async () =>
             {
                 await using var competitor = new ApplicationDbContext(options);
                 var session = await competitor.UserRefreshTokens.SingleAsync();
@@ -169,6 +172,11 @@ public class AdminUsersControllerTests
                 session.Revision++;
                 await competitor.SaveChangesAsync();
             });
+            var raceOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite(connectionString)
+                .AddInterceptors(interceptor)
+                .Options;
+            await using var db = new ApplicationDbContext(raceOptions);
             using var payload = JsonDocument.Parse("{\"isBlocked\":true,\"status\":\"Suspended\"}");
             var action = await new AdminUsersController(db).Patch(
                 userId,
@@ -517,22 +525,22 @@ public class AdminUsersControllerTests
         return new ApplicationDbContext(options);
     }
 
-    private sealed class BeforeFirstSaveDbContext(
-        DbContextOptions<ApplicationDbContext> options,
-        Func<Task> beforeFirstSave) : ApplicationDbContext(options)
+    private sealed class BeforeTransactionInterceptor(Func<Task> beforeTransaction) : DbTransactionInterceptor
     {
         private int _injected;
 
-        public override async Task<int> SaveChangesAsync(
-            bool acceptAllChangesOnSuccess,
+        public override async ValueTask<InterceptionResult<DbTransaction>> TransactionStartingAsync(
+            DbConnection connection,
+            TransactionStartingEventData eventData,
+            InterceptionResult<DbTransaction> result,
             CancellationToken cancellationToken = default)
         {
             if (Interlocked.Exchange(ref _injected, 1) == 0)
             {
-                await beforeFirstSave();
+                await beforeTransaction();
             }
 
-            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+            return result;
         }
     }
 }

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.703.0 - 2026-08-13
+
+Release entry: `2026-08-13-admin-user-session-revocation-write-boundary`.
+
+### Исправлено
+
+- Деактивация пользователя в админке больше не загружает все активные refresh-сессии и не обновляет их по одной.
+
+### Улучшено
+
+- Relational providers отзывают сессии одним set-based UPDATE в транзакции с user/audit changes; Patch использует внедрённый `IClock`, сохраняя block/unblock и concurrent rotation semantics.
+
+### Проверено
+
+- Fail-first: SELECT `25` сессий и `25` UPDATE; after-fix admin user boundary/controller `13/13`, admin/auth/security/session `90/90`, backend Debug/Release `1475/1475`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, docs/encoding `49/49`, secret scan `702/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `716/736` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram/Bot API/SMTP и production-like 3x-ui локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.702.0 - 2026-08-13
 
 Release entry: `2026-08-13-session-revocation-write-boundary`.
