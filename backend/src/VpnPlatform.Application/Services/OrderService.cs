@@ -276,42 +276,77 @@ public class OrderService
     private async Task<string?> ValidatePromoLimitsAsync(PromoCode promo, Guid? userId, CancellationToken cancellationToken)
     {
         var now = _clock.UtcNow;
-        var countedOrders = await _db.Orders
+        await ExpireStalePromoOrdersAsync(promo.Id, now, cancellationToken);
+
+        var countedOrders = _db.Orders
             .AsNoTracking()
             .Where(x =>
                 x.PromoCodeId == promo.Id &&
                 x.Status != OrderStatus.Failed &&
                 x.Status != OrderStatus.Cancelled &&
-                x.Status != OrderStatus.Expired)
-            .ToListAsync(cancellationToken);
-        var stalePending = countedOrders
-            .Where(x => x.Status == OrderStatus.PendingPayment && x.ExpiresAt <= now)
-            .ToList();
-        var expiredOrderIds = new HashSet<Guid>();
-        foreach (var stale in stalePending)
-        {
-            if (await ExpirePendingOrderAsync(stale.Id, stale.UpdatedAt, now, cancellationToken))
-            {
-                expiredOrderIds.Add(stale.Id);
-            }
-        }
-
-        countedOrders = countedOrders.Where(x => !expiredOrderIds.Contains(x.Id)).ToList();
+                x.Status != OrderStatus.Expired);
 
         if (promo.MaxRedemptions.HasValue
-            && countedOrders.Count >= promo.MaxRedemptions.Value)
+            && await countedOrders.CountAsync(cancellationToken) >= promo.MaxRedemptions.Value)
         {
             return "Promo code redemption limit has been reached.";
         }
 
         if (userId.HasValue
             && promo.MaxPerUser.HasValue
-            && countedOrders.Count(x => x.UserId == userId.Value) >= promo.MaxPerUser.Value)
+            && await countedOrders.CountAsync(x => x.UserId == userId.Value, cancellationToken) >= promo.MaxPerUser.Value)
         {
             return "Promo code usage limit for this account has been reached.";
         }
 
         return null;
+    }
+
+    private async Task ExpireStalePromoOrdersAsync(
+        Guid promoId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (_db is DbContext dbContext && dbContext.Database.IsRelational())
+        {
+            if (string.Equals(
+                    dbContext.Database.ProviderName,
+                    "Microsoft.EntityFrameworkCore.Sqlite",
+                    StringComparison.Ordinal))
+            {
+                await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+                    UPDATE "Orders"
+                    SET "Status" = {(int)OrderStatus.Expired},
+                        "UpdatedAt" = {now}
+                    WHERE "PromoCodeId" = {promoId}
+                      AND "Status" = {(int)OrderStatus.PendingPayment}
+                      AND julianday("ExpiresAt") <= julianday({now})
+                    """, cancellationToken);
+                return;
+            }
+
+            await _db.Orders
+                .Where(x =>
+                    x.PromoCodeId == promoId &&
+                    x.Status == OrderStatus.PendingPayment &&
+                    x.ExpiresAt <= now)
+                .ExecuteUpdateAsync(
+                    setters => setters
+                        .SetProperty(x => x.Status, OrderStatus.Expired)
+                        .SetProperty(x => x.UpdatedAt, now),
+                    cancellationToken);
+            return;
+        }
+
+        var staleOrders = await _db.Orders
+            .Where(x => x.PromoCodeId == promoId && x.Status == OrderStatus.PendingPayment)
+            .ToListAsync(cancellationToken);
+        foreach (var staleOrder in staleOrders.Where(x => x.ExpiresAt <= now))
+        {
+            StatusStateMachine.SetOrderStatus(staleOrder, OrderStatus.Expired, now);
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<Result<PromoResolution>> ResolvePromoAsync(

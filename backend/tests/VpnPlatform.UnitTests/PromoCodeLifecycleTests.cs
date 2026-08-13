@@ -171,7 +171,8 @@ public class PromoCodeLifecycleTests
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
-        await using var db = CreateDb(connection);
+        var interceptor = new CommandCaptureInterceptor();
+        await using var db = CreateDb(connection, interceptor);
         await db.Database.EnsureCreatedAsync();
         var now = new DateTimeOffset(2026, 8, 5, 16, 40, 0, TimeSpan.Zero);
         var (tariff, currentUser) = await SeedBaseAsync(db, now);
@@ -195,11 +196,20 @@ public class PromoCodeLifecycleTests
         };
         db.Orders.Add(staleOrder);
         await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
 
         var result = await new OrderService(db, new FixedClock(now)).CreateOrderAsync(
             Command(currentUser.Id, tariff.Id, promo.Code));
 
         Assert.True(result.IsSuccess, result.Error);
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("UPDATE \"Orders\"", StringComparison.Ordinal) &&
+            command.Contains("\"PromoCodeId\"", StringComparison.Ordinal) &&
+            command.Contains("julianday(\"ExpiresAt\")", StringComparison.Ordinal));
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("COUNT(*)", StringComparison.OrdinalIgnoreCase) &&
+            command.Contains("\"Orders\"", StringComparison.Ordinal) &&
+            command.Contains("\"PromoCodeId\"", StringComparison.Ordinal));
         db.ChangeTracker.Clear();
         Assert.Equal(OrderStatus.Expired, (await db.Orders.SingleAsync(x => x.Id == staleOrder.Id)).Status);
         Assert.Equal(1, await db.Orders.CountAsync(x => x.Status == OrderStatus.PendingPayment));
@@ -439,5 +449,30 @@ public class PromoCodeLifecycleTests
             => command.CommandText.Contains("UPDATE \"Orders\"", StringComparison.Ordinal)
                 ? ValueTask.FromResult(InterceptionResult<int>.SuppressWithResult(0))
                 : base.NonQueryExecutingAsync(command, eventData, result, cancellationToken);
+    }
+
+    private sealed class CommandCaptureInterceptor : DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+
+        public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
     }
 }

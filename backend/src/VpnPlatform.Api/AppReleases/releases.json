@@ -16372,5 +16372,28 @@
         "text": "Roadmap progress is 709/729 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-promo-redemption-query-boundary",
+    "version": "0.697.0",
+    "releasedAt": "2026-08-13T15:52:00+07:00",
+    "title": "Лимиты промокода считаются в БД",
+    "summary": "Просроченные promo slots освобождаются атомарно без полной materialization заказов.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Promo redemption больше не загружает все нетерминальные orders и не обновляет stale pending orders по одному."
+      },
+      {
+        "type": "improved",
+        "text": "SQLite использует parameterized julianday UPDATE, PostgreSQL ExecuteUpdateAsync; global/per-user limits считаются через COUNT(*) с сохранением claim/version race boundary."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 710/730 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

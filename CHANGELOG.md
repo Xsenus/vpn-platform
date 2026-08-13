@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.697.0 - 2026-08-13
+
+Release entry: `2026-08-13-promo-redemption-query-boundary`.
+
+### Исправлено
+
+- Проверка promo limits больше не загружает все нетерминальные orders и не истекает stale pending orders по одному.
+
+### Улучшено
+
+- SQLite освобождает просроченные promo slots одним parameterized `julianday` UPDATE; PostgreSQL использует `ExecuteUpdateAsync`, global/per-user limits считаются через `COUNT(*)`.
+
+### Проверено
+
+- Fail-first SQL был без promo-scoped temporal UPDATE/COUNT; after-fix promo lifecycle `14/14`, order/checkout/payment regression `52/52`, backend Debug/Release `1470/1470`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, Release build `0` warnings/errors, secret scan `698/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `710/730` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider кабинеты, live payment, Telegram/Bot API/SMTP, VPS/SSH/Ansible и production-like 3x-ui локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.696.0 - 2026-08-13
 
 Release entry: `2026-08-13-referral-reward-read-boundary`.

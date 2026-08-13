@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: promo redemption query boundary
+
+Scope:
+- Просроченные pending orders промокода должны освобождать slots одним атомарным DB update без полной materialization.
+- Global/per-user limits должны считаться в БД, а claim/version race и fail-closed поведение при неуспешном expiration обязаны сохраниться.
+
+Results:
+- Roadmap progress: `710/730` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-promo-redemption-query-boundary`, version `0.697.0`.
+- Fail-first: lifecycle возвращал правильный результат, но SQL capture не находил promo-scoped temporal UPDATE и server-side COUNT.
+- After fix: SQLite использует parameterized `julianday` UPDATE, PostgreSQL/другие relational providers `ExecuteUpdateAsync`, limits считаются через `COUNT(*)`. Promo lifecycle `14/14`, order/checkout/payment regression `52/52`, backend Debug/Release `1470/1470`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, Release build `0` warnings/errors, secret scan `698/0` и dependency audit `0 vulnerabilities` зеленые. Реальные provider кабинеты, live payment, Telegram/Bot API/SMTP, VPS/SSH/Ansible и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: referral reward read boundary
 
 Scope:

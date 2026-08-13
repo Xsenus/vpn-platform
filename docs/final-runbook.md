@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-13-referral-reward-read-boundary`, версия `0.696.0`; referral relationship top-1 и active program window применяются в БД.
-- roadmap progress: `709/729` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-13-promo-redemption-query-boundary`, версия `0.697.0`; stale promo slots освобождаются атомарно, global/per-user limits считаются в БД.
+- roadmap progress: `710/730` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production
