@@ -27,38 +27,34 @@ public sealed class TelegramNotificationDeliveryService
         var now = _clock.UtcNow;
         var staleBefore = now.Subtract(DeliveryLease);
         var limit = Math.Clamp(take, 1, 100);
-        var result = new List<Guid>(limit);
-        var offset = 0;
-        while (result.Count < limit)
+        if (IsSqlite())
         {
-            var query = _db.TelegramBotNotifications.AsNoTracking()
-                .Where(x => x.Status == "pending" || x.Status == "sending");
-            var ordered = IsSqlite()
-                ? query.OrderBy(x => x.Id)
-                : query.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id);
-            var batch = await ordered
-                .Skip(offset)
-                .Take(100)
+            var rows = await _db.TelegramBotNotifications
+                .FromSqlInterpolated($"""
+                    SELECT *
+                    FROM "TelegramBotNotifications"
+                    WHERE ("Status" = 'pending'
+                            AND ("NextAttemptAt" IS NULL OR julianday("NextAttemptAt") <= julianday({now})))
+                       OR ("Status" = 'sending'
+                            AND julianday("UpdatedAt") <= julianday({staleBefore}))
+                    ORDER BY julianday("CreatedAt"), "Id"
+                    LIMIT {limit}
+                    """)
+                .AsNoTracking()
                 .ToListAsync(cancellationToken);
-            if (batch.Count == 0)
-            {
-                break;
-            }
-
-            result.AddRange(batch
-                .Where(x => x.Status == "pending"
-                    ? !x.NextAttemptAt.HasValue || x.NextAttemptAt <= now
-                    : x.UpdatedAt <= staleBefore)
-                .Select(x => x.Id)
-                .Take(limit - result.Count));
-            offset += batch.Count;
-            if (batch.Count < 100)
-            {
-                break;
-            }
+            return rows.Select(x => x.Id).ToList();
         }
 
-        return result;
+        return await _db.TelegramBotNotifications
+            .AsNoTracking()
+            .Where(x =>
+                (x.Status == "pending" && (x.NextAttemptAt == null || x.NextAttemptAt <= now)) ||
+                (x.Status == "sending" && x.UpdatedAt <= staleBefore))
+            .OrderBy(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
+            .Select(x => x.Id)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<Result<TelegramNotificationDeliveryResult>> DeliverAsync(Guid notificationId, CancellationToken cancellationToken = default)

@@ -40,33 +40,21 @@ public sealed class OutboxMessageDeliveryService
                 .ToListAsync(cancellationToken);
         }
 
-        var result = new List<Guid>(limit);
-        var offset = 0;
-        while (result.Count < limit)
-        {
-            var batch = await query
-                .OrderBy(x => x.Id)
-                .Skip(offset)
-                .Take(100)
-                .ToListAsync(cancellationToken);
-            if (batch.Count == 0)
-            {
-                break;
-            }
-
-            result.AddRange(batch
-                .Where(x => (!x.NextAttemptAt.HasValue || x.NextAttemptAt <= now)
-                    && (!x.ProcessingStartedAt.HasValue || x.ProcessingStartedAt <= staleBefore))
-                .Select(x => x.Id)
-                .Take(limit - result.Count));
-            offset += batch.Count;
-            if (batch.Count < 100)
-            {
-                break;
-            }
-        }
-
-        return result;
+        var rows = await _db.OutboxMessages
+            .FromSqlInterpolated($"""
+                SELECT *
+                FROM "OutboxMessages"
+                WHERE "ProcessedAt" IS NULL
+                  AND "FailedAt" IS NULL
+                  AND "Attempts" < {MaxAttempts}
+                  AND ("NextAttemptAt" IS NULL OR julianday("NextAttemptAt") <= julianday({now}))
+                  AND ("ProcessingStartedAt" IS NULL OR julianday("ProcessingStartedAt") <= julianday({staleBefore}))
+                ORDER BY julianday("CreatedAt"), "Id"
+                LIMIT {limit}
+                """)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+        return rows.Select(x => x.Id).ToList();
     }
 
     public async Task<Result<OutboxMessageDeliveryResult>> DeliverAsync(Guid messageId, CancellationToken cancellationToken = default)

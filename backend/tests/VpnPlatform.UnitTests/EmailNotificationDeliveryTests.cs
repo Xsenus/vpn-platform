@@ -1,6 +1,8 @@
+using System.Data.Common;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
@@ -82,7 +84,8 @@ public sealed class EmailNotificationDeliveryTests
     public async Task Dispatchable_Query_Should_Include_Due_And_Stale_Only()
     {
         await using var connection = await OpenConnectionAsync();
-        await using var db = CreateDbContext(connection);
+        var interceptor = new CommandCaptureInterceptor();
+        await using var db = CreateDbContext(connection, interceptor);
         await db.Database.EnsureCreatedAsync();
         var clock = new MutableClock(new DateTimeOffset(2026, 8, 5, 9, 0, 0, TimeSpan.Zero));
         var user = User();
@@ -98,11 +101,16 @@ public sealed class EmailNotificationDeliveryTests
         db.Users.Add(user);
         db.NotificationDeliveries.AddRange(due, scheduled, stale, active, sent);
         await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
 
         var ids = await new EmailNotificationDeliveryService(db, clock, new RecordingSender(), new TestProtector())
             .GetDispatchableIdsAsync(20);
 
         Assert.Equal(new[] { due.Id, stale.Id }.OrderBy(x => x), ids.OrderBy(x => x));
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("NotificationDeliveries", StringComparison.Ordinal) &&
+            command.Contains("julianday", StringComparison.OrdinalIgnoreCase) &&
+            command.Contains("LIMIT", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -187,6 +195,27 @@ public sealed class EmailNotificationDeliveryTests
 
     private static ApplicationDbContext CreateDbContext(SqliteConnection connection)
         => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
+
+    private static ApplicationDbContext CreateDbContext(SqliteConnection connection, IInterceptor interceptor)
+        => new(new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor)
+            .Options);
+
+    private sealed class CommandCaptureInterceptor : DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
+    }
 
     private sealed class MutableClock(DateTimeOffset utcNow) : IClock
     {

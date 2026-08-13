@@ -16395,5 +16395,28 @@
         "text": "Roadmap progress is 710/730 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-delivery-dispatch-query-boundary",
+    "version": "0.698.0",
+    "releasedAt": "2026-08-13T16:06:00+07:00",
+    "title": "Очереди доставки ограничены в БД",
+    "summary": "Email, Telegram notification и outbox dispatch выбирают только due/stale batch.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "SQLite workers больше не загружают и не сканируют целиком pending delivery queues перед временной фильтрацией."
+      },
+      {
+        "type": "improved",
+        "text": "Due/retry и stale lease predicates выполняются parameterized julianday SQL с CreatedAt/Id order и LIMIT <= 100; claim/retry lifecycle сохранен."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 711/731 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

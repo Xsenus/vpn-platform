@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.698.0 - 2026-08-13
+
+Release entry: `2026-08-13-delivery-dispatch-query-boundary`.
+
+### Исправлено
+
+- SQLite email, Telegram notification и outbox dispatch больше не загружают и не сканируют pending queues перед due/stale filtering.
+
+### Улучшено
+
+- Три очереди используют parameterized `julianday`, deterministic `CreatedAt/Id` order и `LIMIT <= 100`; provider-neutral LINQ paths и delivery lifecycle сохранены.
+
+### Проверено
+
+- Fail-first SQL assertions `0/3`; after-fix targeted `3/3`, delivery lifecycle `32/32`, backend Debug/Release `1470/1470`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, Release build `0` warnings/errors, secret scan `698/0` и dependency audit `0 vulnerabilities` зеленые.
+- Roadmap `711/731` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные Telegram/Bot API/SMTP delivery, provider кабинеты, live payment, VPS/SSH/Ansible и production-like 3x-ui локально не проверялись; статус остается staging-ready baseline, not production-ready.
+
 ## 0.697.0 - 2026-08-13
 
 Release entry: `2026-08-13-promo-redemption-query-boundary`.

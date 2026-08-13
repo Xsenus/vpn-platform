@@ -1,6 +1,8 @@
+using System.Data.Common;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
@@ -200,7 +202,8 @@ public class OutboxMessageDeliveryTests
     public async Task Dispatchable_Query_Should_Return_Due_And_Stale_Only()
     {
         await using var connection = await OpenConnectionAsync();
-        await using var db = CreateDbContext(connection);
+        var interceptor = new CommandCaptureInterceptor();
+        await using var db = CreateDbContext(connection, interceptor);
         await db.Database.EnsureCreatedAsync();
         var clock = new MutableClock(new DateTimeOffset(2026, 8, 4, 14, 0, 0, TimeSpan.Zero));
         var due = Message(clock.UtcNow, "due");
@@ -216,10 +219,15 @@ public class OutboxMessageDeliveryTests
         failed.FailedAt = clock.UtcNow;
         db.OutboxMessages.AddRange(due, scheduled, stale, active, processed, failed);
         await db.SaveChangesAsync();
+        interceptor.Commands.Clear();
 
         var ids = await new OutboxMessageDeliveryService(db, clock, new RecordingSink()).GetDispatchableIdsAsync(20);
 
         Assert.Equal(new[] { due.Id, stale.Id }.OrderBy(x => x), ids.OrderBy(x => x));
+        Assert.Contains(interceptor.Commands, command =>
+            command.Contains("OutboxMessages", StringComparison.Ordinal) &&
+            command.Contains("julianday", StringComparison.OrdinalIgnoreCase) &&
+            command.Contains("LIMIT", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -368,6 +376,27 @@ public class OutboxMessageDeliveryTests
 
     private static ApplicationDbContext CreateDbContext(SqliteConnection connection)
         => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
+
+    private static ApplicationDbContext CreateDbContext(SqliteConnection connection, IInterceptor interceptor)
+        => new(new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor)
+            .Options);
+
+    private sealed class CommandCaptureInterceptor : DbCommandInterceptor
+    {
+        public List<string> Commands { get; } = [];
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
+    }
 
     private static LocalOutboxMessageSink LocalSink(ApplicationDbContext db, IClock clock)
         => new(db, new ReferralRewardService(db, clock));

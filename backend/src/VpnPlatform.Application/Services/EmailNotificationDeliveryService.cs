@@ -52,13 +52,21 @@ public sealed class EmailNotificationDeliveryService
                 .ToListAsync(cancellationToken);
         }
 
-        var rows = await query.OrderBy(x => x.Id).ToListAsync(cancellationToken);
-        return rows
-            .Where(x => (!x.NextAttemptAt.HasValue || x.NextAttemptAt <= now)
-                && (!x.ProcessingStartedAt.HasValue || x.ProcessingStartedAt <= staleBefore))
-            .Select(x => x.Id)
-            .Take(limit)
-            .ToList();
+        var rows = await _db.NotificationDeliveries
+            .FromSqlInterpolated($"""
+                SELECT *
+                FROM "NotificationDeliveries"
+                WHERE "Channel" = {(int)NotificationChannelType.Email}
+                  AND "Status" = {(int)NotificationDeliveryStatus.Pending}
+                  AND "Attempts" < {MaxAttempts}
+                  AND ("NextAttemptAt" IS NULL OR julianday("NextAttemptAt") <= julianday({now}))
+                  AND ("ProcessingStartedAt" IS NULL OR julianday("ProcessingStartedAt") <= julianday({staleBefore}))
+                ORDER BY julianday("CreatedAt"), "Id"
+                LIMIT {limit}
+                """)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+        return rows.Select(x => x.Id).ToList();
     }
 
     public async Task<Result<EmailNotificationDeliveryResult>> DeliverAsync(Guid notificationId, CancellationToken cancellationToken = default)

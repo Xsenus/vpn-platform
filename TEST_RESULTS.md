@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: delivery dispatch query boundary
+
+Scope:
+- SQLite email, Telegram notification и outbox dispatch должны применять due/retry и stale lease до materialization.
+- Deterministic `CreatedAt/Id` order, requested limit, claim, retry/backoff, cancellation, redaction и terminal lifecycle обязаны сохраниться.
+
+Results:
+- Roadmap progress: `711/731` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-delivery-dispatch-query-boundary`, version `0.698.0`.
+- Fail-first: все три lifecycle-теста возвращали правильные IDs, но SQL assertions `0/3` не находили temporal `julianday` predicates до materialization.
+- After fix: SQLite использует parameterized due/stale queries с `CreatedAt/Id` order и `LIMIT <= 100`, PostgreSQL/другие providers сохраняют LINQ filters. Targeted `3/3`, delivery lifecycle `32/32`, backend Debug/Release `1470/1470`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, Release build `0` warnings/errors, secret scan `698/0` и dependency audit `0 vulnerabilities` зеленые. Реальные Telegram/Bot API/SMTP delivery, provider кабинеты, live payment, VPS/SSH/Ansible и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: promo redemption query boundary
 
 Scope:
