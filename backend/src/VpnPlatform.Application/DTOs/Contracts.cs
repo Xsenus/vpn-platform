@@ -3,8 +3,25 @@ using VpnPlatform.Domain.Enums;
 
 namespace VpnPlatform.Application.DTOs;
 
+public sealed record PublicTariffDto(
+    Guid Id,
+    string Name,
+    string Slug,
+    string Description,
+    string FullDescription,
+    IReadOnlyList<string> Features,
+    string Badge,
+    int DurationDays,
+    decimal Price,
+    string Currency,
+    int MaxDevices,
+    long? TrafficLimit,
+    string Category,
+    string AfterPaymentText);
+
 public sealed record TariffDto(
     Guid Id,
+    int Revision,
     string Name,
     string Slug,
     string Description,
@@ -31,6 +48,31 @@ public sealed record TariffDto(
     string AfterPaymentText,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
+
+public sealed record TariffCreateRequest(
+    string? Name = null,
+    string? Slug = null,
+    string? Description = null,
+    string? FullDescription = null,
+    string? FeaturesJson = null,
+    string? Badge = null,
+    int DurationDays = 0,
+    decimal Price = 0,
+    string? Currency = null,
+    int MaxDevices = 0,
+    long? TrafficLimit = null,
+    bool IsTrial = false,
+    bool IsActive = true,
+    int SortOrder = 100,
+    DateTimeOffset? VisibleFrom = null,
+    DateTimeOffset? VisibleTo = null,
+    TariffType TariffType = TariffType.Personal,
+    string? Category = null,
+    string? AllowedRegionsCsv = null,
+    string? AllowedNodeGroupsCsv = null,
+    bool IsReferralEligible = true,
+    string? ProvisioningScenario = null,
+    string? AfterPaymentText = null);
 
 public sealed record PublicFaqEntryDto(string Question, string Answer, string Category);
 public sealed record FaqEntryDto(Guid Id, int Revision, string Question, string Answer, string Category, bool IsActive, bool ShowOnHome, bool ShowOnFaqPage, int SortOrder, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);

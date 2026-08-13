@@ -10,20 +10,7 @@ export type CheckoutUnavailableCopy = {
 }
 
 export function getTariffFeatures(tariff: TariffDto) {
-  if (Array.isArray(tariff.features) && tariff.features.length > 0) {
-    return tariff.features.map((item) => item.trim()).filter(Boolean)
-  }
-
-  if (!tariff.featuresJson) return []
-
-  try {
-    const parsed = JSON.parse(tariff.featuresJson)
-    return Array.isArray(parsed)
-      ? parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.trim())
-      : []
-  } catch {
-    return []
-  }
+  return tariff.features.map((item) => item.trim()).filter(Boolean)
 }
 
 export function getPublicListState(loading: boolean, error: string, itemCount: number): PublicListState {

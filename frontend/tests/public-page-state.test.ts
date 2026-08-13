@@ -9,12 +9,16 @@ function tariff(overrides: Partial<TariffDto>): TariffDto {
     name: 'Оптимальный',
     slug: 'optimal',
     description: 'VPN на месяц',
+    fullDescription: '',
+    features: [],
+    badge: '',
     durationDays: 30,
     price: 490,
     currency: 'RUB',
     maxDevices: 3,
-    isActive: true,
-    sortOrder: 10,
+    trafficLimit: null,
+    category: 'default',
+    afterPaymentText: '',
     ...overrides
   }
 }
@@ -60,10 +64,9 @@ function order(overrides: Partial<OrderDto> = {}): OrderDto {
   }
 }
 
-test('public page state parses tariff features from array and JSON safely', () => {
+test('public page state normalizes tariff features from the public array contract', () => {
   assert.deepEqual(getTariffFeatures(tariff({ features: [' Автовыдача ', '', 'QR-код'] })), ['Автовыдача', 'QR-код'])
-  assert.deepEqual(getTariffFeatures(tariff({ featuresJson: '["До 3 устройств","Поддержка"]' })), ['До 3 устройств', 'Поддержка'])
-  assert.deepEqual(getTariffFeatures(tariff({ featuresJson: '{bad json}' })), [])
+  assert.deepEqual(getTariffFeatures(tariff({ features: [] })), [])
 })
 
 test('public page state separates loading, error, empty and ready states', () => {

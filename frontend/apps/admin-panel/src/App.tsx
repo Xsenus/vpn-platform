@@ -11,6 +11,7 @@ import {
   AdminSessionDto,
   AdminTelegramBotConnectionCheckDto,
   AdminTelegramBotSettingsDto,
+  AdminTariffDto,
   AdminUserDto,
   AdminUserOverviewDto,
   ApiClient,
@@ -37,7 +38,6 @@ import {
   SubscriptionDto,
   SupportConversationDto,
   SupportMessageDto,
-  TariffDto,
   UpdateTariffPayload,
   UpdateTelegramBotSettingsPayload,
   UpsertPaymentProviderAccountPayload,
@@ -740,6 +740,9 @@ const defaultTariffForm: UpdateTariffPayload = {
   isTrial: false,
   isActive: true,
   sortOrder: 100,
+  visibleFrom: null,
+  visibleTo: null,
+  tariffType: 'Personal',
   category: 'default',
   allowedRegionsCsv: '',
   allowedNodeGroupsCsv: '',
@@ -880,7 +883,7 @@ function homeContentIssueCount(readiness: SiteContentReadinessDto | null) {
   return readiness.missingKeys.length + readiness.inactiveKeys.length + readiness.emptyKeys.length + readiness.duplicateKeys.length
 }
 
-function parseTariffFeatures(tariff: Pick<TariffDto, 'features' | 'featuresJson'> | UpdateTariffPayload) {
+function parseTariffFeatures(tariff: Pick<AdminTariffDto, 'features' | 'featuresJson'> | UpdateTariffPayload) {
   const directFeatures = 'features' in tariff ? tariff.features : undefined
   if (Array.isArray(directFeatures) && directFeatures.length > 0) return directFeatures
 
@@ -898,14 +901,26 @@ function featuresTextToJson(value: string) {
   return JSON.stringify(value.split('\n').map((item) => item.trim()).filter(Boolean))
 }
 
-function featuresToText(tariff: Pick<TariffDto, 'features' | 'featuresJson'> | UpdateTariffPayload) {
+function featuresToText(tariff: Pick<AdminTariffDto, 'features' | 'featuresJson'> | UpdateTariffPayload) {
   return parseTariffFeatures(tariff).join('\n')
 }
 
-function validateTariffForm(form: UpdateTariffPayload) {
+function validateTariffForm(form: UpdateTariffPayload, featuresText = '') {
   const errors: string[] = []
   const currency = String(form.currency ?? '').trim().toUpperCase()
   const slug = String(form.slug ?? '').trim()
+  const fieldLengths: Array<[string, unknown, number]> = [
+    ['Название', form.name, 200],
+    ['Slug', form.slug, 160],
+    ['Короткое описание', form.description, 500],
+    ['Полное описание', form.fullDescription, 4000],
+    ['Бейдж', form.badge, 80],
+    ['Категория', form.category, 120],
+    ['Разрешенные регионы', form.allowedRegionsCsv, 2000],
+    ['Группы серверов', form.allowedNodeGroupsCsv, 2000],
+    ['Сценарий выдачи', form.provisioningScenario, 120],
+    ['Текст после оплаты', form.afterPaymentText, 2000]
+  ]
 
   if (!String(form.name ?? '').trim()) errors.push('Укажите название тарифа.')
   if (n(form.price) < 0) errors.push('Цена не может быть отрицательной.')
@@ -913,6 +928,11 @@ function validateTariffForm(form: UpdateTariffPayload) {
   if (n(form.maxDevices) <= 0) errors.push('Количество устройств должно быть больше 0.')
   if (!/^[A-Z]{3}$/.test(currency)) errors.push('Валюта должна быть кодом из 3 латинских букв: RUB, USD или XTR.')
   if (slug && !/^[a-z0-9а-яё_-]+(?:-[a-z0-9а-яё_-]+)*$/i.test(slug)) errors.push('Slug может содержать буквы, цифры, дефис и подчёркивание.')
+  for (const [label, value, limit] of fieldLengths) {
+    if (String(value ?? '').trim().length > limit) errors.push(`${label}: не более ${limit} символов.`)
+  }
+  if (featuresTextToJson(featuresText).length > 4000) errors.push('Преимущества: общий объем не должен превышать 4000 символов.')
+  if (form.visibleFrom && form.visibleTo && new Date(form.visibleFrom) > new Date(form.visibleTo)) errors.push('Начало публикации должно быть раньше окончания.')
 
   return errors
 }
@@ -1000,7 +1020,8 @@ function validateInboundForm(form: CreateVpnInboundPayload, selectedVpnPanelId: 
   return errors
 }
 
-function toDateTimeLocalValue(value: string) {
+function toDateTimeLocalValue(value?: string | null) {
+  if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
   const offset = date.getTimezoneOffset()
@@ -1010,6 +1031,10 @@ function toDateTimeLocalValue(value: string) {
 
 function fromDateTimeLocalValue(value: string) {
   return value ? new Date(value).toISOString() : new Date().toISOString()
+}
+
+function fromOptionalDateTimeLocalValue(value: string) {
+  return value ? fromDateTimeLocalValue(value) : null
 }
 
 function providerConfigured(account: PaymentProviderAccountDto) {
@@ -1099,10 +1124,11 @@ export function App() {
   const [supportMessagesError, setSupportMessagesError] = useState('')
   const [supportReplyText, setSupportReplyText] = useState('')
   const [supportNoteText, setSupportNoteText] = useState('')
-  const [tariffs, setTariffs] = useState<TariffDto[]>([])
+  const [tariffs, setTariffs] = useState<AdminTariffDto[]>([])
   const [tariffForm, setTariffForm] = useState<UpdateTariffPayload>(defaultTariffForm)
   const [tariffFeaturesText, setTariffFeaturesText] = useState('')
   const [editingTariffId, setEditingTariffId] = useState('')
+  const [editingTariffRevision, setEditingTariffRevision] = useState<number | null>(null)
   const [referralPrograms, setReferralPrograms] = useState<AdminReferralProgramDto[]>([])
   const [referralRewards, setReferralRewards] = useState<AdminRewardLedgerDto[]>([])
   const [referralProgramForm, setReferralProgramForm] = useState<ReferralProgramFormState>(defaultReferralProgramForm)
@@ -2491,10 +2517,19 @@ export function App() {
     setTariffForm(defaultTariffForm)
     setTariffFeaturesText('')
     setEditingTariffId('')
+    setEditingTariffRevision(null)
   }
 
-  const editTariff = (tariff: TariffDto) => {
+  const throwTariffConflict = async (error: unknown, action: AdminActionContext, tariffId: string): Promise<never> => {
+    if (!(error instanceof ApiClientError) || error.status !== 409) throw error
+    await action.reloadAll()
+    if (action.isCurrent() && editingTariffIdRef.current === tariffId) resetTariffForm()
+    throw new ApiClientError('Тариф уже изменен другим администратором. Список обновлен: повторите действие с актуальной версией.', 409, error.payload)
+  }
+
+  const editTariff = (tariff: AdminTariffDto) => {
     setEditingTariffId(tariff.id)
+    setEditingTariffRevision(tariff.revision)
     setTariffForm({
       name: tariff.name,
       slug: tariff.slug,
@@ -2510,6 +2545,9 @@ export function App() {
       isTrial: tariff.isTrial ?? false,
       isActive: tariff.isActive !== false,
       sortOrder: tariff.sortOrder ?? 100,
+      visibleFrom: tariff.visibleFrom,
+      visibleTo: tariff.visibleTo,
+      tariffType: tariff.tariffType,
       category: tariff.category,
       allowedRegionsCsv: tariff.allowedRegionsCsv ?? '',
       allowedNodeGroupsCsv: tariff.allowedNodeGroupsCsv ?? '',
@@ -2523,7 +2561,7 @@ export function App() {
 
   const handleSaveTariff = async () => {
     if (!token || !canWriteActiveSection) return
-    const validationErrors = validateTariffForm(tariffForm)
+    const validationErrors = validateTariffForm(tariffForm, tariffFeaturesText)
     if (validationErrors.length > 0) {
       setError(`Тариф: ${validationErrors.join(' ')}`)
       return
@@ -2538,9 +2576,15 @@ export function App() {
     const editingId = editingTariffId
     const submittedForm = tariffForm
     const submittedFeaturesText = tariffFeaturesText
+    const submittedRevision = editingTariffRevision
     await runAction('tariffs', 'tariff-save', async (action) => {
       if (editingId) {
-        await api.updateAdminTariff(token, editingId, payload)
+        if (submittedRevision === null) throw new ApiClientError('Не удалось определить ревизию тарифа. Откройте его заново.', 409, null)
+        try {
+          await api.updateAdminTariff(token, editingId, payload, submittedRevision)
+        } catch (error) {
+          await throwTariffConflict(error, action, editingId)
+        }
       } else {
         await api.createAdminTariff(token, payload)
       }
@@ -2553,18 +2597,23 @@ export function App() {
     }, tariffActionResourceKey(editingId || 'create'))
   }
 
-  const handleToggleTariff = async (tariff: TariffDto) => {
+  const handleToggleTariff = async (tariff: AdminTariffDto) => {
     await runAction('tariffs', tariff.id, async (action) => {
-      await api.updateAdminTariff(token, tariff.id, { isActive: tariff.isActive === false })
+      try {
+        await api.updateAdminTariff(token, tariff.id, { isActive: tariff.isActive === false }, tariff.revision)
+      } catch (error) {
+        await throwTariffConflict(error, action, tariff.id)
+      }
       if (!action.isCurrent()) return
       setNotice(`Тариф ${tariff.name} обновлён.`)
       await action.reloadAll()
     }, tariffActionResourceKey(tariff.id))
   }
 
-  const handleDeleteTariff = async (tariff: TariffDto) => {
+  const handleDeleteTariff = async (tariff: AdminTariffDto) => {
     await runAction('tariffs', `delete-${tariff.id}`, async (action) => {
-      const result = await api.deleteAdminTariff(token, tariff.id)
+      const result = await api.deleteAdminTariff(token, tariff.id, tariff.revision)
+        .catch((error: unknown) => throwTariffConflict(error, action, tariff.id))
       if (!action.isCurrent()) return
       if (editingTariffIdRef.current === tariff.id) resetTariffForm()
       setNotice(result.archived ? `Тариф ${tariff.name} архивирован и скрыт с витрины.` : `Тариф ${tariff.name} удалён.`)
@@ -3692,7 +3741,7 @@ export function App() {
     : undefined
   const providerFormErrors = validatePaymentProviderForm(providerForm, providerFormSetup, editingProviderAccount)
   const providerFormActionBusy = isActionResourceBusy(paymentProviderActionResourceKey(editingProviderAccountId || 'create'))
-  const tariffFormErrors = validateTariffForm(tariffForm)
+  const tariffFormErrors = validateTariffForm(tariffForm, tariffFeaturesText)
   const tariffFormActionBusy = isActionResourceBusy(tariffActionResourceKey(editingTariffId || 'create'))
   const releaseFormActionBusy = isActionResourceBusy(appReleaseActionResourceKey(editingReleaseId || 'create'))
   const faqFormActionBusy = isActionResourceBusy(faqActionResourceKey(editingFaqId || 'create'))
@@ -4508,10 +4557,10 @@ export function App() {
             <fieldset className="form-section">
               <legend>Цена и срок</legend>
               <div className="form-grid">
-                <label><span>Название</span><input value={tariffForm.name ?? ''} onChange={(e) => updateTariffForm('name', e.target.value)} placeholder="Например, Месяц VPN" required /></label>
-                <label><span>Slug</span><input value={tariffForm.slug ?? ''} onChange={(e) => updateTariffForm('slug', e.target.value)} placeholder="month-vpn" /></label>
+                <label><span>Название</span><input value={tariffForm.name ?? ''} onChange={(e) => updateTariffForm('name', e.target.value)} placeholder="Например, Месяц VPN" maxLength={200} required /></label>
+                <label><span>Slug</span><input value={tariffForm.slug ?? ''} onChange={(e) => updateTariffForm('slug', e.target.value)} placeholder="month-vpn" maxLength={160} /></label>
                 <label><span>Цена</span><input value={tariffForm.price ?? 0} onChange={(e) => updateTariffForm('price', Number(e.target.value) || 0)} type="number" min={0} step="1" placeholder="490" /></label>
-                <label><span>Валюта</span><input value={tariffForm.currency ?? 'RUB'} onChange={(e) => updateTariffForm('currency', e.target.value)} placeholder="RUB" /></label>
+                <label><span>Валюта</span><input value={tariffForm.currency ?? 'RUB'} onChange={(e) => updateTariffForm('currency', e.target.value)} placeholder="RUB" maxLength={3} /></label>
                 <label><span>Срок, дней</span><input value={tariffForm.durationDays ?? 30} onChange={(e) => updateTariffForm('durationDays', Number(e.target.value) || 0)} type="number" min={1} step="1" placeholder="30" /></label>
                 <label><span>Устройств</span><input value={tariffForm.maxDevices ?? 3} onChange={(e) => updateTariffForm('maxDevices', Number(e.target.value) || 0)} type="number" min={1} step="1" placeholder="3" /></label>
                 <label><span>Лимит трафика, ГБ</span><input value={tariffForm.trafficLimit ? Math.round(tariffForm.trafficLimit / 1024 / 1024 / 1024) : ''} onChange={(e) => updateTariffForm('trafficLimit', e.target.value ? Number(e.target.value) * 1024 * 1024 * 1024 : null)} type="number" min={0} step="1" placeholder="Без лимита" /></label>
@@ -4521,17 +4570,20 @@ export function App() {
               <legend>Публикация</legend>
               <div className="form-grid">
                 <label><span>Порядок</span><input value={tariffForm.sortOrder ?? 100} onChange={(e) => updateTariffForm('sortOrder', Number(e.target.value) || 0)} type="number" min={0} step="1" placeholder="100" /></label>
-                <label><span>Категория</span><input value={tariffForm.category ?? 'default'} onChange={(e) => updateTariffForm('category', e.target.value)} placeholder="default" /></label>
-                <label><span>Бейдж</span><input value={tariffForm.badge ?? ''} onChange={(e) => updateTariffForm('badge', e.target.value)} placeholder="Популярный, Выгодно, Семейный" /></label>
+                <label><span>Категория</span><input value={tariffForm.category ?? 'default'} onChange={(e) => updateTariffForm('category', e.target.value)} placeholder="default" maxLength={120} /></label>
+                <label><span>Бейдж</span><input value={tariffForm.badge ?? ''} onChange={(e) => updateTariffForm('badge', e.target.value)} placeholder="Популярный, Выгодно, Семейный" maxLength={80} /></label>
                 <label><span>Сценарий выдачи</span><select value={tariffForm.provisioningScenario ?? 'auto'} onChange={(e) => updateTariffForm('provisioningScenario', e.target.value)}><option value="auto">По умолчанию (auto)</option>{workScenarios.map((scenario) => <option key={scenario.id} value={scenario.key}>{scenario.name} ({scenario.key})</option>)}</select></label>
+                <label><span>Тип тарифа</span><select value={tariffForm.tariffType ?? 'Personal'} onChange={(e) => updateTariffForm('tariffType', e.target.value)}><option value="Weekly">Неделя</option><option value="Monthly">Месяц</option><option value="Quarterly">Квартал</option><option value="SemiAnnual">Полгода</option><option value="Annual">Год</option><option value="Trial">Пробный</option><option value="Promo">Акция</option><option value="Personal">Персональный</option></select></label>
+                <label><span>Показывать с</span><input type="datetime-local" value={toDateTimeLocalValue(tariffForm.visibleFrom)} onChange={(e) => updateTariffForm('visibleFrom', fromOptionalDateTimeLocalValue(e.target.value))} /></label>
+                <label><span>Показывать до</span><input type="datetime-local" value={toDateTimeLocalValue(tariffForm.visibleTo)} onChange={(e) => updateTariffForm('visibleTo', fromOptionalDateTimeLocalValue(e.target.value))} /></label>
               </div>
-              <label><span>Короткое описание</span><textarea value={tariffForm.description ?? ''} onChange={(e) => updateTariffForm('description', e.target.value)} placeholder="Коротко для карточки тарифа" rows={3} /></label>
-              <label><span>Полное описание</span><textarea value={tariffForm.fullDescription ?? ''} onChange={(e) => updateTariffForm('fullDescription', e.target.value)} placeholder="Подробное описание для публичной страницы" rows={4} /></label>
+              <label><span>Короткое описание</span><textarea value={tariffForm.description ?? ''} onChange={(e) => updateTariffForm('description', e.target.value)} placeholder="Коротко для карточки тарифа" rows={3} maxLength={500} /></label>
+              <label><span>Полное описание</span><textarea value={tariffForm.fullDescription ?? ''} onChange={(e) => updateTariffForm('fullDescription', e.target.value)} placeholder="Подробное описание для публичной страницы" rows={4} maxLength={4000} /></label>
               <label><span>Преимущества, по одному в строке</span><textarea value={tariffFeaturesText} onChange={(e) => setTariffFeaturesText(e.target.value)} placeholder={'3 устройства\nАвтоматическая выдача\nQR-код в кабинете'} rows={5} /></label>
-              <label><span>Текст после оплаты</span><textarea value={tariffForm.afterPaymentText ?? ''} onChange={(e) => updateTariffForm('afterPaymentText', e.target.value)} placeholder="Что увидит пользователь после покупки" rows={3} /></label>
+              <label><span>Текст после оплаты</span><textarea value={tariffForm.afterPaymentText ?? ''} onChange={(e) => updateTariffForm('afterPaymentText', e.target.value)} placeholder="Что увидит пользователь после покупки" rows={3} maxLength={2000} /></label>
               <div className="form-grid">
-                <label><span>Разрешенные регионы</span><input value={tariffForm.allowedRegionsCsv ?? ''} onChange={(e) => updateTariffForm('allowedRegionsCsv', e.target.value)} placeholder="eu,us" /></label>
-                <label><span>Группы серверов</span><input value={tariffForm.allowedNodeGroupsCsv ?? ''} onChange={(e) => updateTariffForm('allowedNodeGroupsCsv', e.target.value)} placeholder="default,premium" /></label>
+                <label><span>Разрешенные регионы</span><input value={tariffForm.allowedRegionsCsv ?? ''} onChange={(e) => updateTariffForm('allowedRegionsCsv', e.target.value)} placeholder="eu,us" maxLength={2000} /></label>
+                <label><span>Группы серверов</span><input value={tariffForm.allowedNodeGroupsCsv ?? ''} onChange={(e) => updateTariffForm('allowedNodeGroupsCsv', e.target.value)} placeholder="default,premium" maxLength={2000} /></label>
               </div>
               <label className="checkbox-row"><input checked={tariffForm.isActive !== false} onChange={(e) => updateTariffForm('isActive', e.target.checked)} type="checkbox" /> Показывать пользователям</label>
               <label className="checkbox-row"><input checked={tariffForm.isTrial === true} onChange={(e) => updateTariffForm('isTrial', e.target.checked)} type="checkbox" /> Пробный тариф</label>

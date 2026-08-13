@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.679.0 - 2026-08-13
+
+Release entry: `2026-08-13-tariff-boundary`.
+
+### Исправлено
+
+- Публичный API тарифов больше не раскрывает publication rules, internal allocation CSV, provisioning key и audit timestamps.
+- Устаревшая admin-форма не может перезаписать, выключить или удалить параллельно измененный тариф; invalid features JSON больше не стирается молча.
+
+### Улучшено
+
+- Public/admin DTO разделены exact allow-list validators, create использует явный request без client-owned ID/audit fields, а PATCH отклоняет unknown, duplicate и no-op payloads.
+- Списки ограничены DB-side top-200, `Tariff.Revision` защищён EF concurrency token и migration, а редактор получил тип и расписание публикации с frontend/backend границами.
+
+### Проверено
+
+- Fail-first tariff suite `17/27`; after-fix tariff/SQLite `33/33`, frontend `169/169`, backend `1424/1424`, typecheck/build/bundle budget, EF drift, fresh SQLite, strict UTF-8, secret scan и dependency audit `0 vulnerabilities` зелёные. CRUD desktop/mobile `2/2`, stale PATCH/DELETE `4/4`, public checkout `2/2`, render `2/2`, focused responsive/WCAG `1/1`.
+- Roadmap `692/712` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные provider/Telegram кабинеты и VPS/staging/payment/3x-ui evidence локально не закрывались; статус остается staging-ready baseline, not production-ready.
+
 ## 0.678.0 - 2026-08-13
 
 Release entry: `2026-08-13-work-scenario-boundary`.

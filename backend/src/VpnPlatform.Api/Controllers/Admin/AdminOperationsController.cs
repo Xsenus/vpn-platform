@@ -109,6 +109,35 @@ public sealed record AdminRewardLedgerDto(
 public class AdminOperationsController : ControllerBase
 {
     private const string PrecheckReportStepName = "Precheck report";
+    private const int TariffListLimit = 200;
+
+    private static readonly HashSet<string> TariffPatchFields = new(StringComparer.Ordinal)
+    {
+        "revision",
+        "name",
+        "slug",
+        "description",
+        "fullDescription",
+        "featuresJson",
+        "badge",
+        "durationDays",
+        "price",
+        "currency",
+        "maxDevices",
+        "trafficLimit",
+        "isTrial",
+        "isActive",
+        "sortOrder",
+        "visibleFrom",
+        "visibleTo",
+        "tariffType",
+        "category",
+        "allowedRegionsCsv",
+        "allowedNodeGroupsCsv",
+        "isReferralEligible",
+        "provisioningScenario",
+        "afterPaymentText"
+    };
 
     private static readonly string[] FinanceAuditEntityTypes =
     [
@@ -2530,6 +2559,9 @@ public class AdminOperationsController : ControllerBase
     {
         var tariffs = await _db.Tariffs.AsNoTracking()
             .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.Name)
+            .ThenBy(x => x.Id)
+            .Take(TariffListLimit)
             .ToListAsync(cancellationToken);
 
         return Ok(tariffs.Select(MapTariffDto).ToList());
@@ -2537,8 +2569,9 @@ public class AdminOperationsController : ControllerBase
 
     [HttpPost("tariffs")]
     [Authorize(Policy = AdminPolicies.AdminWrite)]
-    public async Task<IActionResult> CreateTariff([FromBody] Tariff tariff, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreateTariff([FromBody] TariffCreateRequest request, CancellationToken cancellationToken)
     {
+        var tariff = CreateTariffEntity(request);
         var validationError = NormalizeTariff(tariff);
         if (validationError is not null)
         {
@@ -2569,6 +2602,12 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = payloadError });
         }
 
+        var expectedRevision = payload.GetProperty("revision").GetInt32();
+        if (expectedRevision != tariff.Revision)
+        {
+            return Conflict(new { error = "Tariff changed. Reload it and retry.", revision = tariff.Revision });
+        }
+
         var before = JsonSerializer.Serialize(MapTariffDto(tariff));
         var candidate = CloneTariff(tariff);
         ApplyTariffPatch(candidate, payload);
@@ -2585,18 +2624,34 @@ public class AdminOperationsController : ControllerBase
         }
 
         CopyTariffFields(candidate, tariff);
+        tariff.Revision = checked(tariff.Revision + 1);
         tariff.UpdatedAt = _clock.UtcNow;
         AddAuditLog("tariff.update", "Tariff", id, before, JsonSerializer.Serialize(MapTariffDto(tariff)));
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Tariff changed. Reload it and retry." });
+        }
         return Ok(MapTariffDto(tariff));
     }
 
     [HttpDelete("tariffs/{id:guid}")]
     [Authorize(Policy = AdminPolicies.AdminWrite)]
-    public async Task<IActionResult> DeleteTariff(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteTariff(Guid id, [FromQuery] int? revision, CancellationToken cancellationToken)
     {
         var tariff = await _db.Tariffs.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (tariff is null) return NotFound();
+        if (!revision.HasValue || revision.Value < 0)
+        {
+            return BadRequest(new { error = "Tariff revision is required and must be a non-negative integer." });
+        }
+        if (revision.Value != tariff.Revision)
+        {
+            return Conflict(new { error = "Tariff changed. Reload it and retry.", revision = tariff.Revision });
+        }
 
         var hasLinkedOrders = await _db.Orders.AnyAsync(x => x.TariffId == id, cancellationToken);
         var hasLinkedSubscriptions = await _db.Subscriptions.AnyAsync(x => x.TariffId == id, cancellationToken);
@@ -2605,16 +2660,31 @@ public class AdminOperationsController : ControllerBase
             var beforeArchive = JsonSerializer.Serialize(MapTariffDto(tariff));
             tariff.IsActive = false;
             tariff.VisibleTo = _clock.UtcNow;
+            tariff.Revision = checked(tariff.Revision + 1);
             tariff.UpdatedAt = _clock.UtcNow;
             AddAuditLog("tariff.archive", "Tariff", id, beforeArchive, JsonSerializer.Serialize(MapTariffDto(tariff)));
-            await _db.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Conflict(new { error = "Tariff changed. Reload it and retry." });
+            }
             return Ok(new { id, deleted = false, archived = true });
         }
 
         var before = JsonSerializer.Serialize(MapTariffDto(tariff));
         _db.Tariffs.Remove(tariff);
         AddAuditLog("tariff.delete", "Tariff", id, before, "{}");
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Tariff changed. Reload it and retry." });
+        }
         return Ok(new { id, deleted = true });
     }
 
@@ -2762,6 +2832,7 @@ public class AdminOperationsController : ControllerBase
     private static TariffDto MapTariffDto(Tariff tariff)
         => new(
             tariff.Id,
+            tariff.Revision,
             tariff.Name,
             tariff.Slug,
             tariff.Description,
@@ -2789,6 +2860,34 @@ public class AdminOperationsController : ControllerBase
             tariff.CreatedAt,
             tariff.UpdatedAt);
 
+    private static Tariff CreateTariffEntity(TariffCreateRequest request)
+        => new()
+        {
+            Name = request.Name ?? string.Empty,
+            Slug = request.Slug ?? string.Empty,
+            Description = request.Description ?? string.Empty,
+            FullDescription = request.FullDescription ?? string.Empty,
+            FeaturesJson = request.FeaturesJson ?? "[]",
+            Badge = request.Badge ?? string.Empty,
+            DurationDays = request.DurationDays,
+            Price = request.Price,
+            Currency = request.Currency ?? "RUB",
+            MaxDevices = request.MaxDevices,
+            TrafficLimit = request.TrafficLimit,
+            IsTrial = request.IsTrial,
+            IsActive = request.IsActive,
+            SortOrder = request.SortOrder,
+            VisibleFrom = request.VisibleFrom,
+            VisibleTo = request.VisibleTo,
+            TariffType = request.TariffType,
+            Category = request.Category ?? "default",
+            AllowedRegionsCsv = request.AllowedRegionsCsv ?? string.Empty,
+            AllowedNodeGroupsCsv = request.AllowedNodeGroupsCsv ?? string.Empty,
+            IsReferralEligible = request.IsReferralEligible,
+            ProvisioningScenario = request.ProvisioningScenario ?? "auto",
+            AfterPaymentText = request.AfterPaymentText ?? string.Empty
+        };
+
     private static string? NormalizeTariff(Tariff tariff)
     {
         if (string.IsNullOrWhiteSpace(tariff.Name))
@@ -2806,11 +2905,20 @@ public class AdminOperationsController : ControllerBase
             return "Tariff maxDevices must be positive.";
         }
 
+        if (!Enum.IsDefined(tariff.TariffType))
+        {
+            return "Tariff tariffType must be a supported tariff type.";
+        }
+
         tariff.Name = tariff.Name.Trim();
         tariff.Slug = Slugify(string.IsNullOrWhiteSpace(tariff.Slug) ? tariff.Name : tariff.Slug);
         tariff.Description = tariff.Description.Trim();
         tariff.FullDescription = tariff.FullDescription.Trim();
-        tariff.FeaturesJson = NormalizeTariffFeaturesJson(tariff.FeaturesJson);
+        if (!TryNormalizeTariffFeaturesJson(tariff.FeaturesJson, out var normalizedFeaturesJson))
+        {
+            return "Tariff featuresJson must be a JSON array of strings.";
+        }
+        tariff.FeaturesJson = normalizedFeaturesJson;
         tariff.Badge = tariff.Badge.Trim();
         tariff.Currency = string.IsNullOrWhiteSpace(tariff.Currency) ? "RUB" : tariff.Currency.Trim().ToUpperInvariant();
         if (!Regex.IsMatch(tariff.Currency, "^[A-Z]{3}$"))
@@ -2829,6 +2937,18 @@ public class AdminOperationsController : ControllerBase
             return "Tariff visibleFrom must be earlier than visibleTo.";
         }
 
+        if (tariff.Name.Length > 200) return "Tariff name must not exceed 200 characters.";
+        if (tariff.Slug.Length > 160) return "Tariff slug must not exceed 160 characters.";
+        if (tariff.Description.Length > 500) return "Tariff description must not exceed 500 characters.";
+        if (tariff.FullDescription.Length > 4000) return "Tariff fullDescription must not exceed 4000 characters.";
+        if (tariff.FeaturesJson.Length > 4000) return "Tariff featuresJson must not exceed 4000 characters.";
+        if (tariff.Badge.Length > 80) return "Tariff badge must not exceed 80 characters.";
+        if (tariff.Category.Length > 120) return "Tariff category must not exceed 120 characters.";
+        if (tariff.AllowedRegionsCsv.Length > 2000) return "Tariff allowedRegionsCsv must not exceed 2000 characters.";
+        if (tariff.AllowedNodeGroupsCsv.Length > 2000) return "Tariff allowedNodeGroupsCsv must not exceed 2000 characters.";
+        if (tariff.ProvisioningScenario.Length > 120) return "Tariff provisioningScenario must not exceed 120 characters.";
+        if (tariff.AfterPaymentText.Length > 2000) return "Tariff afterPaymentText must not exceed 2000 characters.";
+
         return null;
     }
 
@@ -2839,30 +2959,52 @@ public class AdminOperationsController : ControllerBase
             return "Tariff patch must be a JSON object.";
         }
 
+        var seenFields = new HashSet<string>(StringComparer.Ordinal);
+        var hasRevision = false;
+        var editableFieldCount = 0;
         foreach (var property in payload.EnumerateObject())
         {
+            if (!TariffPatchFields.Contains(property.Name))
+            {
+                return $"Unknown tariff field '{property.Name}'.";
+            }
+            if (!seenFields.Add(property.Name))
+            {
+                return $"Tariff field '{property.Name}' must not be repeated.";
+            }
+
             var value = property.Value;
             switch (property.Name)
             {
+                case "revision":
+                    if (value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out var revision) || revision < 0)
+                    {
+                        return "Tariff field 'revision' must be a non-negative integer.";
+                    }
+                    hasRevision = true;
+                    break;
                 case "name" or "slug" or "description" or "fullDescription" or "featuresJson" or "badge"
                     or "currency" or "category" or "allowedRegionsCsv" or "allowedNodeGroupsCsv"
                     or "provisioningScenario" or "afterPaymentText":
-                    if (value.ValueKind is not (JsonValueKind.String or JsonValueKind.Null))
+                    if (value.ValueKind != JsonValueKind.String)
                     {
                         return $"Tariff field '{property.Name}' must be a string.";
                     }
+                    editableFieldCount++;
                     break;
                 case "price":
                     if (value.ValueKind != JsonValueKind.Number || !value.TryGetDecimal(out _))
                     {
                         return "Tariff field 'price' must be a decimal number.";
                     }
+                    editableFieldCount++;
                     break;
                 case "durationDays" or "maxDevices" or "sortOrder":
                     if (value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out _))
                     {
                         return $"Tariff field '{property.Name}' must be an integer.";
                     }
+                    editableFieldCount++;
                     break;
                 case "trafficLimit":
                     if (value.ValueKind != JsonValueKind.Null
@@ -2870,12 +3012,14 @@ public class AdminOperationsController : ControllerBase
                     {
                         return "Tariff field 'trafficLimit' must be an integer or null.";
                     }
+                    editableFieldCount++;
                     break;
                 case "isTrial" or "isActive" or "isReferralEligible":
                     if (value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
                     {
                         return $"Tariff field '{property.Name}' must be a boolean.";
                     }
+                    editableFieldCount++;
                     break;
                 case "visibleFrom" or "visibleTo":
                     if (value.ValueKind != JsonValueKind.Null
@@ -2883,8 +3027,27 @@ public class AdminOperationsController : ControllerBase
                     {
                         return $"Tariff field '{property.Name}' must be an ISO date-time string or null.";
                     }
+                    editableFieldCount++;
+                    break;
+                case "tariffType":
+                    if (value.ValueKind != JsonValueKind.String
+                        || !Enum.TryParse<TariffType>(value.GetString(), ignoreCase: true, out var parsedTariffType)
+                        || !Enum.IsDefined(parsedTariffType))
+                    {
+                        return "Tariff field 'tariffType' must be a supported tariff type.";
+                    }
+                    editableFieldCount++;
                     break;
             }
+        }
+
+        if (!hasRevision)
+        {
+            return "Tariff revision is required and must be a non-negative integer.";
+        }
+        if (editableFieldCount == 0)
+        {
+            return "Tariff patch must contain at least one editable field.";
         }
 
         return null;
@@ -2894,6 +3057,7 @@ public class AdminOperationsController : ControllerBase
         => new()
         {
             Id = source.Id,
+            Revision = source.Revision,
             Name = source.Name,
             Slug = source.Slug,
             Description = source.Description,
@@ -2943,6 +3107,7 @@ public class AdminOperationsController : ControllerBase
         if (payload.TryGetProperty("afterPaymentText", out var afterPaymentText)) tariff.AfterPaymentText = afterPaymentText.GetString() ?? tariff.AfterPaymentText;
         if (payload.TryGetProperty("visibleFrom", out var visibleFrom)) tariff.VisibleFrom = ReadNullableDate(visibleFrom);
         if (payload.TryGetProperty("visibleTo", out var visibleTo)) tariff.VisibleTo = ReadNullableDate(visibleTo);
+        if (payload.TryGetProperty("tariffType", out var tariffType)) tariff.TariffType = Enum.Parse<TariffType>(tariffType.GetString()!, ignoreCase: true);
     }
 
     private static void CopyTariffFields(Tariff source, Tariff target)
@@ -2989,22 +3154,33 @@ public class AdminOperationsController : ControllerBase
         }
     }
 
-    private static string NormalizeTariffFeaturesJson(string? featuresJson)
+    private static bool TryNormalizeTariffFeaturesJson(string? featuresJson, out string normalized)
     {
-        if (string.IsNullOrWhiteSpace(featuresJson)) return "[]";
+        if (string.IsNullOrWhiteSpace(featuresJson))
+        {
+            normalized = "[]";
+            return true;
+        }
 
         try
         {
-            var items = JsonSerializer.Deserialize<List<string>>(featuresJson) ?? [];
-            return JsonSerializer.Serialize(items
-                .Select(x => x.Trim())
+            var items = JsonSerializer.Deserialize<List<string?>>(featuresJson) ?? [];
+            if (items.Any(x => x is null))
+            {
+                normalized = "[]";
+                return false;
+            }
+            normalized = JsonSerializer.Serialize(items
+                .Select(x => x!.Trim())
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList(), JsonOptions);
+            return true;
         }
         catch (JsonException)
         {
-            return "[]";
+            normalized = "[]";
+            return false;
         }
     }
 

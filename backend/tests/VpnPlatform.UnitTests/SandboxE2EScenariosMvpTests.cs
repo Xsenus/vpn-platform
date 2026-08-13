@@ -344,18 +344,16 @@ public class SandboxE2EScenariosMvpTests
         await using var harness = await SandboxHarness.CreateAsync();
         var admin = harness.AdminController;
 
-        var createTariff = await admin.CreateTariff(new Tariff
-        {
-            Name = "Admin monthly",
-            Slug = "admin-monthly",
-            Description = "Created by admin E2E",
-            DurationDays = 30,
-            Price = 590m,
-            Currency = "RUB",
-            MaxDevices = 5,
-            IsActive = true,
-            SortOrder = 1
-        }, CancellationToken.None);
+        var createTariff = await admin.CreateTariff(new TariffCreateRequest(
+            Name: "Admin monthly",
+            Slug: "admin-monthly",
+            Description: "Created by admin E2E",
+            DurationDays: 30,
+            Price: 590m,
+            Currency: "RUB",
+            MaxDevices: 5,
+            IsActive: true,
+            SortOrder: 1), CancellationToken.None);
         Assert.IsType<OkObjectResult>(createTariff);
 
         var providerAccount = await admin.CreatePaymentProviderAccount(new UpsertPaymentProviderAccountCommand(

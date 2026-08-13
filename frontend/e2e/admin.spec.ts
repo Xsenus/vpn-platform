@@ -32,6 +32,7 @@ async function fulfillJson(route: Route, body: unknown, status = 200) {
 function tariff(overrides: Record<string, unknown> = {}) {
   return {
     id: 'tariff-admin-pro',
+    revision: 0,
     name: 'Admin Pro 30',
     slug: 'admin-pro-30',
     description: 'Тариф для проверки админки',
@@ -1298,7 +1299,12 @@ async function mockAdminApi(page: Page) {
         releaseDelayedTariffPatch = null
       }
       const index = tariffs.findIndex((item) => item.id === tariffMutationMatch[1])
-      const updated = tariff({ ...tariffs[index], ...(body as Record<string, unknown>), id: tariffMutationMatch[1], updatedAt: now })
+      const currentRevision = Number(tariffs[index]?.revision ?? 0)
+      if (Number((body as Record<string, unknown>).revision) !== currentRevision) {
+        await fulfillJson(route, { error: 'Tariff changed. Reload it and retry.', revision: currentRevision }, 409)
+        return
+      }
+      const updated = tariff({ ...tariffs[index], ...(body as Record<string, unknown>), id: tariffMutationMatch[1], revision: currentRevision + 1, updatedAt: now })
       if (index >= 0) tariffs[index] = updated
       await fulfillJson(route, updated)
       return
@@ -1306,6 +1312,11 @@ async function mockAdminApi(page: Page) {
 
     if (tariffMutationMatch && method === 'DELETE') {
       const index = tariffs.findIndex((item) => item.id === tariffMutationMatch[1])
+      const currentRevision = Number(tariffs[index]?.revision ?? 0)
+      if (Number(url.searchParams.get('revision')) !== currentRevision) {
+        await fulfillJson(route, { error: 'Tariff changed. Reload it and retry.', revision: currentRevision }, 409)
+        return
+      }
       if (index >= 0) tariffs.splice(index, 1)
       await fulfillJson(route, { id: tariffMutationMatch[1], deleted: true, archived: false })
       return
@@ -2051,6 +2062,16 @@ async function mockAdminApi(page: Page) {
         ...faqEntries[index],
         answer,
         revision: Number(faqEntries[index].revision) + 1,
+        updatedAt: now
+      })
+    },
+    changeTariffExternally: (id: string, name = 'Тариф изменен извне') => {
+      const index = tariffs.findIndex((item) => item.id === id)
+      if (index < 0) return
+      tariffs[index] = tariff({
+        ...tariffs[index],
+        name,
+        revision: Number(tariffs[index].revision) + 1,
         updatedAt: now
       })
     },
@@ -4666,6 +4687,41 @@ test('admin app release editor recovers from a stale revision', async ({ page })
   await expect(releasesPanel.getByRole('heading', { name: 'Создать релиз' })).toBeVisible()
   await expect(releasesPanel.getByText('Актуальная внешняя версия', { exact: true })).toBeVisible()
   expect(api.getRequestCount('/api/app-version/admin/releases/release-admin-e2e', 'PUT')).toBe(1)
+})
+
+test('admin tariff editor recovers from a stale revision', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page)
+  await page.goto('/#tariffs')
+
+  const tariffsPanel = page.locator('#tariffs')
+  const tariffRow = tariffsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  await tariffRow.getByRole('button', { name: 'Редактировать' }).click()
+  await tariffsPanel.getByLabel('Название').fill('Устаревшая локальная правка')
+
+  api.changeTariffExternally('tariff-admin-pro', 'Актуальный внешний тариф')
+  await tariffsPanel.getByRole('button', { name: 'Сохранить тариф' }).click()
+
+  await expect(page.locator('.error-block')).toContainText('Тариф уже изменен другим администратором')
+  await expect(tariffsPanel.getByRole('heading', { name: 'Новый тариф' })).toBeVisible()
+  await expect(tariffsPanel.getByText('Актуальный внешний тариф', { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/admin/tariffs/tariff-admin-pro', 'PATCH')).toBe(1)
+})
+
+test('admin tariff delete keeps an externally changed tariff', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page)
+  await page.goto('/#tariffs')
+
+  const tariffsPanel = page.locator('#tariffs')
+  const tariffRow = tariffsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
+  await tariffRow.getByRole('button', { name: 'Удалить' }).click()
+  api.changeTariffExternally('tariff-admin-pro', 'Актуальный тариф перед удалением')
+  await tariffsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+
+  await expect(page.locator('.error-block')).toContainText('Тариф уже изменен')
+  await expect(tariffsPanel.getByText('Актуальный тариф перед удалением', { exact: true })).toBeVisible()
+  expect(api.getRequestCount('/api/admin/tariffs/tariff-admin-pro', 'DELETE')).toBe(1)
 })
 
 test('admin app release delete keeps an externally changed release', async ({ page }) => {

@@ -87,6 +87,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<TelegramLinkState>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<ChannelProfile>().HasIndex(x => new { x.ProviderType, x.ExternalUserId }).IsUnique();
         modelBuilder.Entity<Tariff>().HasIndex(x => x.Slug).IsUnique();
+        modelBuilder.Entity<Tariff>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<FaqEntry>().HasIndex(x => new { x.IsActive, x.ShowOnFaqPage, x.SortOrder });
         modelBuilder.Entity<FaqEntry>().HasIndex(x => new { x.Category, x.SortOrder });
         modelBuilder.Entity<FaqEntry>().Property(x => x.Revision).IsConcurrencyToken();

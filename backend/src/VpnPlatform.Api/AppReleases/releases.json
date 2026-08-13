@@ -15958,5 +15958,28 @@
         "text": "Roadmap progress is 691/711 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-tariff-boundary",
+    "version": "0.679.0",
+    "releasedAt": "2026-08-13T10:30:00+07:00",
+    "title": "Тарифы защищены от утечек и конфликтов",
+    "summary": "Публичная витрина получает только пользовательские поля, а админка ограничивает выборки и сохраняет внешние изменения при параллельной работе.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Публичный API тарифов больше не передаёт правила публикации, внутренние CSV-фильтры, ключ сценария выдачи и audit timestamps."
+      },
+      {
+        "type": "improved",
+        "text": "Public/admin списки ограничены DB-side top-200, create/PATCH используют точные контракты и границы, а stale PATCH/DELETE возвращают controlled conflict с актуализацией списка."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 692/712 closed, readiness 97.2%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

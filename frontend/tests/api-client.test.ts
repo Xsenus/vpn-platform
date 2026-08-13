@@ -19,6 +19,7 @@ const adminFixtureTimestamp = '2026-08-09T00:00:00Z'
 function adminTariffFixture(overrides: Record<string, unknown> = {}) {
   return {
     id: 'tariff-1',
+    revision: 0,
     name: 'Premium',
     slug: 'premium',
     description: 'Premium access',
@@ -919,11 +920,9 @@ test('ApiClient.getTariffs calls public endpoint', async () => {
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     return new Response(JSON.stringify([{
-      id: '1', name: '1 month', slug: 'one-month', description: '', fullDescription: '', features: [], featuresJson: '[]', badge: '',
-      durationDays: 30, price: 299, currency: 'RUB', maxDevices: 2, trafficLimit: null, isTrial: false, isActive: true,
-      sortOrder: 10, visibleFrom: null, visibleTo: null, tariffType: 'Personal', category: 'default', allowedRegionsCsv: '',
-      allowedNodeGroupsCsv: '', isReferralEligible: true, provisioningScenario: 'auto', afterPaymentText: '',
-      createdAt: '2026-08-05T00:00:00Z', updatedAt: '2026-08-05T00:00:00Z'
+      id: '1', name: '1 month', slug: 'one-month', description: '', fullDescription: '', features: [], badge: '',
+      durationDays: 30, price: 299, currency: 'RUB', maxDevices: 2, trafficLimit: null,
+      category: 'default', afterPaymentText: ''
     }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }) as typeof fetch
 
@@ -932,6 +931,19 @@ test('ApiClient.getTariffs calls public endpoint', async () => {
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/public/tariffs')
   assert.equal(response[0]?.id, '1')
+})
+
+test('ApiClient rejects administrative fields in public tariff responses', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify([{
+    id: '1', name: '1 month', slug: 'one-month', description: '', fullDescription: '', features: [], badge: '',
+    durationDays: 30, price: 299, currency: 'RUB', maxDevices: 2, trafficLimit: null,
+    category: 'default', afterPaymentText: '', isActive: true
+  }]), { status: 200, headers: { 'Content-Type': 'application/json' } })) as typeof fetch
+
+  await assert.rejects(
+    () => new ApiClient('http://localhost:8080').getTariffs(),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502
+  )
 })
 
 test('ApiClient.getPublicPaymentProviders calls public providers endpoint', async () => {
@@ -1227,15 +1239,29 @@ test('ApiClient admin tariff endpoints cover extended CRUD', async () => {
   const client = new ApiClient('http://localhost:8080')
   await client.getAdminTariffs('admin-token')
   await client.createAdminTariff('admin-token', { name: 'Premium', featuresJson: '["Автовыдача"]', badge: 'Популярный', afterPaymentText: 'После оплаты доступ появится в кабинете.' })
-  await client.updateAdminTariff('admin-token', 'tariff-1', { badge: 'Выгодно', provisioningScenario: 'premium-auto' })
-  await client.deleteAdminTariff('admin-token', 'tariff-1')
+  await client.updateAdminTariff('admin-token', 'tariff-1', { badge: 'Выгодно', provisioningScenario: 'premium-auto' }, 7)
+  await client.deleteAdminTariff('admin-token', 'tariff-1', 8)
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/tariffs')
   assert.equal(calls[1]?.init?.method, 'POST')
   assert.equal(calls[2]?.init?.method, 'PATCH')
   assert.equal(calls[3]?.init?.method, 'DELETE')
   assert.match(String(calls[1]?.init?.body), /featuresJson|afterPaymentText/)
+  assert.deepEqual(JSON.parse(String(calls[2]?.init?.body)), { badge: 'Выгодно', provisioningScenario: 'premium-auto', revision: 7 })
+  assert.equal(calls[3]?.url, 'http://localhost:8080/api/admin/tariffs/tariff-1?revision=8')
   assert.equal(new Headers(calls[3]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+})
+
+test('ApiClient rejects unknown extensions in admin tariff responses', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify([adminTariffFixture({ internalNote: 'diagnostic' })]), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  await assert.rejects(
+    () => new ApiClient('http://localhost:8080').getAdminTariffs('admin-token'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502
+  )
 })
 
 test('ApiClient admin referral endpoints cover programs and rewards', async () => {
@@ -2772,8 +2798,8 @@ test('ApiClient rejects malformed admin content and app release DTOs', async () 
     () => client.markAppVersionSeen('user-token', 'release-1'),
     () => client.getAdminTariffs('admin-token'),
     () => client.createAdminTariff('admin-token', tariffPayload),
-    () => client.updateAdminTariff('admin-token', 'tariff-1', tariffPayload),
-    () => client.deleteAdminTariff('admin-token', 'tariff-1'),
+    () => client.updateAdminTariff('admin-token', 'tariff-1', tariffPayload, 0),
+    () => client.deleteAdminTariff('admin-token', 'tariff-1', 0),
     () => client.getAdminReferralPrograms('admin-token'),
     () => client.getAdminReferralRewards('admin-token'),
     () => client.createAdminReferralProgram('admin-token', referralPayload),
@@ -3454,11 +3480,9 @@ test('ApiClient covers sandbox E2E admin, cabinet and checkout endpoints', async
     }
     if (path.endsWith('/api/public/tariffs')) {
       return new Response(JSON.stringify([{
-        id: 'tariff-1', name: 'Monthly', slug: 'monthly', description: '', fullDescription: '', features: [], featuresJson: '[]', badge: '',
-        durationDays: 30, price: 299, currency: 'RUB', maxDevices: 2, trafficLimit: null, isTrial: false, isActive: true,
-        sortOrder: 10, visibleFrom: null, visibleTo: null, tariffType: 'Personal', category: 'default', allowedRegionsCsv: '',
-        allowedNodeGroupsCsv: '', isReferralEligible: true, provisioningScenario: 'auto', afterPaymentText: '',
-        createdAt: '2026-08-05T00:00:00Z', updatedAt: '2026-08-05T00:00:00Z'
+        id: 'tariff-1', name: 'Monthly', slug: 'monthly', description: '', fullDescription: '', features: [], badge: '',
+        durationDays: 30, price: 299, currency: 'RUB', maxDevices: 2, trafficLimit: null,
+        category: 'default', afterPaymentText: ''
       }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }
     if (path.endsWith('/api/me/accesses')) {

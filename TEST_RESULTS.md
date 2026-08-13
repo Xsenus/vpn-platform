@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: tariff boundary
+
+Scope:
+- Public tariff API не должен раскрывать admin/audit metadata; public/admin lists должны иметь DB-side bound.
+- Create/PATCH должны иметь точные контракты и границы; stale PATCH/DELETE не должны терять внешние изменения.
+
+Results:
+- Roadmap progress: `692/712` closed, readiness `97.2%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-tariff-boundary`, version `0.679.0`.
+- Fail-first: targeted backend `17/27`; public DTO содержал admin fields, lists возвращали 205 тарифов, PATCH принимал unknown/duplicate/no-op поля, длины и stale revision.
+- After fix: minimal public DTO, exact public/admin validators, DB-side top-200, explicit create request, strict patch/JSON/length validation, EF revision migration и controlled `409` с reload/recovery UI.
+- Tariff/SQLite `33/33`, frontend `169/169`, backend `1424/1424`, typecheck/build/bundle budget, EF drift, fresh SQLite, strict UTF-8, secret scan и dependency audit `0 vulnerabilities` зелёные. Stateful CRUD desktop/mobile `2/2`, stale PATCH/DELETE `4/4`, public tariff/checkout `2/2`, public/admin render `2/2`, focused tariff responsive/WCAG `1/1` на 320/390/1280 px. Объединённый расширенный Playwright run превысил 5-minute timeout и не засчитывался. Реальные provider/Telegram кабинеты, Bot API, SMTP и VPS/staging/live payment/production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: work scenario boundary
 
 Scope:

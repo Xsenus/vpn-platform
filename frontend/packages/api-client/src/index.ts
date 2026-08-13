@@ -24,29 +24,33 @@ export type TariffDto = {
   name: string
   slug: string
   description: string
-  fullDescription?: string
-  features?: string[]
-  featuresJson?: string
-  badge?: string
+  fullDescription: string
+  features: string[]
+  badge: string
   durationDays: number
   price: number
   currency: string
   maxDevices: number
-  trafficLimit?: number | null
-  isTrial?: boolean
-  isActive?: boolean
-  sortOrder?: number
-  visibleFrom?: string | null
-  visibleTo?: string | null
-  tariffType?: string
+  trafficLimit: number | null
   category: string
-  allowedRegionsCsv?: string
-  allowedNodeGroupsCsv?: string
-  isReferralEligible?: boolean
-  provisioningScenario?: string
-  afterPaymentText?: string
-  createdAt?: string
-  updatedAt?: string
+  afterPaymentText: string
+}
+
+export type AdminTariffDto = TariffDto & {
+  revision: number
+  featuresJson: string
+  isTrial: boolean
+  isActive: boolean
+  sortOrder: number
+  visibleFrom: string | null
+  visibleTo: string | null
+  tariffType: string
+  allowedRegionsCsv: string
+  allowedNodeGroupsCsv: string
+  isReferralEligible: boolean
+  provisioningScenario: string
+  createdAt: string
+  updatedAt: string
 }
 
 export type AppReleaseItemType = 'new' | 'improved' | 'fixed' | 'important'
@@ -1152,7 +1156,7 @@ export type AdminUserOverviewDto = {
   supportConversations: SupportConversationDto[]
 }
 
-export type UpdateTariffPayload = Partial<Pick<TariffDto, 'name' | 'slug' | 'description' | 'fullDescription' | 'featuresJson' | 'badge' | 'price' | 'currency' | 'durationDays' | 'maxDevices' | 'trafficLimit' | 'isTrial' | 'isActive' | 'sortOrder' | 'category' | 'allowedRegionsCsv' | 'allowedNodeGroupsCsv' | 'isReferralEligible' | 'provisioningScenario' | 'afterPaymentText'>>
+export type UpdateTariffPayload = Partial<Pick<AdminTariffDto, 'name' | 'slug' | 'description' | 'fullDescription' | 'featuresJson' | 'badge' | 'price' | 'currency' | 'durationDays' | 'maxDevices' | 'trafficLimit' | 'isTrial' | 'isActive' | 'sortOrder' | 'visibleFrom' | 'visibleTo' | 'tariffType' | 'category' | 'allowedRegionsCsv' | 'allowedNodeGroupsCsv' | 'isReferralEligible' | 'provisioningScenario' | 'afterPaymentText'>>
 
 export type FaqItem = {
   question: string
@@ -1590,37 +1594,67 @@ function hasUniqueStringKey(items: unknown[], key: string) {
   return true
 }
 
-function isTariffDto(value: unknown): value is TariffDto {
-  if (!isRecord(value)) return false
+const publicTariffFields = new Set([
+  'id', 'name', 'slug', 'description', 'fullDescription', 'features', 'badge', 'durationDays',
+  'price', 'currency', 'maxDevices', 'trafficLimit', 'category', 'afterPaymentText'
+])
 
+const adminTariffFields = new Set([
+  ...publicTariffFields,
+  'revision', 'featuresJson', 'isTrial', 'isActive', 'sortOrder', 'visibleFrom', 'visibleTo',
+  'tariffType', 'allowedRegionsCsv', 'allowedNodeGroupsCsv', 'isReferralEligible',
+  'provisioningScenario', 'createdAt', 'updatedAt'
+])
+
+const tariffTypeValues = new Set(['Weekly', 'Monthly', 'Quarterly', 'SemiAnnual', 'Annual', 'Trial', 'Promo', 'Personal'])
+
+function hasPublicTariffFields(value: Record<string, unknown>) {
   return hasString(value, 'id', true)
     && hasString(value, 'name', true)
     && hasString(value, 'slug', true)
     && hasString(value, 'description')
     && hasString(value, 'fullDescription')
     && Array.isArray(value.features)
-    && value.features.every((item) => typeof item === 'string')
-    && hasString(value, 'featuresJson')
+    && value.features.every((item) => typeof item === 'string' && item.trim().length > 0)
     && hasString(value, 'badge')
     && hasInteger(value, 'durationDays', 1)
     && hasFiniteNumber(value, 'price', 0)
     && hasString(value, 'currency', true)
+    && /^[A-Z]{3}$/.test(value.currency as string)
     && hasInteger(value, 'maxDevices', 1)
-    && (value.trafficLimit === null || (hasInteger(value, 'trafficLimit', 0)))
+    && (value.trafficLimit === null || hasInteger(value, 'trafficLimit', 0))
+    && hasString(value, 'category', true)
+    && hasString(value, 'afterPaymentText')
+}
+
+function isTariffDto(value: unknown): value is TariffDto {
+  if (!isRecord(value)) return false
+
+  return hasPublicTariffFields(value)
+    && Object.keys(value).every((key) => publicTariffFields.has(key))
+}
+
+function isAdminTariffDto(value: unknown): value is AdminTariffDto {
+  if (!isRecord(value)) return false
+
+  return hasPublicTariffFields(value)
+    && hasInteger(value, 'revision', 0)
+    && hasString(value, 'featuresJson')
     && hasBoolean(value, 'isTrial')
     && hasBoolean(value, 'isActive')
     && hasInteger(value, 'sortOrder')
-    && hasNullableString(value, 'visibleFrom')
-    && hasNullableString(value, 'visibleTo')
+    && hasNullableDateString(value, 'visibleFrom')
+    && hasNullableDateString(value, 'visibleTo')
     && hasString(value, 'tariffType', true)
-    && hasString(value, 'category', true)
+    && tariffTypeValues.has(value.tariffType as string)
     && hasString(value, 'allowedRegionsCsv')
     && hasString(value, 'allowedNodeGroupsCsv')
     && hasBoolean(value, 'isReferralEligible')
     && hasString(value, 'provisioningScenario', true)
     && hasString(value, 'afterPaymentText')
-    && hasString(value, 'createdAt', true)
-    && hasString(value, 'updatedAt', true)
+    && hasDateString(value, 'createdAt')
+    && hasDateString(value, 'updatedAt')
+    && Object.keys(value).every((key) => adminTariffFields.has(key))
 }
 
 function isFaqItem(value: unknown): value is FaqItem {
@@ -4132,8 +4166,8 @@ export class ApiClient {
       && items.every((item) => item.vpnPanelId === id))
   }
 
-  getAdminTariffs(token: string): Promise<TariffDto[]> {
-    return this.requestArray<TariffDto>('/api/admin/tariffs', { token, errorMessage: apiFallbackErrorMessage }, isTariffDto, (items) => hasUniqueStringKey(items, 'id'))
+  getAdminTariffs(token: string): Promise<AdminTariffDto[]> {
+    return this.requestArray<AdminTariffDto>('/api/admin/tariffs', { token, errorMessage: apiFallbackErrorMessage }, isAdminTariffDto, (items) => hasUniqueStringKey(items, 'id'))
   }
 
   getAdminReferralPrograms(token: string): Promise<AdminReferralProgramDto[]> {
@@ -4296,26 +4330,26 @@ export class ApiClient {
     }, 'object', isDeleteResultDto)
   }
 
-  createAdminTariff(token: string, payload: UpdateTariffPayload): Promise<TariffDto> {
-    return this.request<TariffDto>('/api/admin/tariffs', {
+  createAdminTariff(token: string, payload: UpdateTariffPayload): Promise<AdminTariffDto> {
+    return this.request<AdminTariffDto>('/api/admin/tariffs', {
       method: 'POST',
       token,
       body: JSON.stringify(payload),
       errorMessage: apiFallbackErrorMessage
-    }, 'object', isTariffDto)
+    }, 'object', isAdminTariffDto)
   }
 
-  updateAdminTariff(token: string, id: string, payload: UpdateTariffPayload): Promise<TariffDto> {
-    return this.request<TariffDto>(`/api/admin/tariffs/${id}`, {
+  updateAdminTariff(token: string, id: string, payload: UpdateTariffPayload, revision: number): Promise<AdminTariffDto> {
+    return this.request<AdminTariffDto>(`/api/admin/tariffs/${id}`, {
       method: 'PATCH',
       token,
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, revision }),
       errorMessage: apiFallbackErrorMessage
-    }, 'object', isTariffDto)
+    }, 'object', isAdminTariffDto)
   }
 
-  deleteAdminTariff(token: string, id: string): Promise<{ id: string; deleted: boolean; archived?: boolean }> {
-    return this.request<{ id: string; deleted: boolean; archived?: boolean }>(`/api/admin/tariffs/${id}`, {
+  deleteAdminTariff(token: string, id: string, revision: number): Promise<{ id: string; deleted: boolean; archived?: boolean }> {
+    return this.request<{ id: string; deleted: boolean; archived?: boolean }>(`/api/admin/tariffs/${id}?revision=${encodeURIComponent(String(revision))}`, {
       method: 'DELETE',
       token,
       errorMessage: apiFallbackErrorMessage

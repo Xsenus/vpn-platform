@@ -36,27 +36,14 @@ const tariffs = [
     description: 'Базовый доступ для одного пользователя.',
     fullDescription: 'Публичный тариф для E2E проверки checkout.',
     features: ['2 устройства', 'Автовыдача после оплаты'],
-    featuresJson: '[]',
     badge: 'Популярный',
     durationDays: 30,
     price: 299,
     currency: 'RUB',
     maxDevices: 2,
     trafficLimit: null,
-    isTrial: false,
-    isActive: true,
-    sortOrder: 1,
-    visibleFrom: null,
-    visibleTo: null,
-    tariffType: 'Personal',
     category: 'Личный',
-    allowedRegionsCsv: 'EU',
-    allowedNodeGroupsCsv: 'default',
-    isReferralEligible: true,
-    provisioningScenario: 'standard',
-    afterPaymentText: 'После оплаты доступ появится автоматически.',
-    createdAt: '2026-06-13T00:00:00Z',
-    updatedAt: '2026-06-13T00:00:00Z'
+    afterPaymentText: 'После оплаты доступ появится автоматически.'
   }
 ]
 

@@ -68,6 +68,7 @@ const adminUser = {
 
 const tariff = {
   id: 'tariff-all-screens',
+  revision: 0,
   name: 'All Screens 30',
   slug: 'all-screens-30',
   description: 'Tariff for all screens smoke.',
@@ -94,6 +95,23 @@ const tariff = {
   afterPaymentText: 'Access appears in cabinet after payment.',
   createdAt: now,
   updatedAt: now
+}
+
+const publicTariff = {
+  id: tariff.id,
+  name: tariff.name,
+  slug: tariff.slug,
+  description: tariff.description,
+  fullDescription: tariff.fullDescription,
+  features: tariff.features,
+  badge: tariff.badge,
+  durationDays: tariff.durationDays,
+  price: tariff.price,
+  currency: tariff.currency,
+  maxDevices: tariff.maxDevices,
+  trafficLimit: tariff.trafficLimit,
+  category: tariff.category,
+  afterPaymentText: tariff.afterPaymentText
 }
 
 const subscription = {
@@ -336,7 +354,7 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/public/tariffs') {
-      await fulfillJson(route, [tariff])
+      await fulfillJson(route, [publicTariff])
       return
     }
 
@@ -1160,6 +1178,37 @@ test('admin controls do not overlap at dense layout boundaries', async ({ page }
     await page.setViewportSize({ width: boundaryCase.width, height: 900 })
     await page.goto(`http://127.0.0.1:5295/#${boundaryCase.section}`)
     await expectResponsiveLayout(page, `admin ${boundaryCase.section} at ${boundaryCase.width}px regression boundary`)
+  }
+
+  expect(browserErrors).toEqual([])
+})
+
+test('admin tariff editor fits focused mobile and desktop viewports', async ({ page }) => {
+  const browserErrors = collectBrowserErrors(page)
+  await installApiMock(page)
+
+  for (const viewport of [
+    { name: 'compact-mobile', width: 320, height: 568 },
+    { name: 'large-mobile', width: 390, height: 844 },
+    { name: 'wide-layout-boundary', width: 1280, height: 900 }
+  ]) {
+    await page.setViewportSize(viewport)
+    await page.goto('http://127.0.0.1:5295/#tariffs')
+    const hasStoredAdminSession = await page.evaluate(() => Boolean(sessionStorage.getItem('vpn-platform-admin-token')))
+    if (!hasStoredAdminSession) {
+      await page.locator('input[type="email"]').fill('admin@example.test')
+      await page.locator('input[type="password"]').fill('Password123!')
+      await page.locator('form').locator('button[type="submit"]').click()
+    }
+    const tariffsPanel = page.locator('#tariffs')
+    await expect(tariffsPanel).toBeVisible()
+    await tariffsPanel.locator('.list-item-vertical').first().getByRole('button', { name: 'Редактировать' }).click()
+    await tariffsPanel.getByLabel('Название').fill('Длинный персональный тариф для проверки переноса в мобильном редакторе')
+    await tariffsPanel.getByLabel('Короткое описание').fill('Подробное описание тарифа должно переноситься внутри предпросмотра и не расширять страницу.')
+    await tariffsPanel.getByLabel('Показывать с').fill('2026-08-13T10:00')
+    await tariffsPanel.getByLabel('Показывать до').fill('2026-09-13T10:00')
+    await expectResponsiveLayout(page, `admin tariff editor at ${viewport.name}`)
+    if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin tariff editor at ${viewport.name}`)
   }
 
   expect(browserErrors).toEqual([])
