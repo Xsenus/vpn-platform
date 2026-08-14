@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.715.0 - 2026-08-14
+
+Release entry: `2026-08-14-x3ui-safe-client-toggle-runtime-clock`.
+
+### Исправлено
+
+- 3x-ui enable/disable сначала читает исходную конфигурацию remote-клиента и меняет только `enable`, сохраняя UUID, email, flow, IP/traffic limits, expiry и дополнительные provider fields.
+- Login, GET и POST к 3x-ui работают fail-closed для malformed payload, `success:false`, пустого обязательного ответа и отсутствующего session cookie; HTTP request clones освобождаются после каждого retry.
+- JWT expiry, Stripe webhook timestamp tolerance, 3x-ui session/traffic timestamps и auto-created sandbox node health timestamp используют application clock.
+
+### Проверено
+
+- Fail-first regressions воспроизвели повреждение remote client payload, принятие malformed/unsuccessful 3x-ui HTTP 200, фиктивный session cookie, три системных timestamp, отклонение поддерживаемого root array, строковый false marker и принятие array login (`0/12`); after-fix provider/auth regression `66/66`, `X3UiHttpClientTests` `21/21`, backend Debug/Release `1515/1515`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow и актуальный Playwright `268/268` на 25 viewport-конфигурациях зелёные.
+- Roadmap `734/754` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.714.0 - 2026-08-14
 
 Release entry: `2026-08-14-public-catalog-release-seed-clock`.

@@ -6,16 +6,19 @@ using Microsoft.IdentityModel.Tokens;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Entities;
+using VpnPlatform.Infrastructure.Services;
 
 namespace VpnPlatform.Infrastructure.Auth;
 
 public class JwtTokenService : ITokenService
 {
     private readonly IConfiguration _configuration;
+    private readonly IClock _clock;
 
-    public JwtTokenService(IConfiguration configuration)
+    public JwtTokenService(IConfiguration configuration, IClock? clock = null)
     {
         _configuration = configuration;
+        _clock = clock ?? new SystemClock();
     }
 
     public string CreateAccessToken(User user, IEnumerable<string> roles)
@@ -40,7 +43,7 @@ public class JwtTokenService : ITokenService
             issuer: _configuration["Jwt:Issuer"] ?? "VpnPlatform",
             audience: _configuration["Jwt:Audience"] ?? "VpnPlatform.Clients",
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(30),
+            expires: _clock.UtcNow.UtcDateTime.AddMinutes(30),
             signingCredentials: creds);
 
         return new JwtSecurityTokenHandler().WriteToken(token);

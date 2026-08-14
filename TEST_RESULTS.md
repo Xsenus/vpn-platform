@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: safe 3x-ui client toggle and runtime clock
+
+Scope:
+- 3x-ui enable/disable не должен повреждать remote client settings и не должен принимать malformed, explicit unsuccessful или неавторизованный HTTP 200 как успешную mutation.
+- JWT, Stripe webhook tolerance, 3x-ui transport timestamps и sandbox node allocation должны использовать application clock.
+
+Results:
+- Roadmap progress: `734/754` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-x3ui-safe-client-toggle-runtime-clock`, version `0.715.0`.
+- Fail-first: disable заменял email/UUID/flow/limits/expiry synthetic-значениями, malformed/`success:false` HTTP 200 и отсутствие cookie принимались как success, JWT/Stripe/sandbox node использовали системное время, root array отклонялся, строковый false marker и array login принимались; `0/12`.
+- After fix: remote client JSON сохраняется с единственным изменением `enable`, missing client блокирует update; login/GET/POST fail-closed, root array разрешён только inbound list; request clones освобождаются; JWT, Stripe, session/traffic и sandbox health используют `IClock`. Targeted provider/auth regression `66/66`, `X3UiHttpClientTests` `21/21`, backend Debug/Release `1515/1515`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow и актуальный Playwright `268/268` на 25 viewport-конфигурациях зелёные. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-14: public catalog and release seed clock
 
 Scope:

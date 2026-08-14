@@ -12,6 +12,7 @@ using VpnPlatform.Application.DTOs;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.Security;
+using VpnPlatform.Infrastructure.Services;
 
 namespace VpnPlatform.Infrastructure.Vpn;
 
@@ -23,11 +24,13 @@ public class X3UiHttpClient : IX3UiClient
     };
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<X3UiHttpClient> _logger;
+    private readonly IClock _clock;
 
-    public X3UiHttpClient(IHttpClientFactory httpClientFactory, ILogger<X3UiHttpClient> logger)
+    public X3UiHttpClient(IHttpClientFactory httpClientFactory, ILogger<X3UiHttpClient> logger, IClock? clock = null)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        _clock = clock ?? new SystemClock();
     }
 
     public async Task<X3UiSession> LoginAsync(VpnPanel panel, string password, CancellationToken cancellationToken)
@@ -47,10 +50,10 @@ public class X3UiHttpClient : IX3UiClient
         var cookies = response.Headers.TryGetValues("Set-Cookie", out var values) ? string.Join("; ", values.Select(x => x.Split(';')[0])) : string.Empty;
         if (string.IsNullOrWhiteSpace(cookies))
         {
-            cookies = "session=unknown";
+            throw new InvalidOperationException("3x-ui login response did not contain a session cookie.");
         }
 
-        return new X3UiSession(cookies, DateTimeOffset.UtcNow);
+        return new X3UiSession(cookies, _clock.UtcNow);
     }
 
     public async Task<X3UiHealthResult> CheckHealthAsync(VpnPanel panel, string password, CancellationToken cancellationToken)
@@ -87,7 +90,7 @@ public class X3UiHttpClient : IX3UiClient
 
     public async Task<IReadOnlyCollection<X3UiInboundDto>> GetInboundsAsync(VpnPanel panel, string password, CancellationToken cancellationToken)
     {
-        var raw = await GetRawAsync(panel, password, "panel/api/inbounds/list", cancellationToken);
+        var raw = await GetRawAsync(panel, password, "panel/api/inbounds/list", cancellationToken, allowArrayResponse: true);
         return ParseInbounds(raw);
     }
 
@@ -176,15 +179,15 @@ public class X3UiHttpClient : IX3UiClient
     public async Task<X3UiTrafficSnapshot> GetClientTrafficAsync(VpnPanel panel, string password, string clientId, CancellationToken cancellationToken)
     {
         var raw = await GetRawAsync(panel, password, $"panel/api/inbounds/getClientTraffics/{Uri.EscapeDataString(clientId)}", cancellationToken, allowNotFound: true);
-        return new X3UiTrafficSnapshot(clientId, TryReadLong(raw, "up"), TryReadLong(raw, "down"), DateTimeOffset.UtcNow);
+        return new X3UiTrafficSnapshot(clientId, TryReadLong(raw, "up"), TryReadLong(raw, "down"), _clock.UtcNow);
     }
 
     private async Task SetClientEnabledAsync(VpnPanel panel, string password, string inboundId, string clientId, bool enabled, CancellationToken cancellationToken)
     {
-        var traffic = await GetClientTrafficAsync(panel, password, clientId, cancellationToken);
-        var request = new X3UiUpdateClientRequest(inboundId, clientId, clientId, clientId, string.Empty, 0, null, DateTimeOffset.UtcNow.AddDays(1), enabled);
-        var settings = BuildClientSettings(request.Email, request.Uuid, request.Flow, request.LimitIp, request.TotalGb, request.ExpiryTime, enabled);
-        await PostRawAsync(panel, password, $"panel/api/inbounds/updateClient/{Uri.EscapeDataString(clientId)}", new { id = inboundId, settings, traffic.Up, traffic.Down }, cancellationToken, allowEmptySuccess: true);
+        var inbound = await GetInboundAsync(panel, password, inboundId, cancellationToken)
+            ?? throw new InvalidOperationException("3x-ui inbound client configuration was not found.");
+        var settings = BuildClientEnabledSettings(inbound.SettingsJson, clientId, enabled);
+        await PostRawAsync(panel, password, $"panel/api/inbounds/updateClient/{Uri.EscapeDataString(clientId)}", new { id = inboundId, settings }, cancellationToken, allowEmptySuccess: true);
     }
 
     private ClientLease CreateClient(VpnPanel panel)
@@ -210,7 +213,13 @@ public class X3UiHttpClient : IX3UiClient
         return new ClientLease(unmanagedClient, ownsClient: true);
     }
 
-    private async Task<string> GetRawAsync(VpnPanel panel, string password, string path, CancellationToken cancellationToken, bool allowNotFound = false)
+    private async Task<string> GetRawAsync(
+        VpnPanel panel,
+        string password,
+        string path,
+        CancellationToken cancellationToken,
+        bool allowNotFound = false,
+        bool allowArrayResponse = false)
     {
         var session = await LoginAsync(panel, password, cancellationToken);
         using var lease = CreateClient(panel);
@@ -222,6 +231,10 @@ public class X3UiHttpClient : IX3UiClient
         if (!response.IsSuccessStatusCode && !(allowNotFound && response.StatusCode == HttpStatusCode.NotFound))
         {
             throw new InvalidOperationException($"3x-ui GET {path} failed with HTTP {(int)response.StatusCode}.");
+        }
+        if (response.IsSuccessStatusCode && !IsSuccessResponse(raw, allowArrayResponse))
+        {
+            throw new InvalidOperationException($"3x-ui GET {path} returned unsuccessful response.");
         }
         return raw;
     }
@@ -242,7 +255,17 @@ public class X3UiHttpClient : IX3UiClient
             throw new InvalidOperationException($"3x-ui POST {path} failed with HTTP {(int)response.StatusCode}.");
         }
 
-        if (!allowEmptySuccess && !string.IsNullOrWhiteSpace(raw) && !IsSuccessResponse(raw))
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            if (!allowEmptySuccess)
+            {
+                throw new InvalidOperationException($"3x-ui POST {path} returned an empty response.");
+            }
+
+            return raw;
+        }
+
+        if (!IsSuccessResponse(raw))
         {
             throw new InvalidOperationException($"3x-ui POST {path} returned unsuccessful response.");
         }
@@ -277,7 +300,7 @@ public class X3UiHttpClient : IX3UiClient
         {
             try
             {
-                var clone = await CloneRequestAsync(request, cancellationToken);
+                using var clone = await CloneRequestAsync(request, cancellationToken);
                 var response = await client.SendAsync(clone, cancellationToken);
                 if ((int)response.StatusCode < 500 || attempt == 3)
                 {
@@ -345,30 +368,71 @@ public class X3UiHttpClient : IX3UiClient
             }
         }, JsonOptions);
 
-    private static bool IsSuccessResponse(string raw)
+    private static string BuildClientEnabledSettings(string settingsJson, string clientId, bool enabled)
+    {
+        try
+        {
+            var root = JsonNode.Parse(string.IsNullOrWhiteSpace(settingsJson) ? "{}" : settingsJson) as JsonObject;
+            var clients = root?["clients"] as JsonArray;
+            var client = clients?
+                .OfType<JsonObject>()
+                .FirstOrDefault(x => string.Equals(x["id"]?.GetValue<string>(), clientId, StringComparison.Ordinal));
+            if (client is null)
+            {
+                throw new InvalidOperationException("3x-ui inbound client configuration was not found.");
+            }
+
+            var updatedClient = client.DeepClone().AsObject();
+            updatedClient["enable"] = enabled;
+            return new JsonObject
+            {
+                ["clients"] = new JsonArray(updatedClient)
+            }.ToJsonString(JsonOptions);
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is JsonException or FormatException)
+        {
+            throw new InvalidOperationException("3x-ui inbound client configuration is invalid.", ex);
+        }
+    }
+
+    private static bool IsSuccessResponse(string raw, bool allowArrayResponse = false)
     {
         if (string.IsNullOrWhiteSpace(raw))
         {
-            return true;
+            return false;
         }
 
         try
         {
             using var doc = JsonDocument.Parse(raw);
             var root = doc.RootElement;
-            if (root.TryGetProperty("success", out var success) && success.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            if (root.ValueKind == JsonValueKind.Array)
             {
-                return success.GetBoolean();
+                return allowArrayResponse;
             }
-            if (root.TryGetProperty("ok", out var ok) && ok.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            if (root.ValueKind != JsonValueKind.Object)
             {
-                return ok.GetBoolean();
+                return false;
             }
+
+            if (root.TryGetProperty("success", out var success))
+            {
+                return success.ValueKind == JsonValueKind.True;
+            }
+            if (root.TryGetProperty("ok", out var ok))
+            {
+                return ok.ValueKind == JsonValueKind.True;
+            }
+
             return true;
         }
         catch
         {
-            return true;
+            return false;
         }
     }
 
@@ -378,13 +442,24 @@ public class X3UiHttpClient : IX3UiClient
         {
             using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(raw) ? "{}" : raw);
             var root = doc.RootElement;
-            var array = root.TryGetProperty("obj", out var obj) && obj.ValueKind == JsonValueKind.Array
-                ? obj
-                : root.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array
-                    ? data
-                    : root.ValueKind == JsonValueKind.Array ? root : default;
-
-            if (array.ValueKind != JsonValueKind.Array)
+            JsonElement array;
+            if (root.ValueKind == JsonValueKind.Array)
+            {
+                array = root;
+            }
+            else if (root.ValueKind == JsonValueKind.Object
+                     && root.TryGetProperty("obj", out var obj)
+                     && obj.ValueKind == JsonValueKind.Array)
+            {
+                array = obj;
+            }
+            else if (root.ValueKind == JsonValueKind.Object
+                     && root.TryGetProperty("data", out var data)
+                     && data.ValueKind == JsonValueKind.Array)
+            {
+                array = data;
+            }
+            else
             {
                 return Array.Empty<X3UiInboundDto>();
             }

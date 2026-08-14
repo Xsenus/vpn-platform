@@ -13,6 +13,7 @@ using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.Security;
+using VpnPlatform.Infrastructure.Services;
 using static VpnPlatform.Infrastructure.Payments.PaymentProviderShared;
 
 namespace VpnPlatform.Infrastructure.Payments;
@@ -203,12 +204,14 @@ public sealed class StripePaymentProvider : IPaymentProvider, IPaymentWebhookVer
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly PaymentProviderAccountService _accounts;
     private readonly IHostEnvironment _environment;
+    private readonly IClock _clock;
 
-    public StripePaymentProvider(IHttpClientFactory httpClientFactory, PaymentProviderAccountService accounts, IHostEnvironment environment)
+    public StripePaymentProvider(IHttpClientFactory httpClientFactory, PaymentProviderAccountService accounts, IHostEnvironment environment, IClock? clock = null)
     {
         _httpClientFactory = httpClientFactory;
         _accounts = accounts;
         _environment = environment;
+        _clock = clock ?? new SystemClock();
     }
 
     public PaymentProvider Provider => PaymentProvider.Stripe;
@@ -319,7 +322,7 @@ public sealed class StripePaymentProvider : IPaymentProvider, IPaymentWebhookVer
             return Task.FromResult(new PaymentWebhookVerificationResult(false, "stripe-signature", "Stripe-Signature header is malformed."));
         }
 
-        var age = Math.Abs(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - ts);
+        var age = Math.Abs(_clock.UtcNow.ToUnixTimeSeconds() - ts);
         if (age > 300)
         {
             return Task.FromResult(new PaymentWebhookVerificationResult(false, "stripe-signature", "Stripe webhook timestamp is outside tolerance."));

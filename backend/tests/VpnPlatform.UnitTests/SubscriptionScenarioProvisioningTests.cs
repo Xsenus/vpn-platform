@@ -100,6 +100,18 @@ public class SubscriptionScenarioProvisioningTests
     }
 
     [Fact]
+    public async Task Auto_Created_Sandbox_Node_Should_Use_Injected_Clock()
+    {
+        await using var db = CreateDb();
+        var now = new DateTimeOffset(2034, 4, 5, 6, 7, 8, TimeSpan.Zero);
+        var service = new NodeAllocationService(db, new FixedClock(now));
+
+        var node = await service.SelectOrCreateSandboxNodeAsync("vless");
+
+        Assert.Equal(now, node.LastHealthCheckAt);
+    }
+
+    [Fact]
     public async Task ActivateOrRenewFromOrderAsync_Should_Apply_WorkScenario_To_Vpn_Provisioning()
     {
         await using var db = CreateDb();

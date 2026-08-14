@@ -212,10 +212,11 @@ public class AdditionalPaymentProviderSignatureTests
     public async Task Stripe_Webhook_Signature_Should_Verify()
     {
         await using var db = CreateDbContext();
-        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), new FixedClock());
-        var provider = new StripePaymentProvider(null!, accounts, new TestHostEnvironment(Environments.Production));
+        var clock = new FixedClock();
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
+        var provider = new StripePaymentProvider(null!, accounts, new TestHostEnvironment(Environments.Production), clock);
         var raw = "{\"id\":\"evt_1\",\"type\":\"checkout.session.completed\",\"data\":{\"object\":{\"id\":\"cs_test_1\",\"payment_status\":\"paid\",\"amount_total\":49000,\"currency\":\"rub\",\"metadata\":{\"orderId\":\"11111111111111111111111111111111\"}}}}";
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var timestamp = clock.UtcNow.ToUnixTimeSeconds();
         var expected = HmacSha256Hex("whsec_test", $"{timestamp}.{raw}");
         var headers = new Dictionary<string, string> { ["Stripe-Signature"] = $"t={timestamp},v1={expected}" };
         var account = new PaymentProviderAccount
@@ -236,6 +237,32 @@ public class AdditionalPaymentProviderSignatureTests
         Assert.Equal("cs_test_1", parsed.PaymentId);
         Assert.Equal(490m, parsed.Amount);
         Assert.Equal("RUB", parsed.Currency);
+    }
+
+    [Fact]
+    public async Task Stripe_Webhook_Timestamp_Should_Use_Application_Clock()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var accounts = new PaymentProviderAccountService(db, new TestSecretProtector(), clock);
+        var provider = new StripePaymentProvider(null!, accounts, new TestHostEnvironment(Environments.Production), clock);
+        const string raw = "{\"id\":\"evt_clock\",\"type\":\"checkout.session.completed\",\"data\":{\"object\":{\"id\":\"cs_clock\",\"payment_status\":\"paid\",\"amount_total\":49000,\"currency\":\"rub\"}}}";
+        var timestamp = clock.UtcNow.ToUnixTimeSeconds();
+        var expected = HmacSha256Hex("whsec_test", $"{timestamp}.{raw}");
+        var headers = new Dictionary<string, string> { ["Stripe-Signature"] = $"t={timestamp},v1={expected}" };
+        var account = new PaymentProviderAccount
+        {
+            Provider = PaymentProvider.Stripe,
+            Mode = PaymentProviderMode.Production,
+            IsEnabled = true,
+            SecretKeyProtected = "sk_test",
+            WebhookSecretProtected = "whsec_test"
+        };
+
+        var parsed = await provider.ParseWebhookAsync(raw, headers, CancellationToken.None);
+        var verification = await provider.VerifyAsync(account, parsed, raw, headers, CancellationToken.None);
+
+        Assert.True(verification.IsValid, verification.Error);
     }
 
     [Fact]

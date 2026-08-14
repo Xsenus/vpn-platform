@@ -11,10 +11,12 @@ public class NodeAllocationService
     public const string NoAvailableNodeError = "No available VPN node for provisioning access";
 
     private readonly IApplicationDbContext _db;
+    private readonly IClock _clock;
 
-    public NodeAllocationService(IApplicationDbContext db)
+    public NodeAllocationService(IApplicationDbContext db, IClock? clock = null)
     {
         _db = db;
+        _clock = clock ?? new SystemNodeClock();
     }
 
     public async Task<VpnNode> SelectNodeAsync(Tariff tariff, WorkScenario? scenario = null, CancellationToken cancellationToken = default)
@@ -151,7 +153,7 @@ public class NodeAllocationService
             UsedCapacity = 0,
             SupportedProtocolsCsv = requiredProtocol,
             HealthStatus = HealthStatus.Healthy,
-            LastHealthCheckAt = DateTimeOffset.UtcNow,
+            LastHealthCheckAt = _clock.UtcNow,
             ProvisioningStatus = ProvisioningRunStatus.Succeeded,
             InstalledVersion = "sandbox",
             BackupStatus = "disabled",
@@ -187,6 +189,11 @@ public class NodeAllocationService
 
     private static string NormalizeRule(string? value, string fallback)
         => string.IsNullOrWhiteSpace(value) ? fallback : value.Trim().ToLowerInvariant();
+
+    private sealed class SystemNodeClock : IClock
+    {
+        public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
+    }
 
     private static IOrderedQueryable<VpnNode> ApplyNodeOrdering(IQueryable<VpnNode> query, string rule)
         => rule switch

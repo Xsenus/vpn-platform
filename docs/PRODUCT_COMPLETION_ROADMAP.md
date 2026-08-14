@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-14.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-public-catalog-release-seed-clock`, версия `0.714.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `732/752` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-x3ui-safe-client-toggle-runtime-clock`, версия `0.715.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `734/754` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-14:
 
-- [x] `STATE-001` Backend test suite проходит: `1501/1501`.
+- [x] `STATE-001` Backend test suite проходит: `1515/1515`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2624,6 +2624,14 @@ git diff --check
   - Что сделать: каждый test seed root должен удаляться после теста; накопленные временные артефакты не должны оставаться на машине разработчика.
   - Что сделано: `AppReleaseSeedServiceTests` реализует `IDisposable`, регистрирует созданные roots и рекурсивно удаляет их после каждого теста; ранее накопленный абсолютный temp-каталог очищен после проверки пути.
   - Доказательство: audit обнаружил `4120` каталогов и `2938` файлов; после исправления seed suite `6/6` не увеличил число roots (`4120 -> 4120`), затем накопленный каталог удален и `Directory.Exists = false`.
+- [x] `P11-ACC-442` Сделать 3x-ui client enable/disable безопасным для remote-конфигурации и transport failures. 2026-08-14.
+  - Что сделать: toggle не должен перезаписывать client settings synthetic-значениями; malformed, explicit unsuccessful и неавторизованные ответы панели не должны становиться локальным success.
+  - Что сделано: toggle читает inbound и отправляет исходный client JSON с единственным изменением `enable`; UUID, email, flow, limits, expiry, `tgId`, `subId` и reset policy сохраняются. Missing client, malformed JSON, `success:false`, пустой обязательный response и login без session cookie завершаются fail-closed без remote update.
+  - Доказательство: fail-first provider regressions воспроизвели synthetic payload, принятые ошибочные HTTP 200, сломанный root-array parser, строковый false marker и array login; after-fix `X3UiHttpClientTests` `21/21`, общий provider/auth regression `66/66`, backend Debug/Release `1515/1515`, fresh SQLite full flow. Реальный production-like 3x-ui остается открытым внешним evidence.
+- [x] `P11-ACC-443` Синхронизировать JWT, Stripe webhook и provider runtime timestamps с application clock. 2026-08-14.
+  - Что сделать: security tolerance и provider timestamps не должны зависеть от прямого чтения process clock внутри business workflow.
+  - Что сделано: JWT expiry, Stripe five-minute signature tolerance, 3x-ui session/traffic timestamps и health timestamp auto-created sandbox node используют внедренный `IClock`.
+  - Доказательство: fail-first clock regressions `0/3` получили системное время вместо фиксированного application time; after-fix targeted `66/66`, backend Debug/Release `1515/1515`.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

@@ -16802,5 +16802,32 @@
         "text": "Roadmap progress is 732/752 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-x3ui-safe-client-toggle-runtime-clock",
+    "version": "0.715.0",
+    "releasedAt": "2026-08-14T09:10:00+07:00",
+    "title": "Операции 3x-ui сохраняют конфигурацию клиента",
+    "summary": "Переключение VPN-клиента стало fail-closed, а security и provider timestamps синхронизированы с application clock.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Enable и disable меняют только флаг клиента, сохраняя UUID, email, flow, лимиты, срок действия и дополнительные поля 3x-ui."
+      },
+      {
+        "type": "fixed",
+        "text": "Login, GET и POST отклоняют malformed payload, success:false, отсутствующий session cookie и пустой обязательный ответ панели."
+      },
+      {
+        "type": "improved",
+        "text": "JWT expiry, Stripe webhook tolerance, 3x-ui session и traffic timestamps, а также sandbox node health используют application clock."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 734/754 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
