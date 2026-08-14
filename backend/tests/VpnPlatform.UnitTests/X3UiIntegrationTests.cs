@@ -1588,8 +1588,7 @@ public class X3UiIntegrationTests
             var first = Task.Run(() => CaptureMigrationAsync(() => firstService.MigrateClientAsync(seed.ClientIds[0], new MigrateVpnClientCommand(seed.TargetInboundId), CancellationToken.None)));
             await addStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
             var second = Task.Run(() => CaptureMigrationAsync(() => secondService.MigrateClientAsync(seed.ClientIds[1], new MigrateVpnClientCommand(seed.TargetInboundId), CancellationToken.None)));
-            await Task.Delay(250);
-            var secondCompletedBeforeRelease = second.IsCompleted;
+            var secondCompletedBeforeRelease = await Task.WhenAny(second, Task.Delay(TimeSpan.FromSeconds(10))) == second;
             releaseAdd.TrySetResult(true);
             var attempts = await Task.WhenAll(first, second);
 

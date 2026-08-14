@@ -25,6 +25,21 @@ public class OrderService
 
     public async Task<Result<OrderDto>> CreateOrderAsync(CreateOrderCommand command, CancellationToken cancellationToken = default)
     {
+        if (!Enum.IsDefined(command.Type))
+        {
+            return Result<OrderDto>.Failure("Order type is not supported.");
+        }
+
+        if (!Enum.IsDefined(command.Channel))
+        {
+            return Result<OrderDto>.Failure("Order channel is not supported.");
+        }
+
+        if (!Enum.IsDefined(command.PaymentProvider))
+        {
+            return Result<OrderDto>.Failure("Payment provider is not supported.");
+        }
+
         var tariff = await _db.Tariffs.FirstOrDefaultAsync(x => x.Id == command.TariffId && x.IsActive, cancellationToken);
         if (tariff is null)
         {
@@ -86,6 +101,11 @@ public class OrderService
         PaymentProvider provider,
         CancellationToken cancellationToken = default)
     {
+        if (!Enum.IsDefined(provider))
+        {
+            return Result<OrderDto>.Failure("Payment provider is not supported.");
+        }
+
         await using var processingGate = await PaymentProcessingGate.AcquireOrderAsync(orderId, cancellationToken);
         var order = await _db.Orders.FirstOrDefaultAsync(x => x.Id == orderId && x.UserId == userId, cancellationToken);
         if (order is null)
@@ -126,6 +146,11 @@ public class OrderService
         ChannelType channel,
         CancellationToken cancellationToken = default)
     {
+        if (!Enum.IsDefined(channel))
+        {
+            return Result<bool>.Failure("Order channel is not supported.");
+        }
+
         var promoResult = await ResolvePromoAsync(promoCode, tariffId, channel, cancellationToken);
         if (!promoResult.IsSuccess || promoResult.Value is null)
         {

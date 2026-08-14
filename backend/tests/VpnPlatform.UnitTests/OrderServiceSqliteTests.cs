@@ -158,6 +158,48 @@ public class OrderServiceSqliteTests
     }
 
     [Fact]
+    public async Task Order_Service_Should_Reject_Undefined_Enum_Inputs_Without_Mutation()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var now = new DateTimeOffset(2026, 8, 14, 6, 0, 0, TimeSpan.Zero);
+        var userId = Guid.NewGuid();
+        var tariffId = Guid.NewGuid();
+        db.Users.Add(new User { Id = userId, Email = "invalid-order-enum@test.local", DisplayName = "Invalid enum", PasswordHash = "hash" });
+        db.Tariffs.Add(new Tariff { Id = tariffId, Name = "Enum", Slug = "invalid-order-enum", DurationDays = 30, Price = 100, Currency = "RUB", IsActive = true });
+        await db.SaveChangesAsync();
+        var service = new OrderService(db, new FixedClock(now));
+        var valid = new CreateOrderCommand(userId, tariffId, OrderType.NewSubscription, ChannelType.Telegram, PaymentProvider.YooKassa, null, false);
+
+        var invalidType = await service.CreateOrderAsync(valid with { Type = (OrderType)999 });
+        var invalidChannel = await service.CreateOrderAsync(valid with { Channel = (ChannelType)999 });
+        var invalidProvider = await service.CreateOrderAsync(valid with { PaymentProvider = (PaymentProvider)999 });
+
+        Assert.False(invalidType.IsSuccess);
+        Assert.Contains("type", invalidType.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.False(invalidChannel.IsSuccess);
+        Assert.Contains("channel", invalidChannel.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.False(invalidProvider.IsSuccess);
+        Assert.Contains("provider", invalidProvider.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await db.Orders.AsNoTracking().ToListAsync());
+
+        var created = await service.CreateOrderAsync(valid);
+        Assert.True(created.IsSuccess, created.Error);
+        var selection = await service.SelectPaymentProviderAsync(created.Value!.Id, userId, (PaymentProvider)999);
+        var promo = await service.ValidatePromoForCheckoutAsync(null, tariffId, (ChannelType)999);
+
+        Assert.False(selection.IsSuccess);
+        Assert.Contains("provider", selection.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.False(promo.IsSuccess);
+        Assert.Contains("channel", promo.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(PaymentProvider.YooKassa, (await db.Orders.SingleAsync()).PaymentProvider);
+    }
+
+    [Fact]
     public async Task CreateOrderAsync_Should_Expire_Previous_Intent_Before_Creating_Replacement()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");

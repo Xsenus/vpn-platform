@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.721.0 - 2026-08-14
+
+Release entry: `2026-08-14-service-enum-boundaries`.
+
+### Исправлено
+
+- Payment provider account service больше не сохраняет numeric undefined provider и mode: оба значения проверяются до provider gate и SQL.
+- Order service отклоняет undefined order type, channel и payment provider до create/select/promo операций, предотвращая некорректные order snapshots.
+- Concurrent X3Ui migration test ждёт завершения competing capacity reservation с bounded timeout вместо хрупкого предположения, что SQLite-процесс всегда завершится за 250 мс.
+
+### Проверено
+
+- Fail-first service regressions `0/2` сохранили undefined enum; after-fix focused `2/2`, payment/order/checkout/Telegram regression `146/146`, X3Ui concurrency isolated `1/1` и repeat `10/10`, backend Debug/Release `1543/1543`, fresh SQLite full flow с latest release, глобальный formatter, EF drift и secret scan `706/0` зелёные. Frontend не менялся; актуальные frontend `172/172`, production build/bundle, dependency audit `0 vulnerabilities` и Playwright `270/270` остаются применимыми.
+- Roadmap `741/761` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.720.0 - 2026-08-14
 
 Release entry: `2026-08-14-enum-input-boundaries`.

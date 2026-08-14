@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-14 локально подтверждено:
 
-- backend full suite: 1541/1541;
+- backend full suite: 1543/1543;
 - frontend tests: 172/172;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-14-enum-input-boundaries`, версия `0.720.0`; admin notification/order filters и Telegram payment callback fail-closed отклоняют неизвестные и numeric undefined enum-значения.
-- roadmap progress: `740/760` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-14-service-enum-boundaries`, версия `0.721.0`; payment-account и order services отклоняют undefined provider/mode/type/channel до gate, SQL и persistence.
+- roadmap progress: `741/761` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

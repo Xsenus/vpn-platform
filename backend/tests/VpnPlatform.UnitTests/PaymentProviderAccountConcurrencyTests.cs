@@ -156,6 +156,27 @@ public class PaymentProviderAccountConcurrencyTests
         Assert.Equal(1, await db.PaymentProviderAccounts.CountAsync(x => x.Name == "duplicate-name"));
     }
 
+    [Fact]
+    public async Task Provider_Account_Should_Reject_Undefined_Provider_And_Mode_Without_Persistence()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new ApplicationDbContext(
+            new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        var service = new PaymentProviderAccountService(db, new TestSecretProtector(), new TestClock());
+        var valid = Command("invalid-enum", isDefault: false);
+
+        var invalidProvider = await service.UpsertAsync(null, valid with { Provider = (PaymentProvider)999 });
+        var invalidMode = await service.UpsertAsync(null, valid with { Mode = (PaymentProviderMode)999 });
+
+        Assert.False(invalidProvider.IsSuccess);
+        Assert.Contains("provider", invalidProvider.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.False(invalidMode.IsSuccess);
+        Assert.Contains("mode", invalidMode.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await db.PaymentProviderAccounts.ToListAsync());
+    }
+
     [Theory]
     [InlineData("https://operator:secret@api.example.test", "https://cabinet.example.test/return", "https://api.example.test/webhook", "{}")]
     [InlineData("https://api.example.test", "https://operator:secret@cabinet.example.test/return", "https://api.example.test/webhook", "{}")]

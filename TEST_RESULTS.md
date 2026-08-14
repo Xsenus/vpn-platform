@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: service enum boundaries
+
+Scope:
+- Payment-account и order application commands должны fail-closed отклонять numeric undefined enum даже при обходе controller parser/model validation.
+- Invalid provider/mode/type/channel не должны доходить до gate, SQL, payment account persistence или order snapshot mutation.
+- Concurrent X3Ui capacity test должен проверять завершение competing reservation до remote release без зависимости от локального 250-ms scheduler timing.
+
+Results:
+- Roadmap progress: `741/761` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-service-enum-boundaries`, version `0.721.0`.
+- Fail-first: payment-account и order service regressions завершились `0/2` после фактического сохранения undefined enum-значений.
+- After fix: `PaymentProviderAccountService` проверяет provider/mode; `OrderService` проверяет type/channel/provider до create/select/promo операций; X3Ui test использует bounded completion wait. Focused `2/2`, payment/order/checkout/Telegram regression `146/146`, X3Ui isolated `1/1` и repeat `10/10`, backend Debug/Release `1543/1543`, fresh SQLite full flow с latest release, глобальный formatter, EF drift и secret scan `706/0` зелёные.
+- Frontend не менялся; актуальные frontend `172/172`, typecheck/build, bundle budget, dependency audit `0 vulnerabilities` и Playwright `270/270` остаются применимыми.
+- External boundary: реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись; статус остаётся `staging-ready baseline`, не production-ready.
+
 ## Check 2026-08-14: fail-closed enum input boundaries
 
 Scope:

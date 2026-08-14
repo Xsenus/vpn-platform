@@ -66,6 +66,16 @@ public class PaymentProviderAccountService
 
     public async Task<Result<PaymentProviderAccountDto>> UpsertAsync(Guid? id, UpsertPaymentProviderAccountCommand command, CancellationToken cancellationToken = default)
     {
+        if (!Enum.IsDefined(command.Provider))
+        {
+            return Result<PaymentProviderAccountDto>.Failure("Payment provider is not supported.");
+        }
+
+        if (!Enum.IsDefined(command.Mode))
+        {
+            return Result<PaymentProviderAccountDto>.Failure("Payment provider mode is not supported.");
+        }
+
         await using var accountGate = id.HasValue
             ? await PaymentProcessingGate.AcquirePaymentProviderAccountAsync(id.Value, cancellationToken)
             : null;
