@@ -17211,5 +17211,32 @@
         "text": "Roadmap progress is 752/772 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-admin-user-vpn-label-localization",
+    "version": "0.730.0",
+    "releasedAt": "2026-08-14T18:55:36+07:00",
+    "title": "User and VPN client metadata uses Russian labels",
+    "summary": "The administrative user overview and 3x-ui client surfaces no longer expose raw source, role, email, counter, event or synchronization metadata.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "User registration and authentication sources, roles, email confirmation, related-record counters and event labels now use bounded Russian text."
+      },
+      {
+        "type": "fixed",
+        "text": "3x-ui client synchronization rows and action notices localize sync, traffic reset, migration and compensation outcomes without changing the operational commands."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop and mobile browser gates verify raw API metadata in the user overview and VPN panels across all 17 administrative sections and 25 viewport configurations."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 753/773 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

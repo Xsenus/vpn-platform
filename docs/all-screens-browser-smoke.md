@@ -107,6 +107,6 @@ PNG создаются только при явном флаге внутри `f
 - Responsive all-screens `14/14` проверяет 25 viewport-конфигураций `305x568..2560x1440`, WCAG A/AA, overflow/clipping, modal bounds, control overlap и browser diagnostics.
 - Для каждого admin section сохранены и вручную просмотрены representative screenshots: `18` desktop вместе с auth и `17` compact-mobile; invalid geometry `0`, browser diagnostics `0`, временные PNG/reports после review удалены.
 - Pristine create-формы payments, tariffs, referrals, nodes, panels и scenarios не показывают validation summary до interaction; edited invalid state продолжает показывать точную ошибку.
-- Полный Playwright public/cabinet/admin/all-screens/mobile/console `270/270`, frontend `178/178`, production build и admin bundle budget `561658/562176` зелёные.
+- Полный Playwright public/cabinet/admin/all-screens/mobile/console `270/270`, frontend `179/179`, production build и admin bundle budget `563354/564224` зелёные.
 - Cabinet desktop/mobile screenshots подтверждают explicit `ru-RU` dates; admin payments/support/releases screenshots подтверждают локализованные business labels и отсутствие overflow. All-screens автоматически отклоняет видимые en-US `AM/PM` timestamps и проверяет bounded admin metadata на desktop/mobile.
-- Latest "Что нового": `2026-08-14-admin-business-label-localization`, версия `0.729.0`.
+- Latest "Что нового": `2026-08-14-admin-user-vpn-label-localization`, версия `0.730.0`; user overview и VPN client labels проверены с raw API metadata на desktop и полной responsive-матрице.

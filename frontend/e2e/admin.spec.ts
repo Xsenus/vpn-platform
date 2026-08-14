@@ -3375,7 +3375,7 @@ test('admin serializes VPN infrastructure commands across parent resources', asy
   await page.waitForTimeout(300)
   expect(api.getRequestCount('/api/admin/vpn-clients/client-e2e/enable', 'POST')).toBe(0)
   api.releaseVpnClientSync()
-  await expect(page.getByText('VPN-клиент client@example.test обновлен: synced.')).toBeVisible()
+  await expect(page.getByText('VPN-клиент client@example.test обновлен: Синхронизирован.')).toBeVisible()
 
   await openAdminSection(page, 'Подготовка VPS', 'provisioning')
   const provisioningPanel = page.locator('#provisioning')
@@ -4351,14 +4351,14 @@ test('admin 3x-ui client actions persist across reload', async ({ page }) => {
   await expect(clientRow.getByRole('button', { name: 'Отключить' })).toBeVisible()
 
   await clientRow.getByRole('button', { name: 'Синхронизировать' }).click()
-  await expect(page.getByText('VPN-клиент client@example.test обновлен: synced.')).toBeVisible()
-  await expect(clientRow).toContainText('Синхронизация: synced')
+  await expect(page.getByText('VPN-клиент client@example.test обновлен: Синхронизирован.')).toBeVisible()
+  await expect(clientRow).toContainText('Синхронизация: Синхронизирован')
 
   await clientRow.getByRole('button', { name: 'Сбросить трафик' }).click()
   await expect(panelsPanel.getByRole('dialog')).toContainText('ручной сверки')
   await panelsPanel.getByRole('button', { name: 'Подтвердить' }).click()
-  await expect(page.getByText('VPN-клиент client@example.test обновлен: traffic-reset.')).toBeVisible()
-  await expect(clientRow).toContainText('Синхронизация: traffic-reset')
+  await expect(page.getByText('VPN-клиент client@example.test обновлен: Счётчики сброшены.')).toBeVisible()
+  await expect(clientRow).toContainText('Синхронизация: Счётчики сброшены')
 
   for (const action of ['disable', 'enable', 'sync', 'reset-traffic']) {
     expect(api.getAuthorizedRequestCount(`/api/admin/vpn-clients/client-e2e/${action}`, 'POST', 'Bearer admin-vpn-client-token')).toBe(1)

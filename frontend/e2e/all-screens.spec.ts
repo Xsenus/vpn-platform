@@ -764,6 +764,30 @@ async function installApiMock(page: Page) {
       return
     }
 
+    if (method === 'GET' && path.endsWith('/vpn-panels/panel-all-screens/clients')) {
+      await fulfillJson(route, [{
+        id: 'client-all-screens',
+        userId: user.id,
+        subscriptionId: subscription.id,
+        vpnPanelId: 'panel-all-screens',
+        vpnInboundId: 'inbound-all-screens',
+        externalClientId: 'external-client-all-screens',
+        email: 'all-screens@example.test',
+        uuid: '00000000-0000-4000-8000-000000000021',
+        flow: 'xtls-rprx-vision',
+        limitIp: 3,
+        totalGb: null,
+        expiryTime: '2099-07-01T00:00:00Z',
+        enable: true,
+        configUri: 'vless://all-screens@example.test:443',
+        qrCodePayload: 'vless://all-screens@example.test:443',
+        syncStatus: 'synced',
+        lastSyncedAt: now,
+        revision: 0
+      }])
+      return
+    }
+
     if (method === 'GET' && path.includes('/vpn-panels/')) {
       await fulfillJson(route, [])
       return
@@ -1188,6 +1212,20 @@ test('every admin section renders without blank screens or browser errors', asyn
       await expect(page.getByText(/канал: Сайт · тип: Новая подписка/)).toBeVisible()
       await expect(page.getByText(/YooKassa · Проверка · показывается на сайте/)).toBeVisible()
     }
+    if (section === 'users') {
+      const usersPanel = page.locator('#users')
+      await expect(usersPanel.getByText(/Сайт · продлений 0/)).toBeVisible()
+      await expect(usersPanel.getByText(/all-screens@example\.test · Локальная учётная запись/).first()).toBeVisible()
+      await expect(usersPanel.getByText('Пользователь', { exact: true })).toBeVisible()
+      await expect(usersPanel.getByText('Email подтверждён', { exact: true })).toBeVisible()
+      await expect(usersPanel.getByText('Платежей: 1', { exact: true })).toBeVisible()
+      await expect(usersPanel.getByText('Аккаунтов: 0', { exact: true })).toBeVisible()
+      await expect(usersPanel.getByText(/синхронизация 14\.06\.2026/)).toBeVisible()
+      await expect(usersPanel.getByText(/^(?:1 active|1 payments|0 accounts|Email confirmed)$/)).toHaveCount(0)
+    }
+    if (section === 'panels') {
+      await expect(page.locator('#panels').getByText(/Синхронизация: Синхронизирован/)).toBeVisible()
+    }
     if (section === 'support') {
       await expect(page.getByText(/Сайт · tg:—/)).toBeVisible()
       await expect(page.getByText('От пользователя', { exact: true })).toBeVisible()
@@ -1529,6 +1567,18 @@ test('every admin section fits representative responsive viewports', async ({ pa
       await expect(page.locator(`#${section}`)).toBeVisible()
       await expect(page.locator('#admin-section-load-error')).toHaveCount(0)
       await expect(page.getByText(/Не удалось загрузить часть данных/)).toHaveCount(0)
+      if (section === 'users') {
+        const usersPanel = page.locator('#users')
+        await expect(usersPanel.getByText(/Сайт · продлений 0/)).toBeVisible()
+        await expect(usersPanel.getByText(/all-screens@example\.test · Локальная учётная запись/).first()).toBeVisible()
+        await expect(usersPanel.getByText('Пользователь', { exact: true })).toBeVisible()
+        await expect(usersPanel.getByText('Email подтверждён', { exact: true })).toBeVisible()
+        await expect(usersPanel.getByText('Платежей: 1', { exact: true })).toBeVisible()
+        await expect(usersPanel.getByText('Аккаунтов: 0', { exact: true })).toBeVisible()
+        await expect(usersPanel.getByText(/синхронизация 14\.06\.2026/)).toBeVisible()
+        await expect(usersPanel.getByText(/^(?:1 active|1 payments|0 accounts|Email confirmed)$/)).toHaveCount(0)
+      }
+      if (section === 'panels') await expect(page.locator('#panels').getByText(/Синхронизация: Синхронизирован/)).toBeVisible()
       await expectResponsiveLayout(page, `admin ${section} at ${viewport.name}`)
       if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin ${section} at ${viewport.name}`)
       if (viewport.name === 'compact-mobile') {

@@ -53,6 +53,7 @@ import {
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, formatReferralRewardType, formatReferralRewardValue, formatStatusLabel, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from './admin-users'
+import { formatAdminDisplayLabel, formatAdminRoleLabels } from './admin-display-labels'
 import { adminSectionIds, adminSectionLabels, canAccessAdminSection, canWriteAdminSection, parseAdminSectionHref, type AdminSectionId } from './admin-capabilities'
 import { getAdminPageMetadata } from './admin-page-metadata'
 import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason, getNextAdminAccessExpiryDelay, isAdminAccessExpired } from './admin-accesses'
@@ -3551,7 +3552,7 @@ export function App() {
             : api.resetAdminVpnClientTraffic(token, client.id, client.revision))
         .catch((error: unknown) => throwVpnPanelConflict(error, adminAction))
       if (!adminAction.isCurrent()) return
-      setNotice(`VPN-клиент ${saved.email} обновлен: ${saved.syncStatus}.`)
+      setNotice(`VPN-клиент ${saved.email} обновлен: ${formatAdminDisplayLabel(saved.syncStatus)}.`)
     } finally {
       await loadVpnPanelDetails(selectedVpnPanelId, token, adminAction.operationId)
     }
@@ -4254,12 +4255,12 @@ export function App() {
                 <div key={user.id} className={`list-item${selectedUserId === user.id ? ' selected-item' : ''}`}>
                   <div>
                     <strong>{s(user.displayName, 'Без имени')}</strong>
-                    <div className="muted">{s(user.email)} · {s(user.authSource)} · {s(user.referralCode)}</div>
+                    <div className="muted">{s(user.email)} · {formatAdminDisplayLabel(s(user.authSource))} · {s(user.referralCode)}</div>
                     <div className="muted">создан {formatDate(user.createdAt)} · вход {formatDate(user.lastLoginAt)}</div>
                   </div>
                   <div className="actions">
                     <StatusBadge value={user.isBlocked ? 'Blocked' : user.status} />
-                    <StatusBadge value={s(user.rolesCsv, 'User')} />
+                    <StatusBadge value={formatAdminRoleLabels(user.rolesCsv)} />
                     <PrimaryButton className={selectedUserId === user.id ? 'button-secondary' : 'button-ghost'} onClick={() => selectAdminUser(user.id)}>{selectedUserId === user.id ? 'Открыто' : 'Открыть'}</PrimaryButton>
                   </div>
                 </div>
@@ -4283,12 +4284,12 @@ export function App() {
             <div className="user-profile-head">
               <div>
                 <strong>{s(userOverview.user.displayName, 'Без имени')}</strong>
-                <div className="muted">{s(userOverview.user.email)} · {s(userOverview.user.authSource)} · язык {s(userOverview.user.preferredLanguage)}</div>
+                <div className="muted">{s(userOverview.user.email)} · {formatAdminDisplayLabel(s(userOverview.user.authSource))} · язык {s(userOverview.user.preferredLanguage)}</div>
                 <div className="muted">ID {shortId(userOverview.user.id)} · реферал {s(userOverview.user.referralCode)} · создан {formatDate(userOverview.user.createdAt)}</div>
               </div>
               <div className="row-actions">
                 <StatusBadge value={userOverview.user.isBlocked ? 'Blocked' : userOverview.user.status} />
-                <StatusBadge value={userOverview.user.emailConfirmed ? 'Email confirmed' : 'Email not confirmed'} />
+                <StatusBadge value={formatAdminDisplayLabel(userOverview.user.emailConfirmed ? 'EmailConfirmed' : 'EmailNotConfirmed')} />
               </div>
             </div>
             <div className="user-overview-stats">
@@ -4305,14 +4306,14 @@ export function App() {
             )}
 
             <div className="user-overview-section">
-              <div className="card-head"><h4>Подписки</h4><StatusBadge value={`${userOverviewStats.activeSubscriptionsCount} active`} /></div>
+              <div className="card-head"><h4>Подписки</h4><StatusBadge value={`Активных: ${userOverviewStats.activeSubscriptionsCount}`} /></div>
               <div className="list-stack">
                 {userOverview.subscriptions.length === 0 && <EmptyState title="Подписок нет" description="После оплаты тарифов подписки появятся здесь." />}
                 {userOverview.subscriptions.slice(0, 5).map((subscription) => (
                   <div key={subscription.id} className="list-item">
                     <div>
                       <strong>{subscription.tariffName || shortId(subscription.tariffId)}</strong>
-                      <div className="muted">{formatDate(subscription.startAt)} - {formatDate(subscription.endAt)} · {subscription.sourceChannel || '—'} · продлений {subscription.renewalCount ?? 0}</div>
+                      <div className="muted">{formatDate(subscription.startAt)} - {formatDate(subscription.endAt)} · {subscription.sourceChannel ? formatStatusLabel(subscription.sourceChannel) : '—'} · продлений {subscription.renewalCount ?? 0}</div>
                       <div className="muted">сервер {shortId(subscription.currentServerId)} · доступ {shortId(subscription.currentAccessId)}</div>
                     </div>
                     <StatusBadge value={subscription.status} />
@@ -4322,7 +4323,7 @@ export function App() {
             </div>
 
             <div className="user-overview-section">
-              <div className="card-head"><h4>Заказы и платежи</h4><StatusBadge value={`${userOverviewStats.paymentsCount} payments`} /></div>
+              <div className="card-head"><h4>Заказы и платежи</h4><StatusBadge value={`Платежей: ${userOverviewStats.paymentsCount}`} /></div>
               <div className="list-stack">
                 {userOverview.orders.length === 0 && userOverview.payments.length === 0 && <EmptyState title="Покупок нет" description="Заказы и платежи появятся после первого checkout." />}
                 {userOverview.orders.slice(0, 4).map((order) => (
@@ -4338,7 +4339,7 @@ export function App() {
                   <div key={payment.id} className="list-item">
                     <div>
                       <strong>{payment.provider} · {payment.amount} {payment.currency}</strong>
-                      <div className="muted">payment {payment.providerPaymentId || shortId(payment.id)} · подпись {payment.signatureValidated ? 'проверена' : 'не проверена'} · активация {payment.isActivationProcessed ? 'выполнена' : 'ожидает'}</div>
+                      <div className="muted">Платёж {payment.providerPaymentId || shortId(payment.id)} · подпись {payment.signatureValidated ? 'проверена' : 'не проверена'} · активация {payment.isActivationProcessed ? 'выполнена' : 'ожидает'}</div>
                     </div>
                     <StatusBadge value={payment.status} />
                   </div>
@@ -4347,14 +4348,14 @@ export function App() {
             </div>
 
             <div className="user-overview-section">
-              <div className="card-head"><h4>VPN-доступы</h4><StatusBadge value={`${userOverviewStats.activeAccessesCount} active`} /></div>
+              <div className="card-head"><h4>VPN-доступы</h4><StatusBadge value={`Активных: ${userOverviewStats.activeAccessesCount}`} /></div>
               <div className="list-stack">
                 {userOverview.accessCredentials.length === 0 && <EmptyState title="VPN-доступов нет" description="Доступы создаются после успешной оплаты и сценария выдачи." />}
                 {userOverview.accessCredentials.slice(0, 5).map((access) => (
                   <div key={access.id} className="list-item">
                     <div>
                       <strong>{formatStatusLabel(access.providerType)} · {access.serverName || shortId(access.serverId)}</strong>
-                      <div className="muted">выдан {formatDate(access.issuedAt)} · sync {formatDate(access.lastSyncedAt)} · ревизия {access.revision}</div>
+                      <div className="muted">выдан {formatDate(access.issuedAt)} · синхронизация {formatDate(access.lastSyncedAt)} · ревизия {access.revision}</div>
                       {getAdminAccessTerminalReason(access, adminAccessNow)
                         ? <div className="muted user-overview-link">Ключ скрыт: подписка или доступ завершены.</div>
                         : <div className="muted user-overview-link">{access.accessUri || 'URI не выдан'}</div>}
@@ -4366,7 +4367,7 @@ export function App() {
             </div>
 
             <div className="user-overview-section">
-              <div className="card-head"><h4>Telegram и поддержка</h4><StatusBadge value={`${userOverviewStats.telegramAccountsCount} accounts`} /></div>
+              <div className="card-head"><h4>Telegram и поддержка</h4><StatusBadge value={`Аккаунтов: ${userOverviewStats.telegramAccountsCount}`} /></div>
               <div className="list-stack">
                 {userOverview.telegramAccounts.length === 0 && <EmptyState title="Telegram не привязан" description="После привязки аккаунта оператор увидит chat/user id и последний контакт." />}
                 {userOverview.telegramAccounts.map((account) => (
@@ -5042,7 +5043,36 @@ export function App() {
                 : [])
             )
             const clientNeedsReconciliation = client.syncStatus.includes('uncertain') || client.syncStatus.includes('compensation-failed')
-            return <div key={client.id} className="list-item-vertical"><div className="item-head"><div><strong>{client.email}</strong><div className="muted">UUID {client.uuid} · inbound {inbound?.name ?? shortId(client.vpnInboundId)} · до {formatDate(client.expiryTime)}</div><div className="muted">Синхронизация: {client.syncStatus || 'unknown'} · {formatDate(client.lastSyncedAt)} · лимит устройств {client.limitIp ?? 0}</div></div><div className="item-status"><StatusBadge value={client.enable ? 'Enabled' : 'Disabled'} />{clientNeedsReconciliation && <StatusBadge value="SyncRequired" />}{inbound && <StatusBadge value={inbound.protocol} />}</div></div><div className="toolbar" hidden={!canWriteSection('panels')}>{client.enable ? <ConfirmButton className="button-secondary" disabled={clientActionBusy} message={`Отключить VPN-клиента "${client.email}"? Пользователь потеряет подключение.`} onConfirm={() => handleVpnClientAction(client, 'disable')}>Отключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={clientActionBusy} onClick={() => void handleVpnClientAction(client, 'enable')}>Включить</PrimaryButton>}<PrimaryButton disabled={clientActionBusy} onClick={() => void handleVpnClientAction(client, 'sync')}>Синхронизировать</PrimaryButton><ConfirmButton disabled={clientActionBusy} message={`Необратимо обнулить счётчики трафика VPN-клиента "${client.email}" в 3x-ui? При сетевой неопределённости клиент будет помечен для ручной сверки.`} onConfirm={() => handleVpnClientAction(client, 'reset')}>Сбросить трафик</ConfirmButton>{migrationOptionsCount > 0 && <><select aria-label={`Целевой inbound для ${client.email}`} value={vpnClientMigrationTargets[client.id] ?? ''} onChange={(e) => updateVpnClientMigrationTarget(client.id, e.target.value)}><option value="">Выберите inbound</option>{migrationOptionGroups.map((group) => <optgroup key={group.panel.id} label={`${group.panel.name} · ${group.panel.region}`}>{group.inbounds.map((option) => <option key={option.id} value={option.id}>{option.name} · {option.protocol}:{option.port} · {option.usedCapacity}/{option.capacity}</option>)}</optgroup>)}</select><ConfirmButton disabled={!vpnClientMigrationTargets[client.id] || clientActionBusy} message={`Перенести VPN-клиента "${client.email}"? Сначала будет занято по одному временному slot целевой панели, inbound и связанного VPN-сервера; после успешного удаления source-копии старые slots освободятся. При ошибке перенос будет отменён.`} onConfirm={() => handleMigrateVpnClient(client)}>Перенести</ConfirmButton></>}</div></div>
+            return (
+              <div key={client.id} className="list-item-vertical">
+                <div className="item-head">
+                  <div>
+                    <strong>{client.email}</strong>
+                    <div className="muted">UUID {client.uuid} · inbound {inbound?.name ?? shortId(client.vpnInboundId)} · до {formatDate(client.expiryTime)}</div>
+                    <div className="muted">Синхронизация: {client.syncStatus ? formatAdminDisplayLabel(client.syncStatus) : 'Неизвестно'} · {formatDate(client.lastSyncedAt)} · лимит устройств {client.limitIp ?? 0}</div>
+                  </div>
+                  <div className="item-status">
+                    <StatusBadge value={client.enable ? 'Enabled' : 'Disabled'} />
+                    {clientNeedsReconciliation && <StatusBadge value="SyncRequired" />}
+                    {inbound && <StatusBadge value={inbound.protocol} />}
+                  </div>
+                </div>
+                <div className="toolbar" hidden={!canWriteSection('panels')}>
+                  {client.enable
+                    ? <ConfirmButton className="button-secondary" disabled={clientActionBusy} message={`Отключить VPN-клиента "${client.email}"? Пользователь потеряет подключение.`} onConfirm={() => handleVpnClientAction(client, 'disable')}>Отключить</ConfirmButton>
+                    : <PrimaryButton className="button-ghost" disabled={clientActionBusy} onClick={() => void handleVpnClientAction(client, 'enable')}>Включить</PrimaryButton>}
+                  <PrimaryButton disabled={clientActionBusy} onClick={() => void handleVpnClientAction(client, 'sync')}>Синхронизировать</PrimaryButton>
+                  <ConfirmButton disabled={clientActionBusy} message={`Необратимо обнулить счётчики трафика VPN-клиента "${client.email}" в 3x-ui? При сетевой неопределённости клиент будет помечен для ручной сверки.`} onConfirm={() => handleVpnClientAction(client, 'reset')}>Сбросить трафик</ConfirmButton>
+                  {migrationOptionsCount > 0 && <>
+                    <select aria-label={`Целевой inbound для ${client.email}`} value={vpnClientMigrationTargets[client.id] ?? ''} onChange={(e) => updateVpnClientMigrationTarget(client.id, e.target.value)}>
+                      <option value="">Выберите inbound</option>
+                      {migrationOptionGroups.map((group) => <optgroup key={group.panel.id} label={`${group.panel.name} · ${group.panel.region}`}>{group.inbounds.map((option) => <option key={option.id} value={option.id}>{option.name} · {option.protocol}:{option.port} · {option.usedCapacity}/{option.capacity}</option>)}</optgroup>)}
+                    </select>
+                    <ConfirmButton disabled={!vpnClientMigrationTargets[client.id] || clientActionBusy} message={`Перенести VPN-клиента "${client.email}"? Сначала будет занято по одному временному slot целевой панели, inbound и связанного VPN-сервера; после успешного удаления source-копии старые slots освободятся. При ошибке перенос будет отменён.`} onConfirm={() => handleMigrateVpnClient(client)}>Перенести</ConfirmButton>
+                  </>}
+                </div>
+              </div>
+            )
           })}{vpnClients.length === 0 && <EmptyState title="Клиентов нет" description="После выдачи VPN-доступов клиенты 3x-ui появятся здесь." />}{vpnHealthChecks.slice(0, 3).map((check) => <div key={check.id} className="list-item"><span>{check.version || 'неизвестно'} · {check.latencyMs ?? 0}ms · {check.errorMessage || 'ok'}</span><StatusBadge value={check.status} /></div>)}{vpnSyncRuns.slice(0, 3).map((run) => <div key={run.id} className="list-item"><span>{run.errorMessage || (run.summaryJson !== '{}' ? run.summaryJson : '') || shortId(run.id)}</span><StatusBadge value={run.status} /></div>)}</div>
           </>}
         </Card>

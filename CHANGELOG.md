@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.730.0 - 2026-08-14
+
+Release entry: `2026-08-14-admin-user-vpn-label-localization`.
+
+### Исправлено
+
+- Карточка пользователя в админке локализует источник регистрации и авторизации, роли, подтверждение email, счётчики связанных сущностей и подписи событий вместо вывода `Web`, `Local`, `User`, `Email confirmed`, `active`, `payments`, `accounts`, `payment` и `sync`.
+- Статусы синхронизации 3x-ui клиентов и action-уведомления используют ограниченный admin-словарь: `synced`, `traffic-reset`, migration/compensation состояния и неизвестное значение отображаются понятными русскими подписями.
+- Desktop/mobile all-screens fixtures проверяют реальные raw API metadata, а operational Playwright сохраняет команды disable/enable/sync/reset/migrate и их состояние после reload.
+
+### Проверено
+
+- Fail-first unit/source guard дважды завершился `2/10 failed`; после исправления focused suite `11/11`, frontend `179/179`, typecheck/build, admin bundle `563354/564224`, dependency audit `0 vulnerabilities`, targeted VPN client desktop/mobile `4/4` и полный Playwright `270/270` зелёные.
+- Все 17 разделов админки прошли desktop и 25 responsive viewport-конфигураций; representative users/panels screenshots просмотрены вручную без overflow, clipping, overlap или browser diagnostics. Backend Debug/Release `1555/1555`, API build, fresh SQLite, formatter, EF drift, encoding и secret scan `711/0` подтверждены release gate. Roadmap `753/773` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.729.0 - 2026-08-14
 
 Release entry: `2026-08-14-admin-business-label-localization`.

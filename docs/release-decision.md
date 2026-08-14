@@ -24,7 +24,7 @@ Production-ready решение заблокировано следующими 
 
 - Backend full suite: `1555/1555`.
 - API Release build: OK.
-- Frontend unit tests: `178/178`.
+- Frontend unit tests: `179/179`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
 - Browser console smoke: `270/270`; responsive all-screens `14/14` проверяет ready-state, content/modal/control geometry на 25 viewport-конфигурациях `305x568..2560x1440`, включая точные пары `N/N+1` для всех CSS-breakpoints; production inventory маршрутов и admin sections, local WebP decode и representative screenshots проверены.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-14-admin-business-label-localization`, версия `0.729.0`; admin payment, support, release и action-notice surfaces используют bounded Russian business labels и проверены desktop/mobile. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `752/772` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-14-admin-user-vpn-label-localization`, версия `0.730.0`; user overview и 3x-ui client surfaces используют bounded Russian source/auth/role/email/count/event/sync labels и проверены desktop/mobile. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `753/773` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

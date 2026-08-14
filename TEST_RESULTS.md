@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: admin user and VPN client label localization
+
+Scope:
+- User overview must not expose raw registration/auth sources, role names, email state, English counters or event labels.
+- 3x-ui client rows and action notices must localize bounded sync results without changing disable, enable, sync, traffic reset or migration behavior.
+- Localized metadata must fit all administrative desktop/mobile layouts without overflow, clipping or overlap.
+
+Results:
+- Roadmap progress: `753/773` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-admin-user-vpn-label-localization`, version `0.730.0`.
+- Fail-first: the expanded unit/source guard twice completed with `2/10 failed`, first reproducing raw `Web`/`synced`, then raw `Local` plus English user-overview metadata.
+- After fix: shared business labels cover registration channel, while an admin-only bounded formatter covers auth source, roles, email state and VPN sync outcomes. Focused unit/source `11/11`, frontend `179/179`, typecheck/build, admin bundle budget `563354/564224`, dependency audit `0 vulnerabilities`, targeted VPN client desktop/mobile Playwright `4/4` and full Playwright `270/270` are green.
+- Visual gate: all 17 admin sections passed desktop and 25 responsive viewport configurations; users/panels desktop/mobile screenshots were reviewed manually, all client controls remain present, invalid geometry `0`, browser diagnostics `0`.
+- Release gate: backend Debug/Release `1555/1555`, API Release build `0 warnings / 0 errors`, fresh SQLite full flow with latest release, global formatter, EF pending-model check, secret scan `711/0` and strict UTF-8/BOM guard are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-14: admin business label localization
 
 Scope:
