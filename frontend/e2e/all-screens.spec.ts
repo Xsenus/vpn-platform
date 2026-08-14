@@ -1154,9 +1154,18 @@ test('every admin section renders without blank screens or browser errors', asyn
     await expectNonBlankPage(page)
     await expectPageQuality(page, `admin ${section}`)
     await expectWcagQuality(page, `admin ${section}`)
-    if (section === 'dashboard' || section === 'panels') {
-      await captureAuditScreenshot(page, testInfo, `admin-${section}-desktop`)
+    const pristineCreateFormSelector: Record<string, string> = {
+      payments: '#payments form',
+      tariffs: '#tariffs form',
+      referrals: '#referrals form',
+      nodes: '#nodes form',
+      panels: '#panels form',
+      scenarios: '#scenarios form'
     }
+    if (pristineCreateFormSelector[section]) {
+      await expect(page.locator(pristineCreateFormSelector[section]).first().locator('.form-validation-summary')).toHaveCount(0)
+    }
+    await captureAuditScreenshot(page, testInfo, `admin-${section}-desktop`)
   }
   await expect(page.getByText(/Не удалось загрузить часть данных/)).toHaveCount(0)
 
@@ -1492,7 +1501,7 @@ test('every admin section fits representative responsive viewports', async ({ pa
       await expect(page.getByText(/Не удалось загрузить часть данных/)).toHaveCount(0)
       await expectResponsiveLayout(page, `admin ${section} at ${viewport.name}`)
       if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin ${section} at ${viewport.name}`)
-      if (viewport.name === 'compact-mobile' && (section === 'dashboard' || section === 'panels')) {
+      if (viewport.name === 'compact-mobile') {
         await captureAuditScreenshot(page, testInfo, `admin-${section}-mobile`)
       }
     }

@@ -4041,6 +4041,7 @@ test('admin VPN configuration validators reject invalid semantic fields', async 
   await panelForm.getByLabel('Емкость').fill('1.5')
   await panelForm.getByLabel('Шаблон inbound JSON').fill('[]')
   await expect(panelForm.getByRole('button', { name: 'Добавить панель' })).toBeDisabled()
+  await expect(panelForm.locator('.form-validation-summary')).toContainText('Укажите логин 3x-ui панели.')
   await panelForm.evaluate((form) => form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true })))
 
   await panelsSection.getByRole('combobox', { name: 'Панель' }).selectOption('panel-eu')

@@ -39,13 +39,13 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("1555/1555", readme, StringComparison.Ordinal);
-        Assert.Contains("172/172", readme, StringComparison.Ordinal);
+        Assert.Contains("173/173", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-14-provider-response-redaction-timeout-boundary", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-14-pristine-form-validation-visual-inventory", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("270/270", readme, StringComparison.Ordinal);
     }
 
@@ -59,8 +59,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1555/1555",
-                     "2026-08-14-provider-response-redaction-timeout-boundary",
-                     "0.726.0",
+                     "2026-08-14-pristine-form-validation-visual-inventory",
+                     "0.727.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

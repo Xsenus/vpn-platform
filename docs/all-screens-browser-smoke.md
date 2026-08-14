@@ -100,3 +100,12 @@ PNG создаются только при явном флаге внутри `f
 - Visual oracle проверяет clipping обычного контента, границы dialog и overlap реально видимых controls с учётом clipping ancestors и active modal layer.
 - Public routes и admin sections берутся из production typed inventory; быстрый boundary test закрывает `vpn@521`, `referrals@1280` и `releases@1280`.
 - Latest "Что нового": `2026-08-12-payment-status-proof-boundary`, версия `0.662.0`; полный browser inventory остаётся `227/227` за `12.9 min` без failed/flaky/skipped, отдельный responsive all-screens `7/7` за `9.2 min`.
+
+## Результат 2026-08-14
+
+- Production inventory покрывает 6 public route-состояний, cabinet auth/dashboard, admin auth и все 17 admin sections.
+- Responsive all-screens `14/14` проверяет 25 viewport-конфигураций `305x568..2560x1440`, WCAG A/AA, overflow/clipping, modal bounds, control overlap и browser diagnostics.
+- Для каждого admin section сохранены и вручную просмотрены representative screenshots: `18` desktop вместе с auth и `17` compact-mobile; invalid geometry `0`, browser diagnostics `0`, временные PNG/reports после review удалены.
+- Pristine create-формы payments, tariffs, referrals, nodes, panels и scenarios не показывают validation summary до interaction; edited invalid state продолжает показывать точную ошибку.
+- Полный Playwright public/cabinet/admin/all-screens/mobile/console `270/270`, frontend `173/173`, production build и admin bundle budget `561000/561152` зелёные.
+- Latest "Что нового": `2026-08-14-pristine-form-validation-visual-inventory`, версия `0.727.0`.

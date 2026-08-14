@@ -20,7 +20,7 @@ public class FinalDocsChangelogTests
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("1555/1555", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-14-provider-response-redaction-timeout-boundary", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-14-pristine-form-validation-visual-inventory", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -66,8 +66,8 @@ public class FinalDocsChangelogTests
         foreach (var expected in new[]
                  {
                      "1555/1555",
-                     "2026-08-14-provider-response-redaction-timeout-boundary",
-                     "0.726.0",
+                     "2026-08-14-pristine-form-validation-visual-inventory",
+                     "0.727.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",

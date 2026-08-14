@@ -1810,11 +1810,13 @@ export function App() {
   const updateFaqForm = <K extends keyof FaqUpsertPayload>(key: K, value: FaqUpsertPayload[K]) => setFaqForm((current) => ({ ...current, [key]: value }))
   const updateSiteContentForm = <K extends keyof SiteContentBlockUpsertPayload>(key: K, value: SiteContentBlockUpsertPayload[K]) => setSiteContentForm((current) => ({ ...current, [key]: value }))
   const updateWorkScenarioForm = <K extends keyof WorkScenarioUpsertPayload>(key: K, value: WorkScenarioUpsertPayload[K]) => setWorkScenarioForm((current) => ({ ...current, [key]: value }))
-  const updateWorkScenarioTariffLink = (tariffId: string, checked: boolean) => setWorkScenarioForm((current) => {
-    const currentIds = parseWorkScenarioTariffIds(current.allowedTariffIdsJson)
-    const nextIds = checked ? [...currentIds, tariffId] : currentIds.filter((id) => id !== tariffId)
-    return { ...current, allowedTariffIdsJson: scenarioTariffIdsToJson(nextIds) }
-  })
+  const updateWorkScenarioTariffLink = (tariffId: string, checked: boolean) => {
+    setWorkScenarioForm((current) => {
+      const currentIds = parseWorkScenarioTariffIds(current.allowedTariffIdsJson)
+      const nextIds = checked ? [...currentIds, tariffId] : currentIds.filter((id) => id !== tariffId)
+      return { ...current, allowedTariffIdsJson: scenarioTariffIdsToJson(nextIds) }
+    })
+  }
   const isWorkScenarioTariffSelected = (tariffId: string) => parseWorkScenarioTariffIds(workScenarioForm.allowedTariffIdsJson).includes(tariffId)
   const updateReleaseItem = (index: number, patch: Partial<AppReleaseUpsertPayload['items'][number]>) => setReleaseForm((current) => ({
     ...current,
@@ -3427,7 +3429,7 @@ export function App() {
       if (formIsCurrent) {
         selectVpnPanel(saved.id)
         setEditingVpnPanelId(null)
-        setVpnPanelForm({ ...defaultVpnPanelForm, region: submittedForm.region })
+        setVpnPanelForm(defaultVpnPanelForm)
       }
       await action.reloadAll()
       if (formIsCurrent && action.isCurrent() && selectedVpnPanelIdRef.current === saved.id) {
@@ -3675,7 +3677,7 @@ export function App() {
       if (serverFormRef.current === submittedForm && editingServerIdRef.current === editingId) {
         setEditingServerId(null)
         setEditingServerRevision(null)
-        setServerForm({ ...defaultServerForm, provider: submittedForm.provider, region: submittedForm.region, country: submittedForm.country, datacenter: submittedForm.datacenter })
+        setServerForm(defaultServerForm)
       }
       await action.reloadAll()
     }, serverActionResourceKey(editingId || 'create'))
@@ -4454,7 +4456,7 @@ export function App() {
                 <label className="checkbox-row"><input checked={providerForm.useWebhookIpAllowList} onChange={(e) => updateProviderForm('useWebhookIpAllowList', e.target.checked)} type="checkbox" /> Ограничить webhook по IP</label>
               </div>
             </fieldset>
-            <FormValidationSummary errors={providerFormErrors} />
+            <FormValidationSummary errors={providerForm !== defaultProviderForm ? providerFormErrors : []} />
             <div className="form-footer">
               <PrimaryButton type="submit" disabled={providerFormActionBusy || !token || providerFormErrors.length > 0} title={adminDisabledTitle} aria-busy={providerFormActionBusy}>{editingProviderAccountId ? 'Сохранить изменения' : 'Сохранить способ оплаты'}</PrimaryButton>
               {editingProviderAccountId && <PrimaryButton type="button" className="button-ghost" onClick={resetProviderForm}>Отменить редактирование</PrimaryButton>}
@@ -4688,7 +4690,7 @@ export function App() {
               <div className="muted">{tariffForm.maxDevices ?? 0} устройств · сценарий {tariffForm.provisioningScenario || 'auto'}</div>
               {tariffFeaturesText && <ul className="feature-list compact-list">{tariffFeaturesText.split('\n').filter(Boolean).map((feature) => <li key={feature}>{feature}</li>)}</ul>}
             </div>
-            <FormValidationSummary errors={tariffFormErrors} />
+            <FormValidationSummary errors={tariffForm !== defaultTariffForm || tariffFeaturesText ? tariffFormErrors : []} />
             <div className="form-footer">
               <PrimaryButton type="submit" disabled={!token || tariffFormActionBusy || tariffFormErrors.length > 0} title={adminDisabledTitle} aria-busy={tariffFormActionBusy}>{editingTariffId ? 'Сохранить тариф' : 'Создать тариф'}</PrimaryButton>
               {editingTariffId && <PrimaryButton type="button" className="button-ghost" onClick={resetTariffForm}>Отменить редактирование</PrimaryButton>}
@@ -4742,7 +4744,7 @@ export function App() {
               </div>
               <label className="checkbox-row" hidden={!referralProgramForm.referredEnabled}><input type="checkbox" checked={referralProgramForm.referredAutoApprove} onChange={(event) => updateReferralProgramForm('referredAutoApprove', event.target.checked)} /> Подтверждать автоматически</label>
             </fieldset>
-            <FormValidationSummary errors={referralProgramFormErrors} />
+            <FormValidationSummary errors={referralProgramForm !== defaultReferralProgramForm ? referralProgramFormErrors : []} />
             <div className="form-footer">
               <PrimaryButton type="submit" disabled={referralProgramFormActionBusy || referralProgramFormErrors.length > 0} aria-busy={referralProgramFormActionBusy}>{editingReferralProgramId ? 'Сохранить программу' : 'Создать программу'}</PrimaryButton>
               {editingReferralProgramId && <PrimaryButton type="button" className="button-ghost" onClick={resetReferralProgramForm}>Отменить редактирование</PrimaryButton>}
@@ -4942,7 +4944,7 @@ export function App() {
               </div>
             </fieldset>
             <p className="muted">SSH-доступ защищается API и не возвращается обратно. Проверочный режим не выполняет реальный SSH-деплой.</p>
-            <FormValidationSummary errors={serverFormErrors} />
+            <FormValidationSummary errors={serverForm !== defaultServerForm ? serverFormErrors : []} />
             <div className="form-footer">
               <PrimaryButton type="submit" disabled={serverFormActionBusy || !token || serverFormErrors.length > 0} title={adminDisabledTitle} aria-busy={serverFormActionBusy}>{editingServerId ? 'Сохранить сервер' : 'Создать сервер'}</PrimaryButton>
               {editingServerId && <PrimaryButton type="button" className="button-ghost" onClick={cancelServerEdit}>Отменить редактирование</PrimaryButton>}
@@ -4976,7 +4978,7 @@ export function App() {
               <label className="checkbox-row"><input checked={vpnPanelForm.autoCreateInbound} onChange={(e) => updateVpnPanelForm('autoCreateInbound', e.target.checked)} type="checkbox" /> Автоматически создавать inbound при выдаче доступа</label>
               <label><span>Шаблон inbound JSON</span><textarea value={vpnPanelForm.defaultInboundTemplateJson} onChange={(e) => updateVpnPanelForm('defaultInboundTemplateJson', e.target.value)} rows={4} maxLength={32768} placeholder='{"remark":"default-vless","protocol":"vless","port":443}' /></label>
             </fieldset>
-            <FormValidationSummary errors={vpnPanelFormErrors} />
+            <FormValidationSummary errors={vpnPanelForm !== defaultVpnPanelForm ? vpnPanelFormErrors : []} />
             <div className="form-footer">
               <PrimaryButton type="submit" disabled={vpnPanelFormActionBusy || !token || vpnPanelFormErrors.length > 0} title={adminDisabledTitle} aria-busy={vpnPanelFormActionBusy}>{editingVpnPanelId ? 'Сохранить панель' : 'Добавить панель'}</PrimaryButton>
               {editingVpnPanelId && <PrimaryButton type="button" className="button-ghost" onClick={cancelVpnPanelEdit}>Отменить редактирование</PrimaryButton>}
@@ -5448,7 +5450,7 @@ export function App() {
               <label><span>Текст для кабинета</span><textarea value={workScenarioForm.cabinetText} onChange={(e) => updateWorkScenarioForm('cabinetText', e.target.value)} rows={3} maxLength={4000} /></label>
               <label><span>Текст для Telegram</span><textarea value={workScenarioForm.telegramText} onChange={(e) => updateWorkScenarioForm('telegramText', e.target.value)} rows={3} maxLength={4000} /></label>
             </fieldset>
-            <FormValidationSummary errors={workScenarioFormErrors} />
+            <FormValidationSummary errors={workScenarioForm !== defaultWorkScenarioForm ? workScenarioFormErrors : []} />
             <div className="form-footer">
               <PrimaryButton type="submit" disabled={!token || workScenarioFormActionBusy || workScenarioFormErrors.length > 0} title={adminDisabledTitle} aria-busy={workScenarioFormActionBusy}>{editingWorkScenarioId ? 'Сохранить сценарий' : 'Создать сценарий'}</PrimaryButton>
               {editingWorkScenarioId && <PrimaryButton type="button" className="button-secondary" onClick={resetWorkScenarioForm}>Отменить редактирование</PrimaryButton>}

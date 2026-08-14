@@ -42,6 +42,21 @@ test('all-screens checks content, modal bounds and control overlaps', () => {
   assert.match(allScreens, /locator\(`#\$\{section\}`\)\)\.toBeVisible\(\)/)
   assert.match(allScreens, /locator\('#admin-section-load-error'\)\)\.toHaveCount\(0\)/)
   assert.match(allScreens, /Не удалось загрузить часть данных/)
+  assert.match(allScreens, /captureAuditScreenshot\(page, testInfo, `admin-\$\{section\}-desktop`\)/)
+  assert.match(allScreens, /viewport\.name === 'compact-mobile'[\s\S]*captureAuditScreenshot\(page, testInfo, `admin-\$\{section\}-mobile`\)/)
+})
+
+test('admin pristine forms defer validation feedback until user interaction', () => {
+  const root = findRepositoryRoot()
+  const adminApp = readFileSync(join(root, 'frontend', 'apps', 'admin-panel', 'src', 'App.tsx'), 'utf8')
+  const sharedStyles = readFileSync(join(root, 'frontend', 'packages', 'ui', 'src', 'styles.css'), 'utf8')
+
+  for (const stateName of ['provider', 'referralProgram', 'server', 'vpnPanel', 'workScenario']) {
+    assert.match(adminApp, new RegExp(`FormValidationSummary errors=\\{${stateName}Form !== default${stateName[0].toUpperCase()}${stateName.slice(1)}Form \\? ${stateName}FormErrors : \\[\\]\\}`))
+  }
+  assert.match(adminApp, /FormValidationSummary errors=\{tariffForm !== defaultTariffForm \|\| tariffFeaturesText \? tariffFormErrors : \[\]\}/)
+  assert.match(sharedStyles, /input:user-invalid, textarea:user-invalid, select:user-invalid/)
+  assert.doesNotMatch(sharedStyles, /:invalid:not\(:placeholder-shown\)/)
 })
 
 test('responsive matrix straddles every CSS breakpoint', () => {

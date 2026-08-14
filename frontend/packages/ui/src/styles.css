@@ -272,7 +272,7 @@ textarea { min-height: 96px; resize: vertical; }
 input:hover, select:hover, textarea:hover { border-color: #9aa8ba; }
 input:disabled, select:disabled, textarea:disabled { background: #f1f5f9; color: #8793a5; }
 input::placeholder, textarea::placeholder { color: #94a3b8; }
-input:invalid:not(:placeholder-shown), textarea:invalid:not(:placeholder-shown), select:invalid {
+input:user-invalid, textarea:user-invalid, select:user-invalid {
   border-color: #fca5a5;
   box-shadow: 0 0 0 3px rgba(252, 165, 165, 0.18);
 }

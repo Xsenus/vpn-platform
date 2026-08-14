@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-14.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-provider-response-redaction-timeout-boundary`, версия `0.726.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `747/767` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-pristine-form-validation-visual-inventory`, версия `0.727.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `749/769` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-14:
 
 - [x] `STATE-001` Backend test suite проходит: `1555/1555`.
-- [x] `STATE-002` Frontend test suite проходит: `172/172`.
+- [x] `STATE-002` Frontend test suite проходит: `173/173`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2684,6 +2684,14 @@ git diff --check
   - Что сделать: execution timeout path должен завершаться в пределах существующего `<10s` test/runtime contract даже если остановка process tree не подтверждается немедленно.
   - Что сделано: post-kill wait ограничен 5 секундами; при неостановленном runner возвращается безопасный diagnostic без ожидания незавершенных stdout/stderr tasks, cleanup extra-vars остается в `finally`.
   - Доказательство: первоначальный full Debug `1554/1555` воспроизвел `12.38s`; after-fix timeout stability `3/3`, повторный backend Debug/Release `1555/1555`, fresh SQLite full flow, formatter и EF drift зелёные.
+- [x] `P11-ACC-457` Отложить ошибки новых admin-форм до взаимодействия пользователя. 2026-08-14.
+  - Что сделать: пустые create-формы способов оплаты, тарифов, реферальных программ, VPN-серверов, 3x-ui панелей и сценариев не должны сразу показывать красную сводку или native invalid border; после изменения невалидного поля точная диагностика должна оставаться доступной.
+  - Что сделано: `FormValidationSummary` отличает canonical default object от изменённой формы без дополнительного bundle state; shared CSS использует `:user-invalid`; успешное создание server/panel возвращает полный default snapshot.
+  - Доказательство: fail-first panel `0/1`, затем expanded form inventory `0/1` на payments; after-fix все admin sections `1/1`, validation/secure lifecycle/managed CRUD `6/6`, frontend `173/173`, typecheck/build, admin bundle `561000/561152`, dependency audit `0 vulnerabilities` и полный Playwright `270/270` зелёные.
+- [x] `P11-ACC-458` Покрыть визуальным инвентарём каждый admin-раздел на desktop и mobile. 2026-08-14.
+  - Что сделать: all-screens должен сохранять representative desktop и compact-mobile screenshots всех 17 production admin sections, одновременно проверяя WCAG, overflow, clipping, modal bounds, control overlap и browser diagnostics на полной responsive-матрице.
+  - Что сделано: screenshot capture расширен с dashboard/panels на весь canonical `adminSectionIds`; pristine-form assertion входит в desktop inventory, а compact-mobile capture выполняется для каждого раздела.
+  - Доказательство: all-screens `14/14`, 25 viewport-конфигураций `305x568..2560x1440`, `18` desktop и `17` mobile admin screenshots просмотрены вручную, invalid geometry `0`, browser diagnostics `0`; временные screenshots/reports удалены после проверки.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: pristine admin validation and complete visual inventory
+
+Scope:
+- New administrative create forms must not show validation errors or red borders before user interaction.
+- Validation feedback must remain visible after an invalid edit or submit attempt.
+- Every production admin section must have representative desktop and compact-mobile visual evidence in the all-screens audit.
+
+Results:
+- Roadmap progress: `749/769` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-pristine-form-validation-visual-inventory`, version `0.727.0`.
+- Fail-first: the pristine 3x-ui panel form completed `0/1`; the expanded six-form regression then completed `0/1` at payments, reproducing immediate red summaries before interaction.
+- After fix: pristine summaries are deferred by canonical default-form identity and native fields use `:user-invalid`; edited invalid forms still show exact diagnostics. All admin sections `1/1`, operational validation/secure lifecycle/managed CRUD `6/6`, frontend `173/173`, typecheck/build, admin bundle budget `561000/561152`, dependency audit `0 vulnerabilities` and Playwright `270/270` are green.
+- Visual gate: all-screens `14/14` covered 25 viewport configurations `305x568..2560x1440`; `18` desktop and `17` compact-mobile admin screenshots were reviewed manually, invalid geometry `0`, browser diagnostics `0`. Temporary screenshots and reports were removed after review.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-14: provider response redaction and provisioning timeout boundary
 
 Scope:

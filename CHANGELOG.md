@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.727.0 - 2026-08-14
+
+Release entry: `2026-08-14-pristine-form-validation-visual-inventory`.
+
+### Исправлено
+
+- Новые формы способов оплаты, тарифов, реферальных программ, VPN-серверов, 3x-ui панелей и сценариев больше не показывают красную сводку ошибок до первого изменения пользователем.
+- Нативная подсветка обязательных полей использует `:user-invalid`, поэтому пустая pristine-форма не выглядит ошибочной, а после взаимодействия feedback сохраняется.
+- Успешное создание VPN-сервера или панели возвращает форму к полному исходному состоянию без устаревших значений и ложной валидации.
+
+### Проверено
+
+- Fail-first pristine-form browser regressions `0/1` для панели и затем `0/1` для расширенной выборки; after-fix все 17 admin sections `1/1`, validation/secure lifecycle/managed CRUD `6/6`, frontend `173/173`, typecheck/build, admin bundle `561000/561152`, dependency audit `0 vulnerabilities` и полный Playwright `270/270` зелёные.
+- All-screens `14/14` проверил 25 viewport-конфигураций `305x568..2560x1440`; визуально просмотрены `18` desktop и `17` mobile admin screenshots, invalid geometry `0`, browser diagnostics `0`. Roadmap `749/769` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.726.0 - 2026-08-14
 
 Release entry: `2026-08-14-provider-response-redaction-timeout-boundary`.

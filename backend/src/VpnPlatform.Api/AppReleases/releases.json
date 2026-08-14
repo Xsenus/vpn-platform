@@ -17130,5 +17130,32 @@
         "text": "Roadmap progress is 747/767 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-pristine-form-validation-visual-inventory",
+    "version": "0.727.0",
+    "releasedAt": "2026-08-14T15:55:23+07:00",
+    "title": "Admin forms validate after user interaction",
+    "summary": "Pristine create forms remain neutral while every administrative section now has desktop and mobile visual audit coverage.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "New payment, tariff, referral, VPN server, 3x-ui panel and work scenario forms no longer show validation summaries before user interaction."
+      },
+      {
+        "type": "improved",
+        "text": "Native required-field styling now uses user-invalid state while exact validation feedback remains visible after an invalid edit."
+      },
+      {
+        "type": "improved",
+        "text": "All 17 administrative sections are captured and reviewed at representative desktop and compact-mobile viewports."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 749/769 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
