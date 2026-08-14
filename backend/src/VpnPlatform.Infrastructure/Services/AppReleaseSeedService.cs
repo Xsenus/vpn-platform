@@ -44,11 +44,8 @@ public sealed class AppReleaseSeedService
 
         await using var stream = File.OpenRead(releasesPath);
         var seedItems = await JsonSerializer.DeserializeAsync<List<AppReleaseSeedItem>>(stream, JsonOptions, cancellationToken) ?? new();
-        var seedByReleaseId = seedItems
-            .Where(x => !string.IsNullOrWhiteSpace(x.ReleaseId))
-            .GroupBy(x => x.ReleaseId.Trim(), StringComparer.OrdinalIgnoreCase)
-            .Select(x => x.Last())
-            .ToDictionary(x => x.ReleaseId.Trim(), StringComparer.OrdinalIgnoreCase);
+        ValidateSeedItems(seedItems);
+        var seedByReleaseId = seedItems.ToDictionary(x => x.ReleaseId.Trim(), StringComparer.OrdinalIgnoreCase);
 
         var existing = await db.AppReleases
             .Include(x => x.Items)
@@ -79,7 +76,7 @@ public sealed class AppReleaseSeedService
             }
 
             release.Version = seed.Version.Trim();
-            release.ReleasedAt = seed.ReleasedAt.ToUniversalTime();
+            release.ReleasedAt = seed.ReleasedAt!.Value.ToUniversalTime();
             release.Title = seed.Title.Trim();
             release.Summary = seed.Summary.Trim();
             release.IsActive = seed.IsActive;
@@ -141,6 +138,61 @@ public sealed class AppReleaseSeedService
             _ => "new"
         };
 
+    private static void ValidateSeedItems(IReadOnlyList<AppReleaseSeedItem> seedItems)
+    {
+        if (seedItems.Count == 0)
+        {
+            throw new InvalidDataException("App release seed must contain at least one release.");
+        }
+
+        var releaseIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var index = 0; index < seedItems.Count; index++)
+        {
+            var seed = seedItems[index]
+                ?? throw new InvalidDataException($"App release seed item {index} must be an object.");
+            var itemLabel = $"App release seed item {index}";
+            if (string.IsNullOrWhiteSpace(seed.ReleaseId))
+            {
+                throw new InvalidDataException($"{itemLabel} requires releaseId.");
+            }
+
+            var releaseId = seed.ReleaseId.Trim();
+            if (!releaseIds.Add(releaseId))
+            {
+                throw new InvalidDataException($"App release seed contains duplicate releaseId '{releaseId}'.");
+            }
+            if (string.IsNullOrWhiteSpace(seed.Version))
+            {
+                throw new InvalidDataException($"{itemLabel} requires version.");
+            }
+            if (!seed.ReleasedAt.HasValue)
+            {
+                throw new InvalidDataException($"{itemLabel} requires releasedAt.");
+            }
+            if (string.IsNullOrWhiteSpace(seed.Title))
+            {
+                throw new InvalidDataException($"{itemLabel} requires title.");
+            }
+            if (string.IsNullOrWhiteSpace(seed.Summary))
+            {
+                throw new InvalidDataException($"{itemLabel} requires summary.");
+            }
+            if (!string.IsNullOrWhiteSpace(seed.Source)
+                && !string.Equals(seed.Source.Trim(), "agent", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException($"{itemLabel} source must be 'agent'.");
+            }
+            if (seed.Items is null || seed.Items.Count == 0)
+            {
+                throw new InvalidDataException($"{itemLabel} requires at least one item.");
+            }
+            if (seed.Items.Any(x => x is null || string.IsNullOrWhiteSpace(x.Text)))
+            {
+                throw new InvalidDataException($"{itemLabel} contains an item without text.");
+            }
+        }
+    }
+
     public sealed class AppReleaseSeedItem
     {
         [JsonPropertyName("releaseId")]
@@ -148,7 +200,7 @@ public sealed class AppReleaseSeedService
         [JsonPropertyName("version")]
         public string Version { get; set; } = string.Empty;
         [JsonPropertyName("releasedAt")]
-        public DateTimeOffset ReleasedAt { get; set; } = DateTimeOffset.UtcNow;
+        public DateTimeOffset? ReleasedAt { get; set; }
         [JsonPropertyName("title")]
         public string Title { get; set; } = string.Empty;
         [JsonPropertyName("summary")]

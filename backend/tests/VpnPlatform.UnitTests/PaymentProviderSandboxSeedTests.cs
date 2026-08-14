@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Api.Controllers.Public;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Entities;
@@ -14,6 +15,24 @@ namespace VpnPlatform.UnitTests;
 
 public class PaymentProviderSandboxSeedTests
 {
+    [Fact]
+    public async Task Demo_Seed_Should_Use_Application_Clock()
+    {
+        await using var db = CreateDbContext();
+        var now = new DateTimeOffset(2034, 4, 5, 6, 7, 8, TimeSpan.Zero);
+
+        await DbInitializer.SeedDemoDataAsync(db, new FixedClock(now), CancellationToken.None);
+        await db.SaveChangesAsync();
+
+        Assert.All(await db.PaymentProviderAccounts.ToListAsync(), account =>
+        {
+            Assert.Equal(now, account.CreatedAt);
+            Assert.Equal(now, account.UpdatedAt);
+        });
+        Assert.Equal(now, (await db.VpnPanels.SingleAsync()).LastHealthCheckAt);
+        Assert.Equal(now, (await db.VpnNodes.SingleAsync()).LastHealthCheckAt);
+    }
+
     [Fact]
     public async Task Local_Sqlite_Seed_Should_Create_Admin_Tariffs_Payments_And_Sandbox_Vpn_Infrastructure()
     {
@@ -32,7 +51,7 @@ public class PaymentProviderSandboxSeedTests
             RolesCsv = UserRoles.SuperAdmin,
             ResetExistingPassword = true
         }, CancellationToken.None);
-        await DbInitializer.SeedDemoDataAsync(db, CancellationToken.None);
+        await SeedAsync(db);
         await db.SaveChangesAsync();
 
         var admin = await db.Users.SingleAsync(x => x.Email == "admin@local.test");
@@ -84,7 +103,7 @@ public class PaymentProviderSandboxSeedTests
             .ToArray();
         Assert.DoesNotContain(seededText, ContainsMojibakeMarker);
 
-        await DbInitializer.SeedDemoDataAsync(db, CancellationToken.None);
+        await SeedAsync(db);
         await db.SaveChangesAsync();
 
         Assert.Equal(tariffs.Count, await db.Tariffs.CountAsync());
@@ -118,7 +137,7 @@ public class PaymentProviderSandboxSeedTests
         });
         await db.SaveChangesAsync();
 
-        await DbInitializer.SeedDemoDataAsync(db, CancellationToken.None);
+        await SeedAsync(db);
         await db.SaveChangesAsync();
 
         var accounts = await db.PaymentProviderAccounts.AsNoTracking().ToListAsync();
@@ -170,6 +189,14 @@ public class PaymentProviderSandboxSeedTests
                || value.Contains("\u0420\u0406", StringComparison.Ordinal)
                || value.Contains("\u0420\u0098", StringComparison.Ordinal);
     }
+
+    private sealed class FixedClock(DateTimeOffset utcNow) : IClock
+    {
+        public DateTimeOffset UtcNow { get; } = utcNow;
+    }
+
+    private static Task SeedAsync(ApplicationDbContext db)
+        => DbInitializer.SeedDemoDataAsync(db, new FixedClock(DateTimeOffset.UtcNow), CancellationToken.None);
 
     private static ApplicationDbContext CreateDbContext()
     {

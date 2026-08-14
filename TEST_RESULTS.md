@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: release seed preflight and demo seed clock
+
+Scope:
+- Startup release seed не должен удалять историю или создавать неконсистентные releases при семантически неверном JSON.
+- Demo payment/VPN seed должен использовать application clock для audit и health timestamps.
+
+Results:
+- Roadmap progress: `736/756` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-release-seed-preflight-demo-clock`, version `0.716.0`.
+- Fail-first: пустой/неполный seed удалял existing agent release, missing `releasedAt` получал системный default, duplicate ID молча выбирал последнюю запись, а `source:manual` создавал неподконтрольный seed-sync release (`0/5`); demo provider/VPN seed использовал системное время (`0/1`).
+- After fix: полный schema/ownership preflight выполняется до загрузки tracked releases, `releasedAt` обязателен, а `DbInitializer` получает `IClock`. Seed regression `14/14`, documentation/release gate `63/63`, backend Debug/Release `1521/1521`, fresh SQLite full flow с latest release, EF drift, formatter verify, secret scan `705/0` и dependency audit `0 vulnerabilities` зелёные. Актуальный неизменённый visual/operation gate: frontend `172/172`, typecheck/build, bundle budget и Playwright `268/268` на 25 viewport-конфигурациях. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-14: safe 3x-ui client toggle and runtime clock
 
 Scope:

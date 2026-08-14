@@ -16,6 +16,132 @@ public class AppReleaseSeedServiceTests : IDisposable
     private readonly List<string> _seedRoots = [];
 
     [Fact]
+    public async Task SyncAsync_Should_Reject_Invalid_Seed_Before_Deleting_Existing_Releases()
+    {
+        await using var db = CreateDb();
+        db.AppReleases.Add(new AppRelease
+        {
+            ReleaseId = "existing-agent",
+            Version = "1.0.0",
+            ReleasedAt = new DateTimeOffset(2034, 4, 5, 5, 0, 0, TimeSpan.Zero),
+            Title = "Existing release",
+            Summary = "Must remain",
+            Source = "agent"
+        });
+        await db.SaveChangesAsync();
+        var root = CreateSeedRoot("""
+        [
+          {
+            "version": "2.0.0",
+            "releasedAt": "2034-04-05T06:00:00Z",
+            "title": "Invalid release",
+            "summary": "Missing release id",
+            "items": [{ "type": "fixed", "text": "Invalid item" }]
+          }
+        ]
+        """);
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => CreateService(root).SyncAsync(db, root));
+
+        Assert.Equal("existing-agent", (await db.AppReleases.SingleAsync()).ReleaseId);
+    }
+
+    [Fact]
+    public async Task SyncAsync_Should_Reject_Empty_Seed_Before_Deleting_Existing_Releases()
+    {
+        await using var db = CreateDb();
+        db.AppReleases.Add(new AppRelease
+        {
+            ReleaseId = "existing-agent",
+            Version = "1.0.0",
+            ReleasedAt = new DateTimeOffset(2034, 4, 5, 5, 0, 0, TimeSpan.Zero),
+            Title = "Existing release",
+            Summary = "Must remain",
+            Source = "agent"
+        });
+        await db.SaveChangesAsync();
+        var root = CreateSeedRoot("[]");
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => CreateService(root).SyncAsync(db, root));
+
+        Assert.Equal("existing-agent", (await db.AppReleases.SingleAsync()).ReleaseId);
+    }
+
+    [Fact]
+    public async Task SyncAsync_Should_Reject_Missing_ReleasedAt()
+    {
+        await using var db = CreateDb();
+        var root = CreateSeedRoot("""
+        [
+          {
+            "releaseId": "missing-date",
+            "version": "1.0.0",
+            "title": "Missing date",
+            "summary": "Must be rejected",
+            "items": [{ "type": "fixed", "text": "Invalid item" }]
+          }
+        ]
+        """);
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => CreateService(root).SyncAsync(db, root));
+
+        Assert.Empty(await db.AppReleases.ToListAsync());
+    }
+
+    [Fact]
+    public async Task SyncAsync_Should_Reject_Duplicate_ReleaseIds()
+    {
+        await using var db = CreateDb();
+        var root = CreateSeedRoot("""
+        [
+          {
+            "releaseId": "duplicate-release",
+            "version": "1.0.0",
+            "releasedAt": "2034-04-05T06:00:00Z",
+            "title": "First",
+            "summary": "First copy",
+            "items": [{ "type": "new", "text": "First item" }]
+          },
+          {
+            "releaseId": "DUPLICATE-RELEASE",
+            "version": "2.0.0",
+            "releasedAt": "2034-04-05T07:00:00Z",
+            "title": "Second",
+            "summary": "Second copy",
+            "items": [{ "type": "fixed", "text": "Second item" }]
+          }
+        ]
+        """);
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => CreateService(root).SyncAsync(db, root));
+
+        Assert.Empty(await db.AppReleases.ToListAsync());
+    }
+
+    [Fact]
+    public async Task SyncAsync_Should_Reject_Manual_Source_In_Agent_Seed()
+    {
+        await using var db = CreateDb();
+        var root = CreateSeedRoot("""
+        [
+          {
+            "releaseId": "manual-from-seed",
+            "version": "1.0.0",
+            "releasedAt": "2034-04-05T06:00:00Z",
+            "title": "Wrong ownership",
+            "summary": "Agent seed must not create manual releases",
+            "source": "manual",
+            "items": [{ "type": "fixed", "text": "Invalid ownership" }]
+          }
+        ]
+        """);
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => CreateService(root).SyncAsync(db, root));
+
+        Assert.Empty(await db.AppReleases.ToListAsync());
+    }
+
+    [Fact]
     public async Task SyncAsync_Should_Use_Injected_Clock_For_Release_And_Items()
     {
         await using var db = CreateDb();

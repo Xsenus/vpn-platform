@@ -16829,5 +16829,32 @@
         "text": "Roadmap progress is 734/754 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-release-seed-preflight-demo-clock",
+    "version": "0.716.0",
+    "releasedAt": "2026-08-14T09:33:00+07:00",
+    "title": "История релизов защищена от ошибочного seed",
+    "summary": "Startup sync валидирует release seed до изменения базы, а demo payment и VPN seed используют application clock.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Release seed полностью валидируется до загрузки tracked releases и не может удалить существующую agent history при пустом или неполном входе."
+      },
+      {
+        "type": "fixed",
+        "text": "Дата релиза обязательна, release ID уникальны без учета регистра, а startup seed не может создавать manual-owned releases."
+      },
+      {
+        "type": "improved",
+        "text": "Demo payment provider accounts, panel, inbound и node используют единый application clock snapshot для audit и health timestamps."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 736/756 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

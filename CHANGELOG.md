@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.716.0 - 2026-08-14
+
+Release entry: `2026-08-14-release-seed-preflight-demo-clock`.
+
+### Исправлено
+
+- Startup release sync валидирует весь seed до чтения tracked releases и отклоняет пустой файл, отсутствующие обязательные поля, duplicate ID, пустые items и недопустимый manual ownership; ошибочный seed больше не удаляет agent history и не оставляет частично изменённый контекст.
+- `releasedAt` обязателен и больше не получает системный default; demo payment providers и sandbox VPN infrastructure используют application clock для audit и health timestamps.
+
+### Проверено
+
+- Fail-first release-seed regressions `0/5` воспроизвели удаление существующей истории, системную дату, silent duplicate resolution и создание immutable manual release; demo-seed clock regression `0/1` получил системные timestamps у всех девяти provider accounts. После исправления seed regression `14/14`, documentation/release gate `63/63`, backend Debug/Release `1521/1521`, fresh SQLite full flow, EF drift, formatter verify, secret scan `705/0` и dependency audit `0 vulnerabilities` зелёные; актуальный неизменённый visual/operation gate: frontend `172/172`, typecheck/build, bundle budget и Playwright `268/268` на 25 viewport-конфигурациях.
+- Roadmap `736/756` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.715.0 - 2026-08-14
 
 Release entry: `2026-08-14-x3ui-safe-client-toggle-runtime-clock`.

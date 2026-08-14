@@ -278,19 +278,22 @@ public class DbInitializer : IHostedService
     private readonly IOptions<DatabaseStartupOptions> _databaseOptions;
     private readonly IOptions<AdminBootstrapOptions> _adminOptions;
     private readonly AdminBootstrapService _adminBootstrapService;
+    private readonly IClock _clock;
 
     public DbInitializer(
         IServiceProvider serviceProvider,
         ILogger<DbInitializer> logger,
         IOptions<DatabaseStartupOptions> databaseOptions,
         IOptions<AdminBootstrapOptions> adminOptions,
-        AdminBootstrapService adminBootstrapService)
+        AdminBootstrapService adminBootstrapService,
+        IClock clock)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
         _databaseOptions = databaseOptions;
         _adminOptions = adminOptions;
         _adminBootstrapService = adminBootstrapService;
+        _clock = clock;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -346,7 +349,7 @@ public class DbInitializer : IHostedService
 
         if (databaseOptions.SeedDemoData)
         {
-            await SeedDemoDataAsync(db, cancellationToken);
+            await SeedDemoDataAsync(db, _clock, cancellationToken);
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -359,7 +362,7 @@ public class DbInitializer : IHostedService
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    internal static async Task SeedDemoDataAsync(ApplicationDbContext db, CancellationToken cancellationToken)
+    internal static async Task SeedDemoDataAsync(ApplicationDbContext db, IClock clock, CancellationToken cancellationToken)
     {
         if (!await db.Tariffs.AnyAsync(cancellationToken))
         {
@@ -387,7 +390,7 @@ public class DbInitializer : IHostedService
             .Distinct()
             .ToListAsync(cancellationToken);
         var existingPaymentProviderSet = existingPaymentProviders.ToHashSet();
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.UtcNow;
         var missingLocalSandboxProviders = LocalSandboxPaymentProviders(now)
             .Where(x => !existingPaymentProviderSet.Contains(x.Provider))
             .ToArray();
