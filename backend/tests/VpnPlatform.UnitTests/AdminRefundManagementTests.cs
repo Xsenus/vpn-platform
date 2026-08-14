@@ -422,8 +422,13 @@ public class AdminRefundManagementTests
         db.AddRange(user, tariff, account, payment.Order, payment);
         await db.SaveChangesAsync();
 
-        var provider = new TrackingPaymentProvider(PaymentProvider.YooKassa, statusError: "provider-status-private-marker");
-        var controller = CreateController(db, CreateOrchestrator(db, provider));
+        var provider = new TrackingPaymentProvider(PaymentProvider.YooKassa, statusError: "Authorization: Bearer provider-status-private-marker");
+        var orchestrator = CreateOrchestrator(db, provider);
+        var serviceResult = await orchestrator.RecheckPaymentAsync(payment.Id, CancellationToken.None);
+        Assert.False(serviceResult.IsSuccess);
+        Assert.DoesNotContain("provider-status-private-marker", serviceResult.Error, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", serviceResult.Error, StringComparison.OrdinalIgnoreCase);
+        var controller = CreateController(db, orchestrator);
         var badRequest = Assert.IsType<BadRequestObjectResult>(await controller.RecheckPayment(payment.Id, CancellationToken.None));
 
         Assert.DoesNotContain("provider-status-private-marker", JsonSerializer.Serialize(badRequest.Value), StringComparison.Ordinal);
@@ -1110,8 +1115,13 @@ public class AdminRefundManagementTests
 
         var provider = new TrackingPaymentProvider(
             PaymentProvider.YooKassa,
-            refundStatusError: "provider-recheck-private-marker");
-        var controller = CreateController(db, CreateOrchestrator(db, provider));
+            refundStatusError: "secret=provider-recheck-private-marker");
+        var orchestrator = CreateOrchestrator(db, provider);
+        var serviceResult = await orchestrator.RecheckRefundAsync(refund.Id, CancellationToken.None);
+        Assert.False(serviceResult.IsSuccess);
+        Assert.DoesNotContain("provider-recheck-private-marker", serviceResult.Error, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", serviceResult.Error, StringComparison.OrdinalIgnoreCase);
+        var controller = CreateController(db, orchestrator);
         var accepted = Assert.IsType<AcceptedResult>(await controller.RecheckRefund(refund.Id, CancellationToken.None));
         var response = JsonSerializer.Serialize(accepted.Value);
 

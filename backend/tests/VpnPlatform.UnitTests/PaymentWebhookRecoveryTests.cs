@@ -106,6 +106,11 @@ public class PaymentWebhookRecoveryTests
             fixture.RawWebhook,
             EmptyHeaders(),
             CancellationToken.None);
+        var failedEvent = await fixture.Db.PaymentWebhookEvents.AsNoTracking().SingleAsync();
+        Assert.DoesNotContain("verifier-private-token", first.Error, StringComparison.Ordinal);
+        Assert.Equal("Webhook verification failed.", first.Error);
+        Assert.DoesNotContain("verifier-private-token", failedEvent.ErrorText, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", failedEvent.ErrorText, StringComparison.OrdinalIgnoreCase);
         var retry = await fixture.Orchestrator.ProcessAsync(
             PaymentProvider.YooKassa,
             fixture.RawWebhook,
@@ -194,7 +199,10 @@ public class PaymentWebhookRecoveryTests
         Assert.False(first.IsSuccess);
         Assert.False(second.IsSuccess);
         Assert.Equal(1, await fixture.Db.PaymentWebhookEvents.CountAsync());
-        Assert.Equal(PaymentWebhookEventStatus.Rejected, (await fixture.Db.PaymentWebhookEvents.SingleAsync()).Status);
+        var webhookEvent = await fixture.Db.PaymentWebhookEvents.SingleAsync();
+        Assert.Equal(PaymentWebhookEventStatus.Rejected, webhookEvent.Status);
+        Assert.DoesNotContain("parse-private-token", webhookEvent.ErrorText, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", webhookEvent.ErrorText, StringComparison.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyDictionary<string, string> EmptyHeaders() => new Dictionary<string, string>();
@@ -327,7 +335,7 @@ public class PaymentWebhookRecoveryTests
         {
             if (ThrowOnParse)
             {
-                throw new InvalidOperationException("Injected parse failure.");
+                throw new InvalidOperationException("secret=parse-private-token");
             }
 
             return Task.FromResult(new PaymentWebhookParseResult(EventId, "payment.succeeded", PaymentId, PaymentStatus.Succeeded, rawBody, false, 490m, "RUB", true));
@@ -338,7 +346,7 @@ public class PaymentWebhookRecoveryTests
             if (VerificationFailuresRemaining > 0)
             {
                 VerificationFailuresRemaining--;
-                throw new InvalidOperationException("Injected verifier failure.");
+                throw new InvalidOperationException("Authorization: Bearer verifier-private-token");
             }
 
             return Task.FromResult(new PaymentWebhookVerificationResult(true, "test-verifier", null));

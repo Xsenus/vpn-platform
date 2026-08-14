@@ -2,6 +2,20 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: payment error redaction
+
+Scope:
+- Payment provider exceptions, status reasons and webhook verifier diagnostics must not expose bearer tokens, secrets or credentials through application results or persisted diagnostic fields.
+- Authorization/Bearer redaction must remove the complete token value before generic key-value rules run.
+- Payment retryability, webhook idempotency and refund reconciliation semantics must remain unchanged.
+
+Results:
+- Roadmap progress: `743/763` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-payment-error-redaction`, version `0.723.0`.
+- Fail-first: payment/provider regressions completed `0/6` and reproduced raw exception/status diagnostics in service results, payment reservations and webhook events.
+- After fix: provider/verifier/refund/recheck diagnostics are redacted before result or persistence, capped at 500 characters, and the Authorization rule removes the complete bearer value. Focused `7/7`, payment/security regression `148/148`, backend Debug/Release `1548/1548`, Release build `0 warnings / 0 errors`, docs/encoding `62/62`, fresh SQLite full flow latest release, formatter, EF drift and secret scan `707/0` are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-14: automatic entity application clock
 
 Scope:

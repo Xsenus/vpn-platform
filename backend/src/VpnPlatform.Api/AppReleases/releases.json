@@ -17022,5 +17022,32 @@
         "text": "Roadmap progress is 742/762 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-payment-error-redaction",
+    "version": "0.723.0",
+    "releasedAt": "2026-08-14T13:41:49+07:00",
+    "title": "Payment diagnostics no longer expose provider secrets",
+    "summary": "Provider, refund, recheck and webhook errors are redacted before application results and diagnostic persistence.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Payment initialization, refund and status recheck errors no longer expose tokens or secrets through application results or payment diagnostics."
+      },
+      {
+        "type": "fixed",
+        "text": "Webhook parse, verifier and processing diagnostics are redacted before PaymentWebhookEvent persistence."
+      },
+      {
+        "type": "improved",
+        "text": "Authorization Bearer redaction now removes the complete token value before generic key-value redaction runs."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 743/763 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

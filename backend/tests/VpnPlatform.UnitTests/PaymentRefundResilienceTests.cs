@@ -194,6 +194,28 @@ public class PaymentRefundResilienceTests
         Assert.Equal(0m, payment.RefundedAmount);
     }
 
+    [Fact]
+    public async Task Provider_Exception_Should_Be_Redacted_In_Refund_Result()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 4, 11, 0, 0, TimeSpan.Zero);
+        var paymentId = await SeedRefundablePaymentAsync(db, now);
+        var provider = new TrackingPaymentProvider(
+            () => throw new InvalidOperationException("secret=refund-private-token"));
+        var orchestrator = CreateOrchestrator(db, provider, now);
+
+        var result = await orchestrator.RefundPaymentAsync(paymentId, 40m, "redaction", CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.DoesNotContain("refund-private-token", result.Error, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(RefundStatus.Unknown, (await db.Refunds.SingleAsync()).Status);
+    }
+
     private static PaymentOrchestrator CreateOrchestrator(ApplicationDbContext db, IPaymentProvider provider, DateTimeOffset now)
         => CreateOrchestrator(db, new TestPaymentProviderFactory(provider), now);
 

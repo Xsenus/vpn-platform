@@ -41,7 +41,7 @@ public class SecurityHardeningMvpTests
     [Fact]
     public void SensitiveDataRedactor_Should_Redact_Secrets_And_Protected_Payloads()
     {
-        var text = "password=plain token:raw-token bot_token=telegram-secret webhook_secret=hook x3ui_password=panel Authorization: Bearer abc v1:YWJjZA==";
+        var text = "password=plain token:raw-token bot_token=telegram-secret webhook_secret=hook x3ui_password=panel Authorization: Bearer bearer-private-token v1:YWJjZA==";
 
         var redacted = SensitiveDataRedactor.Redact(text);
 
@@ -50,7 +50,7 @@ public class SecurityHardeningMvpTests
         Assert.DoesNotContain("raw-token", redacted, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("telegram-secret", redacted, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("webhook_secret=hook", redacted, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("Bearer abc", redacted, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("bearer-private-token", redacted, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("YWJjZA", redacted, StringComparison.OrdinalIgnoreCase);
     }
 

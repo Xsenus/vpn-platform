@@ -225,10 +225,11 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         }
         catch (Exception ex)
         {
-            payment.StatusReason = ex.Message;
+            var safeError = SafeError(ex.Message);
+            payment.StatusReason = safeError;
             payment.UpdatedAt = now;
             await TrySavePaymentStateAsync();
-            return Result<PaymentInitResult>.Failure(ex.Message);
+            return Result<PaymentInitResult>.Failure(safeError);
         }
 
         if (string.IsNullOrWhiteSpace(init.PaymentId))
@@ -497,11 +498,14 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
         if (!verification.IsValid)
         {
+            var safeVerificationError = SafeError(verification.Error);
             webhookEvent.Status = PaymentWebhookEventStatus.Rejected;
-            webhookEvent.ErrorText = verification.Error ?? "Invalid webhook authenticity.";
+            webhookEvent.ErrorText = string.IsNullOrWhiteSpace(safeVerificationError)
+                ? "Invalid webhook authenticity."
+                : safeVerificationError;
             webhookEvent.ProcessedAt = _clock.UtcNow;
             payment.WebhookPayload = rawBody;
-            payment.StatusReason = verification.Error ?? string.Empty;
+            payment.StatusReason = safeVerificationError;
             payment.UpdatedAt = _clock.UtcNow;
             await _db.SaveChangesAsync(cancellationToken);
             return Result<string>.Failure("Invalid webhook authenticity.");
@@ -526,7 +530,9 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
                 }
                 else if (capture.Value.Status == PaymentStatus.Unknown)
                 {
-                    result = Result<string>.Failure(capture.Value.StatusReason ?? "Captured payment status is unknown.", isRetryable: true);
+                    result = Result<string>.Failure(
+                        SafeErrorOrDefault(capture.Value.StatusReason, "Captured payment status is unknown."),
+                        isRetryable: true);
                 }
                 else
                 {
@@ -558,7 +564,8 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             : result.IsRetryable
                 ? PaymentWebhookEventStatus.Failed
                 : PaymentWebhookEventStatus.Rejected;
-        webhookEvent.ErrorText = result.Error ?? string.Empty;
+        var safeResultError = SafeError(result.Error);
+        webhookEvent.ErrorText = safeResultError;
         webhookEvent.ProcessedAt = _clock.UtcNow;
         try
         {
@@ -579,7 +586,9 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
         return result.IsSuccess
             ? Result<string>.Success("Webhook processed.")
-            : Result<string>.Failure(result.Error ?? "Webhook processing failed.", result.IsRetryable);
+            : Result<string>.Failure(
+                string.IsNullOrWhiteSpace(safeResultError) ? "Webhook processing failed." : safeResultError,
+                result.IsRetryable);
     }
 
     private async Task<bool> TryClaimWebhookEventAsync(PaymentWebhookEvent existingEvent, DateTimeOffset now, CancellationToken cancellationToken)
@@ -639,7 +648,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
     private void MarkWebhookFailed(PaymentWebhookEvent webhookEvent, string error)
     {
         webhookEvent.Status = PaymentWebhookEventStatus.Failed;
-        webhookEvent.ErrorText = error;
+        webhookEvent.ErrorText = SafeError(error);
         webhookEvent.ProcessedAt = _clock.UtcNow;
     }
 
@@ -680,7 +689,9 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
             if (statusResult.Status == PaymentStatus.Unknown)
             {
-                return Result<PaymentStatusResult>.Failure(statusResult.StatusReason ?? "Payment provider status is unknown.", isRetryable: true);
+                return Result<PaymentStatusResult>.Failure(
+                    SafeErrorOrDefault(statusResult.StatusReason, "Payment provider status is unknown."),
+                    isRetryable: true);
             }
 
             var apply = await ApplyPaymentStatusAsync(payment, statusResult.Status, statusResult.RawResponse, $"manual-recheck:{payment.Id}:{statusResult.Status}", cancellationToken);
@@ -692,11 +703,11 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         }
         catch (NotSupportedException ex)
         {
-            return Result<PaymentStatusResult>.Failure(ex.Message);
+            return Result<PaymentStatusResult>.Failure(SafeError(ex.Message));
         }
         catch (Exception ex)
         {
-            return Result<PaymentStatusResult>.Failure(ex.Message, isRetryable: true);
+            return Result<PaymentStatusResult>.Failure(SafeError(ex.Message), isRetryable: true);
         }
     }
 
@@ -849,7 +860,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         {
             var persisted = await MarkRefundUnresolvedAsync(refund, payment, currentPayment);
             var suffix = persisted ? string.Empty : " Local reconciliation also failed.";
-            return Result<RefundDto>.Failure($"Refund provider outcome is unknown and requires manual reconciliation. {ex.Message}{suffix}", isRetryable: canRecoverReservation || PaymentProviderConfigurationRules.SupportsIdempotentRefundCreateRetry(currentPayment.Provider));
+            return Result<RefundDto>.Failure($"Refund provider outcome is unknown and requires manual reconciliation. {SafeError(ex.Message)}{suffix}", isRetryable: canRecoverReservation || PaymentProviderConfigurationRules.SupportsIdempotentRefundCreateRetry(currentPayment.Provider));
         }
 
         var refundValidation = ValidatePaymentRefundResult(currentPayment, refundResult, amount);
@@ -895,7 +906,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         {
             var persisted = await MarkRefundUnresolvedAsync(refund, payment, currentPayment);
             var suffix = persisted ? string.Empty : " The durable reservation remains in New status because local reconciliation also failed.";
-            return Result<RefundDto>.Failure($"Refund was accepted by the provider but local finalization failed; manual reconciliation is required. {ex.Message}{suffix}");
+            return Result<RefundDto>.Failure($"Refund was accepted by the provider but local finalization failed; manual reconciliation is required. {SafeError(ex.Message)}{suffix}");
         }
     }
 
@@ -1013,7 +1024,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         }
         catch (Exception ex)
         {
-            return Result<RefundDto>.Failure($"Refund status recheck failed: {ex.Message}", isRetryable: true);
+            return Result<RefundDto>.Failure($"Refund status recheck failed: {SafeError(ex.Message)}", isRetryable: true);
         }
     }
 
@@ -1329,7 +1340,8 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
     {
         if (refundResult.Status == RefundStatus.Unknown)
         {
-            return Result<string>.Failure(refundResult.StatusReason ?? "Payment provider refund status is unknown.");
+            return Result<string>.Failure(
+                SafeErrorOrDefault(refundResult.StatusReason, "Payment provider refund status is unknown."));
         }
 
         if (string.IsNullOrWhiteSpace(refundResult.RefundId))
@@ -1380,7 +1392,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             RawPayload = rawBody,
             HeadersJson = SerializeSafeHeaders(headers),
             Status = PaymentWebhookEventStatus.Rejected,
-            ErrorText = error,
+            ErrorText = SafeError(error),
             ReceivedAt = now,
             ProcessedAt = now,
             CreatedAt = now,
@@ -1403,6 +1415,15 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
                 throw;
             }
         }
+    }
+
+    private static string SafeError(string? error)
+        => SensitiveDataRedactor.Redact(error, maxLength: 500);
+
+    private static string SafeErrorOrDefault(string? error, string fallback)
+    {
+        var safeError = SafeError(error);
+        return string.IsNullOrWhiteSpace(safeError) ? fallback : safeError;
     }
 
     private async Task<string> BuildPaymentSucceededTelegramPayloadAsync(Order order, ActivationResult activation, CancellationToken cancellationToken)

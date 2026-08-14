@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-14 локально подтверждено:
 
-- backend full suite: 1546/1546;
+- backend full suite: 1548/1548;
 - frontend tests: 172/172;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-14-automatic-entity-application-clock`, версия `0.722.0`; audit и operational timestamps автоматически создаваемых сущностей используют application clock, а доменная модель не захватывает process time.
-- roadmap progress: `742/762` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-14-payment-error-redaction`, версия `0.723.0`; payment/provider exception и status diagnostics редактируются до application result и persistence, включая полный Authorization/Bearer token value.
+- roadmap progress: `743/763` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

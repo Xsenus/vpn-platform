@@ -8,8 +8,8 @@ public static class SensitiveDataRedactor
 
     private static readonly Regex[] Patterns =
     {
-        new("(?i)(password|passwd|pwd|token|secret|api[_-]?key|private[_-]?key|ssh[_-]?key|ssh[_-]?pass|credential|authorization|bot[_-]?token|webhook[_-]?secret|x3ui|panel[_-]?password)(\\s*[:=]\\s*)([^\\s,;\\}\\]\\\"']+)", RegexOptions.Compiled),
         new("(?i)(Authorization\\s*:\\s*)(Bearer\\s+)?[^\\s]+", RegexOptions.Compiled),
+        new("(?i)(password|passwd|pwd|token|secret|api[_-]?key|private[_-]?key|ssh[_-]?key|ssh[_-]?pass|credential|authorization|bot[_-]?token|webhook[_-]?secret|x3ui|panel[_-]?password)(\\s*[:=]\\s*)([^\\s,;\\}\\]\\\"']+)", RegexOptions.Compiled),
         new("-----BEGIN [A-Z ]*PRIVATE KEY-----[\\s\\S]*?-----END [A-Z ]*PRIVATE KEY-----", RegexOptions.Compiled),
         new("(?i)(v1:)[A-Za-z0-9+/=]+", RegexOptions.Compiled)
     };

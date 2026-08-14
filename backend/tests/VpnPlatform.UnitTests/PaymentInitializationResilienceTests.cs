@@ -148,6 +148,24 @@ public class PaymentInitializationResilienceTests
         Assert.Empty(payment.ConfirmationUrl);
     }
 
+    [Fact]
+    public async Task Provider_Exception_Should_Be_Redacted_In_Result_And_Reservation()
+    {
+        await using var fixture = await PaymentFixture.CreateAsync();
+        var provider = new TrackingPaymentProvider(initError: "Authorization: Bearer init-private-token");
+        var orchestrator = fixture.CreateOrchestrator(provider);
+
+        var result = await orchestrator.InitPaymentAsync(fixture.Command, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.DoesNotContain("init-private-token", result.Error, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", result.Error, StringComparison.OrdinalIgnoreCase);
+        await using var verificationDb = fixture.CreateVerificationContext();
+        var payment = await verificationDb.Payments.SingleAsync();
+        Assert.DoesNotContain("init-private-token", payment.StatusReason, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", payment.StatusReason, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
     [InlineData("javascript:alert(1)")]
     [InlineData("data:text/html,payment")]
@@ -368,7 +386,7 @@ public class PaymentInitializationResilienceTests
         }
     }
 
-    private sealed class TrackingPaymentProvider(Action? beforeReturn = null, string? redirectUrl = null, string? paymentId = null) : IPaymentProvider
+    private sealed class TrackingPaymentProvider(Action? beforeReturn = null, string? redirectUrl = null, string? paymentId = null, string? initError = null) : IPaymentProvider
     {
         public PaymentProvider Provider => PaymentProvider.YooKassa;
         public int InitCalls { get; private set; }
@@ -378,6 +396,10 @@ public class PaymentInitializationResilienceTests
         public Task<PaymentInitResult> CreatePaymentAsync(PaymentCreateRequest request, CancellationToken cancellationToken)
         {
             InitCalls++;
+            if (!string.IsNullOrWhiteSpace(initError))
+            {
+                throw new InvalidOperationException(initError);
+            }
             beforeReturn?.Invoke();
             return Task.FromResult(new PaymentInitResult(PaymentId, RedirectUrl, "{\"status\":\"pending\"}"));
         }

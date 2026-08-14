@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.723.0 - 2026-08-14
+
+Release entry: `2026-08-14-payment-error-redaction`.
+
+### Исправлено
+
+- Payment provider exceptions, unknown status reasons, refund/recheck failures и webhook verifier diagnostics редактируются до возврата из application service и до записи в `PaymentAttempt.StatusReason`/`PaymentWebhookEvent.ErrorText`.
+- `Authorization: Bearer ...` обрабатывается раньше общего key-value шаблона, поэтому redactor удаляет весь bearer token, а не только слово `Bearer`.
+- Диагностические ошибки ограничены 500 символами; retryability, webhook idempotency, refund reservation и reconciliation contract не изменены.
+
+### Проверено
+
+- Fail-first payment regressions `0/6`; after-fix focused `7/7`, payment/security regression `148/148`, backend Debug/Release `1548/1548`, Release build `0 warnings / 0 errors`, docs/encoding `62/62`, fresh SQLite full flow latest release, глобальный formatter, EF drift и secret scan `707/0` зелёные.
+- Roadmap `743/763` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.722.0 - 2026-08-14
 
 Release entry: `2026-08-14-automatic-entity-application-clock`.
