@@ -16671,5 +16671,32 @@
         "text": "Roadmap progress is 723/743 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-13-sqlite-telegram-dedup-reconciliation",
+    "version": "0.710.0",
+    "releasedAt": "2026-08-13T20:46:56+07:00",
+    "title": "SQLite upgrade восстанавливает dedup Telegram notifications",
+    "summary": "Post-migration repair создает canonical dedup key для survivor и отменяет активные дубли после historical SQLite migration.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "SQLite upgrade больше не оставляет несколько pending или sending Telegram notifications с legacy dedup keys."
+      },
+      {
+        "type": "improved",
+        "text": "После MigrateAsync оба startup entry point запускают идемпотентный local repair: survivor получает canonical SHA key, а дубли получают duplicate marker и отменяются."
+      },
+      {
+        "type": "fixed",
+        "text": "Frontend lockfile обновляет транзитивный nanoid до 3.3.18 и устраняет high advisory GHSA-2v37-7h3g-55p8."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 725/745 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

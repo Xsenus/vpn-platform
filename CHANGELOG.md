@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.710.0 - 2026-08-13
+
+Release entry: `2026-08-13-sqlite-telegram-dedup-reconciliation`.
+
+### Исправлено
+
+- SQLite migration upgrade больше не оставляет несколько pending/sending Telegram notifications активными с `legacy:*` keys и не допускает повторную доставку того же semantic event после обновления.
+- Более ранняя notification по фактическому моменту времени сохраняется как survivor, более поздние pending/sending дубли отменяются.
+- Frontend lockfile обновляет транзитивный `nanoid` с `3.3.17` до исправленной `3.3.18` после high advisory `GHSA-2v37-7h3g-55p8`.
+
+### Улучшено
+
+- Оба SQLite startup entry point выполняют idempotent local repair после `MigrateAsync`; historical migrations и PostgreSQL path не изменены.
+- Post-migration reconciliation заменяет migration-only `legacy:*` keys на canonical SHA-key для survivor и устойчивые `duplicate:*` markers для дублей.
+
+### Проверено
+
+- Fail-first migration/startup regressions `0/2` подтвердили отсутствие canonical key и post-migration repair; after-fix targeted `17/17`, backend Debug/Release `1492/1492`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Актуальный неизмененный visual/operation gate: Playwright `268/268` на 25 viewport-конфигурациях.
+- Roadmap `725/745` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.709.0 - 2026-08-13
 
 Release entry: `2026-08-13-sqlite-outbox-provisioning-temporal-preflight`.

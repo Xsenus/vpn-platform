@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 using VpnPlatform.Infrastructure.Persistence;
@@ -162,6 +163,68 @@ public class LocalSqliteSchemaRepairTests
         Assert.Single(stored, x => x.Status == "pending");
         Assert.Single(stored, x => x.Status == "cancelled");
         Assert.True(await IndexExistsAsync(connection, "IX_TelegramBotNotifications_DeduplicationKey"));
+    }
+
+    [Fact]
+    public async Task ApplyAsync_Should_Reconcile_Legacy_Keys_After_Telegram_Deduplication_Migration()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        var migrator = db.GetService<IMigrator>();
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE "TelegramBotNotifications" (
+                "Id" TEXT NOT NULL PRIMARY KEY,
+                "TelegramUserId" INTEGER NOT NULL,
+                "Type" TEXT NOT NULL,
+                "PayloadJson" TEXT NOT NULL,
+                "Status" TEXT NOT NULL,
+                "AttemptCount" INTEGER NOT NULL,
+                "NextAttemptAt" TEXT NULL,
+                "SentAt" TEXT NULL,
+                "ErrorText" TEXT NOT NULL,
+                "CreatedAt" TEXT NOT NULL,
+                "UpdatedAt" TEXT NOT NULL
+            );
+            """);
+        await MarkMigrationsBeforeAsync(db, "20260804124229_AddTelegramNotificationDeduplication");
+
+        var olderId = Guid.NewGuid();
+        var newerId = Guid.NewGuid();
+        const long telegramUserId = 777401;
+        const string type = "subscription_expiring";
+        const string payloadJson = "{\"text\":\"Renew\"}";
+        var olderInstant = new DateTimeOffset(2026, 8, 4, 10, 0, 0, TimeSpan.FromHours(5));
+        var newerInstant = new DateTimeOffset(2026, 8, 4, 8, 0, 0, TimeSpan.Zero);
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "TelegramBotNotifications"
+                ("Id", "TelegramUserId", "Type", "PayloadJson", "Status", "AttemptCount", "NextAttemptAt", "SentAt", "ErrorText", "CreatedAt", "UpdatedAt")
+            VALUES
+                ({olderId}, {telegramUserId}, {type}, {payloadJson}, 'pending', 0, {olderInstant}, NULL, '', {olderInstant}, {olderInstant}),
+                ({newerId}, {telegramUserId}, {type}, {payloadJson}, 'pending', 0, {newerInstant}, NULL, '', {newerInstant}, {newerInstant});
+            """);
+
+        await migrator.MigrateAsync("20260804124229_AddTelegramNotificationDeduplication");
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+
+        var notifications = await db.TelegramBotNotifications.AsNoTracking().ToDictionaryAsync(x => x.Id);
+        var expectedKey = TelegramNotificationDeduplication.CreateKey(telegramUserId, type, payloadJson);
+        Assert.Equal(expectedKey, notifications[olderId].DeduplicationKey);
+        Assert.Equal("pending", notifications[olderId].Status);
+        Assert.StartsWith("duplicate:", notifications[newerId].DeduplicationKey, StringComparison.Ordinal);
+        Assert.Equal("cancelled", notifications[newerId].Status);
+        Assert.Null(notifications[newerId].NextAttemptAt);
+        Assert.Contains("Duplicate", notifications[newerId].ErrorText, StringComparison.OrdinalIgnoreCase);
+
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+        var repeated = await db.TelegramBotNotifications.AsNoTracking().ToDictionaryAsync(x => x.Id);
+        Assert.Equal(expectedKey, repeated[olderId].DeduplicationKey);
+        Assert.Equal(notifications[newerId].DeduplicationKey, repeated[newerId].DeduplicationKey);
+        Assert.Equal("cancelled", repeated[newerId].Status);
     }
 
     [Fact]

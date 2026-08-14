@@ -174,12 +174,17 @@ static async Task RunAdminBootstrapCommandAsync(IServiceProvider services)
         }
         else
         {
-            if (db.Database.IsSqlite())
+            var isSqlite = db.Database.IsSqlite();
+            if (isSqlite)
             {
                 await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db);
             }
 
             await db.Database.MigrateAsync();
+            if (isSqlite)
+            {
+                await LocalSqliteSchemaRepair.ApplyAsync(db);
+            }
         }
     }
 

@@ -711,8 +711,16 @@ public static class LocalSqliteSchemaRepair
         CancellationToken cancellationToken)
     {
         var notifications = await db.TelegramBotNotifications
-            .Where(x => x.DeduplicationKey == string.Empty)
+            .Where(x => x.DeduplicationKey == string.Empty || x.DeduplicationKey.StartsWith("legacy:"))
             .ToListAsync(cancellationToken);
+        var canonicalKeys = (await db.TelegramBotNotifications
+                .AsNoTracking()
+                .Where(x => x.DeduplicationKey != string.Empty
+                    && !x.DeduplicationKey.StartsWith("legacy:")
+                    && !x.DeduplicationKey.StartsWith("duplicate:"))
+                .Select(x => x.DeduplicationKey)
+                .ToListAsync(cancellationToken))
+            .ToHashSet(StringComparer.Ordinal);
         foreach (var group in notifications.GroupBy(x => TelegramNotificationDeduplication.CreateKey(
                      x.TelegramUserId,
                      x.Type,
@@ -723,10 +731,16 @@ public static class LocalSqliteSchemaRepair
                 .ThenBy(x => x.CreatedAt)
                 .ThenBy(x => x.Id)
                 .ToList();
-            ordered[0].DeduplicationKey = group.Key;
-            foreach (var duplicate in ordered.Skip(1))
+            var duplicates = ordered.AsEnumerable();
+            if (canonicalKeys.Add(group.Key))
             {
-                duplicate.DeduplicationKey = $"legacy:{duplicate.Id:N}";
+                ordered[0].DeduplicationKey = group.Key;
+                duplicates = ordered.Skip(1);
+            }
+
+            foreach (var duplicate in duplicates)
+            {
+                duplicate.DeduplicationKey = $"duplicate:{duplicate.Id:N}";
                 if (duplicate.Status is "pending" or "sending")
                 {
                     duplicate.Status = "cancelled";

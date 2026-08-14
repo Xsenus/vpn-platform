@@ -311,7 +311,8 @@ public class DbInitializer : IHostedService
         }
         else if (databaseOptions.ApplyMigrationsOnStartup)
         {
-            if (db.Database.IsSqlite())
+            var isSqlite = db.Database.IsSqlite();
+            if (isSqlite)
             {
                 var preparedMigrations = await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db, cancellationToken);
                 if (preparedMigrations > 0)
@@ -321,6 +322,13 @@ public class DbInitializer : IHostedService
             }
 
             await db.Database.MigrateAsync(cancellationToken);
+            if (isSqlite)
+            {
+                var repairedColumns = await LocalSqliteSchemaRepair.ApplyAsync(db, cancellationToken);
+                _logger.LogInformation(
+                    "Local SQLite post-migration repair completed. StructuralRepairsApplied={StructuralRepairsApplied}",
+                    repairedColumns);
+            }
         }
 
         if (adminOptions.Enabled)

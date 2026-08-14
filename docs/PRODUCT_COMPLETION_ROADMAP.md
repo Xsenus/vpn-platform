@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-13.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-sqlite-outbox-provisioning-temporal-preflight`, версия `0.709.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `723/743` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-sqlite-telegram-dedup-reconciliation`, версия `0.710.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `725/745` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-13:
 
-- [x] `STATE-001` Backend test suite проходит: `1490/1490`.
+- [x] `STATE-001` Backend test suite проходит: `1492/1492`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2588,6 +2588,14 @@ git diff --check
   - Что сделать: migration startup и local repair должны сохранять oldest outbox event/queued provisioning run по фактическому моменту времени, а не по текстовому представлению UTC offset; historical migrations и PostgreSQL path должны остаться неизменными.
   - Что сделано: preflight канонизирует в UTC только `CreatedAt` конфликтующих outbox/provisioning групп до `MigrateAsync`; historical migrations выполняют прежнюю quarantine semantics над хронологически сопоставимыми значениями. Local provisioning repair использует `julianday(CreatedAt)`; некорректный timestamp останавливает upgrade fail-closed.
   - Доказательство: fail-first upgrade regressions `0/2` получили `PrepareMigrationsAsync = 0`; after-fix local repair/upgrade `15/15`, backend Debug/Release `1490/1490`, frontend `172/172`, полный Playwright `268/268` за `12.5 min`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой.
+- [x] `P11-ACC-433` Восстановить canonical Telegram notification dedup после SQLite migration. 2026-08-13.
+  - Что сделать: historical SQLite migration дедупликации Telegram notifications не должна оставлять активные дубли только с `legacy:*` ключами; startup обязан восстановить canonical dedup после `MigrateAsync`, не изменяя immutable migrations и PostgreSQL path.
+  - Что сделано: оба migration startup entry point запускают идемпотентный `LocalSqliteSchemaRepair.ApplyAsync` после `MigrateAsync`; repair выбирает survivor по priority, фактическому `CreatedAt` и `Id`, назначает ему canonical SHA key, маркирует остальные записи `duplicate:*` и отменяет активные `pending`/`sending` дубли.
+  - Доказательство: fail-first regressions `0/2` подтвердили отсутствие post-migration repair и сохранение `legacy:*`; after-fix local repair/startup `17/17`, backend Debug/Release `1492/1492`, frontend `172/172`, полный Playwright `268/268` за `12.5 min`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой.
+- [x] `P11-ACC-434` Устранить high advisory транзитивного frontend `nanoid`. 2026-08-13.
+  - Что сделать: production dependency gate не должен принимать уязвимую версию `nanoid <3.3.18`, получаемую через Vite/PostCSS.
+  - Что сделано: lockfile обновлен с `nanoid 3.3.17` до исправленной `3.3.18` без изменения declared dependencies; установленное дерево подтверждает единственную исправленную транзитивную версию.
+  - Доказательство: до исправления `npm audit --audit-level=high` вернул `1 high severity vulnerability` (`GHSA-2v37-7h3g-55p8`); после обновления `npm ls nanoid --all` показывает `3.3.18`, повторный audit возвращает `0 vulnerabilities`.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

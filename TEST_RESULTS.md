@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-13.
 
+## Check 2026-08-13: SQLite Telegram notification dedup reconciliation
+
+Scope:
+- SQLite upgrade через historical `AddTelegramNotificationDeduplication` должен создать canonical dedup boundary и отменить pending/sending дубли, а не оставить все строки с уникальными `legacy:*` keys.
+- Оба startup entry point должны выполнять local repair после `MigrateAsync`; immutable migrations и PostgreSQL path не должны изменяться.
+- Финальный dependency gate должен отклонять frontend lockfile с high advisory; найденный `nanoid 3.3.17` обновлен до `3.3.18`.
+
+Results:
+- Roadmap progress: `725/745` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-13-sqlite-telegram-dedup-reconciliation`, version `0.710.0`.
+- Fail-first: migration fixture оставил обе mixed-offset notification в `pending` с `legacy:*` keys, а source guard не нашел post-migration repair в обоих entry point; `0/2`.
+- After fix: oldest survivor получает canonical SHA-key, duplicate получает `duplicate:*`, становится `cancelled` и теряет retry time; повторный repair idempotent. `nanoid` обновлен с `3.3.17` до `3.3.18`, повторный audit возвращает `0 vulnerabilities`. Targeted local repair/startup/docs `65/65`, backend Debug/Release `1492/1492`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift и secret scan `704/0` зеленые. Актуальный Playwright `268/268` на 25 viewport-конфигурациях остается применимым. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-13: SQLite outbox/provisioning temporal preflight
 
 Scope:

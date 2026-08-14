@@ -113,6 +113,24 @@ public class FreshLocalSetupSmokeTests
         Assert.Contains("[x] `P11-ACC-129`", roadmap, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Sqlite_Migration_Startup_Should_Run_Local_Repair_After_Migrate()
+    {
+        var root = FindRepositoryRoot();
+        foreach (var relativePath in new[]
+                 {
+                     Path.Combine("backend", "src", "VpnPlatform.Api", "Program.cs"),
+                     Path.Combine("backend", "src", "VpnPlatform.Infrastructure", "Services", "SystemServices.cs")
+                 })
+        {
+            var source = File.ReadAllText(Path.Combine(root, relativePath));
+            var migrateIndex = source.IndexOf("await db.Database.MigrateAsync", StringComparison.Ordinal);
+            var repairIndex = source.IndexOf("LocalSqliteSchemaRepair.ApplyAsync", migrateIndex, StringComparison.Ordinal);
+            Assert.True(migrateIndex >= 0, $"{relativePath} must migrate the configured database.");
+            Assert.True(repairIndex > migrateIndex, $"{relativePath} must reconcile SQLite data after migrations.");
+        }
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
