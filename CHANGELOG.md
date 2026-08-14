@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.712.0 - 2026-08-14
+
+Release entry: `2026-08-14-app-release-clock-consistency`.
+
+### Исправлено
+
+- Кабинетная история релизов, отметка «прочитано» и админские фильтры published/upcoming теперь используют внедренный `IClock`, а не системное время.
+- Создание и обновление релиза синхронно назначает `CreatedAt`/`UpdatedAt` релизу, его пунктам и отметке просмотра из одного временного boundary.
+- Encoding guard больше не сканирует временный `tmp`, поэтому параллельная очистка SQLite smoke не вызывает случайный `DirectoryNotFoundException`.
+
+### Проверено
+
+- Fail-first regressions `0/2` воспроизвели пустую историю опубликованных релизов и системный timestamp вместо `2032-02-03T07:08:09Z`; after-fix app-version regression `18/18`, backend Debug/Release `1495/1495`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Актуальный неизмененный visual/operation gate: Playwright `268/268` на 25 viewport-конфигурациях.
+- Roadmap `728/748` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.711.0 - 2026-08-14
 
 Release entry: `2026-08-14-cabinet-support-clock-consistency`.

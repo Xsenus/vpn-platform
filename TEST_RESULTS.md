@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: app release clock consistency
+
+Scope:
+- Кабинетные latest/history/mark-seen и админские release filters/overview/mutations должны использовать единый внедренный `IClock`.
+- Release, item и seen timestamps не должны смешивать application clock с системным временем.
+
+Results:
+- Roadmap progress: `728/748` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-app-release-clock-consistency`, version `0.712.0`.
+- Fail-first: кабинетная история не вернула релиз, опубликованный по фиксированным часам, а admin create сохранил системный `CreatedAt` вместо `2032-02-03T07:08:09Z`; `0/2`.
+- After fix: public/admin app-version workflow использует один `_clock.UtcNow` на операцию; encoding guard исключает transient `tmp` и больше не конфликтует с cleanup smoke-скрипта. Targeted app-version `18/18`, encoding race regression `1/1`, backend Debug/Release `1495/1495`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Актуальный Playwright `268/268` на 25 viewport-конфигурациях остается применимым, frontend не менялся. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-14: cabinet support clock consistency
 
 Scope:

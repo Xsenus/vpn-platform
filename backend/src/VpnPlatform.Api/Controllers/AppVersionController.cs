@@ -7,6 +7,7 @@ using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Api.Controllers.Admin;
+using VpnPlatform.Infrastructure.Services;
 
 namespace VpnPlatform.Api.Controllers;
 
@@ -16,10 +17,12 @@ namespace VpnPlatform.Api.Controllers;
 public sealed class AppVersionController : ControllerBase
 {
     private readonly IApplicationDbContext _db;
+    private readonly IClock _clock;
 
-    public AppVersionController(IApplicationDbContext db)
+    public AppVersionController(IApplicationDbContext db, IClock? clock = null)
     {
         _db = db;
+        _clock = clock ?? new SystemClock();
     }
 
     [HttpGet("latest")]
@@ -51,6 +54,7 @@ public sealed class AppVersionController : ControllerBase
     [HttpPost("mark-seen")]
     public async Task<IActionResult> MarkSeen([FromBody] AppReleaseMarkSeenRequest request, CancellationToken cancellationToken)
     {
+        var now = _clock.UtcNow;
         var releaseId = request.ReleaseId.Trim();
         if (string.IsNullOrWhiteSpace(releaseId))
         {
@@ -63,7 +67,7 @@ public sealed class AppVersionController : ControllerBase
         {
             return NotFound(new { error = "Release not found." });
         }
-        if (!release.IsActive || release.ReleasedAt > DateTimeOffset.UtcNow)
+        if (!release.IsActive || release.ReleasedAt > now)
         {
             return NotFound(new { error = "Release is not published." });
         }
@@ -75,7 +79,9 @@ public sealed class AppVersionController : ControllerBase
             {
                 AppReleaseId = release.Id,
                 UserId = userId,
-                SeenAt = DateTimeOffset.UtcNow
+                SeenAt = now,
+                CreatedAt = now,
+                UpdatedAt = now
             });
             await _db.SaveChangesAsync(cancellationToken);
         }
@@ -91,10 +97,10 @@ public sealed class AppVersionController : ControllerBase
         [FromQuery] string? search = null,
         CancellationToken cancellationToken = default)
     {
+        var now = _clock.UtcNow;
         IQueryable<AppRelease> query;
         if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
         {
-            var now = DateTimeOffset.UtcNow;
             var normalizedVisibility = NormalizeVisibility(visibility);
             var normalizedSource = NormalizeSourceFilter(source);
             var normalizedSearch = search?.Trim().ToLowerInvariant() ?? string.Empty;
@@ -120,7 +126,7 @@ public sealed class AppVersionController : ControllerBase
         }
         else
         {
-            query = ApplyAdminFilters(_db.AppReleases.AsNoTracking(), visibility, source, search)
+            query = ApplyAdminFilters(_db.AppReleases.AsNoTracking(), visibility, source, search, now)
                 .OrderByDescending(x => x.ReleasedAt)
                 .ThenByDescending(x => x.CreatedAt)
                 .ThenByDescending(x => x.Id)
@@ -144,7 +150,7 @@ public sealed class AppVersionController : ControllerBase
     [Authorize(Policy = AdminPolicies.AdminRead)]
     public async Task<IActionResult> GetAdminReleasesOverview(CancellationToken cancellationToken)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
         IQueryable<AppRelease> publishedQuery;
         IQueryable<AppRelease> upcomingQuery;
         IQueryable<AppRelease> emptyQuery;
@@ -204,6 +210,7 @@ public sealed class AppVersionController : ControllerBase
     [Authorize(Policy = AdminPolicies.AdminWrite)]
     public async Task<IActionResult> CreateAdminRelease([FromBody] AppReleaseUpsertRequest request, CancellationToken cancellationToken)
     {
+        var now = _clock.UtcNow;
         var validationError = ValidateReleaseRequest(request);
         if (validationError is not null)
         {
@@ -227,12 +234,14 @@ public sealed class AppVersionController : ControllerBase
             Summary = request.Summary.Trim(),
             IsActive = request.IsActive,
             Source = NormalizeSource(request.Source),
+            CreatedAt = now,
+            UpdatedAt = now,
             CreatedByUserId = actor.UserId,
             CreatedByUserName = actor.UserName,
             UpdatedByUserId = actor.UserId,
             UpdatedByUserName = actor.UserName
         };
-        foreach (var item in MapRequestItems(request.Items))
+        foreach (var item in MapRequestItems(request.Items, now))
         {
             item.AppReleaseId = release.Id;
             release.Items.Add(item);
@@ -248,6 +257,7 @@ public sealed class AppVersionController : ControllerBase
     [Authorize(Policy = AdminPolicies.AdminWrite)]
     public async Task<IActionResult> UpdateAdminRelease(Guid id, [FromBody] AppReleaseUpsertRequest request, CancellationToken cancellationToken)
     {
+        var now = _clock.UtcNow;
         var validationError = ValidateReleaseRequest(request);
         if (validationError is not null)
         {
@@ -288,11 +298,11 @@ public sealed class AppVersionController : ControllerBase
         release.IsActive = request.IsActive;
         release.Source = NormalizeSource(request.Source);
         release.Revision = checked(release.Revision + 1);
-        release.UpdatedAt = DateTimeOffset.UtcNow;
+        release.UpdatedAt = now;
         release.UpdatedByUserId = actor.UserId;
         release.UpdatedByUserName = actor.UserName;
 
-        var nextItems = MapRequestItems(request.Items).ToList();
+        var nextItems = MapRequestItems(request.Items, now).ToList();
         _db.AppReleaseItems.RemoveRange(release.Items);
         foreach (var item in nextItems)
         {
@@ -375,7 +385,7 @@ public sealed class AppVersionController : ControllerBase
 
     private async Task<List<AppRelease>> GetPublishedActiveReleasesAsync(CancellationToken cancellationToken)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
         IQueryable<AppRelease> query;
         if (_db is DbContext dbContext && dbContext.Database.IsSqlite())
         {
@@ -407,9 +417,13 @@ public sealed class AppVersionController : ControllerBase
             .ToList();
     }
 
-    private static IQueryable<AppRelease> ApplyAdminFilters(IQueryable<AppRelease> releases, string? visibility, string? source, string? search)
+    private static IQueryable<AppRelease> ApplyAdminFilters(
+        IQueryable<AppRelease> releases,
+        string? visibility,
+        string? source,
+        string? search,
+        DateTimeOffset now)
     {
-        var now = DateTimeOffset.UtcNow;
         var filtered = releases;
         if (!string.IsNullOrWhiteSpace(visibility) && !string.Equals(visibility, "all", StringComparison.OrdinalIgnoreCase))
         {
@@ -479,14 +493,16 @@ public sealed class AppVersionController : ControllerBase
                 .Select(x => new CabinetAppReleaseItemDto(x.Type, x.Text))
                 .ToList());
 
-    private static IEnumerable<AppReleaseItem> MapRequestItems(IReadOnlyList<AppReleaseItemDto> items)
+    private static IEnumerable<AppReleaseItem> MapRequestItems(IReadOnlyList<AppReleaseItemDto> items, DateTimeOffset now)
         => items
             .Where(x => !string.IsNullOrWhiteSpace(x.Text))
             .Select((x, index) => new AppReleaseItem
             {
                 Type = NormalizeItemType(x.Type),
                 Text = x.Text.Trim(),
-                SortOrder = x.SortOrder > 0 ? x.SortOrder : (index + 1) * 10
+                SortOrder = x.SortOrder > 0 ? x.SortOrder : (index + 1) * 10,
+                CreatedAt = now,
+                UpdatedAt = now
             });
 
     private static string? ValidateReleaseRequest(AppReleaseUpsertRequest request)

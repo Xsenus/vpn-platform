@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Api.Controllers;
+using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Domain.Entities;
@@ -15,6 +16,83 @@ namespace VpnPlatform.UnitTests;
 
 public class AppVersionControllerTests
 {
+    [Fact]
+    public async Task Cabinet_App_Release_Workflow_Should_Use_Injected_Clock()
+    {
+        await using var db = CreateDb();
+        var now = new DateTimeOffset(2032, 2, 3, 7, 8, 9, TimeSpan.Zero);
+        var userId = Guid.NewGuid();
+        await SeedUserAsync(db, userId);
+        db.AppReleases.AddRange(
+            Release("clock-published", "1.0.0", now.AddMinutes(-1)),
+            Release("clock-upcoming", "1.1.0", now.AddMinutes(1)));
+        await db.SaveChangesAsync();
+        var controller = CreateController(db, userId, clock: new FixedClock(now));
+
+        var history = AssertOk<List<CabinetAppReleaseDto>>(
+            await controller.GetHistory(CancellationToken.None));
+        var markSeen = await controller.MarkSeen(
+            new AppReleaseMarkSeenRequest("clock-published"),
+            CancellationToken.None);
+
+        Assert.Equal("clock-published", Assert.Single(history).ReleaseId);
+        Assert.IsType<OkObjectResult>(markSeen);
+        var seen = await db.AppReleaseSeen.SingleAsync();
+        Assert.Equal(now, seen.SeenAt);
+        Assert.Equal(now, seen.CreatedAt);
+        Assert.Equal(now, seen.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task Admin_App_Release_Workflow_Should_Use_Injected_Clock()
+    {
+        await using var db = CreateDb();
+        var now = new DateTimeOffset(2032, 2, 3, 7, 8, 9, TimeSpan.Zero);
+        var clock = new MutableClock(now);
+        var adminId = Guid.NewGuid();
+        await SeedUserAsync(db, adminId, UserRoles.Admin);
+        var controller = CreateController(db, adminId, UserRoles.Admin, clock);
+        var request = new AppReleaseUpsertRequest(
+            "clock-admin",
+            "1.0.0",
+            now.AddMinutes(-1),
+            "Clock release",
+            "Clock contract",
+            true,
+            "manual",
+            new[] { new AppReleaseItemDto(null, "new", "Initial item", 10) });
+
+        var created = AssertOk<AppReleaseDto>(
+            await controller.CreateAdminRelease(request, CancellationToken.None));
+        var createdItem = await db.AppReleaseItems.SingleAsync();
+        var published = AssertOk<List<AppReleaseDto>>(
+            await controller.GetAdminReleases(visibility: "published", cancellationToken: CancellationToken.None));
+        using var overview = ToJson(await controller.GetAdminReleasesOverview(CancellationToken.None));
+
+        Assert.Equal(now, created.CreatedAt);
+        Assert.Equal(now, created.UpdatedAt);
+        Assert.Equal(now, createdItem.CreatedAt);
+        Assert.Equal(now, createdItem.UpdatedAt);
+        Assert.Equal("clock-admin", Assert.Single(published).ReleaseId);
+        Assert.Equal(1, overview.RootElement.GetProperty("PublishedCount").GetInt32());
+        Assert.Equal(0, overview.RootElement.GetProperty("UpcomingCount").GetInt32());
+
+        clock.UtcNow = now.AddHours(1);
+        var updated = AssertOk<AppReleaseDto>(await controller.UpdateAdminRelease(
+            created.Id,
+            request with
+            {
+                Revision = created.Revision,
+                Items = new[] { new AppReleaseItemDto(null, "fixed", "Replacement item", 10) }
+            },
+            CancellationToken.None));
+        var replacementItem = await db.AppReleaseItems.SingleAsync();
+
+        Assert.Equal(clock.UtcNow, updated.UpdatedAt);
+        Assert.Equal(clock.UtcNow, replacementItem.CreatedAt);
+        Assert.Equal(clock.UtcNow, replacementItem.UpdatedAt);
+    }
+
     [Fact]
     public async Task GetHistory_Should_Return_Only_Published_Active_Releases_In_Descending_Order()
     {
@@ -428,7 +506,11 @@ public class AppVersionControllerTests
             "manual",
             new[] { new AppReleaseItemDto(null, "new", $"Пункт {releaseId}", 10) });
 
-    private static AppVersionController CreateController(ApplicationDbContext db, Guid userId, string role = UserRoles.User)
+    private static AppVersionController CreateController(
+        ApplicationDbContext db,
+        Guid userId,
+        string role = UserRoles.User,
+        IClock? clock = null)
     {
         var identity = new ClaimsIdentity(new[]
         {
@@ -437,13 +519,23 @@ public class AppVersionControllerTests
             new Claim(ClaimTypes.Role, role)
         }, "Test");
 
-        return new AppVersionController(db)
+        return new AppVersionController(db, clock)
         {
             ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
             }
         };
+    }
+
+    private sealed class FixedClock(DateTimeOffset utcNow) : IClock
+    {
+        public DateTimeOffset UtcNow { get; } = utcNow;
+    }
+
+    private sealed class MutableClock(DateTimeOffset utcNow) : IClock
+    {
+        public DateTimeOffset UtcNow { get; set; } = utcNow;
     }
 
     private static T AssertOk<T>(IActionResult result)

@@ -16721,5 +16721,32 @@
         "text": "Roadmap progress is 726/746 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-app-release-clock-consistency",
+    "version": "0.712.0",
+    "releasedAt": "2026-08-14T08:25:00+07:00",
+    "title": "Раздел «Что нового» использует единое время приложения",
+    "summary": "Кабинетная видимость релизов, отметки просмотра и админские операции синхронизированы с application clock.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Latest, history, mark-seen и админские published/upcoming фильтры больше не зависят от прямого DateTimeOffset.UtcNow."
+      },
+      {
+        "type": "improved",
+        "text": "Release, item и seen timestamps получают согласованные CreatedAt, UpdatedAt и SeenAt из одного application clock boundary."
+      },
+      {
+        "type": "fixed",
+        "text": "Strict UTF-8 guard исключает transient tmp и не падает при параллельной очистке fresh SQLite smoke."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 728/748 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
