@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.718.0 - 2026-08-14
+
+Release entry: `2026-08-14-backend-source-encoding-guard`.
+
+### Исправлено
+
+- Generated EF migrations больше не исключаются из strict UTF-8 проверки: BOM удалён из 15 исторических migration-файлов, а локальный backend C# baseline нормализован с 65 CRLF-файлов до LF согласно корневому `.editorconfig` и `.gitattributes`.
+- Encoding suite теперь отдельно запрещает CR во всех backend C# и проверяет migration/snapshot-файлы на UTF-8 without BOM, предотвращая повторное появление скрытого formatter-долга.
+
+### Проверено
+
+- Fail-first encoding regressions `0/2` подтвердили CRLF и BOM; after-fix tracked C# baseline `312/0/0`, targeted `2/2`, глобальный `dotnet format --verify-no-changes`, backend Debug/Release `1540/1540`, fresh SQLite full flow с latest release, EF pending-model-changes и secret scan `706/0` зелёные. Актуальные frontend `172/172`, production build/bundle, dependency audit `0 vulnerabilities` и Playwright `270/270` остаются применимыми, runtime-логика и frontend не менялись.
+- Roadmap `738/758` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.717.0 - 2026-08-14
 
 Release entry: `2026-08-14-release-content-contract`.

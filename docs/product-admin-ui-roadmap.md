@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `737/757` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `738/758` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,7 +85,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1539/1539`.
+- [x] Backend full suite: `1540/1540`.
 - [x] Frontend unit tests: `172/172`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -167,7 +167,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-14-release-content-contract`, версия `0.717.0`; admin API, frontend-редактор и startup seed применяют единый fail-closed контракт release ID, полей, items, типов и сортировки; backend `1539/1539`.
+- [x] Latest "Что нового": `2026-08-14-backend-source-encoding-guard`, версия `0.718.0`; backend C# и generated EF migrations проходят strict UTF-8 without BOM, LF guard и глобальный formatter; backend `1540/1540`.
 
 ## Как вести дальше
 

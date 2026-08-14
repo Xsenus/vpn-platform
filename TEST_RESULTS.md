@@ -2,6 +2,19 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: backend source encoding and formatter baseline
+
+Scope:
+- Все tracked backend C# файлы, включая generated EF migrations и snapshot, должны соответствовать strict UTF-8 without BOM и LF из корневого `.editorconfig`/`.gitattributes`.
+- Глобальный formatter gate не должен зависеть от stale локальных line endings или исключения migrations из encoding guard.
+
+Results:
+- Roadmap progress: `738/758` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-backend-source-encoding-guard`, version `0.718.0`.
+- Fail-first: `312` tracked C# содержали `15` UTF-8 BOM и `65` CRLF-файлов; strict encoding/LF regressions завершились `0/2`, глобальный formatter был красным на ENDOFLINE/CHARSET.
+- After fix: baseline `312/0/0`, targeted encoding `2/2`, глобальный `dotnet format --verify-no-changes`, backend Debug/Release `1540/1540`, fresh SQLite full flow с latest release, EF pending-model-changes и secret scan `706/0` зелёные. Frontend/runtime не менялись; актуальные frontend `172/172`, typecheck/build, bundle budget, dependency audit `0 vulnerabilities` и Playwright `270/270` остаются применимыми.
+- External boundary: реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись; статус остаётся `staging-ready baseline`, не production-ready.
+
 ## Check 2026-08-14: unified release content contract
 
 Scope:

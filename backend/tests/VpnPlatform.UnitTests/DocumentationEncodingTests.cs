@@ -373,6 +373,30 @@ public class DocumentationEncodingTests
         }
     }
 
+    [Fact]
+    public void Backend_CSharp_Should_Use_Lf_Line_Endings()
+    {
+        var root = FindRepositoryRoot();
+        var backendRoot = Path.Combine(root, "backend");
+        var files = Directory
+            .EnumerateFiles(backendRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(file =>
+            {
+                var relativePath = Path.GetRelativePath(backendRoot, file);
+                return !relativePath.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                       && !relativePath.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
+            })
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        Assert.NotEmpty(files);
+        foreach (var file in files)
+        {
+            var bytes = File.ReadAllBytes(file);
+            Assert.DoesNotContain((byte)'\r', bytes);
+        }
+    }
+
     private static string Describe(string marker)
         => string.Join(" ", marker.Select(character => $"U+{(int)character:X4}"));
 
@@ -427,7 +451,6 @@ public class DocumentationEncodingTests
                        && !relativePath.StartsWith($".git{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
                        && !relativePath.StartsWith($".serena{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
                        && !relativePath.StartsWith($"tmp{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
-                       && !relativePath.Contains($"{Path.DirectorySeparatorChar}Migrations{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
                        && !relativePath.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
                        && !relativePath.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
                        && !relativePath.Contains($"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)

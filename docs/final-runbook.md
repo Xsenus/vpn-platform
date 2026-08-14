@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-14 локально подтверждено:
 
-- backend full suite: 1539/1539;
+- backend full suite: 1540/1540;
 - frontend tests: 172/172;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-14-release-content-contract`, версия `0.717.0`; admin API, frontend-редактор и startup seed используют единый fail-closed контракт release ID, полей, items, типов и сортировки.
-- roadmap progress: `737/757` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-14-backend-source-encoding-guard`, версия `0.718.0`; все backend C# проходят глобальный formatter, strict UTF-8 without BOM и LF guard, включая generated EF migrations.
+- roadmap progress: `738/758` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production
