@@ -7,7 +7,10 @@ namespace VpnPlatform.Infrastructure.Persistence;
 
 public static class LocalSqliteSchemaRepair
 {
-    public static async Task<int> PrepareMigrationsAsync(ApplicationDbContext db, CancellationToken cancellationToken = default)
+    public static async Task<int> PrepareMigrationsAsync(
+        ApplicationDbContext db,
+        DateTimeOffset repairAt,
+        CancellationToken cancellationToken = default)
     {
         if (!db.Database.IsSqlite())
         {
@@ -32,14 +35,14 @@ public static class LocalSqliteSchemaRepair
         if (await TableExistsAsync(db, "TelegramAccounts", cancellationToken)
             && !await IndexIsUniqueAsync(db, "TelegramAccounts", "IX_TelegramAccounts_UserId", cancellationToken))
         {
-            await BackfillDuplicateTelegramAccountLinksAsync(db, cancellationToken);
+            await BackfillDuplicateTelegramAccountLinksAsync(db, repairAt, cancellationToken);
             prepared++;
         }
 
         if (await TableExistsAsync(db, "PanelSyncRuns", cancellationToken)
             && !await IndexIsUniqueAsync(db, "PanelSyncRuns", "IX_PanelSyncRuns_Running_VpnPanelId", cancellationToken))
         {
-            await BackfillDuplicateRunningPanelSyncRunsAsync(db, cancellationToken);
+            await BackfillDuplicateRunningPanelSyncRunsAsync(db, repairAt, cancellationToken);
             prepared++;
         }
 
@@ -53,7 +56,10 @@ public static class LocalSqliteSchemaRepair
         return prepared;
     }
 
-    public static async Task<int> ApplyAsync(ApplicationDbContext db, CancellationToken cancellationToken = default)
+    public static async Task<int> ApplyAsync(
+        ApplicationDbContext db,
+        DateTimeOffset repairAt,
+        CancellationToken cancellationToken = default)
     {
         if (!db.Database.IsSqlite())
         {
@@ -247,20 +253,20 @@ public static class LocalSqliteSchemaRepair
             && await TableExistsAsync(db, "TelegramBotDeepLinks", cancellationToken)
             && await TableExistsAsync(db, "TelegramLinkStates", cancellationToken))
         {
-            await db.Database.ExecuteSqlRawAsync(
-                """
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"""
                 UPDATE "TelegramBotDeepLinks"
                 SET
-                    "InvalidatedAt" = CURRENT_TIMESTAMP,
+                    "InvalidatedAt" = {repairAt},
                     "InvalidationReason" = 'telegram_link_lifecycle_migration',
                     "Revision" = 1,
-                    "UpdatedAt" = CURRENT_TIMESTAMP
+                    "UpdatedAt" = {repairAt}
                 WHERE "Purpose" = 'link_account' AND "UsedAt" IS NULL;
 
                 INSERT OR IGNORE INTO "TelegramLinkStates"
                     ("Id", "UserId", "Generation", "Revision", "CreatedAt", "UpdatedAt")
                 SELECT
-                    "UserId", "UserId", 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                    "UserId", "UserId", 1, 1, {repairAt}, {repairAt}
                 FROM "TelegramBotDeepLinks"
                 WHERE "UserId" IS NOT NULL
                 GROUP BY "UserId";
@@ -271,7 +277,7 @@ public static class LocalSqliteSchemaRepair
         if (await TableExistsAsync(db, "TelegramAccounts", cancellationToken)
             && !await IndexIsUniqueAsync(db, "TelegramAccounts", "IX_TelegramAccounts_UserId", cancellationToken))
         {
-            await BackfillDuplicateTelegramAccountLinksAsync(db, cancellationToken);
+            await BackfillDuplicateTelegramAccountLinksAsync(db, repairAt, cancellationToken);
             await db.Database.ExecuteSqlRawAsync(
                 """DROP INDEX IF EXISTS "IX_TelegramAccounts_UserId";""",
                 cancellationToken);
@@ -343,7 +349,7 @@ public static class LocalSqliteSchemaRepair
 
             if (!await IndexIsUniqueAsync(db, "OutboxMessages", "IX_OutboxMessages_Type_CorrelationId", cancellationToken))
             {
-                await BackfillOutboxDuplicateCorrelationsAsync(db, cancellationToken);
+                await BackfillOutboxDuplicateCorrelationsAsync(db, repairAt, cancellationToken);
                 await db.Database.ExecuteSqlRawAsync(
                     """DROP INDEX IF EXISTS "IX_OutboxMessages_Type_CorrelationId";""",
                     cancellationToken);
@@ -411,7 +417,7 @@ public static class LocalSqliteSchemaRepair
 
             if (!await IndexIsUniqueAsync(db, "ProvisioningRuns", "IX_ProvisioningRuns_Active_NodeId", cancellationToken))
             {
-                await BackfillDuplicateActiveProvisioningRunsAsync(db, cancellationToken);
+                await BackfillDuplicateActiveProvisioningRunsAsync(db, repairAt, cancellationToken);
                 await db.Database.ExecuteSqlRawAsync(
                     """DROP INDEX IF EXISTS "IX_ProvisioningRuns_Active_NodeId";""",
                     cancellationToken);
@@ -447,7 +453,7 @@ public static class LocalSqliteSchemaRepair
             && !await IndexIsUniqueAsync(db, "PanelSyncRuns", "IX_PanelSyncRuns_Running_VpnPanelId", cancellationToken))
         {
             await RedactLegacyPanelErrorsAsync(db, cancellationToken);
-            await BackfillDuplicateRunningPanelSyncRunsAsync(db, cancellationToken);
+            await BackfillDuplicateRunningPanelSyncRunsAsync(db, repairAt, cancellationToken);
             await db.Database.ExecuteSqlRawAsync(
                 """DROP INDEX IF EXISTS "IX_PanelSyncRuns_Running_VpnPanelId";""",
                 cancellationToken);
@@ -462,10 +468,11 @@ public static class LocalSqliteSchemaRepair
 
     private static async Task BackfillDuplicateTelegramAccountLinksAsync(
         ApplicationDbContext db,
+        DateTimeOffset repairAt,
         CancellationToken cancellationToken)
     {
-        await db.Database.ExecuteSqlRawAsync(
-            """
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"""
             CREATE TEMP TABLE "__DuplicateTelegramAccountLinks" AS
             SELECT "Id" FROM (
                 SELECT
@@ -482,7 +489,7 @@ public static class LocalSqliteSchemaRepair
             SET
                 "UserId" = NULL,
                 "LinkedAt" = NULL,
-                "UpdatedAt" = CURRENT_TIMESTAMP
+                "UpdatedAt" = {repairAt}
             WHERE "Id" IN (SELECT "Id" FROM "__DuplicateTelegramAccountLinks");
 
             DROP TABLE "__DuplicateTelegramAccountLinks";
@@ -492,10 +499,11 @@ public static class LocalSqliteSchemaRepair
 
     private static async Task BackfillDuplicateRunningPanelSyncRunsAsync(
         ApplicationDbContext db,
+        DateTimeOffset repairAt,
         CancellationToken cancellationToken)
     {
-        await db.Database.ExecuteSqlRawAsync(
-            """
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"""
             CREATE TEMP TABLE "__DuplicateRunningPanelSyncRuns" AS
             SELECT "Id" FROM (
                 SELECT
@@ -511,9 +519,9 @@ public static class LocalSqliteSchemaRepair
             UPDATE "PanelSyncRuns"
             SET
                 "Status" = 3,
-                "FinishedAt" = CURRENT_TIMESTAMP,
+                "FinishedAt" = {repairAt},
                 "ErrorMessage" = 'Duplicate running panel sync quarantined during local schema repair.',
-                "UpdatedAt" = CURRENT_TIMESTAMP
+                "UpdatedAt" = {repairAt}
             WHERE "Id" IN (SELECT "Id" FROM "__DuplicateRunningPanelSyncRuns");
 
             DROP TABLE "__DuplicateRunningPanelSyncRuns";
@@ -584,10 +592,11 @@ public static class LocalSqliteSchemaRepair
 
     private static async Task BackfillDuplicateActiveProvisioningRunsAsync(
         ApplicationDbContext db,
+        DateTimeOffset repairAt,
         CancellationToken cancellationToken)
     {
-        await db.Database.ExecuteSqlRawAsync(
-            """
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"""
             CREATE TEMP TABLE "__DuplicateActiveProvisioningRuns" AS
             SELECT "Id" FROM (
                 SELECT
@@ -608,13 +617,13 @@ public static class LocalSqliteSchemaRepair
                 "Status" = CASE WHEN "DryRun" THEN 10 ELSE 3 END,
                 "ProcessingStartedAt" = NULL,
                 "LeaseExpiresAt" = NULL,
-                "FinishedAt" = CURRENT_TIMESTAMP,
+                "FinishedAt" = {repairAt},
                 "LastError" = 'Duplicate active provisioning run quarantined during local schema repair.',
                 "ExecutionLog" = substr(CASE
                     WHEN "ExecutionLog" = '' THEN 'Duplicate active provisioning run quarantined during local schema repair.'
                     ELSE "ExecutionLog" || char(10) || 'Duplicate active provisioning run quarantined during local schema repair.'
                 END, 1, 4000),
-                "UpdatedAt" = CURRENT_TIMESTAMP
+                "UpdatedAt" = {repairAt}
             WHERE "Id" IN (SELECT "Id" FROM "__DuplicateActiveProvisioningRuns");
 
             DROP TABLE "__DuplicateActiveProvisioningRuns";
@@ -766,6 +775,7 @@ public static class LocalSqliteSchemaRepair
 
     private static async Task BackfillOutboxDuplicateCorrelationsAsync(
         ApplicationDbContext db,
+        DateTimeOffset repairAt,
         CancellationToken cancellationToken)
     {
         var messages = await db.OutboxMessages.ToListAsync(cancellationToken);
@@ -782,7 +792,7 @@ public static class LocalSqliteSchemaRepair
                 if (!duplicate.ProcessedAt.HasValue
                     && duplicate.Type is not ("password_reset_requested" or "PaymentStatusChanged"))
                 {
-                    duplicate.FailedAt = DateTimeOffset.UtcNow;
+                    duplicate.FailedAt = repairAt;
                     duplicate.LastError = "Duplicate outbox message cancelled during local schema repair.";
                 }
             }

@@ -2,6 +2,20 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: SQLite repair application clock
+
+Scope:
+- SQLite migration preparation, post-migration repair и CLI admin-bootstrap должны использовать один application-clock snapshot для quarantine/audit timestamps.
+- Outbox, provisioning, panel sync и Telegram repair paths не должны зависеть от process clock или SQLite `CURRENT_TIMESTAMP`.
+
+Results:
+- Roadmap progress: `739/759` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-sqlite-repair-application-clock`, version `0.719.0`.
+- Fail-first: четыре SQLite regressions получили системное/DB-время вместо `2035-06-07T08:09:10Z` (`0/4`).
+- After fix: `PrepareMigrationsAsync`/`ApplyAsync` требуют `repairAt`, hosted startup и CLI получают его из `IClock`, SQL timestamps параметризованы. Targeted `4/4`, SQLite repair/startup/admin-bootstrap regression `52/52`, backend Debug/Release `1540/1540`, fresh SQLite full flow с latest release, глобальный formatter, EF drift и secret scan `706/0` зелёные.
+- Frontend/API DTO не менялись; актуальные frontend `172/172`, typecheck/build, bundle budget, dependency audit `0 vulnerabilities` и Playwright `270/270` остаются применимыми.
+- External boundary: реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись; статус остаётся `staging-ready baseline`, не production-ready.
+
 ## Check 2026-08-14: backend source encoding and formatter baseline
 
 Scope:

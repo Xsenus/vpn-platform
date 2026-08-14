@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.719.0 - 2026-08-14
+
+Release entry: `2026-08-14-sqlite-repair-application-clock`.
+
+### Исправлено
+
+- SQLite migration preparation и post-migration repair больше не используют process/DB clock для quarantine timestamps: outbox, provisioning, panel sync и Telegram lifecycle получают один обязательный `repairAt` snapshot.
+- Hosted startup и CLI admin-bootstrap передают `IClock.UtcNow`; SQL updates параметризованы тем же значением без `CURRENT_TIMESTAMP`, а direct entity repair больше не читает `DateTimeOffset.UtcNow`.
+
+### Проверено
+
+- Fail-first SQLite clock regressions `0/4` получили системное/DB-время; after-fix targeted `4/4`, SQLite repair/startup/admin-bootstrap regression `52/52`, backend Debug/Release `1540/1540`, fresh SQLite full flow с latest release, глобальный formatter, EF drift и secret scan `706/0` зелёные. Актуальные frontend `172/172`, production build/bundle, dependency audit `0 vulnerabilities` и Playwright `270/270` остаются применимыми, frontend/API DTO не менялись.
+- Roadmap `739/759` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.718.0 - 2026-08-14
 
 Release entry: `2026-08-14-backend-source-encoding-guard`.

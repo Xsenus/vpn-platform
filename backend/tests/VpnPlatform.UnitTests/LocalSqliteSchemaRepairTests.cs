@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -12,6 +13,8 @@ namespace VpnPlatform.UnitTests;
 
 public class LocalSqliteSchemaRepairTests
 {
+    private static readonly DateTimeOffset RepairAt = new(2035, 6, 7, 8, 9, 10, TimeSpan.Zero);
+
     [Fact]
     public async Task ApplyAsync_Should_Add_Missing_User_Session_Columns_To_Existing_Local_Sqlite_Db()
     {
@@ -39,7 +42,7 @@ public class LocalSqliteSchemaRepairTests
             );
             """);
 
-        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt);
 
         Assert.Equal(11, repaired);
         Assert.True(await ColumnExistsAsync(connection, "Users", "SessionVersion"));
@@ -53,7 +56,7 @@ public class LocalSqliteSchemaRepairTests
         Assert.True(await ColumnExistsAsync(connection, "PasswordResetTokens", "Revision"));
         Assert.True(await ColumnExistsAsync(connection, "PasswordResetTokens", "Generation"));
         Assert.True(await IndexIsUniqueAsync(connection, "PasswordResetStates", "IX_PasswordResetStates_UserId"));
-        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt));
     }
 
     [Fact]
@@ -94,7 +97,7 @@ public class LocalSqliteSchemaRepairTests
             .Options;
         await using var db = new ApplicationDbContext(options);
 
-        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt);
 
         Assert.Equal(2, repaired);
         Assert.True(await ColumnExistsAsync(connection, "PaymentProviderAccounts", "WebhookUrl"));
@@ -112,8 +115,8 @@ public class LocalSqliteSchemaRepairTests
         await using var db = new ApplicationDbContext(options);
         await db.Database.EnsureCreatedAsync();
 
-        Assert.Equal(0, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db));
-        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+        Assert.Equal(0, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db, RepairAt));
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt));
         Assert.True(await ColumnExistsAsync(connection, "PaymentProviderAccounts", "WebhookUrl"));
     }
 
@@ -153,7 +156,7 @@ public class LocalSqliteSchemaRepairTests
                 ({duplicate.Id}, {duplicate.TelegramUserId}, {duplicate.Type}, {duplicate.PayloadJson}, {duplicate.Status}, 0, {duplicate.NextAttemptAt}, NULL, '', {duplicate.CreatedAt}, {duplicate.UpdatedAt});
             """);
 
-        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt);
 
         Assert.Equal(2, repaired);
         Assert.True(await ColumnExistsAsync(connection, "TelegramBotNotifications", "DeduplicationKey"));
@@ -209,7 +212,7 @@ public class LocalSqliteSchemaRepairTests
             """);
 
         await migrator.MigrateAsync("20260804124229_AddTelegramNotificationDeduplication");
-        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt));
 
         var notifications = await db.TelegramBotNotifications.AsNoTracking().ToDictionaryAsync(x => x.Id);
         var expectedKey = TelegramNotificationDeduplication.CreateKey(telegramUserId, type, payloadJson);
@@ -220,7 +223,7 @@ public class LocalSqliteSchemaRepairTests
         Assert.Null(notifications[newerId].NextAttemptAt);
         Assert.Contains("Duplicate", notifications[newerId].ErrorText, StringComparison.OrdinalIgnoreCase);
 
-        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt));
         var repeated = await db.TelegramBotNotifications.AsNoTracking().ToDictionaryAsync(x => x.Id);
         Assert.Equal(expectedKey, repeated[olderId].DeduplicationKey);
         Assert.Equal(notifications[newerId].DeduplicationKey, repeated[newerId].DeduplicationKey);
@@ -262,7 +265,7 @@ public class LocalSqliteSchemaRepairTests
                 ({duplicate.Id}, {duplicate.Type}, {duplicate.PayloadJson}, {duplicate.CorrelationId}, 0, NULL, NULL, {duplicate.CreatedAt}, {duplicate.UpdatedAt});
             """);
 
-        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt);
 
         Assert.Equal(4, repaired);
         Assert.True(await ColumnExistsAsync(connection, "OutboxMessages", "ProcessingStartedAt"));
@@ -272,7 +275,7 @@ public class LocalSqliteSchemaRepairTests
         var stored = await db.OutboxMessages.AsNoTracking().OrderBy(x => x.Id).ToListAsync();
         Assert.Equal(2, stored.Select(x => x.CorrelationId).Distinct(StringComparer.Ordinal).Count());
         Assert.Single(stored, x => x.FailedAt == null);
-        Assert.Single(stored, x => x.FailedAt != null);
+        Assert.Equal(RepairAt, Assert.Single(stored, x => x.FailedAt != null).FailedAt);
     }
 
     [Fact]
@@ -311,7 +314,7 @@ public class LocalSqliteSchemaRepairTests
                 ({duplicateId}, {createdAt.AddMinutes(1)}, {createdAt.AddMinutes(1)}, {nodeId}, 8, NULL, 1, {createdAt.AddMinutes(1)}, NULL, 'queued');
             """);
 
-        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt);
 
         Assert.Equal(6, repaired);
         Assert.True(await ColumnExistsAsync(connection, "ProvisioningRuns", "Revision"));
@@ -324,7 +327,7 @@ public class LocalSqliteSchemaRepairTests
         Assert.Equal(ProvisioningRunStatus.Prechecking, stored[0].Status);
         Assert.Equal(ProvisioningRunStatus.PrecheckFailed, stored[1].Status);
         Assert.Contains("quarantined", stored[1].LastError, StringComparison.OrdinalIgnoreCase);
-        Assert.NotNull(stored[1].FinishedAt);
+        Assert.Equal(RepairAt, stored[1].FinishedAt);
     }
 
     [Fact]
@@ -364,7 +367,7 @@ public class LocalSqliteSchemaRepairTests
                 ({newerId}, {newerInstant}, {newerInstant}, {nodeId}, 8, NULL, 1, {newerInstant}, NULL, 'newer');
             """);
 
-        Assert.Equal(6, await LocalSqliteSchemaRepair.ApplyAsync(db));
+        Assert.Equal(6, await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt));
 
         var runs = await db.ProvisioningRuns.AsNoTracking().ToDictionaryAsync(x => x.Id);
         Assert.Equal(ProvisioningRunStatus.PrecheckQueued, runs[olderId].Status);
@@ -413,7 +416,7 @@ public class LocalSqliteSchemaRepairTests
                 ({newerId}, {newerInstant}, {newerInstant}, 'NotificationRequested', {payloadJson}, 'mixed-offset', 0, NULL, NULL);
             """);
 
-        Assert.Equal(1, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db));
+        Assert.Equal(1, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db, RepairAt));
         await migrator.MigrateAsync("20260804131342_OutboxDispatchRecovery");
 
         var messages = await db.OutboxMessages.AsNoTracking().ToDictionaryAsync(x => x.Id);
@@ -449,7 +452,7 @@ public class LocalSqliteSchemaRepairTests
             """);
 
         var error = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => LocalSqliteSchemaRepair.PrepareMigrationsAsync(db));
+            () => LocalSqliteSchemaRepair.PrepareMigrationsAsync(db, RepairAt));
 
         Assert.Contains("invalid timestamp", error.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -494,7 +497,7 @@ public class LocalSqliteSchemaRepairTests
                 ({newerId}, {newerInstant}, {newerInstant}, {nodeId}, 8, NULL, 1, {newerInstant}, NULL, 'newer');
             """);
 
-        Assert.Equal(1, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db));
+        Assert.Equal(1, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db, RepairAt));
         await migrator.MigrateAsync("20260804134818_ProvisioningWorkerRecovery");
 
         await using var command = connection.CreateCommand();
@@ -536,7 +539,7 @@ public class LocalSqliteSchemaRepairTests
             );
             """);
 
-        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt);
 
         Assert.Equal(5, repaired);
         Assert.True(await ColumnExistsAsync(connection, "Subscriptions", "LifecycleAttemptCount"));
@@ -544,7 +547,7 @@ public class LocalSqliteSchemaRepairTests
         Assert.True(await ColumnExistsAsync(connection, "Subscriptions", "LifecycleLeaseExpiresAt"));
         Assert.True(await ColumnExistsAsync(connection, "Subscriptions", "LifecycleNextAttemptAt"));
         Assert.True(await ColumnExistsAsync(connection, "Subscriptions", "LifecycleLastError"));
-        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt));
     }
 
     [Fact]
@@ -586,12 +589,13 @@ public class LocalSqliteSchemaRepairTests
                 ({historicalFailureId}, {panelId}, 3, {newerInstant.AddMinutes(1)}, {newerInstant.AddMinutes(1)}, {summaryJson}, 'password=legacy-secret', {newerInstant.AddMinutes(1)}, {newerInstant.AddMinutes(1)});
             """);
 
-        Assert.Equal(1, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db));
+        Assert.Equal(1, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db, RepairAt));
         var preparedRuns = await db.PanelSyncRuns.AsNoTracking().ToDictionaryAsync(x => x.Id);
         Assert.Equal(PanelSyncRunStatus.Running, preparedRuns[firstId].Status);
         Assert.Equal(PanelSyncRunStatus.Failed, preparedRuns[duplicateId].Status);
+        Assert.Equal(RepairAt, preparedRuns[duplicateId].FinishedAt);
         Assert.Contains("quarantined", preparedRuns[duplicateId].ErrorMessage, StringComparison.OrdinalIgnoreCase);
-        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt);
 
         Assert.Equal(1, repaired);
         Assert.True(await IndexIsUniqueAsync(connection, "PanelSyncRuns", "IX_PanelSyncRuns_Running_VpnPanelId"));
@@ -602,7 +606,7 @@ public class LocalSqliteSchemaRepairTests
         Assert.Contains("redacted", runs[duplicateId].ErrorMessage, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("legacy-secret", runs[historicalFailureId].ErrorMessage, StringComparison.Ordinal);
         Assert.Contains("redacted", runs[historicalFailureId].ErrorMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt));
     }
 
     [Fact]
@@ -664,8 +668,8 @@ public class LocalSqliteSchemaRepairTests
                 ({currentAccountId}, {userId}, 777302, {newerInstant}, {newerInstant}, {newerInstant});
             """);
 
-        Assert.Equal(1, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db));
-        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+        Assert.Equal(1, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db, RepairAt));
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt);
 
         Assert.Equal(7, repaired);
         Assert.True(await IndexIsUniqueAsync(connection, "TelegramLinkStates", "IX_TelegramLinkStates_UserId"));
@@ -684,7 +688,12 @@ public class LocalSqliteSchemaRepairTests
                 (SELECT "InvalidationReason" FROM "TelegramBotDeepLinks" LIMIT 1),
                 (SELECT "Revision" FROM "TelegramBotDeepLinks" LIMIT 1),
                 (SELECT COUNT(*) FROM "TelegramAccounts" WHERE "UserId" IS NOT NULL),
-                (SELECT "TelegramUserId" FROM "TelegramAccounts" WHERE "UserId" IS NOT NULL LIMIT 1);
+                (SELECT "TelegramUserId" FROM "TelegramAccounts" WHERE "UserId" IS NOT NULL LIMIT 1),
+                (SELECT "InvalidatedAt" FROM "TelegramBotDeepLinks" LIMIT 1),
+                (SELECT "UpdatedAt" FROM "TelegramBotDeepLinks" LIMIT 1),
+                (SELECT "CreatedAt" FROM "TelegramLinkStates" LIMIT 1),
+                (SELECT "UpdatedAt" FROM "TelegramLinkStates" LIMIT 1),
+                (SELECT "UpdatedAt" FROM "TelegramAccounts" WHERE "UserId" IS NULL LIMIT 1);
             """;
         await using var reader = await command.ExecuteReaderAsync();
         Assert.True(await reader.ReadAsync());
@@ -694,7 +703,12 @@ public class LocalSqliteSchemaRepairTests
         Assert.Equal(1L, reader.GetInt64(3));
         Assert.Equal(1L, reader.GetInt64(4));
         Assert.Equal(777302L, reader.GetInt64(5));
-        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+        Assert.Equal(RepairAt, DateTimeOffset.Parse(reader.GetString(6), CultureInfo.InvariantCulture));
+        Assert.Equal(RepairAt, DateTimeOffset.Parse(reader.GetString(7), CultureInfo.InvariantCulture));
+        Assert.Equal(RepairAt, DateTimeOffset.Parse(reader.GetString(8), CultureInfo.InvariantCulture));
+        Assert.Equal(RepairAt, DateTimeOffset.Parse(reader.GetString(9), CultureInfo.InvariantCulture));
+        Assert.Equal(RepairAt, DateTimeOffset.Parse(reader.GetString(10), CultureInfo.InvariantCulture));
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt));
     }
 
     private static TelegramBotNotification Notification()
@@ -722,12 +736,12 @@ public class LocalSqliteSchemaRepairTests
             );
             """);
 
-        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt);
 
         Assert.Equal(2, repaired);
         Assert.True(await ColumnExistsAsync(connection, "Orders", "PendingIntentKey"));
         Assert.True(await IndexIsUniqueAsync(connection, "Orders", "IX_Orders_Pending_IntentKey"));
-        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt));
     }
 
     [Fact]
@@ -745,11 +759,11 @@ public class LocalSqliteSchemaRepairTests
             );
             """);
 
-        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db);
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt);
 
         Assert.Equal(1, repaired);
         Assert.True(await ColumnExistsAsync(connection, "SupportConversations", "Revision"));
-        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db));
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt));
     }
 
     private static OutboxMessage OutboxMessage(string correlationId)

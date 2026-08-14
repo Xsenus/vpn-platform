@@ -10,6 +10,7 @@ using VpnPlatform.Api.Middleware;
 using VpnPlatform.Api.Observability;
 using VpnPlatform.Api.Security;
 using VpnPlatform.Application;
+using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Infrastructure;
 using VpnPlatform.Infrastructure.Configuration;
@@ -159,6 +160,7 @@ static async Task RunAdminBootstrapCommandAsync(IServiceProvider services)
     var db = provider.GetRequiredService<ApplicationDbContext>();
     var databaseOptions = provider.GetRequiredService<IOptions<DatabaseStartupOptions>>().Value;
     var adminOptions = provider.GetRequiredService<IOptions<AdminBootstrapOptions>>().Value;
+    var repairAt = provider.GetRequiredService<IClock>().UtcNow;
 
     if (!adminOptions.Enabled)
     {
@@ -170,20 +172,20 @@ static async Task RunAdminBootstrapCommandAsync(IServiceProvider services)
         if (DatabaseProviderConfigurator.IsSqlite(databaseOptions.Provider) && databaseOptions.UseEnsureCreatedForLocalSqlite)
         {
             await db.Database.EnsureCreatedAsync();
-            await LocalSqliteSchemaRepair.ApplyAsync(db);
+            await LocalSqliteSchemaRepair.ApplyAsync(db, repairAt);
         }
         else
         {
             var isSqlite = db.Database.IsSqlite();
             if (isSqlite)
             {
-                await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db);
+                await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db, repairAt);
             }
 
             await db.Database.MigrateAsync();
             if (isSqlite)
             {
-                await LocalSqliteSchemaRepair.ApplyAsync(db);
+                await LocalSqliteSchemaRepair.ApplyAsync(db, repairAt);
             }
         }
     }

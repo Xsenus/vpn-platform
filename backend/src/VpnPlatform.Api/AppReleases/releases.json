@@ -16910,5 +16910,32 @@
         "text": "Roadmap progress is 738/758 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-sqlite-repair-application-clock",
+    "version": "0.719.0",
+    "releasedAt": "2026-08-14T12:00:00+07:00",
+    "title": "SQLite-восстановление использует единое время приложения",
+    "summary": "Migration preparation, post-migration repair и admin-bootstrap синхронизируют quarantine timestamps через application clock.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Outbox, provisioning и panel sync repair больше не записывают системное или SQLite-время вместо времени приложения."
+      },
+      {
+        "type": "fixed",
+        "text": "Telegram deep link, link state и duplicate account repair используют тот же параметризованный startup timestamp."
+      },
+      {
+        "type": "improved",
+        "text": "Hosted startup и CLI admin-bootstrap передают один обязательный snapshot IClock во все SQLite repair paths."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 739/759 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-14.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-backend-source-encoding-guard`, версия `0.718.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `738/758` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-sqlite-repair-application-clock`, версия `0.719.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `739/759` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -2648,6 +2648,10 @@ git diff --check
   - Что сделать: все tracked backend C# файлы, включая generated EF migrations и snapshot, должны соответствовать корневому `.editorconfig`: strict UTF-8 without BOM и LF; guard не должен исключать migrations.
   - Что сделано: 65 локальных CRLF-файлов нормализованы до LF, BOM удалён из 15 migration-файлов; `DocumentationEncodingTests` включает migrations и отдельно проверяет отсутствие CR во всех backend C#.
   - Доказательство: baseline `312` tracked C# / `15` BOM / `65` CRLF, fail-first encoding regressions `0/2`; after-fix `312/0/0`, targeted `2/2`, глобальный `dotnet format --verify-no-changes`, backend Debug/Release `1540/1540` и EF pending-model-changes gate зелёные.
+- [x] `P11-ACC-448` Синхронизировать SQLite schema repair с application clock. 2026-08-14.
+  - Что сделать: migration preparation, post-migration repair и admin-bootstrap CLI не должны использовать process/SQLite clock для quarantine timestamps; одна startup-операция должна получать единый snapshot `IClock.UtcNow`.
+  - Что сделано: `PrepareMigrationsAsync` и `ApplyAsync` требуют явный `repairAt`; DbInitializer и CLI admin-bootstrap передают application-clock snapshot; outbox, provisioning, panel sync, Telegram link state/deep link/account SQL используют параметризованное значение без `CURRENT_TIMESTAMP`/`DateTimeOffset.UtcNow`.
+  - Доказательство: fail-first SQLite clock regressions `0/4` получили системное/DB-время; after-fix targeted `4/4`, SQLite repair/startup regression `52/52`, backend Debug/Release `1540/1540` и глобальный formatter зелёные.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

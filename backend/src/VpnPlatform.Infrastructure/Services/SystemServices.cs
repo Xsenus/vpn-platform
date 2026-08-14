@@ -302,11 +302,12 @@ public class DbInitializer : IHostedService
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var databaseOptions = _databaseOptions.Value;
         var adminOptions = _adminOptions.Value;
+        var repairAt = _clock.UtcNow;
 
         if (DatabaseProviderConfigurator.IsSqlite(databaseOptions.Provider) && databaseOptions.UseEnsureCreatedForLocalSqlite)
         {
             await db.Database.EnsureCreatedAsync(cancellationToken);
-            var repairedColumns = await LocalSqliteSchemaRepair.ApplyAsync(db, cancellationToken);
+            var repairedColumns = await LocalSqliteSchemaRepair.ApplyAsync(db, repairAt, cancellationToken);
             if (repairedColumns > 0)
             {
                 _logger.LogInformation("Local SQLite schema repaired. ColumnsAdded={ColumnsAdded}", repairedColumns);
@@ -317,7 +318,7 @@ public class DbInitializer : IHostedService
             var isSqlite = db.Database.IsSqlite();
             if (isSqlite)
             {
-                var preparedMigrations = await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db, cancellationToken);
+                var preparedMigrations = await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db, repairAt, cancellationToken);
                 if (preparedMigrations > 0)
                 {
                     _logger.LogInformation("Local SQLite migration data prepared. RepairsApplied={RepairsApplied}", preparedMigrations);
@@ -327,7 +328,7 @@ public class DbInitializer : IHostedService
             await db.Database.MigrateAsync(cancellationToken);
             if (isSqlite)
             {
-                var repairedColumns = await LocalSqliteSchemaRepair.ApplyAsync(db, cancellationToken);
+                var repairedColumns = await LocalSqliteSchemaRepair.ApplyAsync(db, repairAt, cancellationToken);
                 _logger.LogInformation(
                     "Local SQLite post-migration repair completed. StructuralRepairsApplied={StructuralRepairsApplied}",
                     repairedColumns);

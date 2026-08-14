@@ -86,7 +86,11 @@ public class PaymentProviderAccountConcurrencyTests
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();
 
-        Assert.Equal(1, await LocalSqliteSchemaRepair.PrepareMigrationsAsync(db));
+        Assert.Equal(
+            1,
+            await LocalSqliteSchemaRepair.PrepareMigrationsAsync(
+                db,
+                new DateTimeOffset(2035, 6, 7, 8, 9, 10, TimeSpan.Zero)));
 
         var migrations = db.GetService<IMigrationsAssembly>();
         var migrationEntry = migrations.Migrations.Single(x => x.Key.EndsWith("_PaymentProviderDefaultUniqueness", StringComparison.Ordinal));

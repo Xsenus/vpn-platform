@@ -45,7 +45,7 @@ public class ReadmeDocumentationTests
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-14-backend-source-encoding-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-14-sqlite-repair-application-clock", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("270/270", readme, StringComparison.Ordinal);
     }
 
@@ -59,8 +59,8 @@ public class ReadmeDocumentationTests
         foreach (var expected in new[]
                  {
                      "1540/1540",
-                     "2026-08-14-backend-source-encoding-guard",
-                     "0.718.0",
+                     "2026-08-14-sqlite-repair-application-clock",
+                     "0.719.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",
