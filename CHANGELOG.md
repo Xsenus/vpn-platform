@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.728.0 - 2026-08-14
+
+Release entry: `2026-08-14-russian-date-and-status-localization`.
+
+### Исправлено
+
+- Кабинет и админка больше не зависят от языка браузера при выводе дат: пользовательские даты явно форматируются по `ru-RU`, а пустые и некорректные значения показываются как `—`.
+- История заказов и платежей локализует технические типы заказов и режимы провайдера; списки привязки и доступные имена обращений также используют русские статусы.
+- All-screens gate автоматически отклоняет видимые даты в формате en-US, а desktop/mobile browser assertions защищают локализованные метаданные кабинета.
+
+### Проверено
+
+- Fail-first date regression завершился ошибкой импорта отсутствующего форматтера `0/1`; enum-аудит воспроизвёл `NewSubscription`, `Sandbox` и `open` в пользовательских поверхностях. After-fix focused unit `21/21`, frontend `177/177`, typecheck/build, admin bundle `561085/561152`, dependency audit `0 vulnerabilities` зелёные.
+- Целевой Playwright desktop/mobile `2/2`, полный Playwright `270/270`, backend Debug/Release `1555/1555`, API build `0 warnings / 0 errors`, fresh SQLite full flow, formatter, EF drift и secret scan `709/0` зелёные; representative cabinet screenshots просмотрены вручную, invalid geometry `0`, browser diagnostics `0`. Roadmap `751/771` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.727.0 - 2026-08-14
 
 Release entry: `2026-08-14-pristine-form-validation-visual-inventory`.

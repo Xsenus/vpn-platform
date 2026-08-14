@@ -210,6 +210,7 @@ const statusLabels: Record<string, string> = {
   GracePeriod: 'Льготный период',
   InProgress: 'В работе',
   Sandbox: 'Проверка',
+  Production: 'Рабочий режим',
   Validation: 'Проверка',
   Unknown: 'Неизвестно',
   Degraded: 'Снижена доступность',
@@ -235,14 +236,14 @@ const normalizedStatusLabels = Object.fromEntries(
   Object.entries(statusLabels).map(([key, label]) => [key.toLowerCase(), label])
 )
 
-function badgeLabel(value: unknown) {
+export function formatStatusLabel(value: unknown) {
   const raw = String(value ?? 'Unknown').trim()
   return statusLabels[raw] ?? normalizedStatusLabels[raw.toLowerCase()] ?? raw
 }
 
 export function StatusBadge({ value }: { value: unknown }) {
   const raw = String(value ?? 'Unknown')
-  const label = badgeLabel(raw)
+  const label = formatStatusLabel(raw)
   const resolvedLabel = label || 'Неизвестно'
   return (
     <span className={`status-badge status-badge-${badgeTone(raw)}`} role="status" aria-label={`Статус: ${resolvedLabel}`}>

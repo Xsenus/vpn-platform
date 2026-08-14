@@ -1,4 +1,4 @@
-import type { CabinetOrderDto, CabinetPaymentAttemptDto, OrderCommandDto, PaymentProvider, PublicPaymentProviderDto } from '@vpn-platform/api-client'
+import type { CabinetOrderDto, CabinetPaymentAttemptDto, OrderCommandDto, OrderType, PaymentProvider, PublicPaymentProviderDto } from '@vpn-platform/api-client'
 
 type CabinetPaymentOrder = CabinetOrderDto | OrderCommandDto
 
@@ -9,6 +9,18 @@ const successfulStatuses = new Set(['Paid', 'Completed', 'Succeeded', 'Success',
 const failedStatuses = new Set(['Failed', 'Canceled', 'Cancelled', 'Expired', 'Rejected'])
 const pendingStatuses = new Set(['Pending', 'PendingPayment', 'Created', 'Processing', 'WaitingForCapture'])
 const openConfirmationStatuses = new Set(['New', 'Pending', 'WaitingConfirmation'])
+
+const orderTypeLabels: Record<OrderType, string> = {
+  NewSubscription: 'Новая подписка',
+  Renewal: 'Продление',
+  Upgrade: 'Смена тарифа',
+  Compensation: 'Компенсация'
+}
+
+export function formatOrderType(type: string | null | undefined) {
+  if (!type) return '—'
+  return orderTypeLabels[type as OrderType] ?? 'Другой тип заказа'
+}
 
 export function formatPaymentMoney(amount: number, currency: string) {
   return `${amount.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ${currency}`

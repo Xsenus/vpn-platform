@@ -177,7 +177,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 На 2026-08-14 локально подтверждено:
 
 - backend full suite: 1555/1555;
-- frontend tests: 173/173;
+- frontend tests: 177/177;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-14-pristine-form-validation-visual-inventory`, версия `0.727.0`; pristine admin create-формы откладывают ошибки до interaction, а все 17 разделов имеют desktop/mobile visual inventory.
-- roadmap progress: `749/769` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-14-russian-date-and-status-localization`, версия `0.728.0`; cabinet/admin dates используют explicit `ru-RU`, а order/payment/support enum surfaces локализованы и проверены desktop/mobile.
+- roadmap progress: `751/771` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

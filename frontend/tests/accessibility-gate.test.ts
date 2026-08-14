@@ -42,6 +42,7 @@ test('all-screens checks content, modal bounds and control overlaps', () => {
   assert.match(allScreens, /locator\(`#\$\{section\}`\)\)\.toBeVisible\(\)/)
   assert.match(allScreens, /locator\('#admin-section-load-error'\)\)\.toHaveCount\(0\)/)
   assert.match(allScreens, /Не удалось загрузить часть данных/)
+  assert.match(allScreens, /visible date depends on the en-US browser locale/)
   assert.match(allScreens, /captureAuditScreenshot\(page, testInfo, `admin-\$\{section\}-desktop`\)/)
   assert.match(allScreens, /viewport\.name === 'compact-mobile'[\s\S]*captureAuditScreenshot\(page, testInfo, `admin-\$\{section\}-mobile`\)/)
 })

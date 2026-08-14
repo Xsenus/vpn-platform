@@ -856,6 +856,9 @@ async function expectPageQuality(page: Page, screenName: string) {
 
     if (!document.documentElement.lang.trim()) problems.push('html element has no lang attribute')
     if (!document.querySelector('main, [role="main"]')) problems.push('page has no main landmark')
+    if (/\b\d{1,2}\/\d{1,2}\/\d{4},? \d{1,2}:\d{2}(?::\d{2})? (?:AM|PM)\b/.test(document.body.innerText)) {
+      problems.push('visible date depends on the en-US browser locale')
+    }
 
     for (const sheet of Array.from(document.styleSheets)) {
       let cssText = ''
@@ -1118,6 +1121,12 @@ test('cabinet auth and dashboard surfaces render without blank screens or browse
   await expectNonBlankPage(page)
   await expectPageQuality(page, 'cabinet dashboard')
   await expectWcagQuality(page, 'cabinet dashboard')
+  const orderMetadata = page.locator('.payment-meta-grid').filter({ has: page.getByText('Тип', { exact: true }) })
+  const paymentMetadata = page.locator('.payment-meta-grid').filter({ has: page.getByText('Режим', { exact: true }) })
+  await expect(orderMetadata.getByText('Новая подписка', { exact: true })).toBeVisible()
+  await expect(paymentMetadata.getByText('Проверка', { exact: true })).toBeVisible()
+  await expect(page.getByRole('option', { name: /Completed|Active/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /статус open/i })).toHaveCount(0)
   await expect(page.getByRole('status', { name: 'Статус: Не привязано' })).toHaveClass(/status-badge-neutral/)
   await expect(page.getByRole('status', { name: 'Статус: Успешно' }).first()).toHaveClass(/status-badge-success/)
   await captureAuditScreenshot(page, testInfo, 'cabinet-dashboard-desktop')

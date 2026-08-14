@@ -5,6 +5,7 @@ import {
   buildOrderExportText,
   canOpenOrderPaymentConfirmation,
   canOpenPaymentConfirmation,
+  formatOrderType,
   formatPaymentMoney,
   getLatestPaymentForOrder,
   getNextOrderPaymentExpiryDelay,
@@ -15,6 +16,14 @@ import {
   getPaymentStatusTone,
   groupPaymentsByOrderId
 } from '../apps/cabinet/src/cabinet-payments.ts'
+
+test('cabinet payment history localizes order types', () => {
+  assert.equal(formatOrderType('NewSubscription'), 'Новая подписка')
+  assert.equal(formatOrderType('Renewal'), 'Продление')
+  assert.equal(formatOrderType('Upgrade'), 'Смена тарифа')
+  assert.equal(formatOrderType('Compensation'), 'Компенсация')
+  assert.equal(formatOrderType(null), '—')
+})
 
 function order(overrides: Partial<OrderDto> = {}): OrderDto {
   return {

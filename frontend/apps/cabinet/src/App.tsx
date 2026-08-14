@@ -24,11 +24,12 @@ import {
   validatePasswordResetConfirm,
   validatePasswordResetRequest
 } from '@vpn-platform/api-client'
-import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, ExternalLinkActions, formatReferralRewardType, formatReferralRewardValue, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
+import { Card, CodeBlock, CopyButton, EmptyState, ErrorBlock, ExternalLinkActions, formatReferralRewardType, formatReferralRewardValue, formatStatusLabel, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SegmentedTabs, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { AppVersionGate } from './AppVersion'
 import { buildCabinetSummary, getAccessQrAvailability, getCabinetAccessTerminalReason, getEffectiveSubscriptionStatus, getNextCabinetAccessExpiryDelay, getSubscriptionAccessExpiry, getSubscriptionRenewalAvailability, isCurrentSubscription } from './cabinet-dashboard'
+import { formatCabinetDate, formatCabinetDateTime } from './cabinet-date'
 import { cabinetSessionEndedMessage, isCabinetAccessTokenExpired, isCabinetSessionRejected } from './cabinet-session'
-import { buildOrderExportText, canOpenOrderPaymentConfirmation, formatPaymentMoney, getLatestPaymentForOrder, getNextOrderPaymentExpiryDelay, getOrderPaymentAvailability, getOrderPaymentProviderAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
+import { buildOrderExportText, canOpenOrderPaymentConfirmation, formatOrderType, formatPaymentMoney, getLatestPaymentForOrder, getNextOrderPaymentExpiryDelay, getOrderPaymentAvailability, getOrderPaymentProviderAvailability, getOrderStatusMessage, getPaymentStatusMessage, groupPaymentsByOrderId } from './cabinet-payments'
 import { resolveCabinetPublicWebUrl } from './cabinet-public-url'
 import { countOpenSupportConversations, getSupportChannelLabel, getSupportStatusMessage, selectCurrentSupportConversation, validateSupportReply, validateSupportRequest } from './cabinet-support'
 
@@ -1159,7 +1160,7 @@ export function App() {
                         <div>
                           <h3>{cabinetSummary.currentSubscription.tariffName || 'Активная подписка'}</h3>
                           <p className="muted">
-                            Доступ до {new Date(getSubscriptionAccessExpiry(cabinetSummary.currentSubscription)).toLocaleString()}
+                            Доступ до {formatCabinetDateTime(getSubscriptionAccessExpiry(cabinetSummary.currentSubscription))}
                             {cabinetSummary.daysLeft !== null ? ` · осталось ${cabinetSummary.daysLeft} дн.` : ''}
                           </p>
                           <p className="muted">Сервер: {cabinetSummary.currentSubscription.nodeName ?? cabinetSummary.currentAccess?.serverName ?? 'ожидает назначения'}</p>
@@ -1369,7 +1370,7 @@ export function App() {
                     <PrimaryButton disabled={busy} aria-busy={busy} onClick={() => void handleCreateTelegramLink()}>Создать ссылку на бота</PrimaryButton>
                     {telegramLink && (
                       <>
-                        <p>Ссылка действует до {new Date(telegramLink.expiresAt).toLocaleString()}</p>
+                        <p>Ссылка действует до {formatCabinetDateTime(telegramLink.expiresAt)}</p>
                         <ExternalLinkActions
                           value={telegramLink.deepLinkUrl}
                           openLabel="Открыть бота"
@@ -1465,8 +1466,8 @@ export function App() {
                 return <div className="card" key={subscription.id}>
                   <div className="card-head">
                     <div>
-                      <h3>{subscription.tariffName || subscription.status}</h3>
-                      <p>Доступ до: {new Date(getSubscriptionAccessExpiry(subscription)).toLocaleString()}</p>
+                      <h3>{subscription.tariffName || formatStatusLabel(subscription.status)}</h3>
+                      <p>Доступ до: {formatCabinetDateTime(getSubscriptionAccessExpiry(subscription))}</p>
                       <p>Сервер: {subscription.nodeName ?? 'не назначен'}</p>
                     </div>
                     <StatusBadge value={effectiveStatus} />
@@ -1511,7 +1512,7 @@ export function App() {
                   <div className="card-head">
                     <div>
                       <h3>{access.serverName || 'VPN-доступ'}</h3>
-                      <p className="muted">Действует до {access.expiryDate ? new Date(access.expiryDate).toLocaleString() : '—'}</p>
+                      <p className="muted">Действует до {formatCabinetDateTime(access.expiryDate)}</p>
                     </div>
                     <StatusBadge value={access.status} />
                   </div>
@@ -1556,10 +1557,10 @@ export function App() {
                   </div>
                   <p className="muted no-margin-bottom">{paymentAvailability.reason ?? getOrderStatusMessage(order.status)}</p>
                   <dl className="payment-meta-grid">
-                    <div><dt>Тип</dt><dd>{order.type ?? '—'}</dd></div>
+                    <div><dt>Тип</dt><dd>{formatOrderType(order.type)}</dd></div>
                     <div><dt>Провайдер</dt><dd>{order.paymentProvider}</dd></div>
-                    <div><dt>Истекает</dt><dd>{new Date(order.expiresAt).toLocaleString()}</dd></div>
-                    <div><dt>Оплачен</dt><dd>{order.paidAt ? new Date(order.paidAt).toLocaleString() : '—'}</dd></div>
+                    <div><dt>Истекает</dt><dd>{formatCabinetDateTime(order.expiresAt)}</dd></div>
+                    <div><dt>Оплачен</dt><dd>{formatCabinetDateTime(order.paidAt)}</dd></div>
                     <div><dt>Попыток оплаты</dt><dd>{orderPayments.length}</dd></div>
                   </dl>
                   {latestPayment && (
@@ -1606,10 +1607,10 @@ export function App() {
                 <p className="muted no-margin-bottom">{payment.statusMessage}</p>
                 <dl className="payment-meta-grid">
                   <div><dt>ID у провайдера</dt><dd>{payment.providerPaymentId || '—'}</dd></div>
-                  <div><dt>Режим</dt><dd>{payment.providerMode ?? '—'}</dd></div>
-                  <div><dt>Создан</dt><dd>{new Date(payment.createdAt).toLocaleString()}</dd></div>
-                  <div><dt>Оплачен</dt><dd>{payment.paidAt ? new Date(payment.paidAt).toLocaleString() : '—'}</dd></div>
-                  <div><dt>Ошибка</dt><dd>{payment.failedAt ? new Date(payment.failedAt).toLocaleString() : '—'}</dd></div>
+                  <div><dt>Режим</dt><dd>{payment.providerMode ? formatStatusLabel(payment.providerMode) : '—'}</dd></div>
+                  <div><dt>Создан</dt><dd>{formatCabinetDateTime(payment.createdAt)}</dd></div>
+                  <div><dt>Оплачен</dt><dd>{formatCabinetDateTime(payment.paidAt)}</dd></div>
+                  <div><dt>Ошибка</dt><dd>{formatCabinetDateTime(payment.failedAt)}</dd></div>
                   <div><dt>Активация</dt><dd>{payment.isActivationProcessed ? 'обработана' : 'ожидает'}</dd></div>
                 </dl>
                 {payment.confirmationUrl && canOpenOrderPaymentConfirmation(ordersById.get(payment.orderId), payment.status, paymentNow) && (
@@ -1649,7 +1650,7 @@ export function App() {
                   <select value={supportOrderId} onChange={(e) => setSupportOrderId(e.target.value)}>
                     <option value="">Без привязки к заказу</option>
                     {orders.map((order) => (
-                      <option key={order.id} value={order.id}>{order.tariffName || order.tariffId} · {formatPaymentMoney(order.amount, order.currency)} · {order.status}</option>
+                      <option key={order.id} value={order.id}>{order.tariffName || order.tariffId} · {formatPaymentMoney(order.amount, order.currency)} · {formatStatusLabel(order.status)}</option>
                     ))}
                   </select>
                 </label>}
@@ -1660,7 +1661,7 @@ export function App() {
                   <select value={supportSubscriptionId} onChange={(e) => setSupportSubscriptionId(e.target.value)}>
                     <option value="">Без привязки к подписке</option>
                     {subscriptions.map((subscription) => (
-                      <option key={subscription.id} value={subscription.id}>{subscription.tariffName || subscription.tariffId} · {subscription.status}</option>
+                      <option key={subscription.id} value={subscription.id}>{subscription.tariffName || subscription.tariffId} · {formatStatusLabel(subscription.status)}</option>
                     ))}
                   </select>
                 </label>}
@@ -1694,12 +1695,12 @@ export function App() {
                     type="button"
                     className={`support-ticket${selectedSupportConversation?.id === conversation.id ? ' selected-item' : ''}`}
                     aria-pressed={selectedSupportConversation?.id === conversation.id}
-                    aria-label={`${conversation.subject || 'Обращение в поддержку'}, статус ${conversation.status}`}
+                    aria-label={`${conversation.subject || 'Обращение в поддержку'}, статус ${formatStatusLabel(conversation.status)}`}
                     onClick={() => selectSupportConversation(conversation.id)}
                   >
                     <span>
                       <strong>{conversation.subject || 'Обращение в поддержку'}</strong>
-                      <small>{getSupportChannelLabel(conversation.channel)} · {new Date(conversation.updatedAt).toLocaleString()}</small>
+                      <small>{getSupportChannelLabel(conversation.channel)} · {formatCabinetDateTime(conversation.updatedAt)}</small>
                     </span>
                     <StatusBadge value={conversation.status} />
                   </button>
@@ -1722,7 +1723,7 @@ export function App() {
                   <div key={message.id} className={`support-message support-message-${message.direction}`}>
                     <div className="card-head">
                       <strong>{message.direction === 'outbound' ? 'Поддержка' : 'Вы'}</strong>
-                      <span className="muted">{new Date(message.createdAt).toLocaleString()}</span>
+                      <span className="muted">{formatCabinetDateTime(message.createdAt)}</span>
                     </div>
                     <p>{message.text}</p>
                   </div>
@@ -1759,7 +1760,7 @@ export function App() {
               <div key={reward.id} className="list-item">
                 <div>
                   <strong>{formatReferralRewardType(reward.type)}</strong>
-                  <div className="muted">{formatReferralRewardValue(reward.value, reward.currencyOrUnit)} · {new Date(reward.createdAt).toLocaleDateString()}</div>
+                  <div className="muted">{formatReferralRewardValue(reward.value, reward.currencyOrUnit)} · {formatCabinetDate(reward.createdAt)}</div>
                 </div>
                 <StatusBadge value={reward.status} />
               </div>

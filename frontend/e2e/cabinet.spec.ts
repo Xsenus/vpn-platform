@@ -1789,7 +1789,7 @@ test('cabinet Telegram and support status operations persist across reload', asy
     .toEqual({ status: 'open', revision: 1 })
 
   await page.getByRole('button', { name: 'Обновить данные' }).click()
-  await expect(page.getByRole('button', { name: /Проверка статуса обращения, статус open/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Проверка статуса обращения, статус Открыто/ })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Закрыть' })).toBeVisible()
   expect(api.getRequestCount('/api/me/support/conversations/support-created/status', 'PATCH')).toBe(2)
   expect(api.getAuthorizedRequestCount('/api/me/telegram/unlink', 'Bearer access-token-cabinet-operations', 'DELETE')).toBe(1)

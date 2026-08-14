@@ -24,6 +24,7 @@ import {
   SkipLink,
   StateBlock,
   StatusBadge,
+  formatStatusLabel,
   tryWriteClipboardText,
   ValidationModeBadge,
   designTokens
@@ -54,6 +55,13 @@ test('StatusBadge and CodeBlock render content', () => {
   assert.match(html, /Активно/)
   assert.match(html, /vpn:\/\/example/)
   assert.match(html, /Buy/)
+})
+
+test('formatStatusLabel localizes status text outside badges', () => {
+  assert.equal(formatStatusLabel('PendingPayment'), 'Ожидает оплаты')
+  assert.equal(formatStatusLabel('sandbox'), 'Проверка')
+  assert.equal(formatStatusLabel('Production'), 'Рабочий режим')
+  assert.equal(formatStatusLabel(null), 'Неизвестно')
 })
 
 test('StatusBadge tones distinguish composite negative and successful states', () => {

@@ -17157,5 +17157,32 @@
         "text": "Roadmap progress is 749/769 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-russian-date-and-status-localization",
+    "version": "0.728.0",
+    "releasedAt": "2026-08-14T16:50:21+07:00",
+    "title": "Dates and cabinet statuses use Russian labels",
+    "summary": "Visible dates no longer depend on the browser locale, and cabinet order, payment and support metadata no longer exposes technical enum values.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Cabinet and admin dates use explicit Russian formatting with safe placeholders for missing or invalid values."
+      },
+      {
+        "type": "fixed",
+        "text": "Order types, payment modes, linked record statuses and support accessible names now use Russian labels."
+      },
+      {
+        "type": "improved",
+        "text": "The all-screens browser gate rejects visible en-US timestamps and verifies localized cabinet history metadata on desktop and mobile."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 751/771 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

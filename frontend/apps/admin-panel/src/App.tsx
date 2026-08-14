@@ -846,7 +846,7 @@ function shortId(value?: string | null) {
 function formatDate(value?: string | null) {
   if (!value) return '—'
   const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'medium' })
 }
 
 function getRefundableAmount(payment: PaymentAttemptDto) {

@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-14.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-pristine-form-validation-visual-inventory`, версия `0.727.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `749/769` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-russian-date-and-status-localization`, версия `0.728.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `751/771` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-14:
 
 - [x] `STATE-001` Backend test suite проходит: `1555/1555`.
-- [x] `STATE-002` Frontend test suite проходит: `173/173`.
+- [x] `STATE-002` Frontend test suite проходит: `177/177`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2692,6 +2692,14 @@ git diff --check
   - Что сделать: all-screens должен сохранять representative desktop и compact-mobile screenshots всех 17 production admin sections, одновременно проверяя WCAG, overflow, clipping, modal bounds, control overlap и browser diagnostics на полной responsive-матрице.
   - Что сделано: screenshot capture расширен с dashboard/panels на весь canonical `adminSectionIds`; pristine-form assertion входит в desktop inventory, а compact-mobile capture выполняется для каждого раздела.
   - Доказательство: all-screens `14/14`, 25 viewport-конфигураций `305x568..2560x1440`, `18` desktop и `17` mobile admin screenshots просмотрены вручную, invalid geometry `0`, browser diagnostics `0`; временные screenshots/reports удалены после проверки.
+- [x] `P11-ACC-459` Исключить зависимость пользовательских дат от locale браузера. 2026-08-14.
+  - Что сделать: все видимые даты кабинета и админки должны иметь явный русский формат; пустые и некорректные значения не должны выводить `Invalid Date` или en-US `AM/PM` timestamps.
+  - Что сделано: кабинет использует кешированные `Intl.DateTimeFormat('ru-RU')` helpers с безопасным fallback, admin formatter явно задаёт `ru-RU`, all-screens отклоняет en-US timestamp pattern.
+  - Доказательство: fail-first `0/1`; after-fix date unit `2/2`, frontend `177/177`, typecheck/build, targeted visual Playwright desktop/mobile `2/2` и полный Playwright `270/270` зелёные; representative screenshots просмотрены вручную.
+- [x] `P11-ACC-460` Локализировать технические enum-значения в кабинете. 2026-08-14.
+  - Что сделать: история заказов/платежей, связанные order/subscription options и support accessible names не должны показывать `NewSubscription`, `Sandbox`, `Completed`, `Active` или `open` вместо русских подписей.
+  - Что сделано: shared status formatter экспортирован из UI-пакета, добавлен production mode label, типы заказов форматируются bounded map; обычный текст, options и `aria-label` используют единый словарь.
+  - Доказательство: focused unit `21/21`, frontend `177/177`, browser DOM assertions, targeted desktop/mobile `2/2`, полный Playwright `270/270`, backend Debug/Release `1555/1555`, fresh SQLite latest release, formatter, EF drift, secret scan `709/0` и dependency audit `0 vulnerabilities` зелёные; desktop/mobile screenshots не имеют overflow или clipping.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

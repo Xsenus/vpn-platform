@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: Russian date and status localization
+
+Scope:
+- Visible cabinet and admin dates must use an explicit Russian locale instead of the browser default locale.
+- Cabinet order types, payment modes, linked record statuses and support accessible names must not expose technical enum values.
+- Desktop and compact-mobile history cards must remain readable without overflow after localization.
+
+Results:
+- Roadmap progress: `751/771` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-russian-date-and-status-localization`, version `0.728.0`.
+- Fail-first: the date regression completed `0/1` because the explicit formatter did not exist; visual review independently reproduced en-US timestamps plus `NewSubscription`, `Sandbox` and `open` in Russian UI surfaces.
+- After fix: cabinet dates use cached `ru-RU` formatters with safe fallbacks, admin dates specify `ru-RU`, shared status labels are reusable outside badges and order types have a bounded Russian map. Focused unit `21/21`, frontend `177/177`, typecheck/build, admin bundle budget `561085/561152`, dependency audit `0 vulnerabilities`, targeted desktop/mobile Playwright `2/2` and full Playwright `270/270` are green.
+- Visual gate: representative cabinet desktop and compact-mobile screenshots were reviewed manually; localized labels fit the history/support cards, invalid geometry `0`, browser diagnostics `0`. Temporary screenshots, traces and reports are removed during final cleanup.
+- Release gate: backend Debug/Release `1555/1555`, docs/status/encoding `47/47`, API build `0 warnings / 0 errors`, fresh SQLite full flow with latest release, global formatter, EF pending-model check and secret scan `709/0` are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-14: pristine admin validation and complete visual inventory
 
 Scope:
