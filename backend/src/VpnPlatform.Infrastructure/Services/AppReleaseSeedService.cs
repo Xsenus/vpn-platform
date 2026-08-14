@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using VpnPlatform.Application.Abstractions;
+using VpnPlatform.Application.Common;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Infrastructure.Persistence;
 
@@ -80,7 +81,7 @@ public sealed class AppReleaseSeedService
             release.Title = seed.Title.Trim();
             release.Summary = seed.Summary.Trim();
             release.IsActive = seed.IsActive;
-            release.Source = string.IsNullOrWhiteSpace(seed.Source) ? "agent" : seed.Source.Trim();
+            release.Source = "agent";
             release.UpdatedAt = now;
 
             var currentItems = release.Items.ToList();
@@ -94,7 +95,7 @@ public sealed class AppReleaseSeedService
                     AppReleaseId = release.Id,
                     Type = NormalizeItemType(x.Type),
                     Text = x.Text.Trim(),
-                    SortOrder = x.SortOrder ?? (index + 1) * 10,
+                    SortOrder = ResolveSortOrder(x.SortOrder, index),
                     CreatedAt = now,
                     UpdatedAt = now
                 })
@@ -129,14 +130,14 @@ public sealed class AppReleaseSeedService
     }
 
     private static string NormalizeItemType(string? type)
-        => (type ?? string.Empty).Trim().ToLowerInvariant() switch
-        {
-            "new" => "new",
-            "improved" => "improved",
-            "fixed" => "fixed",
-            "important" => "important",
-            _ => "new"
-        };
+        => AppReleaseContentPolicy.TryNormalizeItemType(type, out var normalized)
+            ? normalized
+            : throw new InvalidOperationException("Release item type was not validated.");
+
+    private static int ResolveSortOrder(int? sortOrder, int index)
+        => AppReleaseContentPolicy.TryResolveSortOrder(sortOrder, index, out var resolved)
+            ? resolved
+            : throw new InvalidOperationException("Release item sort order was not validated.");
 
     private static void ValidateSeedItems(IReadOnlyList<AppReleaseSeedItem> seedItems)
     {
@@ -157,6 +158,10 @@ public sealed class AppReleaseSeedService
             }
 
             var releaseId = seed.ReleaseId.Trim();
+            if (!AppReleaseContentPolicy.IsValidReleaseId(releaseId))
+            {
+                throw new InvalidDataException($"{itemLabel} releaseId must be lowercase kebab-case and 160 characters or less.");
+            }
             if (!releaseIds.Add(releaseId))
             {
                 throw new InvalidDataException($"App release seed contains duplicate releaseId '{releaseId}'.");
@@ -165,7 +170,11 @@ public sealed class AppReleaseSeedService
             {
                 throw new InvalidDataException($"{itemLabel} requires version.");
             }
-            if (!seed.ReleasedAt.HasValue)
+            if (seed.Version.Trim().Length > AppReleaseContentPolicy.VersionMaxLength)
+            {
+                throw new InvalidDataException($"{itemLabel} version must be 40 characters or less.");
+            }
+            if (!seed.ReleasedAt.HasValue || seed.ReleasedAt.Value == default)
             {
                 throw new InvalidDataException($"{itemLabel} requires releasedAt.");
             }
@@ -173,12 +182,20 @@ public sealed class AppReleaseSeedService
             {
                 throw new InvalidDataException($"{itemLabel} requires title.");
             }
+            if (seed.Title.Trim().Length > AppReleaseContentPolicy.TitleMaxLength)
+            {
+                throw new InvalidDataException($"{itemLabel} title must be 200 characters or less.");
+            }
             if (string.IsNullOrWhiteSpace(seed.Summary))
             {
                 throw new InvalidDataException($"{itemLabel} requires summary.");
             }
-            if (!string.IsNullOrWhiteSpace(seed.Source)
-                && !string.Equals(seed.Source.Trim(), "agent", StringComparison.OrdinalIgnoreCase))
+            if (seed.Summary.Trim().Length > AppReleaseContentPolicy.SummaryMaxLength)
+            {
+                throw new InvalidDataException($"{itemLabel} summary must be 4000 characters or less.");
+            }
+            if (!AppReleaseContentPolicy.TryNormalizeSource(seed.Source, "agent", out var source)
+                || !string.Equals(source, "agent", StringComparison.Ordinal))
             {
                 throw new InvalidDataException($"{itemLabel} source must be 'agent'.");
             }
@@ -186,9 +203,34 @@ public sealed class AppReleaseSeedService
             {
                 throw new InvalidDataException($"{itemLabel} requires at least one item.");
             }
-            if (seed.Items.Any(x => x is null || string.IsNullOrWhiteSpace(x.Text)))
+            if (seed.Items.Count > AppReleaseContentPolicy.MaxItems)
             {
-                throw new InvalidDataException($"{itemLabel} contains an item without text.");
+                throw new InvalidDataException($"{itemLabel} cannot contain more than 100 items.");
+            }
+            var sortOrders = new HashSet<int>();
+            for (var itemIndex = 0; itemIndex < seed.Items.Count; itemIndex++)
+            {
+                var item = seed.Items[itemIndex];
+                if (item is null || string.IsNullOrWhiteSpace(item.Text))
+                {
+                    throw new InvalidDataException($"{itemLabel} item {itemIndex} requires text.");
+                }
+                if (item.Text.Trim().Length > AppReleaseContentPolicy.ItemTextMaxLength)
+                {
+                    throw new InvalidDataException($"{itemLabel} item {itemIndex} text must be 4000 characters or less.");
+                }
+                if (!AppReleaseContentPolicy.TryNormalizeItemType(item.Type, out _))
+                {
+                    throw new InvalidDataException($"{itemLabel} item {itemIndex} has an unsupported type.");
+                }
+                if (!AppReleaseContentPolicy.TryResolveSortOrder(item.SortOrder, itemIndex, out var sortOrder))
+                {
+                    throw new InvalidDataException($"{itemLabel} item {itemIndex} sort order cannot be negative.");
+                }
+                if (!sortOrders.Add(sortOrder))
+                {
+                    throw new InvalidDataException($"{itemLabel} item {itemIndex} has a duplicate sort order.");
+                }
             }
         }
     }

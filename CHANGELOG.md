@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.717.0 - 2026-08-14
+
+Release entry: `2026-08-14-release-content-contract`.
+
+### Исправлено
+
+- Admin API и startup seed истории релизов используют единый fail-closed контракт: release ID допускает только lowercase kebab-case, обязательные поля и items имеют явные границы, source/item type не получают silent fallback, отрицательный и дублирующий sort order отклоняется до изменения базы.
+- Frontend-редактор повторяет серверные ограничения при обычном и программном submit, не удаляет частично пустые items перед валидацией и блокирует добавление сверх 100 элементов.
+
+### Проверено
+
+- Fail-first backend regressions `0/8` воспроизвели default date, null/blank items, неизвестные source/type и malformed ID; отдельные sort-order regressions `0/4` подтвердили silent fallback и неоднозначный порядок, frontend programmatic-submit regression `0/1` дошёл до API. После исправления release controller/seed `47/47`, frontend targeted `1/1`, backend Debug/Release `1539/1539`, frontend `172/172`, typecheck/build, admin bundle `561037` raw/`148981` gzip/max `253610`, fresh SQLite full flow, EF drift, changed-file formatter verify, secret scan `706/0` и dependency audit `0 vulnerabilities` зелёные.
+- Полная browser-матрица пройдена раздельно по тем же семи Playwright projects: `270/270`, включая public `27/27`, cabinet `32/32`, admin `69/69`, all-screens `14/14`, mobile-public `27/27`, mobile-cabinet `32/32`, mobile-admin `69/69`. Монолитный wrapper превысил локальный лимит длительности без итогового отчёта и не учитывался в результате.
+- Roadmap `737/757` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.716.0 - 2026-08-14
 
 Release entry: `2026-08-14-release-seed-preflight-demo-clock`.

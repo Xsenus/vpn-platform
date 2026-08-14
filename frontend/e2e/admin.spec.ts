@@ -4780,6 +4780,41 @@ test('admin app release editor recovers from a stale revision', async ({ page })
   expect(api.getRequestCount('/api/app-version/admin/releases/release-admin-e2e', 'PUT')).toBe(1)
 })
 
+test('admin app release handler rejects malformed release ids and partially blank items', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page)
+  await page.goto('/#releases')
+
+  const releasesPanel = page.locator('#releases')
+  const form = releasesPanel.locator('form').first()
+  await releasesPanel.getByLabel('Release ID').fill('Invalid Release ID')
+  await releasesPanel.getByLabel('Версия').fill('0.717.0-test')
+  await releasesPanel.getByLabel('Заголовок').fill('Invalid release boundary')
+  await releasesPanel.getByLabel('Короткое описание').fill('Проверка fail-closed frontend handler.')
+  await releasesPanel.getByLabel('Текст').fill('Валидный первый пункт.')
+
+  const requestCountBefore = api.getRequestCount('/api/app-version/admin/releases', 'POST')
+  await form.evaluate((element) => element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+
+  await expect(page.getByRole('alert')).toContainText('lowercase kebab-case')
+  expect(api.getRequestCount('/api/app-version/admin/releases', 'POST')).toBe(requestCountBefore)
+
+  await releasesPanel.getByLabel('Release ID').fill('valid-release-boundary')
+  await releasesPanel.getByRole('button', { name: 'Добавить пункт' }).click()
+  await form.evaluate((element) => element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+
+  await expect(page.getByRole('alert')).toContainText('Проверьте каждый пункт')
+  expect(api.getRequestCount('/api/app-version/admin/releases', 'POST')).toBe(requestCountBefore)
+
+  await releasesPanel.getByLabel('Текст').nth(1).fill('Валидный второй пункт.')
+  await releasesPanel.getByLabel('Порядок').nth(0).fill('10')
+  await releasesPanel.getByLabel('Порядок').nth(1).fill('10')
+  await form.evaluate((element) => element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+
+  await expect(page.getByRole('alert')).toContainText('уникальный порядок')
+  expect(api.getRequestCount('/api/app-version/admin/releases', 'POST')).toBe(requestCountBefore)
+})
+
 test('admin tariff editor recovers from a stale revision', async ({ page }) => {
   const api = await mockAdminApi(page)
   await seedAdminSession(page)

@@ -16,6 +16,145 @@ namespace VpnPlatform.UnitTests;
 
 public class AppVersionControllerTests
 {
+    [Theory]
+    [InlineData("invalid-source")]
+    [InlineData("invalid-type")]
+    [InlineData("blank-item")]
+    [InlineData("negative-sort")]
+    [InlineData("duplicate-sort")]
+    public async Task Admin_Release_Create_Should_Reject_Semantically_Invalid_Items(string invalidCase)
+    {
+        await using var db = CreateDb();
+        var adminId = Guid.NewGuid();
+        await SeedUserAsync(db, adminId, UserRoles.Admin);
+        var controller = CreateController(db, adminId, UserRoles.Admin);
+        var request = ValidRequest($"release-{invalidCase}", "1.0.0");
+        request = invalidCase switch
+        {
+            "invalid-source" => request with { Source = "external" },
+            "invalid-type" => request with
+            {
+                Items = new[] { new AppReleaseItemDto(null, "typo", "Visible item", 10) }
+            },
+            "blank-item" => request with
+            {
+                Items = new[]
+                {
+                    new AppReleaseItemDto(null, "new", "Visible item", 10),
+                    new AppReleaseItemDto(null, "fixed", " ", 20)
+                }
+            },
+            "negative-sort" => request with
+            {
+                Items = new[] { new AppReleaseItemDto(null, "new", "Visible item", -1) }
+            },
+            "duplicate-sort" => request with
+            {
+                Items = new[]
+                {
+                    new AppReleaseItemDto(null, "new", "First item", 10),
+                    new AppReleaseItemDto(null, "fixed", "Second item", 10)
+                }
+            },
+            _ => throw new ArgumentOutOfRangeException(nameof(invalidCase), invalidCase, null)
+        };
+
+        var result = await controller.CreateAdminRelease(request, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(await db.AppReleases.ToListAsync());
+        Assert.Empty(await db.AppReleaseItems.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData("missing-date")]
+    [InlineData("missing-items")]
+    [InlineData("invalid-release-id")]
+    public async Task Admin_Release_Create_Should_Reject_Missing_Or_Malformed_Required_Data(string invalidCase)
+    {
+        await using var db = CreateDb();
+        var adminId = Guid.NewGuid();
+        await SeedUserAsync(db, adminId, UserRoles.Admin);
+        var controller = CreateController(db, adminId, UserRoles.Admin);
+        var request = ValidRequest("valid-release-id", "1.0.0");
+        request = invalidCase switch
+        {
+            "missing-date" => request with { ReleasedAt = default },
+            "missing-items" => request with { Items = null! },
+            "invalid-release-id" => request with { ReleaseId = "Invalid Release ID" },
+            _ => throw new ArgumentOutOfRangeException(nameof(invalidCase), invalidCase, null)
+        };
+
+        var result = await controller.CreateAdminRelease(request, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(await db.AppReleases.ToListAsync());
+        Assert.Empty(await db.AppReleaseItems.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData("version")]
+    [InlineData("title")]
+    [InlineData("summary")]
+    [InlineData("item-text")]
+    [InlineData("item-count")]
+    public async Task Admin_Release_Create_Should_Reject_Oversized_Content(string invalidCase)
+    {
+        await using var db = CreateDb();
+        var adminId = Guid.NewGuid();
+        await SeedUserAsync(db, adminId, UserRoles.Admin);
+        var controller = CreateController(db, adminId, UserRoles.Admin);
+        var request = ValidRequest($"oversized-{invalidCase}", "1.0.0");
+        request = invalidCase switch
+        {
+            "version" => request with { Version = new string('1', AppReleaseContentPolicy.VersionMaxLength + 1) },
+            "title" => request with { Title = new string('t', AppReleaseContentPolicy.TitleMaxLength + 1) },
+            "summary" => request with { Summary = new string('s', AppReleaseContentPolicy.SummaryMaxLength + 1) },
+            "item-text" => request with
+            {
+                Items = new[] { new AppReleaseItemDto(null, "new", new string('i', AppReleaseContentPolicy.ItemTextMaxLength + 1), 10) }
+            },
+            "item-count" => request with
+            {
+                Items = Enumerable.Range(1, AppReleaseContentPolicy.MaxItems + 1)
+                    .Select(index => new AppReleaseItemDto(null, "new", $"Item {index}", index * 10))
+                    .ToArray()
+            },
+            _ => throw new ArgumentOutOfRangeException(nameof(invalidCase), invalidCase, null)
+        };
+
+        var result = await controller.CreateAdminRelease(request, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(await db.AppReleases.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Admin_Release_Update_Should_Reject_Invalid_Content_Without_Mutating_Release()
+    {
+        await using var db = CreateDb();
+        var adminId = Guid.NewGuid();
+        await SeedUserAsync(db, adminId, UserRoles.Admin);
+        var release = Release("existing-release", "1.0.0", DateTimeOffset.UtcNow.AddMinutes(-5));
+        db.AppReleases.Add(release);
+        await db.SaveChangesAsync();
+        var controller = CreateController(db, adminId, UserRoles.Admin);
+        var request = ValidRequest(release.ReleaseId, release.Version) with
+        {
+            Revision = release.Revision,
+            Title = "Must not persist",
+            Items = new[] { new AppReleaseItemDto(null, "unsupported", "Invalid item", 10) }
+        };
+
+        var result = await controller.UpdateAdminRelease(release.Id, request, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        db.ChangeTracker.Clear();
+        var persisted = await db.AppReleases.Include(x => x.Items).SingleAsync();
+        Assert.Equal("existing-release", persisted.Title);
+        Assert.Equal("new", persisted.Items.Single().Type);
+    }
+
     [Fact]
     public async Task Cabinet_App_Release_Workflow_Should_Use_Injected_Clock()
     {
@@ -59,8 +198,8 @@ public class AppVersionControllerTests
             "Clock release",
             "Clock contract",
             true,
-            "manual",
-            new[] { new AppReleaseItemDto(null, "new", "Initial item", 10) });
+            " MANUAL ",
+            new[] { new AppReleaseItemDto(null, " NEW ", "Initial item", 10) });
 
         var created = AssertOk<AppReleaseDto>(
             await controller.CreateAdminRelease(request, CancellationToken.None));
@@ -71,6 +210,8 @@ public class AppVersionControllerTests
 
         Assert.Equal(now, created.CreatedAt);
         Assert.Equal(now, created.UpdatedAt);
+        Assert.Equal("manual", created.Source);
+        Assert.Equal("new", created.Items.Single().Type);
         Assert.Equal(now, createdItem.CreatedAt);
         Assert.Equal(now, createdItem.UpdatedAt);
         Assert.Equal("clock-admin", Assert.Single(published).ReleaseId);

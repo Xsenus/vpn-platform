@@ -233,7 +233,7 @@ public sealed class AppVersionController : ControllerBase
             Title = request.Title.Trim(),
             Summary = request.Summary.Trim(),
             IsActive = request.IsActive,
-            Source = NormalizeSource(request.Source),
+            Source = NormalizeRequestSource(request.Source),
             CreatedAt = now,
             UpdatedAt = now,
             CreatedByUserId = actor.UserId,
@@ -296,7 +296,7 @@ public sealed class AppVersionController : ControllerBase
         release.Title = request.Title.Trim();
         release.Summary = request.Summary.Trim();
         release.IsActive = request.IsActive;
-        release.Source = NormalizeSource(request.Source);
+        release.Source = NormalizeRequestSource(request.Source);
         release.Revision = checked(release.Revision + 1);
         release.UpdatedAt = now;
         release.UpdatedByUserId = actor.UserId;
@@ -495,12 +495,11 @@ public sealed class AppVersionController : ControllerBase
 
     private static IEnumerable<AppReleaseItem> MapRequestItems(IReadOnlyList<AppReleaseItemDto> items, DateTimeOffset now)
         => items
-            .Where(x => !string.IsNullOrWhiteSpace(x.Text))
             .Select((x, index) => new AppReleaseItem
             {
                 Type = NormalizeItemType(x.Type),
                 Text = x.Text.Trim(),
-                SortOrder = x.SortOrder > 0 ? x.SortOrder : (index + 1) * 10,
+                SortOrder = ResolveSortOrder(x.SortOrder, index),
                 CreatedAt = now,
                 UpdatedAt = now
             });
@@ -508,25 +507,45 @@ public sealed class AppVersionController : ControllerBase
     private static string? ValidateReleaseRequest(AppReleaseUpsertRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.ReleaseId)) return "ReleaseId is required.";
-        if (request.ReleaseId.Length > 160) return "ReleaseId must be 160 characters or less.";
+        if (!AppReleaseContentPolicy.IsValidReleaseId(request.ReleaseId)) return "ReleaseId must be lowercase kebab-case and 160 characters or less.";
         if (string.IsNullOrWhiteSpace(request.Version)) return "Version is required.";
-        if (request.Version.Length > 40) return "Version must be 40 characters or less.";
+        if (request.Version.Trim().Length > AppReleaseContentPolicy.VersionMaxLength) return "Version must be 40 characters or less.";
+        if (request.ReleasedAt == default) return "ReleasedAt is required.";
         if (string.IsNullOrWhiteSpace(request.Title)) return "Title is required.";
-        if (request.Title.Length > 200) return "Title must be 200 characters or less.";
+        if (request.Title.Trim().Length > AppReleaseContentPolicy.TitleMaxLength) return "Title must be 200 characters or less.";
         if (string.IsNullOrWhiteSpace(request.Summary)) return "Summary is required.";
-        if (request.Items.Count == 0 || request.Items.All(x => string.IsNullOrWhiteSpace(x.Text))) return "At least one release item is required.";
+        if (request.Summary.Trim().Length > AppReleaseContentPolicy.SummaryMaxLength) return "Summary must be 4000 characters or less.";
+        if (!AppReleaseContentPolicy.TryNormalizeSource(request.Source, "manual", out _)) return "Source must be 'agent' or 'manual'.";
+        if (request.Items is null || request.Items.Count == 0) return "At least one release item is required.";
+        if (request.Items.Count > AppReleaseContentPolicy.MaxItems) return "A release cannot contain more than 100 items.";
+        var sortOrders = new HashSet<int>();
+        for (var index = 0; index < request.Items.Count; index++)
+        {
+            var item = request.Items[index];
+            if (item is null || string.IsNullOrWhiteSpace(item.Text)) return $"Release item {index} requires text.";
+            if (item.Text.Trim().Length > AppReleaseContentPolicy.ItemTextMaxLength) return $"Release item {index} text must be 4000 characters or less.";
+            if (!AppReleaseContentPolicy.TryNormalizeItemType(item.Type, out _)) return $"Release item {index} has an unsupported type.";
+            if (!AppReleaseContentPolicy.TryResolveSortOrder(item.SortOrder, index, out var sortOrder)) return $"Release item {index} sort order cannot be negative.";
+            if (!sortOrders.Add(sortOrder)) return $"Release item {index} has a duplicate sort order.";
+        }
+
         return null;
     }
 
     private static string NormalizeItemType(string? type)
-        => (type ?? string.Empty).Trim().ToLowerInvariant() switch
-        {
-            "new" => "new",
-            "improved" => "improved",
-            "fixed" => "fixed",
-            "important" => "important",
-            _ => "new"
-        };
+        => AppReleaseContentPolicy.TryNormalizeItemType(type, out var normalized)
+            ? normalized
+            : throw new InvalidOperationException("Release item type was not validated.");
+
+    private static int ResolveSortOrder(int? sortOrder, int index)
+        => AppReleaseContentPolicy.TryResolveSortOrder(sortOrder, index, out var resolved)
+            ? resolved
+            : throw new InvalidOperationException("Release item sort order was not validated.");
+
+    private static string NormalizeRequestSource(string? source)
+        => AppReleaseContentPolicy.TryNormalizeSource(source, "manual", out var normalized)
+            ? normalized
+            : throw new InvalidOperationException("Release source was not validated.");
 
     private static string NormalizeSource(string? source)
         => (source ?? string.Empty).Trim().ToLowerInvariant() == "agent" ? "agent" : "manual";

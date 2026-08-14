@@ -16856,5 +16856,32 @@
         "text": "Roadmap progress is 736/756 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-release-content-contract",
+    "version": "0.717.0",
+    "releasedAt": "2026-08-14T11:15:00+07:00",
+    "title": "История релизов получила единый контракт содержимого",
+    "summary": "Admin API, frontend-редактор и startup seed теперь одинаково отклоняют некорректные поля и неоднозначную сортировку до изменения данных.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Release ID, дата, обязательные поля, source и типы элементов валидируются fail-closed без silent fallback и частичных изменений базы."
+      },
+      {
+        "type": "fixed",
+        "text": "Пустые, слишком длинные или лишние элементы, отрицательный и дублирующий порядок отклоняются одинаково в admin API и startup seed."
+      },
+      {
+        "type": "improved",
+        "text": "Frontend-редактор проверяет тот же контракт при обычном и программном submit и больше не скрывает частично пустые элементы перед отправкой."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 737/757 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

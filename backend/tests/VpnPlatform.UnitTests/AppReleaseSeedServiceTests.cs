@@ -15,6 +15,69 @@ public class AppReleaseSeedServiceTests : IDisposable
 {
     private readonly List<string> _seedRoots = [];
 
+    [Theory]
+    [InlineData("Invalid Release ID", "fixed")]
+    [InlineData("invalid-item-type", "typo")]
+    public async Task SyncAsync_Should_Reject_Invalid_Release_Id_And_Item_Type(string releaseId, string itemType)
+    {
+        await using var db = CreateDb();
+        db.AppReleases.Add(new AppRelease
+        {
+            ReleaseId = "existing-agent",
+            Version = "1.0.0",
+            ReleasedAt = new DateTimeOffset(2034, 4, 5, 5, 0, 0, TimeSpan.Zero),
+            Title = "Existing release",
+            Summary = "Must remain",
+            Source = "agent"
+        });
+        await db.SaveChangesAsync();
+        var root = CreateSeedRoot($$"""
+        [
+          {
+            "releaseId": "{{releaseId}}",
+            "version": "2.0.0",
+            "releasedAt": "2034-04-05T06:00:00Z",
+            "title": "Invalid release",
+            "summary": "Must be rejected",
+            "source": "agent",
+            "items": [{ "type": "{{itemType}}", "text": "Invalid item" }]
+          }
+        ]
+        """);
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => CreateService(root).SyncAsync(db, root));
+
+        Assert.Equal("existing-agent", (await db.AppReleases.SingleAsync()).ReleaseId);
+    }
+
+    [Theory]
+    [InlineData(-1, 20)]
+    [InlineData(10, 10)]
+    public async Task SyncAsync_Should_Reject_Negative_And_Duplicate_Item_Order(int firstSortOrder, int secondSortOrder)
+    {
+        await using var db = CreateDb();
+        var root = CreateSeedRoot($$"""
+        [
+          {
+            "releaseId": "invalid-item-order",
+            "version": "1.0.0",
+            "releasedAt": "2034-04-05T06:00:00Z",
+            "title": "Invalid order",
+            "summary": "Must be rejected",
+            "source": "agent",
+            "items": [
+              { "type": "new", "text": "First item", "sortOrder": {{firstSortOrder}} },
+              { "type": "fixed", "text": "Second item", "sortOrder": {{secondSortOrder}} }
+            ]
+          }
+        ]
+        """);
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => CreateService(root).SyncAsync(db, root));
+
+        Assert.Empty(await db.AppReleases.ToListAsync());
+    }
+
     [Fact]
     public async Task SyncAsync_Should_Reject_Invalid_Seed_Before_Deleting_Existing_Releases()
     {
@@ -68,24 +131,28 @@ public class AppReleaseSeedServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task SyncAsync_Should_Reject_Missing_ReleasedAt()
+    public async Task SyncAsync_Should_Reject_Missing_Or_Default_ReleasedAt()
     {
-        await using var db = CreateDb();
-        var root = CreateSeedRoot("""
-        [
-          {
-            "releaseId": "missing-date",
-            "version": "1.0.0",
-            "title": "Missing date",
-            "summary": "Must be rejected",
-            "items": [{ "type": "fixed", "text": "Invalid item" }]
-          }
-        ]
-        """);
+        foreach (var releasedAtProperty in new[] { string.Empty, "\"releasedAt\": \"0001-01-01T00:00:00Z\"," })
+        {
+            await using var db = CreateDb();
+            var root = CreateSeedRoot($$"""
+            [
+              {
+                "releaseId": "invalid-date",
+                "version": "1.0.0",
+                {{releasedAtProperty}}
+                "title": "Invalid date",
+                "summary": "Must be rejected",
+                "items": [{ "type": "fixed", "text": "Invalid item" }]
+              }
+            ]
+            """);
 
-        await Assert.ThrowsAsync<InvalidDataException>(() => CreateService(root).SyncAsync(db, root));
+            await Assert.ThrowsAsync<InvalidDataException>(() => CreateService(root).SyncAsync(db, root));
 
-        Assert.Empty(await db.AppReleases.ToListAsync());
+            Assert.Empty(await db.AppReleases.ToListAsync());
+        }
     }
 
     [Fact]
@@ -194,9 +261,9 @@ public class AppReleaseSeedServiceTests : IDisposable
             "title": "Что нового",
             "summary": "Описание релиза",
             "isActive": true,
-            "source": "agent",
+            "source": " AGENT ",
             "items": [
-              { "type": "improved", "text": "Улучшена админка", "sortOrder": 20 }
+              { "type": " IMPROVED ", "text": "Улучшена админка", "sortOrder": 20 }
             ]
           }
         ]
@@ -208,6 +275,7 @@ public class AppReleaseSeedServiceTests : IDisposable
         var release = await db.AppReleases.Include(x => x.Items).SingleAsync();
         Assert.Equal("json-release", release.ReleaseId);
         Assert.Equal("Что нового", release.Title);
+        Assert.Equal("agent", release.Source);
         Assert.Equal("improved", release.Items.Single().Type);
     }
 

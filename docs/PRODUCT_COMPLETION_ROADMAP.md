@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-14.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-release-seed-preflight-demo-clock`, версия `0.716.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `736/756` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-release-content-contract`, версия `0.717.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `737/757` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-14:
 
-- [x] `STATE-001` Backend test suite проходит: `1521/1521`.
+- [x] `STATE-001` Backend test suite проходит: `1539/1539`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2640,6 +2640,10 @@ git diff --check
   - Что сделать: provider audit timestamps и sandbox panel/node health timestamps не должны читать process clock напрямую.
   - Что сделано: `DbInitializer` получает `IClock` через DI и передает его в `SeedDemoDataAsync`; один snapshot используется для payment accounts, node group, panel, inbound и node.
   - Доказательство: fail-first `0/1` получил системное время у всех девяти provider accounts; after-fix seed regression `14/14`, backend Debug/Release `1521/1521`.
+- [x] `P11-ACC-446` Унифицировать fail-closed контракт содержимого истории релизов. 2026-08-14.
+  - Что сделать: admin API, программный submit frontend-формы и startup seed должны одинаково отклонять malformed release ID, пустые/слишком длинные поля, неизвестные source/item type, отрицательный или дублирующий sort order и частично пустые items без silent normalization и partial mutation.
+  - Что сделано: общий `AppReleaseContentPolicy` задаёт границы и нормализацию release ID, source, item type и sort order; create/update валидируют запрос до изменения tracked entity; seed полностью проверяет записи до чтения/изменения базы; frontend повторяет контракт до API-вызова и сохраняет все элементы для явной ошибки.
+  - Доказательство: fail-first backend regressions `0/8` и sort-order regressions `0/4`, frontend programmatic-submit regression `0/1`; after-fix release controller/seed `47/47`, frontend targeted `1/1`, frontend unit `172/172`, backend Debug/Release `1539/1539`, полный Playwright `270/270`, fresh SQLite full flow, typecheck/build и bundle budget зелёные.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

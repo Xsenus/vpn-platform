@@ -765,6 +765,9 @@ const defaultReleaseForm: AppReleaseUpsertPayload = {
   ]
 }
 
+const appReleaseIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const appReleaseItemTypePattern = /^(new|improved|fixed|important)$/
+
 const defaultFaqForm: FaqUpsertPayload = {
   question: '',
   answer: '',
@@ -2730,12 +2733,28 @@ export function App() {
       title: submittedForm.title.trim(),
       summary: submittedForm.summary.trim(),
       items: submittedForm.items
-        .filter((item) => item.text.trim())
         .map((item, index) => ({ ...item, text: item.text.trim(), sortOrder: item.sortOrder || (index + 1) * 10 }))
     }
 
-    if (!payload.releaseId || !payload.version || !payload.title || !payload.summary || payload.items.length === 0) {
-      setError('Заполните releaseId, версию, заголовок, описание и хотя бы один пункт релиза.')
+    if (!payload.releaseId || !appReleaseIdPattern.test(payload.releaseId) || payload.releaseId.length > 160) {
+      setError('Release ID: lowercase kebab-case, не более 160 символов.')
+      return
+    }
+    if (!payload.version || payload.version.length > 40 || !payload.title || payload.title.length > 200 || !payload.summary || payload.summary.length > 4000) {
+      setError('Проверьте версию, заголовок и описание релиза.')
+      return
+    }
+    if (!payload.releasedAt || Number.isNaN(Date.parse(payload.releasedAt))) {
+      setError('Укажите дату публикации релиза.')
+      return
+    }
+    const itemSortOrders = payload.items.map((item) => item.sortOrder)
+    if ((payload.source && !['agent', 'manual'].includes(payload.source))
+      || payload.items.length === 0
+      || payload.items.length > 100
+      || payload.items.some((item) => !item.text || item.text.length > 4000 || !appReleaseItemTypePattern.test(item.type) || item.sortOrder < 0)
+      || new Set(itemSortOrders).size !== itemSortOrders.length) {
+      setError('Проверьте каждый пункт, его тип и уникальный порядок (не более 100).')
       return
     }
 
@@ -5126,8 +5145,8 @@ export function App() {
             <fieldset className="form-section">
               <legend>Публикация</legend>
               <div className="form-grid">
-                <label><span>Release ID</span><input value={releaseForm.releaseId} onChange={(e) => updateReleaseForm('releaseId', e.target.value)} placeholder="2026-05-27-whats-new-module" required /></label>
-                <label><span>Версия</span><input value={releaseForm.version} onChange={(e) => updateReleaseForm('version', e.target.value)} placeholder="0.2.0" required /></label>
+                <label><span>Release ID</span><input value={releaseForm.releaseId} onChange={(e) => updateReleaseForm('releaseId', e.target.value)} placeholder="2026-05-27-whats-new-module" maxLength={160} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required /></label>
+                <label><span>Версия</span><input value={releaseForm.version} onChange={(e) => updateReleaseForm('version', e.target.value)} placeholder="0.2.0" maxLength={40} required /></label>
                 <label><span>Дата публикации</span><input value={toDateTimeLocalValue(releaseForm.releasedAt)} onChange={(e) => updateReleaseForm('releasedAt', fromDateTimeLocalValue(e.target.value))} type="datetime-local" required /></label>
                 <label><span>Источник</span><select value={releaseForm.source ?? 'manual'} onChange={(e) => updateReleaseForm('source', e.target.value)}><option value="manual">Вручную</option><option value="agent">Агент</option></select></label>
               </div>
@@ -5136,7 +5155,7 @@ export function App() {
             <fieldset className="form-section">
               <legend>Описание для пользователей</legend>
               <label><span>Заголовок</span><input value={releaseForm.title} onChange={(e) => updateReleaseForm('title', e.target.value)} placeholder="Что изменилось" maxLength={200} required /></label>
-              <label><span>Короткое описание</span><textarea value={releaseForm.summary} onChange={(e) => updateReleaseForm('summary', e.target.value)} rows={3} placeholder="Коротко объясните, где пользователь увидит изменения" required /></label>
+              <label><span>Короткое описание</span><textarea value={releaseForm.summary} onChange={(e) => updateReleaseForm('summary', e.target.value)} rows={3} placeholder="Коротко объясните, где пользователь увидит изменения" maxLength={4000} required /></label>
             </fieldset>
             <fieldset className="form-section">
               <legend>Пункты релиза</legend>
@@ -5145,12 +5164,12 @@ export function App() {
                   <div key={index} className="release-item-editor">
                     <label><span>Тип</span><select value={item.type} onChange={(e) => updateReleaseItem(index, { type: e.target.value })}><option value="new">Новое</option><option value="improved">Улучшено</option><option value="fixed">Исправлено</option><option value="important">Важно</option></select></label>
                     <label><span>Порядок</span><input value={item.sortOrder} onChange={(e) => updateReleaseItem(index, { sortOrder: Number(e.target.value) || 0 })} type="number" min={0} step="1" /></label>
-                    <label className="release-item-text"><span>Текст</span><textarea value={item.text} onChange={(e) => updateReleaseItem(index, { text: e.target.value })} rows={2} placeholder="Пишите для пользователя, без названий файлов и коммитов" required /></label>
+                    <label className="release-item-text"><span>Текст</span><textarea value={item.text} onChange={(e) => updateReleaseItem(index, { text: e.target.value })} rows={2} placeholder="Пишите для пользователя, без названий файлов и коммитов" maxLength={4000} required /></label>
                     <PrimaryButton type="button" className="button-ghost" disabled={releaseForm.items.length <= 1} onClick={() => removeReleaseItem(index)}>Убрать</PrimaryButton>
                   </div>
                 ))}
               </div>
-              <PrimaryButton type="button" className="button-secondary mt-12" onClick={addReleaseItem}>Добавить пункт</PrimaryButton>
+              <PrimaryButton type="button" className="button-secondary mt-12" disabled={releaseForm.items.length >= 100} onClick={addReleaseItem}>Добавить пункт</PrimaryButton>
             </fieldset>
             <div className="form-footer">
               <PrimaryButton type="submit" disabled={!token || releaseFormActionBusy || !releaseForm.releaseId || !releaseForm.title || !releaseForm.summary} title={adminDisabledTitle} aria-busy={releaseFormActionBusy}>

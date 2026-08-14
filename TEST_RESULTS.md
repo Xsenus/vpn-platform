@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: unified release content contract
+
+Scope:
+- Admin create/update API, frontend release editor и startup seed должны применять одинаковый fail-closed контракт до API-вызова или изменения базы.
+- Malformed release ID, default date, null/blank/oversized items, неизвестные source/type, отрицательный и дублирующий sort order не должны silently нормализоваться или вызывать partial mutation.
+
+Results:
+- Roadmap progress: `737/757` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-release-content-contract`, version `0.717.0`.
+- Fail-first: backend malformed-content regressions `0/8`, sort-order regressions `0/4`, frontend programmatic-submit regression `0/1`.
+- After fix: общий `AppReleaseContentPolicy` валидирует ID, размеры, source/type и вычисленный порядок; API проверяет запрос до mutation, seed выполняет полный preflight, frontend не скрывает частично пустые items. Release controller/seed `47/47`, frontend targeted `1/1`, backend Debug/Release `1539/1539`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, changed-file formatter verify, secret scan `706/0` и dependency audit `0 vulnerabilities` зелёные.
+- Browser gate: семь Playwright projects пройдены раздельно `270/270`: public `27/27`, cabinet `32/32`, admin `69/69`, all-screens `14/14`, mobile-public `27/27`, mobile-cabinet `32/32`, mobile-admin `69/69`. Монолитный wrapper превысил локальный лимит без итогового report, поэтому не учитывался; раздельный запуск покрывает тот же project set.
+- Formatter boundary: все изменённые C#-файлы проходят `dotnet format --verify-no-changes --include`; глобальный verify остаётся красным на существующих смешанных line endings/charset в старых migrations/tests, которые не входят в этот change set.
+- External boundary: реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись; статус остаётся `staging-ready baseline`, не production-ready.
+
 ## Check 2026-08-14: release seed preflight and demo seed clock
 
 Scope:
