@@ -1384,11 +1384,11 @@ public class TelegramBotService
 
         PaymentProvider provider;
         Guid orderId;
-        if (Guid.TryParse(parts[1], out orderId) && Enum.TryParse<PaymentProvider>(parts[2], true, out provider))
+        if (Guid.TryParse(parts[1], out orderId) && TryParsePaymentProvider(parts[2], out provider))
         {
             // canonical pay:<orderId>:<provider>
         }
-        else if (Enum.TryParse<PaymentProvider>(parts[1], true, out provider) && Guid.TryParse(parts[2], out orderId))
+        else if (TryParsePaymentProvider(parts[1], out provider) && Guid.TryParse(parts[2], out orderId))
         {
             // backwards-compatible pay:<provider>:<orderId>
         }
@@ -1459,6 +1459,9 @@ public class TelegramBotService
 
         return new RouteResult($"Платеж создан через {provider}. Нажмите «Оплатить», завершите оплату и вернитесь сюда. Повторный webhook не продублирует подписку или VPN-доступ.", chatId, BuildPaymentLinkKeyboard(init.Value.RedirectUrl, payment?.Id ?? Guid.Empty, orderId));
     }
+
+    private static bool TryParsePaymentProvider(string value, out PaymentProvider provider)
+        => Enum.TryParse(value, true, out provider) && Enum.IsDefined(provider);
 
     private async Task<RouteResult> PrepareTelegramStarsPaymentAsync(TelegramAccount account, Guid orderId, long? chatId, CancellationToken cancellationToken)
     {

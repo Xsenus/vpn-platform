@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.720.0 - 2026-08-14
+
+Release entry: `2026-08-14-enum-input-boundaries`.
+
+### Исправлено
+
+- Admin notification delivery filter больше не превращает неизвестный status в запрос без фильтра: malformed и numeric undefined значения отклоняются до SQL.
+- Order status и Telegram payment provider parsers требуют не только `Enum.TryParse`, но и `Enum.IsDefined`, исключая неопределенные числовые значения.
+
+### Проверено
+
+- Fail-first regressions `0/3`; after-fix focused `4/4`, admin/Telegram regression `68/68`, backend Debug/Release `1541/1541`, fresh SQLite full flow с latest release, глобальный formatter, EF drift и secret scan `706/0` зелёные. Frontend не менялся; актуальные frontend `172/172`, production build/bundle, dependency audit `0 vulnerabilities` и Playwright `270/270` остаются применимыми.
+- Roadmap `740/760` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.719.0 - 2026-08-14
 
 Release entry: `2026-08-14-sqlite-repair-application-clock`.

@@ -49,6 +49,7 @@ public class AdminOrderManagementTests
         Assert.True(orders[0].GetProperty("LastPaymentRecheckSupported").GetBoolean());
 
         Assert.IsType<BadRequestObjectResult>(await controller.GetOrders("NotAStatus", null, CancellationToken.None));
+        Assert.IsType<BadRequestObjectResult>(await controller.GetOrders("999", null, CancellationToken.None));
     }
 
     [Fact]

@@ -1102,8 +1102,10 @@ public class TelegramBotPurchaseFlowTests
         var order = await db.Orders.SingleAsync();
 
         var result = await service.ProcessUpdateAsync(CallbackUpdate(354, $"pay:{order.Id}:UnknownProvider"), new Dictionary<string, string>(), null, CancellationToken.None);
+        var numericResult = await service.ProcessUpdateAsync(CallbackUpdate(355, $"pay:{order.Id}:999"), new Dictionary<string, string>(), null, CancellationToken.None);
 
         Assert.Contains("Некорректный", result.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Некорректный", numericResult.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, await db.Payments.CountAsync());
     }
 

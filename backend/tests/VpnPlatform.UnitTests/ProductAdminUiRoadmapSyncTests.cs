@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-14",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `1540/1540`",
+                     "Backend full suite: `1541/1541`",
                      "Frontend unit tests: `172/172`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `270/270`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-14-sqlite-repair-application-clock",
-                     "0.719.0"
+                     "2026-08-14-enum-input-boundaries",
+                     "0.720.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-14-sqlite-repair-application-clock", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-14-sqlite-repair-application-clock", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-14-enum-input-boundaries", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-14-enum-input-boundaries", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `1540/1540`",
+                     "Backend full suite: `1541/1541`",
                      "Frontend unit tests: `172/172`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-14-sqlite-repair-application-clock",
-                     "0.719.0",
+                     "2026-08-14-enum-input-boundaries",
+                     "0.720.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

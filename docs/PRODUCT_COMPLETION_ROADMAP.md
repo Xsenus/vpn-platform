@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-14.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-sqlite-repair-application-clock`, версия `0.719.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `739/759` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-enum-input-boundaries`, версия `0.720.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `740/760` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-14:
 
-- [x] `STATE-001` Backend test suite проходит: `1540/1540`.
+- [x] `STATE-001` Backend test suite проходит: `1541/1541`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2652,6 +2652,10 @@ git diff --check
   - Что сделать: migration preparation, post-migration repair и admin-bootstrap CLI не должны использовать process/SQLite clock для quarantine timestamps; одна startup-операция должна получать единый snapshot `IClock.UtcNow`.
   - Что сделано: `PrepareMigrationsAsync` и `ApplyAsync` требуют явный `repairAt`; DbInitializer и CLI admin-bootstrap передают application-clock snapshot; outbox, provisioning, panel sync, Telegram link state/deep link/account SQL используют параметризованное значение без `CURRENT_TIMESTAMP`/`DateTimeOffset.UtcNow`.
   - Доказательство: fail-first SQLite clock regressions `0/4` получили системное/DB-время; after-fix targeted `4/4`, SQLite repair/startup regression `52/52`, backend Debug/Release `1540/1540` и глобальный formatter зелёные.
+- [x] `P11-ACC-449` Закрыть enum-границы входных параметров. 2026-08-14.
+  - Что сделать: admin notification/order filters и Telegram payment callback не должны принимать неизвестные текстовые или числовые enum-значения и продолжать SQL/бизнес-операцию.
+  - Что сделано: notification delivery filter валидируется до SQL; order status parser и Telegram callback parser требуют `Enum.IsDefined`, поэтому numeric undefined больше не проходит через `Enum.TryParse`.
+  - Доказательство: fail-first regressions `0/3`; after-fix focused `4/4`, admin/Telegram regression `68/68`, backend Debug/Release `1541/1541`, fresh SQLite full flow, глобальный formatter, EF drift и secret scan `706/0` зелёные.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

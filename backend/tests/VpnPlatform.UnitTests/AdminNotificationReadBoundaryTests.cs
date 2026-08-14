@@ -15,6 +15,33 @@ namespace VpnPlatform.UnitTests;
 public class AdminNotificationReadBoundaryTests
 {
     [Fact]
+    public async Task Admin_Notification_Query_Should_Reject_Invalid_Status_Before_Sql()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var interceptor = new CommandCaptureInterceptor();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        interceptor.Commands.Clear();
+        var controller = new AdminOperationsController(db, null!, null!, null!);
+
+        foreach (var invalidStatus in new[] { "unknown-status", "999" })
+        {
+            var result = await controller.GetNotificationDeliveries(
+                new AdminNotificationDeliveryFilters(Status: invalidStatus),
+                CancellationToken.None);
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        Assert.Empty(interceptor.Commands);
+    }
+
+    [Fact]
     public async Task Admin_Notification_Query_Should_Filter_Order_And_Limit_In_Sqlite()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");

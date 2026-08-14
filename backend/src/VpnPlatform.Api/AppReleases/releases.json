@@ -16937,5 +16937,32 @@
         "text": "Roadmap progress is 739/759 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-enum-input-boundaries",
+    "version": "0.720.0",
+    "releasedAt": "2026-08-14T12:16:46+07:00",
+    "title": "Границы enum-ввода работают fail-closed",
+    "summary": "Admin filters и Telegram payment callback отклоняют неизвестные текстовые и числовые enum-значения.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Invalid notification delivery status отклоняется до SQL вместо скрытого снятия фильтра."
+      },
+      {
+        "type": "fixed",
+        "text": "Order status и Telegram payment provider больше не принимают numeric undefined enum-значения."
+      },
+      {
+        "type": "improved",
+        "text": "Enum input boundaries единообразно проверяют Enum.IsDefined до SQL или бизнес-операции."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 740/760 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

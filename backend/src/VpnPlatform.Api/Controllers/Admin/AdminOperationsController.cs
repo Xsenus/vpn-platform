@@ -387,8 +387,13 @@ public class AdminOperationsController : ControllerBase
     {
         var limit = Math.Clamp(filters.Limit, 1, 500);
         var status = NotificationDeliveryStatus.Pending;
-        var hasStatus = !string.IsNullOrWhiteSpace(filters.Status)
-            && Enum.TryParse(filters.Status.Trim(), true, out status);
+        var hasStatus = !string.IsNullOrWhiteSpace(filters.Status);
+        if (hasStatus
+            && (!Enum.TryParse(filters.Status!.Trim(), true, out status) || !Enum.IsDefined(status)))
+        {
+            return BadRequest(new { error = "Invalid notification delivery status." });
+        }
+
         var templateKey = filters.TemplateKey?.Trim() ?? string.Empty;
         var search = filters.Search?.Trim() ?? string.Empty;
 
@@ -3725,7 +3730,8 @@ public class AdminOperationsController : ControllerBase
         var result = new List<OrderStatus>();
         foreach (var rawValue in status.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            if (!Enum.TryParse<OrderStatus>(rawValue, ignoreCase: true, out var parsed))
+            if (!Enum.TryParse<OrderStatus>(rawValue, ignoreCase: true, out var parsed)
+                || !Enum.IsDefined(parsed))
             {
                 return null;
             }

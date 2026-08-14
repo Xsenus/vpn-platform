@@ -2,6 +2,20 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: fail-closed enum input boundaries
+
+Scope:
+- Admin notification/order filters и Telegram payment callback должны отклонять unknown и numeric undefined enum-значения.
+- Invalid notification status не должен доходить до SQL, а invalid payment provider - до provider availability/платежной логики.
+
+Results:
+- Roadmap progress: `740/760` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-enum-input-boundaries`, version `0.720.0`.
+- Fail-first: notification status, order status и Telegram provider regressions завершились `0/3`: malformed status silently убирал фильтр, numeric undefined значения проходили `Enum.TryParse`.
+- After fix: все три input paths требуют `Enum.IsDefined`; focused `4/4`, admin notification/order и Telegram regression `68/68`, backend Debug/Release `1541/1541`, fresh SQLite full flow с latest release, глобальный formatter, EF drift и secret scan `706/0` зелёные.
+- Frontend не менялся; актуальные frontend `172/172`, typecheck/build, bundle budget, dependency audit `0 vulnerabilities` и Playwright `270/270` остаются применимыми.
+- External boundary: реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись; статус остаётся `staging-ready baseline`, не production-ready.
+
 ## Check 2026-08-14: SQLite repair application clock
 
 Scope:
