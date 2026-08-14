@@ -2,6 +2,20 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: structured JSON secret isolation
+
+Scope:
+- Structured diagnostics must redact nested password/token/secret/credential properties without corrupting valid JSON or removing safe configuration metadata.
+- Generic site-content administration must not expose or mutate protected Telegram bot settings owned by the dedicated settings boundary.
+- Reserved group and key matching must be case-insensitive for reads and mutations.
+
+Results:
+- Roadmap progress: `745/765` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-structured-json-secret-isolation`, version `0.725.0`.
+- Fail-first: direct structured redaction and SQLite content-boundary regressions completed `0/2`, reproducing raw nested JSON secrets and generic CRUD access to `telegram_bot` records.
+- After fix: JSON diagnostics are parsed and recursively redacted while safe metadata remains typed; reserved Telegram records are hidden and immutable through generic content endpoints. Focused `2/2`, security/content/Telegram regression `26/26`, backend Debug/Release `1553/1553`, Release build `0 warnings / 0 errors`, docs/encoding `28/28`, fresh SQLite full flow latest release, formatter, EF drift and secret scan `707/0` are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-14: redact before truncation
 
 Scope:

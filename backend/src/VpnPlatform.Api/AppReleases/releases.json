@@ -17076,5 +17076,32 @@
         "text": "Roadmap progress is 744/764 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-structured-json-secret-isolation",
+    "version": "0.725.0",
+    "releasedAt": "2026-08-14T14:18:09+07:00",
+    "title": "Structured diagnostics and Telegram settings are isolated",
+    "summary": "Nested JSON secrets are redacted safely and system Telegram settings are no longer exposed through generic content administration.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Nested password, token, secret and credential JSON properties are recursively redacted without corrupting the document."
+      },
+      {
+        "type": "fixed",
+        "text": "Generic site-content reads and mutations no longer expose or modify reserved telegram_bot records."
+      },
+      {
+        "type": "improved",
+        "text": "Safe Configured and Rotated metadata remains typed and readable while sensitive values are removed."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 745/765 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 namespace VpnPlatform.Application.Common;
@@ -5,6 +7,35 @@ namespace VpnPlatform.Application.Common;
 public static class SensitiveDataRedactor
 {
     private const string Replacement = "***REDACTED***";
+
+    private static readonly string[] SensitiveJsonPropertyNameFragments =
+    {
+        "password",
+        "passwd",
+        "pwd",
+        "token",
+        "secret",
+        "apikey",
+        "privatekey",
+        "sshkey",
+        "sshpass",
+        "credential",
+        "authorization",
+        "bottoken",
+        "webhooksecret",
+        "x3ui",
+        "panelpassword",
+        "accesstoken",
+        "refreshtoken",
+        "clientsecret"
+    };
+
+    private static readonly string[] SafeJsonMetadataAffixes =
+    {
+        "configured",
+        "masked",
+        "rotated"
+    };
 
     private static readonly Regex[] Patterns =
     {
@@ -21,7 +52,7 @@ public static class SensitiveDataRedactor
             return string.Empty;
         }
 
-        var redacted = value;
+        var redacted = TryRedactJson(value);
 
         foreach (var secret in (knownSecrets ?? Enumerable.Empty<string?>())
                      .Where(secret => !string.IsNullOrWhiteSpace(secret))
@@ -71,5 +102,73 @@ public static class SensitiveDataRedactor
         }
 
         return redacted[..(maxLength.Value - truncationSuffix.Length)] + truncationSuffix;
+    }
+
+    private static string TryRedactJson(string value)
+    {
+        var firstContentCharacter = value.AsSpan().TrimStart();
+        if (firstContentCharacter.IsEmpty || firstContentCharacter[0] is not ('{' or '['))
+        {
+            return value;
+        }
+
+        try
+        {
+            var root = JsonNode.Parse(value);
+            if (root is null)
+            {
+                return value;
+            }
+
+            RedactJsonNode(root);
+            return root.ToJsonString();
+        }
+        catch (JsonException)
+        {
+            return value;
+        }
+    }
+
+    private static void RedactJsonNode(JsonNode node)
+    {
+        if (node is JsonObject jsonObject)
+        {
+            foreach (var property in jsonObject.ToArray())
+            {
+                if (IsSensitiveJsonProperty(property.Key))
+                {
+                    jsonObject[property.Key] = Replacement;
+                }
+                else if (property.Value is not null)
+                {
+                    RedactJsonNode(property.Value);
+                }
+            }
+
+            return;
+        }
+
+        if (node is JsonArray jsonArray)
+        {
+            foreach (var item in jsonArray)
+            {
+                if (item is not null)
+                {
+                    RedactJsonNode(item);
+                }
+            }
+        }
+    }
+
+    private static bool IsSensitiveJsonProperty(string propertyName)
+    {
+        var normalized = string.Concat(propertyName.Where(char.IsLetterOrDigit)).ToLowerInvariant();
+        if (normalized.StartsWith("rotated", StringComparison.Ordinal)
+            || SafeJsonMetadataAffixes.Any(affix => normalized.EndsWith(affix, StringComparison.Ordinal)))
+        {
+            return false;
+        }
+
+        return SensitiveJsonPropertyNameFragments.Any(fragment => normalized.Contains(fragment, StringComparison.Ordinal));
     }
 }

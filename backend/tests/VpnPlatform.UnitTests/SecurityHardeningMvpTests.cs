@@ -55,6 +55,27 @@ public class SecurityHardeningMvpTests
     }
 
     [Fact]
+    public void SensitiveDataRedactor_Should_Redact_Nested_Json_Without_Corrupting_It()
+    {
+        const string json = "{\"currentPassword\":\"json-password\",\"nested\":{\"apiKey\":\"json-api-key\",\"secretToken\":\"json-token\",\"note\":\"keep me\",\"botTokenConfigured\":true,\"rotatedSecretToken\":true},\"items\":[{\"privateKey\":\"quoted \\\"secret\\\" value\"}]}";
+
+        var redacted = SensitiveDataRedactor.Redact(json);
+
+        using var document = JsonDocument.Parse(redacted);
+        Assert.Equal("***REDACTED***", document.RootElement.GetProperty("currentPassword").GetString());
+        Assert.Equal("***REDACTED***", document.RootElement.GetProperty("nested").GetProperty("apiKey").GetString());
+        Assert.Equal("***REDACTED***", document.RootElement.GetProperty("nested").GetProperty("secretToken").GetString());
+        Assert.Equal("keep me", document.RootElement.GetProperty("nested").GetProperty("note").GetString());
+        Assert.True(document.RootElement.GetProperty("nested").GetProperty("botTokenConfigured").GetBoolean());
+        Assert.True(document.RootElement.GetProperty("nested").GetProperty("rotatedSecretToken").GetBoolean());
+        Assert.Equal("***REDACTED***", document.RootElement.GetProperty("items")[0].GetProperty("privateKey").GetString());
+        Assert.DoesNotContain("json-password", redacted, StringComparison.Ordinal);
+        Assert.DoesNotContain("json-api-key", redacted, StringComparison.Ordinal);
+        Assert.DoesNotContain("json-token", redacted, StringComparison.Ordinal);
+        Assert.DoesNotContain("quoted", redacted, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SensitiveDataRedactor_Should_Redact_Known_Secret_Before_Length_Limit()
     {
         var secret = "reset-code-" + new string('s', 64);

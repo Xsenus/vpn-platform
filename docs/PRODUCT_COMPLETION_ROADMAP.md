@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-14.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-redact-before-truncation`, версия `0.724.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `744/764` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-structured-json-secret-isolation`, версия `0.725.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `745/765` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-14:
 
-- [x] `STATE-001` Backend test suite проходит: `1551/1551`.
+- [x] `STATE-001` Backend test suite проходит: `1553/1553`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2672,6 +2672,10 @@ git diff --check
   - Что сделать: `SensitiveDataRedactor` не должен раскрывать префикс known secret или PEM private key, если секрет пересекает `maxLength`; перекрывающиеся known secrets должны обрабатываться от длинного к короткому, а итоговая строка не должна превышать лимит.
   - Что сделано: known-secret replacement и regex redaction выполняются на полном тексте до truncation; known secrets дедуплицируются и сортируются по убыванию длины; truncation suffix входит в итоговый `maxLength`. Email password-reset retry больше не сохраняет начало reset-кода на 500-символьной границе.
   - Доказательство: fail-first redaction/email regressions `0/3`; after-fix focused `3/3`, redactor consumer regression `247/247`, backend Debug/Release `1551/1551`, Release build `0 warnings / 0 errors`, docs/encoding `62/62`, fresh SQLite full flow latest release, formatter, EF drift и secret scan `707/0` зелёные.
+- [x] `P11-ACC-454` Изолировать structured JSON secrets и системные Telegram settings. 2026-08-14.
+  - Что сделать: общий diagnostic redactor должен очищать вложенные JSON password/token/secret/credential values без повреждения JSON; generic site-content CRUD не должен раскрывать или менять защищенные `telegram_bot` records.
+  - Что сделано: `SensitiveDataRedactor` разбирает object/array JSON и рекурсивно заменяет чувствительные свойства, сохраняя безопасные `Configured`/`Rotated` metadata; `AdminSiteContentController` case-insensitive исключает системную группу и key prefix из list/create/update/delete.
+  - Доказательство: fail-first regressions `0/2`; after-fix focused `2/2`, security/content/Telegram regression `26/26`, backend Debug/Release `1553/1553`, Release build `0 warnings / 0 errors`, docs/encoding `28/28`, fresh SQLite full flow latest release, formatter, EF drift и secret scan `707/0` зелёные.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

@@ -146,6 +146,42 @@ public class SiteContentControllerTests
     }
 
     [Fact]
+    public async Task AdminSiteContent_Should_Isolate_Telegram_Bot_System_Settings()
+    {
+        await using var db = CreateDb();
+        var protectedToken = Block("telegram_bot.bot_token_protected", "v1:protected-token", "telegram_bot");
+        var publicSetting = Block("telegram_bot.public_bot_username", "vpn_test_bot", "telegram_bot");
+        var regularBlock = Block("home.hero.title", "Заголовок");
+        db.SiteContentBlocks.AddRange(protectedToken, publicSetting, regularBlock);
+        await db.SaveChangesAsync();
+        var controller = CreateAdminController(db);
+
+        var all = AssertOk<List<SiteContentBlockDto>>(await controller.Get(cancellationToken: CancellationToken.None));
+        var systemGroup = AssertOk<List<SiteContentBlockDto>>(await controller.Get("telegram_bot", CancellationToken.None));
+        var createByGroup = await controller.Create(
+            new SiteContentBlockUpsertRequest("custom.key", "tampered", "Telegram_Bot", "System", "", "text", true, 1),
+            CancellationToken.None);
+        var createByKey = await controller.Create(
+            new SiteContentBlockUpsertRequest("Telegram_Bot.mode", "Webhook", "custom", "System", "", "text", true, 1),
+            CancellationToken.None);
+        var update = await controller.Update(
+            protectedToken.Id,
+            new SiteContentBlockUpsertRequest(protectedToken.Key, "tampered", protectedToken.Group, protectedToken.Label, "", "text", true, 1, protectedToken.Revision),
+            CancellationToken.None);
+        var delete = await controller.Delete(publicSetting.Id, publicSetting.Revision, CancellationToken.None);
+
+        Assert.Single(all, item => item.Id == regularBlock.Id);
+        Assert.Empty(systemGroup);
+        Assert.IsType<BadRequestObjectResult>(createByGroup);
+        Assert.IsType<BadRequestObjectResult>(createByKey);
+        Assert.IsType<NotFoundResult>(update);
+        Assert.IsType<NotFoundResult>(delete);
+        Assert.Equal("v1:protected-token", (await db.SiteContentBlocks.SingleAsync(item => item.Id == protectedToken.Id)).Value);
+        Assert.Equal("vpn_test_bot", (await db.SiteContentBlocks.SingleAsync(item => item.Id == publicSetting.Id)).Value);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Fact]
     public async Task AdminSiteContent_Should_Report_Readiness_And_Restore_Defaults()
     {
         await using var db = CreateDb();

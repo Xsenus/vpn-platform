@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.725.0 - 2026-08-14
+
+Release entry: `2026-08-14-structured-json-secret-isolation`.
+
+### Исправлено
+
+- `SensitiveDataRedactor` разбирает JSON и рекурсивно удаляет значения password/token/secret/credential полей, сохраняя валидную структуру и безопасные metadata-флаги `Configured`/`Rotated`.
+- Универсальный CRUD site content больше не возвращает и не изменяет системную группу и ключи `telegram_bot`; защищенные token values доступны только специализированному Telegram settings boundary.
+- Case-insensitive group/key variants также отклоняются, поэтому системные записи нельзя подменить через альтернативный регистр.
+
+### Проверено
+
+- Fail-first structured JSON/content isolation regressions `0/2`; after-fix focused `2/2`, security/content/Telegram regression `26/26`, backend Debug/Release `1553/1553`, Release build `0 warnings / 0 errors`, docs/encoding `28/28`, fresh SQLite full flow latest release, formatter, EF drift и secret scan `707/0` зелёные.
+- Roadmap `745/765` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.724.0 - 2026-08-14
 
 Release entry: `2026-08-14-redact-before-truncation`.

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
+using VpnPlatform.Application.Services;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Infrastructure.Services;
 
@@ -15,6 +16,8 @@ namespace VpnPlatform.Api.Controllers.Admin;
 public class AdminSiteContentController : ControllerBase
 {
     private const int ListLimit = 200;
+    private const string ReservedSettingsGroup = TelegramBotRuntimeSettingsService.SettingsGroup;
+    private const string ReservedSettingsKeyPrefix = "telegram_bot.";
     private static readonly IReadOnlyList<SiteContentDefault> RequiredHomeDefaults =
     [
         new("home.hero.eyebrow", "VPN Platform", "Hero eyebrow", "Надзаголовок первого экрана", 10),
@@ -51,7 +54,9 @@ public class AdminSiteContentController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Get([FromQuery] string? group = null, CancellationToken cancellationToken = default)
     {
-        var query = _db.SiteContentBlocks.AsNoTracking();
+        var query = _db.SiteContentBlocks.AsNoTracking()
+            .Where(x => x.Group.ToLower() != ReservedSettingsGroup
+                && !x.Key.ToLower().StartsWith(ReservedSettingsKeyPrefix));
         if (!string.IsNullOrWhiteSpace(group))
         {
             var normalizedGroup = group.Trim();
@@ -195,7 +200,7 @@ public class AdminSiteContentController : ControllerBase
     public async Task<IActionResult> Update(Guid id, [FromBody] SiteContentBlockUpsertRequest request, CancellationToken cancellationToken)
     {
         var block = await _db.SiteContentBlocks.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (block is null) return NotFound();
+        if (block is null || IsReservedSystemSetting(block)) return NotFound();
         if (!request.Revision.HasValue || request.Revision.Value < 0)
         {
             return BadRequest(new { error = "Site content revision is required and must be a non-negative integer." });
@@ -234,7 +239,7 @@ public class AdminSiteContentController : ControllerBase
     public async Task<IActionResult> Delete(Guid id, [FromQuery] int? revision, CancellationToken cancellationToken)
     {
         var block = await _db.SiteContentBlocks.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (block is null) return NotFound();
+        if (block is null || IsReservedSystemSetting(block)) return NotFound();
         if (!revision.HasValue || revision.Value < 0)
         {
             return BadRequest(new { error = "Site content revision is required and must be a non-negative integer." });
@@ -271,8 +276,17 @@ public class AdminSiteContentController : ControllerBase
         block.InputType = string.IsNullOrWhiteSpace(request.InputType) ? "text" : request.InputType.Trim();
         block.IsActive = request.IsActive;
         block.SortOrder = request.SortOrder;
+        if (IsReservedSystemSetting(block))
+        {
+            return "Telegram bot settings must be managed through the dedicated settings endpoint.";
+        }
+
         return null;
     }
+
+    private static bool IsReservedSystemSetting(SiteContentBlock block)
+        => block.Group.Equals(ReservedSettingsGroup, StringComparison.OrdinalIgnoreCase)
+            || block.Key.StartsWith(ReservedSettingsKeyPrefix, StringComparison.OrdinalIgnoreCase);
 
     private static void Copy(SiteContentBlock source, SiteContentBlock target)
     {
