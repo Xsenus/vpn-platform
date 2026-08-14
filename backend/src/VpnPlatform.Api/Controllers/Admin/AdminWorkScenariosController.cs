@@ -7,6 +7,7 @@ using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Domain.Entities;
+using VpnPlatform.Infrastructure.Services;
 
 namespace VpnPlatform.Api.Controllers.Admin;
 
@@ -17,10 +18,12 @@ public class AdminWorkScenariosController : ControllerBase
 {
     private const int ListLimit = 200;
     private readonly IApplicationDbContext _db;
+    private readonly IClock _clock;
 
-    public AdminWorkScenariosController(IApplicationDbContext db)
+    public AdminWorkScenariosController(IApplicationDbContext db, IClock? clock = null)
     {
         _db = db;
+        _clock = clock ?? new SystemClock();
     }
 
     [HttpGet]
@@ -49,6 +52,10 @@ public class AdminWorkScenariosController : ControllerBase
         {
             return BadRequest(new { error = "Scenario key already exists." });
         }
+
+        var now = _clock.UtcNow;
+        scenario.CreatedAt = now;
+        scenario.UpdatedAt = now;
 
         _db.WorkScenarios.Add(scenario);
         AdminAuditLogWriter.Add(_db, this, "work_scenario.create", "WorkScenario", scenario.Id, null, Map(scenario));
@@ -89,7 +96,7 @@ public class AdminWorkScenariosController : ControllerBase
         var before = Map(scenario);
         Copy(candidate, scenario);
         scenario.Revision = checked(scenario.Revision + 1);
-        scenario.UpdatedAt = DateTimeOffset.UtcNow;
+        scenario.UpdatedAt = _clock.UtcNow;
         AdminAuditLogWriter.Add(_db, this, "work_scenario.update", "WorkScenario", scenario.Id, before, Map(scenario));
         try
         {

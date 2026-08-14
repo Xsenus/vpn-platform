@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.713.0 - 2026-08-14
+
+Release entry: `2026-08-14-admin-crud-clock-and-capacity-gates`.
+
+### Исправлено
+
+- FAQ, site content, work scenarios и Telegram bot settings используют внедренный `IClock` для create/update/restore, `GeneratedAt`/`CheckedAt` и всех settings/template timestamps.
+- X3Ui concurrency regression принимает оба безопасных пути последнего inbound slot: ранний отказ до remote create или позднюю компенсацию лишнего remote-клиента; в обоих случаях локальная capacity и единственный клиент обязательны.
+
+### Проверено
+
+- Fail-first clock regressions `0/4` получили системное время вместо `2033-03-04T05:06:07Z`; after-fix targeted `4/4`, CRUD/Telegram regression `72/72`, capacity concurrency `5/5`, backend Debug/Release `1499/1499`, frontend `172/172`, typecheck/build и bundle budget зеленые. Fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` также пройдены. Актуальный visual/operation gate: Playwright `268/268` на 25 viewport-конфигурациях.
+- Roadmap `730/750` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.712.0 - 2026-08-14
 
 Release entry: `2026-08-14-app-release-clock-consistency`.

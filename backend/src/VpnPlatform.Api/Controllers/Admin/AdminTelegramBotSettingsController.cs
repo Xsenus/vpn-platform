@@ -8,6 +8,7 @@ using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
+using VpnPlatform.Infrastructure.Services;
 
 namespace VpnPlatform.Api.Controllers.Admin;
 
@@ -36,27 +37,35 @@ public class AdminTelegramBotSettingsController : ControllerBase
     private readonly IApplicationDbContext _db;
     private readonly IConfiguration _configuration;
     private readonly ISecretProtector _secretProtector;
+    private readonly IClock _clock;
 
-    public AdminTelegramBotSettingsController(IApplicationDbContext db, IConfiguration configuration, ISecretProtector secretProtector)
+    public AdminTelegramBotSettingsController(
+        IApplicationDbContext db,
+        IConfiguration configuration,
+        ISecretProtector secretProtector,
+        IClock? clock = null)
     {
         _db = db;
         _configuration = configuration;
         _secretProtector = secretProtector;
+        _clock = clock ?? new SystemClock();
     }
 
     [HttpGet("settings")]
     public async Task<IActionResult> GetSettings(CancellationToken cancellationToken)
     {
+        var now = _clock.UtcNow;
         var state = await LoadStateAsync(cancellationToken);
-        return Ok(ToDto(state));
+        return Ok(ToDto(state, now));
     }
 
     [HttpPost("settings/test")]
     [Authorize(Policy = AdminPolicies.BotManage)]
     public async Task<IActionResult> TestSettings(CancellationToken cancellationToken)
     {
+        var now = _clock.UtcNow;
         var state = await LoadStateAsync(cancellationToken);
-        return Ok(BuildConnectionCheck(state));
+        return Ok(BuildConnectionCheck(state, now));
     }
 
     [HttpPatch("settings")]
@@ -70,29 +79,31 @@ public class AdminTelegramBotSettingsController : ControllerBase
             return BadRequest(new { error = validationError });
         }
 
-        await UpsertSettingAsync(EnabledKey, "Включен", request.Enabled?.ToString().ToLowerInvariant(), "checkbox", cancellationToken);
-        await UpsertSettingAsync(ModeKey, "Режим", NormalizeMode(request.Mode), "select", cancellationToken);
-        await UpsertSettingAsync(PublicBotUsernameKey, "Public bot username", NormalizeUsername(request.PublicBotUsername), "text", cancellationToken);
-        await UpsertSettingAsync(WebhookUrlKey, "Webhook URL", NormalizeOptionalUrl(request.WebhookUrl), "url", cancellationToken);
-        await UpsertSettingAsync(AdminChatIdKey, "Admin chat id", request.AdminChatId?.Trim(), "text", cancellationToken);
-        await UpsertSettingAsync(WebAppUrlKey, "WebApp URL", NormalizeOptionalUrl(request.WebAppUrl), "url", cancellationToken);
+        var now = _clock.UtcNow;
+
+        await UpsertSettingAsync(EnabledKey, "Включен", request.Enabled?.ToString().ToLowerInvariant(), "checkbox", now, cancellationToken);
+        await UpsertSettingAsync(ModeKey, "Режим", NormalizeMode(request.Mode), "select", now, cancellationToken);
+        await UpsertSettingAsync(PublicBotUsernameKey, "Public bot username", NormalizeUsername(request.PublicBotUsername), "text", now, cancellationToken);
+        await UpsertSettingAsync(WebhookUrlKey, "Webhook URL", NormalizeOptionalUrl(request.WebhookUrl), "url", now, cancellationToken);
+        await UpsertSettingAsync(AdminChatIdKey, "Admin chat id", request.AdminChatId?.Trim(), "text", now, cancellationToken);
+        await UpsertSettingAsync(WebAppUrlKey, "WebApp URL", NormalizeOptionalUrl(request.WebAppUrl), "url", now, cancellationToken);
         if (!string.IsNullOrWhiteSpace(request.BotToken))
         {
-            await UpsertSettingAsync(BotTokenProtectedKey, "Bot token", _secretProtector.Protect(request.BotToken.Trim()), "secret", cancellationToken);
+            await UpsertSettingAsync(BotTokenProtectedKey, "Bot token", _secretProtector.Protect(request.BotToken.Trim()), "secret", now, cancellationToken);
         }
 
         if (!string.IsNullOrWhiteSpace(request.SecretToken))
         {
-            await UpsertSettingAsync(SecretTokenProtectedKey, "Secret token", _secretProtector.Protect(request.SecretToken.Trim()), "secret", cancellationToken);
+            await UpsertSettingAsync(SecretTokenProtectedKey, "Secret token", _secretProtector.Protect(request.SecretToken.Trim()), "secret", now, cancellationToken);
         }
 
-        await UpsertTemplateAsync(WelcomeKey, "Welcome text", request.WelcomeText, cancellationToken);
-        await UpsertTemplateAsync(InstructionKey, "Instruction text", request.InstructionText, cancellationToken);
-        await UpsertTemplateAsync(SupportKey, "Support text", request.SupportText, cancellationToken);
-        await UpsertTemplateAsync(AfterPaymentKey, "After payment text", request.AfterPaymentTextTemplate, cancellationToken);
-        await UpsertTemplateAsync(RenewalKey, "Renewal text", request.RenewalTextTemplate, cancellationToken);
-        await UpsertTemplateAsync(PaymentFailedKey, "Payment failed text", request.PaymentFailedTextTemplate, cancellationToken);
-        await UpsertTemplateAsync(SubscriptionExpiredKey, "Subscription expired text", request.SubscriptionExpiredTextTemplate, cancellationToken);
+        await UpsertTemplateAsync(WelcomeKey, "Welcome text", request.WelcomeText, now, cancellationToken);
+        await UpsertTemplateAsync(InstructionKey, "Instruction text", request.InstructionText, now, cancellationToken);
+        await UpsertTemplateAsync(SupportKey, "Support text", request.SupportText, now, cancellationToken);
+        await UpsertTemplateAsync(AfterPaymentKey, "After payment text", request.AfterPaymentTextTemplate, now, cancellationToken);
+        await UpsertTemplateAsync(RenewalKey, "Renewal text", request.RenewalTextTemplate, now, cancellationToken);
+        await UpsertTemplateAsync(PaymentFailedKey, "Payment failed text", request.PaymentFailedTextTemplate, now, cancellationToken);
+        await UpsertTemplateAsync(SubscriptionExpiredKey, "Subscription expired text", request.SubscriptionExpiredTextTemplate, now, cancellationToken);
         AdminAuditLogWriter.Add(
             _db,
             this,
@@ -103,7 +114,7 @@ public class AdminTelegramBotSettingsController : ControllerBase
             ToAuditSnapshot(request));
         AddSecretRotationAudit(request);
         await _db.SaveChangesAsync(cancellationToken);
-        return await GetSettings(cancellationToken);
+        return Ok(ToDto(await LoadStateAsync(cancellationToken), now));
     }
 
     private async Task<TelegramBotSettingsState> LoadStateAsync(CancellationToken cancellationToken)
@@ -133,7 +144,7 @@ public class AdminTelegramBotSettingsController : ControllerBase
             templates);
     }
 
-    private static AdminTelegramBotSettingsDto ToDto(TelegramBotSettingsState state)
+    private static AdminTelegramBotSettingsDto ToDto(TelegramBotSettingsState state, DateTimeOffset now)
         => new(
             state.Enabled,
             state.Mode,
@@ -151,7 +162,7 @@ public class AdminTelegramBotSettingsController : ControllerBase
             FindTemplate(state.Templates, RenewalKey, "Продление оформлено. После оплаты подписка будет продлена автоматически."),
             FindTemplate(state.Templates, PaymentFailedKey, "Оплата не прошла. Проверьте способ оплаты или попробуйте другой вариант."),
             FindTemplate(state.Templates, SubscriptionExpiredKey, "Срок подписки истек. Продлите тариф, чтобы восстановить VPN-доступ."),
-            DateTimeOffset.UtcNow);
+            now);
 
     private static string? ValidateUpdate(UpdateTelegramBotSettingsCommand request, TelegramBotSettingsState current)
     {
@@ -205,7 +216,7 @@ public class AdminTelegramBotSettingsController : ControllerBase
         return null;
     }
 
-    private static AdminTelegramBotConnectionCheckDto BuildConnectionCheck(TelegramBotSettingsState state)
+    private static AdminTelegramBotConnectionCheckDto BuildConnectionCheck(TelegramBotSettingsState state, DateTimeOffset now)
     {
         var requiredActions = new List<string>();
         var warnings = new List<string>();
@@ -262,10 +273,16 @@ public class AdminTelegramBotSettingsController : ControllerBase
             isReady ? "ready" : "needs_configuration",
             requiredActions,
             warnings,
-            DateTimeOffset.UtcNow);
+            now);
     }
 
-    private async Task UpsertSettingAsync(string key, string label, string? value, string inputType, CancellationToken cancellationToken)
+    private async Task UpsertSettingAsync(
+        string key,
+        string label,
+        string? value,
+        string inputType,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
     {
         if (value is null)
         {
@@ -282,7 +299,9 @@ public class AdminTelegramBotSettingsController : ControllerBase
                 Label = label,
                 Value = value,
                 InputType = inputType,
-                IsActive = true
+                IsActive = true,
+                CreatedAt = now,
+                UpdatedAt = now
             });
             return;
         }
@@ -292,10 +311,15 @@ public class AdminTelegramBotSettingsController : ControllerBase
         setting.Value = value;
         setting.InputType = inputType;
         setting.IsActive = true;
-        setting.UpdatedAt = DateTimeOffset.UtcNow;
+        setting.UpdatedAt = now;
     }
 
-    private async Task UpsertTemplateAsync(string key, string subject, string? body, CancellationToken cancellationToken)
+    private async Task UpsertTemplateAsync(
+        string key,
+        string subject,
+        string? body,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
     {
         if (body is null)
         {
@@ -315,7 +339,9 @@ public class AdminTelegramBotSettingsController : ControllerBase
                 Language = "ru",
                 Subject = subject,
                 Body = normalized,
-                IsActive = true
+                IsActive = true,
+                CreatedAt = now,
+                UpdatedAt = now
             });
             return;
         }
@@ -323,7 +349,7 @@ public class AdminTelegramBotSettingsController : ControllerBase
         template.Subject = subject;
         template.Body = normalized;
         template.IsActive = true;
-        template.UpdatedAt = DateTimeOffset.UtcNow;
+        template.UpdatedAt = now;
     }
 
     private void AddSecretRotationAudit(UpdateTelegramBotSettingsCommand request)

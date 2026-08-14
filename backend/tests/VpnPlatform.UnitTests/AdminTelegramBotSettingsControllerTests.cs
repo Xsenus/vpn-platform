@@ -14,6 +14,52 @@ namespace VpnPlatform.UnitTests;
 public class AdminTelegramBotSettingsControllerTests
 {
     [Fact]
+    public async Task Telegram_Bot_Settings_Workflow_Should_Use_Injected_Clock()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var initialTime = new DateTimeOffset(2033, 3, 4, 5, 6, 7, TimeSpan.Zero);
+        var clock = new MutableClock(initialTime);
+        var controller = new AdminTelegramBotSettingsController(
+            db,
+            EmptyConfiguration(),
+            new TestSecretProtector(),
+            clock);
+
+        var initialSettings = Assert.IsType<AdminTelegramBotSettingsDto>(
+            Assert.IsType<OkObjectResult>(await controller.GetSettings(CancellationToken.None)).Value);
+        var initialCheck = Assert.IsType<AdminTelegramBotConnectionCheckDto>(
+            Assert.IsType<OkObjectResult>(await controller.TestSettings(CancellationToken.None)).Value);
+        Assert.Equal(initialTime, initialSettings.GeneratedAt);
+        Assert.Equal(initialTime, initialCheck.CheckedAt);
+
+        var request = DisabledSettings("Initial welcome");
+        await controller.UpdateSettings(request, CancellationToken.None);
+        Assert.All(await db.SiteContentBlocks.ToListAsync(), setting =>
+        {
+            Assert.Equal(initialTime, setting.CreatedAt);
+            Assert.Equal(initialTime, setting.UpdatedAt);
+        });
+        var template = await db.NotificationTemplates.SingleAsync();
+        Assert.Equal(initialTime, template.CreatedAt);
+        Assert.Equal(initialTime, template.UpdatedAt);
+
+        clock.UtcNow = initialTime.AddHours(1);
+        var updatedSettings = Assert.IsType<AdminTelegramBotSettingsDto>(
+            Assert.IsType<OkObjectResult>(await controller.UpdateSettings(
+                DisabledSettings("Updated welcome"),
+                CancellationToken.None)).Value);
+        Assert.All(await db.SiteContentBlocks.ToListAsync(), setting =>
+            Assert.Equal(clock.UtcNow, setting.UpdatedAt));
+        template = await db.NotificationTemplates.SingleAsync();
+        Assert.Equal(initialTime, template.CreatedAt);
+        Assert.Equal(clock.UtcNow, template.UpdatedAt);
+        Assert.Equal(clock.UtcNow, updatedSettings.GeneratedAt);
+    }
+
+    [Fact]
     public async Task Telegram_Bot_Settings_Should_Save_Validate_And_Check_Readiness_On_Sqlite()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -188,6 +234,29 @@ public class AdminTelegramBotSettingsControllerTests
     }
 
     private static IConfiguration EmptyConfiguration() => new ConfigurationBuilder().Build();
+
+    private static UpdateTelegramBotSettingsCommand DisabledSettings(string welcomeText)
+        => new(
+            Enabled: false,
+            Mode: "LongPolling",
+            PublicBotUsername: "vpn_clock_bot",
+            BotToken: null,
+            WebhookUrl: null,
+            SecretToken: null,
+            AdminChatId: null,
+            WebAppUrl: null,
+            WelcomeText: welcomeText,
+            InstructionText: null,
+            SupportText: null,
+            AfterPaymentTextTemplate: null,
+            RenewalTextTemplate: null,
+            PaymentFailedTextTemplate: null,
+            SubscriptionExpiredTextTemplate: null);
+
+    private sealed class MutableClock(DateTimeOffset utcNow) : IClock
+    {
+        public DateTimeOffset UtcNow { get; set; } = utcNow;
+    }
 
     private sealed class TestSecretProtector : ISecretProtector
     {

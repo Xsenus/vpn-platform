@@ -6,6 +6,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Api.Controllers.Public;
+using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Domain.Entities;
@@ -16,6 +17,30 @@ namespace VpnPlatform.UnitTests;
 
 public class FaqControllerTests
 {
+    [Fact]
+    public async Task AdminFaq_Mutations_Should_Use_Injected_Clock()
+    {
+        await using var db = CreateDb();
+        var initialTime = new DateTimeOffset(2033, 3, 4, 5, 6, 7, TimeSpan.Zero);
+        var clock = new MutableClock(initialTime);
+        var controller = CreateAdminController(db, clock);
+        var request = new FaqEntryUpsertRequest("Clock question", "Clock answer", "Clock", true, false, true, 10);
+
+        var created = AssertOk<FaqEntryDto>(await controller.Create(request, CancellationToken.None));
+
+        Assert.Equal(initialTime, created.CreatedAt);
+        Assert.Equal(initialTime, created.UpdatedAt);
+
+        clock.UtcNow = initialTime.AddHours(1);
+        var updated = AssertOk<FaqEntryDto>(await controller.Update(
+            created.Id,
+            request with { Answer = "Updated answer", Revision = created.Revision },
+            CancellationToken.None));
+
+        Assert.Equal(initialTime, updated.CreatedAt);
+        Assert.Equal(clock.UtcNow, updated.UpdatedAt);
+    }
+
     [Fact]
     public void Faq_Read_Paths_Should_Keep_Production_Limits_Before_Materialization()
     {
@@ -323,7 +348,7 @@ public class FaqControllerTests
             SortOrder = sortOrder
         };
 
-    private static AdminFaqController CreateAdminController(ApplicationDbContext db)
+    private static AdminFaqController CreateAdminController(ApplicationDbContext db, IClock? clock = null)
     {
         var identity = new ClaimsIdentity(new[]
         {
@@ -331,13 +356,18 @@ public class FaqControllerTests
             new Claim(ClaimTypes.Role, UserRoles.Admin)
         }, "Test");
 
-        return new AdminFaqController(db)
+        return new AdminFaqController(db, clock)
         {
             ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
             }
         };
+    }
+
+    private sealed class MutableClock(DateTimeOffset utcNow) : IClock
+    {
+        public DateTimeOffset UtcNow { get; set; } = utcNow;
     }
 
     private static ApplicationDbContext CreateDb()

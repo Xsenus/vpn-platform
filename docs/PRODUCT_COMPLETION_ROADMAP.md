@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-14.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-app-release-clock-consistency`, версия `0.712.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `728/748` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-admin-crud-clock-and-capacity-gates`, версия `0.713.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `730/750` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-14:
 
-- [x] `STATE-001` Backend test suite проходит: `1495/1495`.
+- [x] `STATE-001` Backend test suite проходит: `1499/1499`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2608,6 +2608,14 @@ git diff --check
   - Что сделать: strict UTF-8 guard не должен читать transient `tmp` одновременно с cleanup локальных smoke-скриптов и случайно падать на исчезнувших файлах.
   - Что сделано: source-like inventory явно исключает корневой `tmp`, который уже исключен из secret scan и не является репозиторным источником; проверка tracked docs/source/release seed сохранена.
   - Доказательство: fail-first full Release suite упал с `DirectoryNotFoundException` на удаленном `tmp/fresh-local-smoke/keys/*.xml`; after-fix encoding regression `1/1` и повторные backend Debug/Release `1495/1495` зеленые, fresh SQLite smoke подтвердил latest release `2026-08-14-app-release-clock-consistency`.
+- [x] `P11-ACC-438` Синхронизировать admin CRUD и Telegram settings с application clock. 2026-08-14.
+  - Что сделать: FAQ, site content, work scenarios и Telegram settings не должны использовать системное время для create/update/restore, generated/check DTO и settings/template timestamps.
+  - Что сделано: четыре контроллера получают `IClock`; accepted mutations и Telegram read/update batch используют один `_clock.UtcNow`, включая новые entities, home defaults и response timestamps. Во всех API controllers устранены прямые `DateTimeOffset.UtcNow`/`DateTime.UtcNow` обращения.
+  - Доказательство: fail-first clock regressions `0/4` получили системное время вместо `2033-03-04T05:06:07Z`; after-fix targeted `4/4`, CRUD/Telegram regression `72/72`, backend Debug/Release `1499/1499`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Актуальный Playwright `268/268` на 25 viewport-конфигурациях остается применимым. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой.
+- [x] `P11-ACC-439` Устранить ложный failure last-slot capacity concurrency gate. 2026-08-14.
+  - Что сделать: тест не должен требовать позднюю remote compensation, если конкурентный запрос безопасно отклонен базой до remote create; oversubscription, orphan client и рассогласованная capacity по-прежнему недопустимы.
+  - Что сделано: gate допускает `1 add/0 delete` для раннего отказа и `2 add/1 delete` для поздней компенсации, сохраняя строгие проверки одного success, одного failure, одного local client и panel/inbound capacity `1/1`.
+  - Доказательство: full Debug suite под параллельной нагрузкой получил безопасный путь `1 add/0 delete`, но упал `1498/1499`; после уточнения контракта изолированные capacity прогоны `5/5` и последовательные backend Debug/Release `1499/1499` зеленые.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: admin CRUD clock and capacity gates
+
+Scope:
+- FAQ, site content, work scenarios и Telegram bot settings должны использовать единый application clock для DTO и persisted timestamps.
+- Последний inbound slot не должен oversubscribe при раннем database rejection или поздней remote compensation.
+
+Results:
+- Roadmap progress: `730/750` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-admin-crud-clock-and-capacity-gates`, version `0.713.0`.
+- Fail-first: четыре clock regressions сохранили системное время вместо `2033-03-04T05:06:07Z` (`0/4`); полный Debug suite дополнительно выявил ложный capacity failure при безопасном раннем отказе (`1498/1499`).
+- After fix: create/update/restore и Telegram read/update batch используют один `_clock.UtcNow`; capacity test принимает один remote add без delete либо два add с одной компенсацией, сохраняя одного клиента и capacity `1/1`. Targeted clock `4/4`, CRUD/Telegram `72/72`, capacity `5/5`, backend Debug/Release `1499/1499`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow, EF drift, secret scan `704/0` и dependency audit `0 vulnerabilities` зеленые. Актуальный Playwright `268/268` на 25 viewport-конфигурациях остается применимым, frontend не менялся. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-14: app release clock consistency
 
 Scope:

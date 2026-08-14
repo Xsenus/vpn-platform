@@ -5,6 +5,7 @@ using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Domain.Entities;
+using VpnPlatform.Infrastructure.Services;
 
 namespace VpnPlatform.Api.Controllers.Admin;
 
@@ -39,10 +40,12 @@ public class AdminSiteContentController : ControllerBase
     private static readonly string[] NormalizedRequiredHomeKeys = RequiredHomeKeys.Select(key => key.ToLowerInvariant()).ToArray();
 
     private readonly IApplicationDbContext _db;
+    private readonly IClock _clock;
 
-    public AdminSiteContentController(IApplicationDbContext db)
+    public AdminSiteContentController(IApplicationDbContext db, IClock? clock = null)
     {
         _db = db;
+        _clock = clock ?? new SystemClock();
     }
 
     [HttpGet]
@@ -77,7 +80,7 @@ public class AdminSiteContentController : ControllerBase
     {
         var created = 0;
         var restored = 0;
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
 
         foreach (var item in RequiredHomeDefaults)
         {
@@ -88,7 +91,7 @@ public class AdminSiteContentController : ControllerBase
                 .FirstOrDefaultAsync(cancellationToken);
             if (block is null)
             {
-                block = item.ToEntity();
+                block = item.ToEntity(now);
                 _db.SiteContentBlocks.Add(block);
                 created++;
                 continue;
@@ -177,6 +180,10 @@ public class AdminSiteContentController : ControllerBase
             return BadRequest(new { error = "Content key already exists." });
         }
 
+        var now = _clock.UtcNow;
+        block.CreatedAt = now;
+        block.UpdatedAt = now;
+
         _db.SiteContentBlocks.Add(block);
         AdminAuditLogWriter.Add(_db, this, "site_content.create", "SiteContentBlock", block.Id, null, Map(block));
         await _db.SaveChangesAsync(cancellationToken);
@@ -209,7 +216,7 @@ public class AdminSiteContentController : ControllerBase
         var before = Map(block);
         Copy(candidate, block);
         block.Revision++;
-        block.UpdatedAt = DateTimeOffset.UtcNow;
+        block.UpdatedAt = _clock.UtcNow;
         AdminAuditLogWriter.Add(_db, this, "site_content.update", "SiteContentBlock", block.Id, before, Map(block));
         try
         {
@@ -330,7 +337,7 @@ public class AdminSiteContentController : ControllerBase
 
     private sealed record SiteContentDefault(string Key, string Value, string Label, string Description, int SortOrder, string InputType = "text")
     {
-        public SiteContentBlock ToEntity()
+        public SiteContentBlock ToEntity(DateTimeOffset now)
             => new()
             {
                 Key = Key,
@@ -340,7 +347,9 @@ public class AdminSiteContentController : ControllerBase
                 Description = Description,
                 InputType = InputType,
                 IsActive = true,
-                SortOrder = SortOrder
+                SortOrder = SortOrder,
+                CreatedAt = now,
+                UpdatedAt = now
             };
     }
 }

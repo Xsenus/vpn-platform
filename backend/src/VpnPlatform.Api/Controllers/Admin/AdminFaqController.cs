@@ -6,6 +6,7 @@ using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Domain.Entities;
+using VpnPlatform.Infrastructure.Services;
 
 namespace VpnPlatform.Api.Controllers.Admin;
 
@@ -15,10 +16,12 @@ namespace VpnPlatform.Api.Controllers.Admin;
 public sealed class AdminFaqController : ControllerBase
 {
     private readonly IApplicationDbContext _db;
+    private readonly IClock _clock;
 
-    public AdminFaqController(IApplicationDbContext db)
+    public AdminFaqController(IApplicationDbContext db, IClock? clock = null)
     {
         _db = db;
+        _clock = clock ?? new SystemClock();
     }
 
     [HttpGet]
@@ -120,6 +123,10 @@ public sealed class AdminFaqController : ControllerBase
             return BadRequest(new { error = "FAQ question already exists in this category." });
         }
 
+        var now = _clock.UtcNow;
+        entry.CreatedAt = now;
+        entry.UpdatedAt = now;
+
         _db.FaqEntries.Add(entry);
         AdminAuditLogWriter.Add(_db, this, "faq.create", "FaqEntry", entry.Id, null, MapFaq(entry));
         await _db.SaveChangesAsync(cancellationToken);
@@ -161,7 +168,7 @@ public sealed class AdminFaqController : ControllerBase
         var before = MapFaq(entry);
         Copy(candidate, entry);
         entry.Revision = checked(entry.Revision + 1);
-        entry.UpdatedAt = DateTimeOffset.UtcNow;
+        entry.UpdatedAt = _clock.UtcNow;
         AdminAuditLogWriter.Add(_db, this, "faq.update", "FaqEntry", entry.Id, before, MapFaq(entry));
         try
         {

@@ -16748,5 +16748,32 @@
         "text": "Roadmap progress is 728/748 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-admin-crud-clock-and-capacity-gates",
+    "version": "0.713.0",
+    "releasedAt": "2026-08-14T08:40:00+07:00",
+    "title": "Админские операции сохраняют согласованное время",
+    "summary": "FAQ, контент, сценарии и Telegram settings переведены на application clock; capacity concurrency gate учитывает оба безопасных пути.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Create, update и restore для FAQ, site content и work scenarios используют единый IClock boundary."
+      },
+      {
+        "type": "fixed",
+        "text": "Telegram settings GeneratedAt, CheckedAt, settings и notification templates получают согласованные application timestamps."
+      },
+      {
+        "type": "improved",
+        "text": "X3Ui last-slot concurrency test принимает ранний безопасный отказ и позднюю compensation, продолжая требовать одного клиента и capacity 1/1."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 730/750 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

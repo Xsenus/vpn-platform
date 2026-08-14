@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Api.Controllers.Admin;
+using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Domain.Entities;
@@ -14,6 +15,30 @@ namespace VpnPlatform.UnitTests;
 
 public class WorkScenarioControllerTests
 {
+    [Fact]
+    public async Task AdminWorkScenario_Mutations_Should_Use_Injected_Clock()
+    {
+        await using var db = CreateDb();
+        var initialTime = new DateTimeOffset(2033, 3, 4, 5, 6, 7, TimeSpan.Zero);
+        var clock = new MutableClock(initialTime);
+        var controller = CreateController(db, clock);
+        var request = Request("clock-scenario");
+
+        var created = AssertOk<WorkScenarioDto>(await controller.Create(request, CancellationToken.None));
+
+        Assert.Equal(initialTime, created.CreatedAt);
+        Assert.Equal(initialTime, created.UpdatedAt);
+
+        clock.UtcNow = initialTime.AddHours(1);
+        var updated = AssertOk<WorkScenarioDto>(await controller.Update(
+            created.Id,
+            request with { Name = "Updated clock scenario", Revision = created.Revision },
+            CancellationToken.None));
+
+        Assert.Equal(initialTime, updated.CreatedAt);
+        Assert.Equal(clock.UtcNow, updated.UpdatedAt);
+    }
+
     [Fact]
     public async Task AdminWorkScenarios_Should_Limit_List()
     {
@@ -413,7 +438,7 @@ public class WorkScenarioControllerTests
             MaxDevices = 3
         };
 
-    private static AdminWorkScenariosController CreateController(ApplicationDbContext db)
+    private static AdminWorkScenariosController CreateController(ApplicationDbContext db, IClock? clock = null)
     {
         var identity = new ClaimsIdentity(new[]
         {
@@ -421,13 +446,18 @@ public class WorkScenarioControllerTests
             new Claim(ClaimTypes.Role, UserRoles.Admin)
         }, "Test");
 
-        return new AdminWorkScenariosController(db)
+        return new AdminWorkScenariosController(db, clock)
         {
             ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
             }
         };
+    }
+
+    private sealed class MutableClock(DateTimeOffset utcNow) : IClock
+    {
+        public DateTimeOffset UtcNow { get; set; } = utcNow;
     }
 
     private static ApplicationDbContext CreateDb()
