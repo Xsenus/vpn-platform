@@ -21,16 +21,14 @@ public static class SensitiveDataRedactor
             return string.Empty;
         }
 
-        var redacted = maxLength.HasValue && value.Length > maxLength.Value
-            ? value[..maxLength.Value] + "\n...[truncated]"
-            : value;
+        var redacted = value;
 
-        foreach (var secret in knownSecrets ?? Enumerable.Empty<string?>())
+        foreach (var secret in (knownSecrets ?? Enumerable.Empty<string?>())
+                     .Where(secret => !string.IsNullOrWhiteSpace(secret))
+                     .Distinct(StringComparer.Ordinal)
+                     .OrderByDescending(secret => secret!.Length))
         {
-            if (!string.IsNullOrWhiteSpace(secret))
-            {
-                redacted = redacted.Replace(secret, Replacement, StringComparison.Ordinal);
-            }
+            redacted = redacted.Replace(secret!, Replacement, StringComparison.Ordinal);
         }
 
         foreach (var pattern in Patterns)
@@ -56,6 +54,22 @@ public static class SensitiveDataRedactor
             });
         }
 
-        return redacted;
+        if (!maxLength.HasValue || redacted.Length <= maxLength.Value)
+        {
+            return redacted;
+        }
+
+        const string truncationSuffix = "\n...[truncated]";
+        if (maxLength.Value <= 0)
+        {
+            return string.Empty;
+        }
+
+        if (maxLength.Value <= truncationSuffix.Length)
+        {
+            return truncationSuffix[..maxLength.Value];
+        }
+
+        return redacted[..(maxLength.Value - truncationSuffix.Length)] + truncationSuffix;
     }
 }

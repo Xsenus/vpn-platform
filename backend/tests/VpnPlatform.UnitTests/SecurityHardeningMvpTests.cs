@@ -55,6 +55,35 @@ public class SecurityHardeningMvpTests
     }
 
     [Fact]
+    public void SensitiveDataRedactor_Should_Redact_Known_Secret_Before_Length_Limit()
+    {
+        var secret = "reset-code-" + new string('s', 64);
+        var text = new string('x', 470) + secret + new string('y', 100);
+
+        var redacted = SensitiveDataRedactor.Redact(text, new[] { secret[..10], secret }, maxLength: 500);
+
+        Assert.DoesNotContain(secret[..30], redacted, StringComparison.Ordinal);
+        Assert.DoesNotContain(secret[10..], redacted, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", redacted, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(500, redacted.Length);
+        Assert.EndsWith("[truncated]", redacted, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SensitiveDataRedactor_Should_Redact_Private_Key_Before_Length_Limit()
+    {
+        const string keyBody = "private-key-body-prefix-that-must-not-leak";
+        var privateKey = $"-----BEGIN PRIVATE KEY-----\n{keyBody}{new string('A', 96)}\n-----END PRIVATE KEY-----";
+        var text = new string('x', 430) + privateKey;
+
+        var redacted = SensitiveDataRedactor.Redact(text, maxLength: 500);
+
+        Assert.DoesNotContain(keyBody, redacted, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", redacted, StringComparison.OrdinalIgnoreCase);
+        Assert.True(redacted.Length <= 500);
+    }
+
+    [Fact]
     public async Task Admin_AddServer_Should_Store_New_Panel_And_Ssh_Secrets_Protected()
     {
         await using var db = CreateDbContext();

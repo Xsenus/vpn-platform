@@ -17049,5 +17049,32 @@
         "text": "Roadmap progress is 743/763 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-redact-before-truncation",
+    "version": "0.724.0",
+    "releasedAt": "2026-08-14T13:58:18+07:00",
+    "title": "Diagnostic secrets are removed before truncation",
+    "summary": "Known secrets and PEM private keys can no longer leak partial values across diagnostic length limits.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Known secrets and PEM private keys are redacted from complete diagnostic text before max-length truncation."
+      },
+      {
+        "type": "fixed",
+        "text": "Overlapping known secrets are processed longest-first so replacing a short prefix cannot expose the remaining secret tail."
+      },
+      {
+        "type": "improved",
+        "text": "Diagnostic truncation markers now fit inside the requested final length, including persisted email reset delivery errors."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 744/764 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

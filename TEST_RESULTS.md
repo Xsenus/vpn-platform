@@ -2,6 +2,20 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: redact before truncation
+
+Scope:
+- Known secrets and PEM private keys must be removed from complete diagnostic text before any `maxLength` truncation.
+- Overlapping known secrets must be processed longest-first so shorter prefixes cannot leave a secret tail.
+- The truncation suffix must fit inside the requested final length, including the email password-reset retry persistence path.
+
+Results:
+- Roadmap progress: `744/764` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-redact-before-truncation`, version `0.724.0`.
+- Fail-first: direct redactor and SQLite email delivery regressions completed `0/3` and reproduced partial reset-code and PEM body disclosure across the 500-character boundary.
+- After fix: redaction runs on full text before truncation, known secrets are distinct and longest-first, and final output stays within `maxLength`. Focused `3/3`, redactor consumer regression `247/247`, backend Debug/Release `1551/1551`, Release build `0 warnings / 0 errors`, docs/encoding `62/62`, fresh SQLite full flow latest release, formatter, EF drift and secret scan `707/0` are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-14: payment error redaction
 
 Scope:

@@ -81,6 +81,35 @@ public sealed class EmailNotificationDeliveryTests
     }
 
     [Fact]
+    public async Task Password_Reset_Failure_Should_Redact_Code_Before_Error_Length_Limit()
+    {
+        await using var connection = await OpenConnectionAsync();
+        await using var db = CreateDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 14, 7, 0, 0, TimeSpan.Zero);
+        var resetCode = "reset-code-" + new string('s', 64);
+        var user = User();
+        var delivery = Delivery(user, now, "password_reset_requested", JsonSerializer.Serialize(new
+        {
+            protectedResetToken = $"protected:{resetCode}",
+            expiryMinutes = 30
+        }));
+        db.Users.Add(user);
+        db.NotificationDeliveries.Add(delivery);
+        await db.SaveChangesAsync();
+        var sender = new ThrowingSender(new string('x', 470) + resetCode);
+
+        var result = await new EmailNotificationDeliveryService(db, new MutableClock(now), sender, new TestProtector())
+            .DeliverAsync(delivery.Id);
+
+        Assert.False(result.IsSuccess);
+        var stored = await db.NotificationDeliveries.AsNoTracking().SingleAsync();
+        Assert.DoesNotContain(resetCode[..30], stored.ErrorText ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", stored.ErrorText ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.True(stored.ErrorText?.Length <= 500);
+    }
+
+    [Fact]
     public async Task Dispatchable_Query_Should_Include_Due_And_Stale_Only()
     {
         await using var connection = await OpenConnectionAsync();
@@ -255,5 +284,11 @@ public sealed class EmailNotificationDeliveryTests
 
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class ThrowingSender(string error) : IEmailSender
+    {
+        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken)
+            => throw new InvalidOperationException(error);
     }
 }

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.724.0 - 2026-08-14
+
+Release entry: `2026-08-14-redact-before-truncation`.
+
+### Исправлено
+
+- `SensitiveDataRedactor` теперь удаляет known secrets и PEM private keys из полного diagnostic text до применения `maxLength`, поэтому секрет, пересекающий границу truncation, не раскрывается частично.
+- Перекрывающиеся known secrets дедуплицируются и обрабатываются от длинного к короткому, исключая утечку хвоста после замены короткого префикса.
+- Truncation suffix входит в итоговый лимит; email password-reset retry не сохраняет начало reset-кода в `NotificationDelivery.ErrorText`.
+
+### Проверено
+
+- Fail-first redaction/email regressions `0/3`; after-fix focused `3/3`, redactor consumer regression `247/247`, backend Debug/Release `1551/1551`, Release build `0 warnings / 0 errors`, docs/encoding `62/62`, fresh SQLite full flow latest release, глобальный formatter, EF drift и secret scan `707/0` зелёные.
+- Roadmap `744/764` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.723.0 - 2026-08-14
 
 Release entry: `2026-08-14-payment-error-redaction`.
