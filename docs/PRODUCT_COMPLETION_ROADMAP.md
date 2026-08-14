@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-14.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-russian-date-and-status-localization`, версия `0.728.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `751/771` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-admin-business-label-localization`, версия `0.729.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `752/772` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-14:
 
 - [x] `STATE-001` Backend test suite проходит: `1555/1555`.
-- [x] `STATE-002` Frontend test suite проходит: `177/177`.
+- [x] `STATE-002` Frontend test suite проходит: `178/178`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2700,6 +2700,10 @@ git diff --check
   - Что сделать: история заказов/платежей, связанные order/subscription options и support accessible names не должны показывать `NewSubscription`, `Sandbox`, `Completed`, `Active` или `open` вместо русских подписей.
   - Что сделано: shared status formatter экспортирован из UI-пакета, добавлен production mode label, типы заказов форматируются bounded map; обычный текст, options и `aria-label` используют единый словарь.
   - Доказательство: focused unit `21/21`, frontend `177/177`, browser DOM assertions, targeted desktop/mobile `2/2`, полный Playwright `270/270`, backend Debug/Release `1555/1555`, fresh SQLite latest release, formatter, EF drift, secret scan `709/0` и dependency audit `0 vulnerabilities` зелёные; desktop/mobile screenshots не имеют overflow или clipping.
+- [x] `P11-ACC-461` Локализировать business enum metadata в админке. 2026-08-14.
+  - Что сделать: способы оплаты, заказы, возвраты, поддержка, «Что нового» и action-уведомления не должны показывать `Sandbox`, `Web`, `NewSubscription`, `inbound`, `new`, `Succeeded`, `Healthy` или `Unknown` вместо русских подписей.
+  - Что сделано: shared status formatter расширен bounded business labels; admin lists, notices и user overview используют его на UI-границе, а технические VPN identifiers и raw operational diagnostics сохранены без смысловой подмены; bundle raw budget увеличен только на 1 KiB, gzip limit не менялся.
+  - Доказательство: fail-first focused guard `0/2`; after-fix focused unit/contract `12/12`, frontend `178/178`, typecheck/build, admin bundle `561658/562176`, targeted admin desktop/mobile `16/16`, полный Playwright `270/270`, backend Debug/Release `1555/1555`, API build `0 warnings / 0 errors`, fresh SQLite latest release, formatter, EF drift, secret scan `710/0` и dependency audit `0 vulnerabilities` зелёные; all 17 admin sections прошли 25 viewport-конфигураций, representative payments/support/releases screenshots просмотрены вручную без overflow, clipping или browser diagnostics.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

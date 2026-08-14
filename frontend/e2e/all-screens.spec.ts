@@ -633,7 +633,17 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path.endsWith('/messages')) {
-      await fulfillJson(route, [])
+      await fulfillJson(route, [{
+        id: 'support-message-all-screens',
+        supportConversationId: 'support-all-screens',
+        userId: user.id,
+        telegramUserId: null,
+        direction: 'inbound',
+        text: 'Проверка локализованного диалога поддержки.',
+        attachmentsJson: '[]',
+        isInternalNote: false,
+        createdAt: now
+      }])
       return
     }
 
@@ -1173,6 +1183,17 @@ test('every admin section renders without blank screens or browser errors', asyn
     }
     if (pristineCreateFormSelector[section]) {
       await expect(page.locator(pristineCreateFormSelector[section]).first().locator('.form-validation-summary')).toHaveCount(0)
+    }
+    if (section === 'payments') {
+      await expect(page.getByText(/канал: Сайт · тип: Новая подписка/)).toBeVisible()
+      await expect(page.getByText(/YooKassa · Проверка · показывается на сайте/)).toBeVisible()
+    }
+    if (section === 'support') {
+      await expect(page.getByText(/Сайт · tg:—/)).toBeVisible()
+      await expect(page.getByText('От пользователя', { exact: true })).toBeVisible()
+    }
+    if (section === 'releases') {
+      await expect(page.getByText('Новое: All screens smoke is available.', { exact: true })).toBeVisible()
     }
     await captureAuditScreenshot(page, testInfo, `admin-${section}-desktop`)
   }

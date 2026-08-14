@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.729.0 - 2026-08-14
+
+Release entry: `2026-08-14-admin-business-label-localization`.
+
+### Исправлено
+
+- Админка локализует режимы платежных провайдеров, каналы и типы заказов, направления сообщений поддержки, типы пунктов релиза и статусы action-уведомлений вместо вывода backend enum.
+- Единый shared formatter теперь покрывает web/Telegram-каналы, order types, 3x-ui provider type, support directions и release item types; технические VPN identifiers и diagnostics остаются без смысловой подмены.
+- All-screens fixtures проверяют локализованные метаданные разделов «Оплаты», «Поддержка» и «Что нового» на desktop и полной responsive-матрице.
+
+### Проверено
+
+- Fail-first unit/source guard завершился `0/2`: formatter возвращал `NewSubscription`, а admin source напрямую выводил `account.mode`. After-fix focused unit/contract `12/12`, frontend `178/178`, typecheck/build, admin bundle `561658/562176`, dependency audit `0 vulnerabilities` зелёные.
+- Целевой Playwright admin desktop/mobile `16/16`, полный Playwright `270/270`, backend Debug/Release `1555/1555`, API build `0 warnings / 0 errors`, fresh SQLite full flow, formatter и EF drift зелёные; secret scan `710/0`. Representative desktop/mobile screenshots просмотрены вручную, invalid geometry `0`, browser diagnostics `0`. Roadmap `752/772` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.728.0 - 2026-08-14
 
 Release entry: `2026-08-14-russian-date-and-status-localization`.

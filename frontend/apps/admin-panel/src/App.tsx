@@ -51,7 +51,7 @@ import {
   PanelSyncRunDto,
   normalizeApiError
 } from '@vpn-platform/api-client'
-import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, formatReferralRewardType, formatReferralRewardValue, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
+import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, formatReferralRewardType, formatReferralRewardValue, formatStatusLabel, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
 import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from './admin-users'
 import { adminSectionIds, adminSectionLabels, canAccessAdminSection, canWriteAdminSection, parseAdminSectionHref, type AdminSectionId } from './admin-capabilities'
 import { getAdminPageMetadata } from './admin-page-metadata'
@@ -1064,9 +1064,9 @@ function providerIssue(account: PaymentProviderAccountDto) {
   if (account.checkoutConfigurationIssue) return account.checkoutConfigurationIssue
   if (providerConfigured(account)) return 'Готов к оплатам'
   if (!account.isEnabled) return 'Провайдер выключен.'
-  if (account.mode === 'Disabled') return 'Режим провайдера: Disabled.'
+  if (account.mode === 'Disabled') return 'Режим провайдера выключен.'
   if (!account.shopId) return 'Нужен ShopId или merchant identifier.'
-  if (account.provider !== 'TelegramStars' && account.mode === 'Production' && !account.hasSecretKey) return 'Для production нужен защищенный secret key.'
+  if (account.provider !== 'TelegramStars' && account.mode === 'Production' && !account.hasSecretKey) return 'Для рабочего режима нужен защищенный secret key.'
   return 'Не настроен.'
 }
 
@@ -2435,7 +2435,7 @@ export function App() {
     }
     const payment = await api.recheckAdminPayment(token, paymentId)
     if (!action.isCurrent()) return
-    setNotice(`Платеж ${shortId(payment.paymentId)} проверен: ${payment.status}`)
+    setNotice(`Платеж ${shortId(payment.paymentId)} проверен: ${formatStatusLabel(payment.status)}`)
     await action.reloadAll()
   }, paymentActionResourceKeys(paymentId, payments.find((payment) => payment.id === paymentId)?.orderId))
 
@@ -2447,7 +2447,7 @@ export function App() {
     }
     const payment = await api.recheckAdminOrderPayment(token, order.id)
     if (!action.isCurrent()) return
-    setNotice(`Заказ ${shortId(order.id)}: последний платеж ${shortId(payment.paymentId)} проверен, статус ${payment.status}.`)
+    setNotice(`Заказ ${shortId(order.id)}: последний платеж ${shortId(payment.paymentId)} проверен, статус ${formatStatusLabel(payment.status)}.`)
     await action.reloadAll()
   }, [
     orderActionResourceKey(order.id),
@@ -2488,7 +2488,7 @@ export function App() {
         throw error
       }
       if (!action.isCurrent()) return
-      setNotice(`Возврат ${refund.providerRefundId || refund.id}: ${refund.status}`)
+      setNotice(`Возврат ${refund.providerRefundId || refund.id}: ${formatStatusLabel(refund.status)}`)
       setRefundAmounts((current) => {
         const next = { ...current }
         delete next[payment.id]
@@ -2508,7 +2508,7 @@ export function App() {
       }
       const result = await api.recheckAdminRefund(token, refund.id)
       if (!action.isCurrent()) return
-      setNotice(`Возврат ${result.providerRefundId || shortId(result.id)} проверен: ${result.status}`)
+      setNotice(`Возврат ${result.providerRefundId || shortId(result.id)} проверен: ${formatStatusLabel(result.status)}`)
       await action.reloadAll()
     }, refundActionResourceKeys(refund))
   }
@@ -2528,7 +2528,7 @@ export function App() {
         throw error
       }
       if (!action.isCurrent()) return
-      setNotice(`Возврат ${result.providerRefundId || shortId(result.id)} повторён: ${result.status}`)
+      setNotice(`Возврат ${result.providerRefundId || shortId(result.id)} повторён: ${formatStatusLabel(result.status)}`)
       await action.reloadAll()
     }, refundActionResourceKeys(refund))
   }
@@ -3441,7 +3441,7 @@ export function App() {
   const handleTestVpnPanel = (panelId: string) => runAction('panels', `test-${panelId}`, async (action) => {
     const result = await api.testAdminVpnPanel(token, panelId)
     if (!action.isCurrent()) return
-    setNotice(`Проверка панели: ${result.status} (${result.version || 'версия неизвестна'})`)
+    setNotice(`Проверка панели: ${formatStatusLabel(result.status)} (${result.version || 'версия неизвестна'})`)
     await action.reloadAll()
     await loadVpnPanelDetails(panelId, token, action.operationId)
   }, vpnPanelActionResourceKey(panelId))
@@ -3449,7 +3449,7 @@ export function App() {
   const handleSyncVpnPanel = (panelId: string) => runAction('panels', `sync-${panelId}`, async (action) => {
     const result = await api.syncAdminVpnPanel(token, panelId)
     if (!action.isCurrent()) return
-    setNotice(`Синхронизация ${result.status}: ${result.summaryJson || result.errorMessage}`)
+    setNotice(`Синхронизация ${formatStatusLabel(result.status)}: ${result.summaryJson || result.errorMessage}`)
     await action.reloadAll()
     await loadVpnPanelDetails(panelId, token, action.operationId)
   }, vpnPanelActionResourceKey(panelId))
@@ -3458,7 +3458,7 @@ export function App() {
     const saved = await api.updateAdminVpnPanel(token, panel.id, { status, revision: panel.revision })
       .catch((error: unknown) => throwVpnPanelConflict(error, action))
     if (!action.isCurrent()) return
-    setNotice(`Панель ${saved.name}: статус ${saved.status}.`)
+    setNotice(`Панель ${saved.name}: статус ${formatStatusLabel(saved.status)}.`)
     await action.reloadAll()
     await loadVpnPanelDetails(panel.id, token, action.operationId)
   }, vpnPanelActionResourceKey(panel.id))
@@ -3716,7 +3716,7 @@ export function App() {
   const handleCheckServerHealth = (server: VpnNodeDto) => runAction('nodes', `health-server-${server.id}`, async (action) => {
     const check = await api.checkAdminServerHealth(token, server.id)
     if (!action.isCurrent()) return
-    setNotice(`Health-check ${server.name}: ${check.status}${check.errorText ? ` · ${check.errorText}` : ''}`)
+    setNotice(`Health-check ${server.name}: ${formatStatusLabel(check.status)}${check.errorText ? ` · ${check.errorText}` : ''}`)
     await action.reloadAll()
   }, serverActionResourceKey(server.id))
 
@@ -4329,7 +4329,7 @@ export function App() {
                   <div key={order.id} className="list-item">
                     <div>
                       <strong>{order.tariffName || shortId(order.tariffId)} · {order.amount} {order.currency}</strong>
-                      <div className="muted">{order.channel || '—'} · {order.paymentProvider || '—'} · создан {formatDate(order.createdAt)} · оплачен {formatDate(order.paidAt)}</div>
+                      <div className="muted">{order.channel ? formatStatusLabel(order.channel) : '—'} · {order.paymentProvider || '—'} · создан {formatDate(order.createdAt)} · оплачен {formatDate(order.paidAt)}</div>
                     </div>
                     <StatusBadge value={order.status} />
                   </div>
@@ -4353,7 +4353,7 @@ export function App() {
                 {userOverview.accessCredentials.slice(0, 5).map((access) => (
                   <div key={access.id} className="list-item">
                     <div>
-                      <strong>{access.providerType} · {access.serverName || shortId(access.serverId)}</strong>
+                      <strong>{formatStatusLabel(access.providerType)} · {access.serverName || shortId(access.serverId)}</strong>
                       <div className="muted">выдан {formatDate(access.issuedAt)} · sync {formatDate(access.lastSyncedAt)} · ревизия {access.revision}</div>
                       {getAdminAccessTerminalReason(access, adminAccessNow)
                         ? <div className="muted user-overview-link">Ключ скрыт: подписка или доступ завершены.</div>
@@ -4383,7 +4383,7 @@ export function App() {
                   <div key={conversation.id} className="list-item">
                     <div>
                       <strong>{conversation.subject || 'Обращение'}</strong>
-                      <div className="muted">{conversation.channel} · tg:{conversation.telegramUserId ?? '—'} · обновлено {formatDate(conversation.updatedAt)}</div>
+                      <div className="muted">{formatStatusLabel(conversation.channel)} · tg:{conversation.telegramUserId ?? '—'} · обновлено {formatDate(conversation.updatedAt)}</div>
                       {conversation.internalNote && <div className="muted">заметка: {conversation.internalNote}</div>}
                     </div>
                     <StatusBadge value={conversation.status} />
@@ -4472,7 +4472,7 @@ export function App() {
                 <div className="card-head">
                   <div>
                     <strong>{account.publicName}</strong>
-                    <div className="muted">{providerSetup(account.provider).title} · {account.mode} · {providerSetup(account.provider).channel === 'web' ? 'показывается в web после готовности' : 'только Telegram-бот'} · {account.name}</div>
+                    <div className="muted">{providerSetup(account.provider).title} · {formatStatusLabel(account.mode)} · {providerSetup(account.provider).channel === 'web' ? 'показывается на сайте после готовности' : 'только Telegram-бот'} · {account.name}</div>
                     <div className="muted">{providerSetup(account.provider).shopIdLabel}: {account.shopId || '—'} · {providerSetup(account.provider).secretLabel}: {account.hasSecretKey ? 'задан' : 'пусто'} · {providerSetup(account.provider).webhookSecretLabel}: {account.hasWebhookSecret ? 'задан' : 'пусто'}</div>
                     <div className="muted">API: {account.apiBaseUrl || '—'} · возврат: {account.returnUrl || '—'} · URL webhook: {account.webhookUrl || '—'}</div>
                     <div className="muted">Список разрешенных IP: {account.useWebhookIpAllowList ? (account.allowedWebhookIpRangesCsv || 'включен, список пуст') : 'не используется'} · дополнительные параметры: {account.extraSettingsJson && account.extraSettingsJson !== '{}' ? 'задан' : 'пусто'}</div>
@@ -4537,9 +4537,9 @@ export function App() {
                 <div className="item-head">
                   <div>
                     <strong>{order.amount} {order.currency} · {order.tariffName || shortId(order.tariffId)}</strong>
-                    <div className="muted">Пользователь: {order.userDisplayName || order.userEmail || shortId(order.userId)} · канал: {order.channel ?? '—'} · тип: {order.type ?? '—'}</div>
+                    <div className="muted">Пользователь: {order.userDisplayName || order.userEmail || shortId(order.userId)} · канал: {order.channel ? formatStatusLabel(order.channel) : '—'} · тип: {order.type ? formatStatusLabel(order.type) : '—'}</div>
                     <div className="muted">Создан: {formatDate(order.createdAt)} · истекает: {formatDate(order.expiresAt)} · оплачен: {formatDate(order.paidAt)}</div>
-                    <div className="muted">Провайдер: {order.paymentProvider ?? '—'} · попыток оплаты: {order.paymentAttemptsCount ?? 0} · последний платеж: {shortId(order.lastPaymentId)} {order.lastPaymentStatus ? `(${order.lastPaymentStatus})` : ''}</div>
+                    <div className="muted">Провайдер: {order.paymentProvider ?? '—'} · попыток оплаты: {order.paymentAttemptsCount ?? 0} · последний платеж: {shortId(order.lastPaymentId)} {order.lastPaymentStatus ? `(${formatStatusLabel(order.lastPaymentStatus)})` : ''}</div>
                     <div className="muted">Заказ: {shortId(order.id)} · подписка: {shortId(order.linkedSubscriptionId)}</div>
                   </div>
                   <div className="item-status">
@@ -4721,7 +4721,7 @@ export function App() {
               </div>
               <label className="checkbox-row"><input type="checkbox" checked={referralProgramForm.firstPurchaseOnly} onChange={(event) => updateReferralProgramForm('firstPurchaseOnly', event.target.checked)} /> Только первая покупка подписки</label>
               <div className="checkbox-grid" role="group" aria-label="Каналы продаж">
-                {['Web', 'Telegram', 'Discord', 'Vk', 'WhatsApp', 'Email'].map((channel) => <label key={channel} className="checkbox-row"><input type="checkbox" checked={referralProgramForm.allowedChannels.includes(channel)} onChange={() => toggleReferralChannel(channel)} /> {channel}</label>)}
+                {['Web', 'Telegram', 'Discord', 'Vk', 'WhatsApp', 'Email'].map((channel) => <label key={channel} className="checkbox-row"><input type="checkbox" checked={referralProgramForm.allowedChannels.includes(channel)} onChange={() => toggleReferralChannel(channel)} /> {formatStatusLabel(channel)}</label>)}
               </div>
             </fieldset>
             <fieldset className="form-section">
@@ -4782,7 +4782,7 @@ export function App() {
                   <div className="item-head">
                     <div>
                       <strong>{subscription.tariffName || shortId(subscription.tariffId)}</strong>
-                      <div className="muted">Пользователь: {shortId(subscription.userId)} · источник: {subscription.sourceChannel ?? '—'} · период {formatDate(subscription.startAt)} - {formatDate(subscription.endAt)}</div>
+                      <div className="muted">Пользователь: {shortId(subscription.userId)} · источник: {subscription.sourceChannel ? formatStatusLabel(subscription.sourceChannel) : '—'} · период {formatDate(subscription.startAt)} - {formatDate(subscription.endAt)}</div>
                       <div className="muted">Доступ: {shortId(subscription.currentAccessId)} · сервер: {shortId(subscription.currentServerId)} · платеж: {shortId(subscription.lastPaymentId)} · продлений: {subscription.renewalCount ?? 0}</div>
                       <div className="muted">Льготный период до: {formatDate(subscription.gracePeriodEndAt)} · причина ограничения: {subscription.blockReason || '—'}</div>
                       {subscription.lifecycleLastError && <div className="error-text">Ошибка отключения: {subscription.lifecycleLastError} · попытка {subscription.lifecycleAttemptCount ?? 0} · повтор {formatDate(subscription.lifecycleNextAttemptAt)}</div>}
@@ -4838,7 +4838,7 @@ export function App() {
                 && access.status !== 'Revoked'
               return <div key={access.id} className="list-item-vertical">
                 <div className="item-head">
-                  <strong>{access.providerType} · {isTerminal ? shortId(access.id) : (access.providerAccessId || shortId(access.id))}</strong>
+                  <strong>{formatStatusLabel(access.providerType)} · {isTerminal ? shortId(access.id) : (access.providerAccessId || shortId(access.id))}</strong>
                   <StatusBadge value={access.status} />
                 </div>
                 <div className="muted">Пользователь: {shortId(access.userId)} · подписка: {shortId(access.subscriptionId)} · сервер: {access.serverName || shortId(access.serverId)} · до: {formatDate(access.expiryDate)}</div>
@@ -5053,7 +5053,7 @@ export function App() {
           <h3>Обращения в поддержку</h3>
           <div className="list-stack">{supportConversations.length === 0 && <EmptyState title="Нет обращений" description="Сообщения из кабинета и Telegram появятся в этом списке." />}{supportConversations.slice(0, 12).map((conversation) => {
             const statusBusy = actionBusyResourceKeys.has(supportActionResourceKey(conversation.id))
-            return <div key={conversation.id} className={`list-item-vertical${selectedSupportConversationId === conversation.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{conversation.subject || 'Обращение в поддержку'}</strong><div className="muted">{conversation.channel} · tg:{conversation.telegramUserId ?? '—'} · пользователь:{shortId(conversation.userId)}</div><div className="muted">Ответственный: {shortId(conversation.assignedToUserId)} · заметка: {conversation.internalNote || '—'}</div></div><StatusBadge value={conversation.status} /></div><div className="toolbar"><PrimaryButton className={selectedSupportConversationId === conversation.id ? 'button-secondary' : 'button-ghost'} onClick={() => selectSupportConversation(conversation.id)}>{selectedSupportConversationId === conversation.id ? 'Открыто' : 'Открыть'}</PrimaryButton>{canWriteSection('support') && <><PrimaryButton className="button-secondary" disabled={statusBusy} aria-busy={statusBusy} onClick={() => void handleSupportStatus('pending', conversation.id)}>В ожидание</PrimaryButton><PrimaryButton disabled={statusBusy} aria-busy={statusBusy} onClick={() => void handleSupportStatus(conversation.status === 'closed' ? 'open' : 'closed', conversation.id)} className="button-secondary">{conversation.status === 'closed' ? 'Переоткрыть' : 'Закрыть'}</PrimaryButton></>}</div></div>
+            return <div key={conversation.id} className={`list-item-vertical${selectedSupportConversationId === conversation.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{conversation.subject || 'Обращение в поддержку'}</strong><div className="muted">{formatStatusLabel(conversation.channel)} · tg:{conversation.telegramUserId ?? '—'} · пользователь:{shortId(conversation.userId)}</div><div className="muted">Ответственный: {shortId(conversation.assignedToUserId)} · заметка: {conversation.internalNote || '—'}</div></div><StatusBadge value={conversation.status} /></div><div className="toolbar"><PrimaryButton className={selectedSupportConversationId === conversation.id ? 'button-secondary' : 'button-ghost'} onClick={() => selectSupportConversation(conversation.id)}>{selectedSupportConversationId === conversation.id ? 'Открыто' : 'Открыть'}</PrimaryButton>{canWriteSection('support') && <><PrimaryButton className="button-secondary" disabled={statusBusy} aria-busy={statusBusy} onClick={() => void handleSupportStatus('pending', conversation.id)}>В ожидание</PrimaryButton><PrimaryButton disabled={statusBusy} aria-busy={statusBusy} onClick={() => void handleSupportStatus(conversation.status === 'closed' ? 'open' : 'closed', conversation.id)} className="button-secondary">{conversation.status === 'closed' ? 'Переоткрыть' : 'Закрыть'}</PrimaryButton></>}</div></div>
           })}</div>
         </Card>
         <Card>
@@ -5069,7 +5069,7 @@ export function App() {
             </div>
           )}
           {!supportMessagesLoading && !supportMessagesError && selectedSupportConversationId && supportMessages.length === 0 && <EmptyState title="Сообщений нет" description="Для выбранного обращения сообщения пока не сохранены." />}
-          <div className="list-stack mt-12">{supportMessages.slice(-12).map((message) => <div key={message.id} className="list-item-vertical"><div className="card-head"><strong>{message.direction}{message.isInternalNote ? ' · внутренняя заметка' : ''}</strong><span className="muted">{formatDate(message.createdAt)}</span></div><div>{message.text}</div></div>)}</div>
+          <div className="list-stack mt-12">{supportMessages.slice(-12).map((message) => <div key={message.id} className="list-item-vertical"><div className="card-head"><strong>{formatStatusLabel(message.direction)}{message.isInternalNote ? ' · внутренняя заметка' : ''}</strong><span className="muted">{formatDate(message.createdAt)}</span></div><div>{message.text}</div></div>)}</div>
           <form hidden={!canWriteSection('support')} className="mt-12" aria-busy={actionBusyResourceKeys.has(supportActionResourceKey(selectedSupportConversationId))} onSubmit={(event) => { event.preventDefault(); void handleReplySupport() }}>
             <label><span>Ответ пользователю</span><textarea value={supportReplyText} onChange={(e) => setSupportReplyText(e.target.value)} rows={3} placeholder="Текст ответа" /></label>
             <PrimaryButton type="submit" disabled={!selectedSupportConversationId || !supportReplyText.trim() || actionBusyResourceKeys.has(supportActionResourceKey(selectedSupportConversationId))} aria-busy={actionBusyResourceKeys.has(supportActionResourceKey(selectedSupportConversationId))}>{supportConversations.find((conversation) => conversation.id === selectedSupportConversationId)?.telegramUserId ? 'Отправить через Telegram' : 'Сохранить ответ'}</PrimaryButton>
@@ -5221,7 +5221,7 @@ export function App() {
                   <div className="item-status"><StatusBadge value={release.isActive ? (new Date(release.releasedAt).getTime() > Date.now() ? 'Upcoming' : 'Published') : 'Hidden'} /><StatusBadge value={releaseSourceLabel(release.source)} /></div>
                 </div>
                 <div className="list-stack mt-12">
-                  {release.items.map((item, index) => <div key={`${release.id}-${index}`} className="list-item"><span>{item.type}: {item.text}</span></div>)}
+                  {release.items.map((item, index) => <div key={`${release.id}-${index}`} className="list-item"><span>{formatStatusLabel(item.type)}: {item.text}</span></div>)}
                 </div>
                 <div className="toolbar" hidden={!canWriteSection('releases')}>
                   <PrimaryButton className="button-secondary" disabled={isActionResourceBusy(appReleaseActionResourceKey(release.id))} onClick={() => editRelease(release)}>Редактировать</PrimaryButton>

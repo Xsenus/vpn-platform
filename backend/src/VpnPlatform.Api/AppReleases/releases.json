@@ -17184,5 +17184,32 @@
         "text": "Roadmap progress is 751/771 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-admin-business-label-localization",
+    "version": "0.729.0",
+    "releasedAt": "2026-08-14T18:04:20+07:00",
+    "title": "Administrative business labels use Russian text",
+    "summary": "Payment, support, release and action metadata in the administrative interface no longer exposes backend enum values.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Payment provider modes, order channels and types, payment and refund statuses now use bounded Russian labels."
+      },
+      {
+        "type": "fixed",
+        "text": "Support channels and message directions, release item types and administrative action notices no longer display technical enum values."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop and mobile browser gates verify localized payments, support and release metadata across all 17 administrative sections and 25 viewport configurations."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 752/772 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

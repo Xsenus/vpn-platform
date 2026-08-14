@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: admin business label localization
+
+Scope:
+- Admin payment, support, release and action-notice surfaces must not expose backend enum values as user-facing labels.
+- Shared formatting must preserve technical VPN identifiers while localizing bounded business metadata.
+- Localized labels must fit representative desktop/mobile screens and the complete responsive matrix without geometry or browser errors.
+
+Results:
+- Roadmap progress: `752/772` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-admin-business-label-localization`, version `0.729.0`.
+- Fail-first: focused unit/source guard completed `0/2`; `formatStatusLabel('NewSubscription')` returned the raw enum and admin source interpolated `account.mode` directly.
+- After fix: shared labels cover channels, order types, provider modes/types, support directions and release item types; payment/refund/panel/health action notices use the same formatter. Focused unit/contract `12/12`, frontend `178/178`, typecheck/build, admin bundle budget `561658/562176`, dependency audit `0 vulnerabilities`, targeted admin desktop/mobile Playwright `16/16` and full Playwright `270/270` are green.
+- Visual gate: all 17 admin sections passed 25 responsive viewport configurations; payments, support and releases desktop/mobile screenshots were reviewed manually, localized labels fit without clipping or overlap, invalid geometry `0`, browser diagnostics `0`.
+- Release gate: backend Debug/Release `1555/1555`, API Release build `0 warnings / 0 errors`, fresh SQLite full flow with latest release, global formatter, EF pending-model check and secret scan `710/0` are green; strict UTF-8/BOM guard and cleanup are completed before commit.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-14: Russian date and status localization
 
 Scope:

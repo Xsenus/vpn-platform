@@ -61,6 +61,10 @@ test('formatStatusLabel localizes status text outside badges', () => {
   assert.equal(formatStatusLabel('PendingPayment'), 'Ожидает оплаты')
   assert.equal(formatStatusLabel('sandbox'), 'Проверка')
   assert.equal(formatStatusLabel('Production'), 'Рабочий режим')
+  assert.equal(formatStatusLabel('NewSubscription'), 'Новая подписка')
+  assert.equal(formatStatusLabel('Web'), 'Сайт')
+  assert.equal(formatStatusLabel('inbound'), 'От пользователя')
+  assert.equal(formatStatusLabel('fixed'), 'Исправлено')
   assert.equal(formatStatusLabel(null), 'Неизвестно')
 })
 
