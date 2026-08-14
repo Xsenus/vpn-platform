@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: provider response redaction and provisioning timeout boundary
+
+Scope:
+- Outbound payment provider responses and exception diagnostics must not persist token/secret values through init, status, capture, refund, refund recheck or Telegram Stars invoice paths.
+- Signed inbound webhook payloads remain unchanged for authenticity and replay evidence.
+- Provisioning process-tree termination after execution timeout must remain bounded below the existing ten-second contract.
+
+Results:
+- Roadmap progress: `747/767` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-provider-response-redaction-timeout-boundary`, version `0.726.0`.
+- Fail-first: provider init/refund raw responses and Telegram invoice exception completed `0/3`, reproducing secrets in application results and SQLite `RawResponse`/`StatusReason`; full Debug also reproduced the contradictory ten-second process-stop wait as `1554/1555`.
+- After fix: provider results are sanitized once at the application boundary and Telegram invoice diagnostics are sanitized before persistence; signed webhook evidence is unchanged. Focused `3/3`, payment/refund/webhook/Telegram regression `173/173`, manual recheck persistence `1/1`, timeout stability `3/3`, backend Debug/Release `1555/1555` are green.
+- Release gate: Release build `0 warnings / 0 errors`, docs/encoding `28/28`, formatter verify, EF migration drift, secret scan `707/0` and fresh SQLite flow through order/payment/subscription/VPN access with latest release `2026-08-14-provider-response-redaction-timeout-boundary` are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-14: structured JSON secret isolation
 
 Scope:

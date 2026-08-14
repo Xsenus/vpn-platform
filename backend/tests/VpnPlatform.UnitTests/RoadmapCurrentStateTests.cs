@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-14-structured-json-secret-isolation";
-    private const string CurrentVersion = "0.725.0";
+    private const string CurrentReleaseId = "2026-08-14-provider-response-redaction-timeout-boundary";
+    private const string CurrentVersion = "0.726.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -17,7 +17,9 @@ public class RoadmapCurrentStateTests
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
 
         Assert.Contains("Дата актуализации: 2026-08-14", roadmap, StringComparison.Ordinal);
-        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1553/1553`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1555/1555`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `P11-ACC-456`", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `P11-ACC-455`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-454`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-453`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-452`", roadmap, StringComparison.Ordinal);
@@ -376,9 +378,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("1553/1553", readme, StringComparison.Ordinal);
-        Assert.Contains("1553/1553", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("1553/1553", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("1555/1555", readme, StringComparison.Ordinal);
+        Assert.Contains("1555/1555", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("1555/1555", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,

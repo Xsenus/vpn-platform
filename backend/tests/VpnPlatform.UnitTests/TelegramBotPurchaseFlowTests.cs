@@ -780,7 +780,8 @@ public class TelegramBotPurchaseFlowTests
         await db.Database.EnsureCreatedAsync();
         var tariff = await SeedCatalogAndProvidersAsync(db);
         await EnableTelegramStarsAsync(db);
-        var invoiceProvider = new RecordingInvoiceProvider();
+        var invoiceProvider = new RecordingInvoiceProvider(
+            "{\"ok\":true,\"result\":{\"secretToken\":\"telegram-invoice-raw-private-token\"}}");
         var service = CreateBot(db, invoiceProvider: invoiceProvider);
 
         await service.ProcessUpdateAsync(Update(417, "/start"), new Dictionary<string, string>(), null, CancellationToken.None);
@@ -795,7 +796,9 @@ public class TelegramBotPurchaseFlowTests
         Assert.Contains("invoice отправлен", first.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("уже отправлен", duplicate.Value!.ResponseText, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(1, invoiceProvider.CreateCalls);
-        Assert.Single(await db.Payments.ToListAsync());
+        var payment = Assert.Single(await db.Payments.ToListAsync());
+        Assert.DoesNotContain("telegram-invoice-raw-private-token", payment.RawResponse, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", payment.RawResponse, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -826,6 +829,8 @@ public class TelegramBotPurchaseFlowTests
         var payment = await db.Payments.SingleAsync();
         Assert.Equal(PaymentStatus.WaitingConfirmation, payment.Status);
         Assert.Contains("outcome could not be confirmed", payment.StatusReason, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("telegram-invoice-private-token", payment.StatusReason, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", payment.StatusReason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -1499,14 +1504,14 @@ public class TelegramBotPurchaseFlowTests
         public string Mask(string? value, int visibleTail = 4) => string.IsNullOrEmpty(value) ? string.Empty : new string('*', Math.Max(0, value.Length - visibleTail)) + value[^Math.Min(visibleTail, value.Length)..];
     }
 
-    private sealed class RecordingInvoiceProvider : ITelegramInvoiceProvider
+    private sealed class RecordingInvoiceProvider(string? rawResponse = null) : ITelegramInvoiceProvider
     {
         public int CreateCalls { get; private set; }
 
         public Task<TelegramInvoiceResult> CreateInvoiceAsync(TelegramInvoiceRequest request, CancellationToken cancellationToken)
         {
             CreateCalls++;
-            return Task.FromResult(new TelegramInvoiceResult(request.Payload, "{\"ok\":true}"));
+            return Task.FromResult(new TelegramInvoiceResult(request.Payload, rawResponse ?? "{\"ok\":true}"));
         }
 
         public Task AnswerPreCheckoutQueryAsync(string preCheckoutQueryId, bool ok, string? errorMessage, CancellationToken cancellationToken) => Task.CompletedTask;
@@ -1520,7 +1525,7 @@ public class TelegramBotPurchaseFlowTests
         public Task<TelegramInvoiceResult> CreateInvoiceAsync(TelegramInvoiceRequest request, CancellationToken cancellationToken)
         {
             CreateCalls++;
-            throw new HttpRequestException("transport outcome unknown");
+            throw new HttpRequestException("transport outcome unknown token=telegram-invoice-private-token");
         }
 
         public Task AnswerPreCheckoutQueryAsync(string preCheckoutQueryId, bool ok, string? errorMessage, CancellationToken cancellationToken) => Task.CompletedTask;

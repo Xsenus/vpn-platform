@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-14 локально подтверждено:
 
-- backend full suite: 1553/1553;
+- backend full suite: 1555/1555;
 - frontend tests: 172/172;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-14-structured-json-secret-isolation`, версия `0.725.0`; nested JSON secrets редактируются без повреждения структуры, а generic content CRUD изолирован от системных Telegram settings.
-- roadmap progress: `745/765` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-14-provider-response-redaction-timeout-boundary`, версия `0.726.0`; outbound provider responses очищаются до persistence, Telegram invoice diagnostics не сохраняют secrets, process-stop wait после provisioning timeout ограничен.
+- roadmap progress: `747/767` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

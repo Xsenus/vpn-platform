@@ -404,6 +404,9 @@ public class AdminRefundManagementTests
         using var json = JsonDocument.Parse(JsonSerializer.Serialize(ok.Value));
 
         Assert.False(json.RootElement.TryGetProperty("RawResponse", out _));
+        var persistedPayment = await db.Payments.AsNoTracking().SingleAsync(x => x.Id == payment.Id);
+        Assert.DoesNotContain("private-provider-marker", persistedPayment.WebhookPayload, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", persistedPayment.WebhookPayload, StringComparison.OrdinalIgnoreCase);
         var audit = Assert.Single(await db.AuditLogs.AsNoTracking().Where(x => x.Action == "payment.recheck").ToListAsync());
         Assert.Equal("admin", audit.ActorType);
         Assert.DoesNotContain("private-provider-marker", audit.BeforeJson, StringComparison.Ordinal);
@@ -1414,7 +1417,7 @@ public class AdminRefundManagementTests
             {
                 throw new InvalidOperationException(statusError);
             }
-            return Task.FromResult(new PaymentStatusResult(statusPaymentId ?? payment.ProviderPaymentId, status ?? payment.Status, "{\"private\":\"private-provider-marker\"}", statusReason));
+            return Task.FromResult(new PaymentStatusResult(statusPaymentId ?? payment.ProviderPaymentId, status ?? payment.Status, "{\"secretToken\":\"private-provider-marker\"}", statusReason));
         }
 
         public Task<PaymentRefundResult> RefundAsync(PaymentAttempt payment, PaymentProviderAccount account, decimal amount, string reason, CancellationToken cancellationToken)

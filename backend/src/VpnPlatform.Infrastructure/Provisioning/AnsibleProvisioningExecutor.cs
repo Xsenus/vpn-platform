@@ -12,6 +12,7 @@ namespace VpnPlatform.Infrastructure.Provisioning;
 
 public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
 {
+    private static readonly TimeSpan ProcessTerminationTimeout = TimeSpan.FromSeconds(5);
     internal const string PrecheckReportStepName = "Precheck report";
 
     private readonly ProvisioningOptions _options;
@@ -425,7 +426,7 @@ public sealed class AnsibleProvisioningExecutor : IProvisioningExecutor
 
         try
         {
-            using var waitCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var waitCts = new CancellationTokenSource(ProcessTerminationTimeout);
             await process.WaitForExitAsync(waitCts.Token);
             return true;
         }

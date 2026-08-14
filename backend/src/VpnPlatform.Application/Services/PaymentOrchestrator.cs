@@ -143,7 +143,8 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
                 return Result<PaymentInitResult>.Failure("Stored payment confirmation URL is invalid; contact support before retrying.");
             }
 
-            return Result<PaymentInitResult>.Success(new PaymentInitResult(existingPending.ProviderPaymentId, existingConfirmationUrl, existingPending.RawResponse));
+            return Result<PaymentInitResult>.Success(SanitizeProviderResult(
+                new PaymentInitResult(existingPending.ProviderPaymentId, existingConfirmationUrl, existingPending.RawResponse)));
         }
 
         var payment = existingPending ?? new PaymentAttempt
@@ -185,7 +186,8 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
                             return Result<PaymentInitResult>.Failure("Stored payment confirmation URL is invalid; contact support before retrying.");
                         }
 
-                        return Result<PaymentInitResult>.Success(new PaymentInitResult(concurrentPayment.ProviderPaymentId, concurrentConfirmationUrl, concurrentPayment.RawResponse));
+                        return Result<PaymentInitResult>.Success(SanitizeProviderResult(
+                            new PaymentInitResult(concurrentPayment.ProviderPaymentId, concurrentConfirmationUrl, concurrentPayment.RawResponse)));
                     }
 
                     if (concurrentPayment is not null)
@@ -218,6 +220,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            payment.RawRequest = SafeRawPayload(payment.RawRequest);
             payment.StatusReason = "Payment provider call was cancelled before its outcome could be confirmed.";
             payment.UpdatedAt = now;
             await TrySavePaymentStateAsync();
@@ -225,12 +228,16 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         }
         catch (Exception ex)
         {
+            payment.RawRequest = SafeRawPayload(payment.RawRequest);
             var safeError = SafeError(ex.Message);
             payment.StatusReason = safeError;
             payment.UpdatedAt = now;
             await TrySavePaymentStateAsync();
             return Result<PaymentInitResult>.Failure(safeError);
         }
+
+        payment.RawRequest = SafeRawPayload(payment.RawRequest);
+        init = SanitizeProviderResult(init);
 
         if (string.IsNullOrWhiteSpace(init.PaymentId))
         {
@@ -536,8 +543,9 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
                 }
                 else
                 {
-                    effectiveStatus = capture.Value.Status;
-                    effectivePayload = capture.Value.RawResponse;
+                    var safeCapture = SanitizeProviderResult(capture.Value);
+                    effectiveStatus = safeCapture.Status;
+                    effectivePayload = safeCapture.RawResponse;
                     result = await ApplyPaymentStatusAsync(payment, effectiveStatus, effectivePayload, webhookEventId, cancellationToken);
                 }
             }
@@ -680,7 +688,8 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         try
         {
             var provider = _paymentProviderFactory.Get(payment.Provider);
-            var statusResult = await provider.GetStatusAsync(payment, payment.PaymentProviderAccount!, cancellationToken);
+            var statusResult = SanitizeProviderResult(
+                await provider.GetStatusAsync(payment, payment.PaymentProviderAccount!, cancellationToken));
             var validation = ValidatePaymentStatusResult(payment, statusResult);
             if (!validation.IsSuccess)
             {
@@ -849,7 +858,8 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
         try
         {
             var provider = _paymentProviderFactory.Get(currentPayment.Provider);
-            refundResult = await provider.RefundAsync(currentPayment, currentPayment.PaymentProviderAccount, amount, reason, cancellationToken);
+            refundResult = SanitizeProviderResult(
+                await provider.RefundAsync(currentPayment, currentPayment.PaymentProviderAccount, amount, reason, cancellationToken));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -965,11 +975,11 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
                 return Result<RefundDto>.Failure($"Payment provider {refund.Provider} does not support refund status recheck.");
             }
 
-            var statusResult = await provider.GetRefundStatusAsync(
+            var statusResult = SanitizeProviderResult(await provider.GetRefundStatusAsync(
                 payment,
                 payment.PaymentProviderAccount,
                 refund,
-                cancellationToken);
+                cancellationToken));
             refund.RawResponse = statusResult.RawResponse;
 
             if (!string.Equals(statusResult.RefundId, refund.ProviderRefundId, StringComparison.Ordinal))
@@ -1419,6 +1429,26 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
     private static string SafeError(string? error)
         => SensitiveDataRedactor.Redact(error, maxLength: 500);
+
+    private static string SafeRawPayload(string? payload)
+        => SensitiveDataRedactor.Redact(payload);
+
+    private static PaymentInitResult SanitizeProviderResult(PaymentInitResult result)
+        => result with { RawResponse = SafeRawPayload(result.RawResponse) };
+
+    private static PaymentStatusResult SanitizeProviderResult(PaymentStatusResult result)
+        => result with
+        {
+            RawResponse = SafeRawPayload(result.RawResponse),
+            StatusReason = SafeError(result.StatusReason)
+        };
+
+    private static PaymentRefundResult SanitizeProviderResult(PaymentRefundResult result)
+        => result with
+        {
+            RawResponse = SafeRawPayload(result.RawResponse),
+            StatusReason = SafeError(result.StatusReason)
+        };
 
     private static string SafeErrorOrDefault(string? error, string fallback)
     {

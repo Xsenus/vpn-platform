@@ -1570,7 +1570,7 @@ public class TelegramBotService
                 payload,
                 "XTR",
                 (int)amount), cancellationToken);
-            existing.RawResponse = invoice.RawResponse;
+            existing.RawResponse = SensitiveDataRedactor.Redact(invoice.RawResponse);
             existing.StatusReason = string.Empty;
             existing.UpdatedAt = _clock.UtcNow;
             await _db.SaveChangesAsync(cancellationToken);
@@ -1585,7 +1585,7 @@ public class TelegramBotService
         }
         catch (Exception ex)
         {
-            existing.StatusReason = $"Telegram Stars invoice outcome could not be confirmed: {ex.Message}";
+            existing.StatusReason = $"Telegram Stars invoice outcome could not be confirmed: {SensitiveDataRedactor.Redact(ex.Message, maxLength: 500)}";
             existing.UpdatedAt = _clock.UtcNow;
             await _db.SaveChangesAsync(cancellationToken);
             return new RouteResult("Не удалось подтвердить отправку счёта Telegram Stars. Не повторяйте оплату и обратитесь в поддержку.", chatId, LinkedMenuReplyMarkupJson());

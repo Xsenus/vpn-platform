@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.726.0 - 2026-08-14
+
+Release entry: `2026-08-14-provider-response-redaction-timeout-boundary`.
+
+### Исправлено
+
+- Payment init/status/capture/refund/recheck results очищают structured provider `RawResponse` и `StatusReason` до application result и persistence; исходящий `RawRequest` очищается также при exception/cancellation.
+- Telegram Stars invoice response и ambiguous transport exception больше не сохраняют token/secret values в `PaymentAttempt`.
+- Provisioning runner после execution timeout ожидает остановку process tree не более 5 секунд вместо дополнительного 10-секундного окна, согласуя runtime с существующим `<10s` контрактом.
+
+### Проверено
+
+- Fail-first provider/Telegram regressions `0/3`; after-fix focused `3/3`, payment/refund/webhook/Telegram regression `173/173`, manual recheck persistence `1/1`; provisioning timeout первоначально воспроизвел full-suite failure `1554/1555`, после исправления стабильно `3/3`.
+- Backend Debug/Release `1555/1555`, Release build `0 warnings / 0 errors`, docs/encoding `28/28`, fresh SQLite full flow с latest release, formatter, EF drift и secret scan `707/0` зелёные. Roadmap `747/767` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.725.0 - 2026-08-14
 
 Release entry: `2026-08-14-structured-json-secret-isolation`.

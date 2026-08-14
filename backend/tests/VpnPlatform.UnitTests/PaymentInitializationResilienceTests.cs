@@ -166,6 +166,27 @@ public class PaymentInitializationResilienceTests
         Assert.Contains("REDACTED", payment.StatusReason, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Provider_Raw_Response_Should_Be_Redacted_In_Result_And_Persistence()
+    {
+        await using var fixture = await PaymentFixture.CreateAsync();
+        const string rawResponse = "{\"status\":\"pending\",\"client_secret\":\"init-raw-private-token\",\"nested\":{\"accessToken\":\"init-access-private-token\"}}";
+        var provider = new TrackingPaymentProvider(rawResponse: rawResponse);
+        var orchestrator = fixture.CreateOrchestrator(provider);
+
+        var result = await orchestrator.InitPaymentAsync(fixture.Command, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.DoesNotContain("init-raw-private-token", result.Value!.RawResponse, StringComparison.Ordinal);
+        Assert.DoesNotContain("init-access-private-token", result.Value.RawResponse, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", result.Value.RawResponse, StringComparison.OrdinalIgnoreCase);
+        await using var verificationDb = fixture.CreateVerificationContext();
+        var payment = await verificationDb.Payments.SingleAsync();
+        Assert.DoesNotContain("init-raw-private-token", payment.RawResponse, StringComparison.Ordinal);
+        Assert.DoesNotContain("init-access-private-token", payment.RawResponse, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", payment.RawResponse, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
     [InlineData("javascript:alert(1)")]
     [InlineData("data:text/html,payment")]
@@ -386,7 +407,7 @@ public class PaymentInitializationResilienceTests
         }
     }
 
-    private sealed class TrackingPaymentProvider(Action? beforeReturn = null, string? redirectUrl = null, string? paymentId = null, string? initError = null) : IPaymentProvider
+    private sealed class TrackingPaymentProvider(Action? beforeReturn = null, string? redirectUrl = null, string? paymentId = null, string? initError = null, string? rawResponse = null) : IPaymentProvider
     {
         public PaymentProvider Provider => PaymentProvider.YooKassa;
         public int InitCalls { get; private set; }
@@ -401,7 +422,7 @@ public class PaymentInitializationResilienceTests
                 throw new InvalidOperationException(initError);
             }
             beforeReturn?.Invoke();
-            return Task.FromResult(new PaymentInitResult(PaymentId, RedirectUrl, "{\"status\":\"pending\"}"));
+            return Task.FromResult(new PaymentInitResult(PaymentId, RedirectUrl, rawResponse ?? "{\"status\":\"pending\"}"));
         }
 
         public Task<PaymentWebhookParseResult> ParseWebhookAsync(string rawBody, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken) => throw new NotSupportedException();

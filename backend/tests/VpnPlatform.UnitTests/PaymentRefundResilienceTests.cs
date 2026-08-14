@@ -216,6 +216,28 @@ public class PaymentRefundResilienceTests
         Assert.Equal(RefundStatus.Unknown, (await db.Refunds.SingleAsync()).Status);
     }
 
+    [Fact]
+    public async Task Provider_Raw_Response_Should_Be_Redacted_Before_Refund_Persistence()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var now = new DateTimeOffset(2026, 8, 14, 7, 0, 0, TimeSpan.Zero);
+        var paymentId = await SeedRefundablePaymentAsync(db, now);
+        const string rawResponse = "{\"status\":\"succeeded\",\"secretToken\":\"refund-raw-private-token\"}";
+        var provider = new TrackingPaymentProvider(() => { }, rawResponse: rawResponse);
+        var orchestrator = CreateOrchestrator(db, provider, now);
+
+        var result = await orchestrator.RefundPaymentAsync(paymentId, 40m, "raw-redaction", CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        var refund = await db.Refunds.SingleAsync();
+        Assert.DoesNotContain("refund-raw-private-token", refund.RawResponse, StringComparison.Ordinal);
+        Assert.Contains("REDACTED", refund.RawResponse, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static PaymentOrchestrator CreateOrchestrator(ApplicationDbContext db, IPaymentProvider provider, DateTimeOffset now)
         => CreateOrchestrator(db, new TestPaymentProviderFactory(provider), now);
 
@@ -272,7 +294,7 @@ public class PaymentRefundResilienceTests
         }
     }
 
-    private sealed class TrackingPaymentProvider(Action beforeReturn, PaymentProvider provider = PaymentProvider.YooKassa) : IPaymentProvider
+    private sealed class TrackingPaymentProvider(Action beforeReturn, PaymentProvider provider = PaymentProvider.YooKassa, string? rawResponse = null) : IPaymentProvider
     {
         public PaymentProvider Provider => provider;
         public int RefundCalls { get; private set; }
@@ -290,7 +312,7 @@ public class PaymentRefundResilienceTests
         {
             RefundCalls++;
             beforeReturn();
-            return Task.FromResult(new PaymentRefundResult($"refund-{payment.Id:N}", RefundStatus.Succeeded, "{\"status\":\"succeeded\"}"));
+            return Task.FromResult(new PaymentRefundResult($"refund-{payment.Id:N}", RefundStatus.Succeeded, rawResponse ?? "{\"status\":\"succeeded\"}"));
         }
     }
 

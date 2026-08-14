@@ -17103,5 +17103,32 @@
         "text": "Roadmap progress is 745/765 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-provider-response-redaction-timeout-boundary",
+    "version": "0.726.0",
+    "releasedAt": "2026-08-14T14:43:52+07:00",
+    "title": "Provider responses are sanitized before persistence",
+    "summary": "Payment and Telegram provider diagnostics no longer persist secrets, and provisioning timeout termination remains bounded.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Payment init, status, capture, refund and recheck results are sanitized once at the application boundary before result or persistence."
+      },
+      {
+        "type": "fixed",
+        "text": "Telegram Stars invoice responses and ambiguous transport exceptions no longer persist token or secret values."
+      },
+      {
+        "type": "improved",
+        "text": "Provisioning runner process-tree termination uses a bounded five-second wait after execution timeout."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 747/767 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
