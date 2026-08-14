@@ -10,15 +10,17 @@ public class CatalogService
 {
     private const int PublicTariffLimit = 200;
     private readonly IApplicationDbContext _db;
+    private readonly IClock _clock;
 
-    public CatalogService(IApplicationDbContext db)
+    public CatalogService(IApplicationDbContext db, IClock clock)
     {
         _db = db;
+        _clock = clock;
     }
 
     public async Task<IReadOnlyCollection<PublicTariffDto>> GetPublicTariffsAsync(CancellationToken cancellationToken = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
         IQueryable<Tariff> query;
 
         if (_db is DbContext dbContext

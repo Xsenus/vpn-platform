@@ -6,6 +6,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Api.Controllers.Public;
+using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Application.Services;
@@ -19,6 +20,24 @@ namespace VpnPlatform.UnitTests;
 public class TariffManagementTests
 {
     [Fact]
+    public async Task PublicCatalog_Should_Use_Injected_Clock_For_Visibility_Window()
+    {
+        await using var db = CreateDb();
+        var now = new DateTimeOffset(2034, 4, 5, 6, 7, 8, TimeSpan.Zero);
+        var visible = Tariff("clock-visible");
+        visible.VisibleFrom = now.AddMinutes(-1);
+        visible.VisibleTo = now.AddMinutes(1);
+        var upcoming = Tariff("clock-upcoming");
+        upcoming.VisibleFrom = now.AddMinutes(1);
+        db.Tariffs.AddRange(visible, upcoming);
+        await db.SaveChangesAsync();
+
+        var tariffs = await Catalog(db, now).GetPublicTariffsAsync(CancellationToken.None);
+
+        Assert.Equal("clock-visible", Assert.Single(tariffs).Slug);
+    }
+
+    [Fact]
     public async Task PublicCatalog_Should_Return_Extended_Active_Tariff_Content()
     {
         await using var db = CreateDb();
@@ -27,7 +46,7 @@ public class TariffManagementTests
             Tariff("premium", isActive: true, sortOrder: 2));
         await db.SaveChangesAsync();
 
-        var tariffs = await new CatalogService(db).GetPublicTariffsAsync(CancellationToken.None);
+        var tariffs = await Catalog(db).GetPublicTariffsAsync(CancellationToken.None);
 
         var tariff = Assert.Single(tariffs);
         Assert.Equal("premium", tariff.Slug);
@@ -67,7 +86,7 @@ public class TariffManagementTests
             Tariff("standard", isActive: true, sortOrder: 20),
             Tariff("start", isActive: true, sortOrder: 10));
         await db.SaveChangesAsync();
-        var controller = new TariffsController(new CatalogService(db));
+        var controller = new TariffsController(Catalog(db));
 
         var response = AssertOk<List<PublicTariffDto>>(await controller.Get(CancellationToken.None));
 
@@ -86,7 +105,7 @@ public class TariffManagementTests
         db.Tariffs.AddRange(Enumerable.Range(0, 205).Select(index => Tariff($"limited-{index:D3}", sortOrder: 10)));
         await db.SaveChangesAsync();
 
-        var publicTariffs = await new CatalogService(db).GetPublicTariffsAsync(CancellationToken.None);
+        var publicTariffs = await Catalog(db).GetPublicTariffsAsync(CancellationToken.None);
         var adminResult = Assert.IsType<OkObjectResult>(await CreateController(db).GetTariffs(CancellationToken.None));
         using var adminJson = JsonDocument.Parse(JsonSerializer.Serialize(adminResult.Value));
 
@@ -181,7 +200,7 @@ public class TariffManagementTests
         var archived = await db.Tariffs.SingleAsync(x => x.Id == tariff.Id);
         Assert.False(archived.IsActive);
         Assert.NotNull(archived.VisibleTo);
-        Assert.DoesNotContain((await new CatalogService(db).GetPublicTariffsAsync(CancellationToken.None)), x => x.Id == tariff.Id);
+        Assert.DoesNotContain((await Catalog(db).GetPublicTariffsAsync(CancellationToken.None)), x => x.Id == tariff.Id);
     }
 
     [Fact]
@@ -537,6 +556,14 @@ public class TariffManagementTests
         var db = new ApplicationDbContext(options);
         db.Database.EnsureCreated();
         return db;
+    }
+
+    private static CatalogService Catalog(ApplicationDbContext db, DateTimeOffset? now = null)
+        => new(db, new FixedClock(now ?? DateTimeOffset.UtcNow));
+
+    private sealed class FixedClock(DateTimeOffset utcNow) : IClock
+    {
+        public DateTimeOffset UtcNow { get; } = utcNow;
     }
 
     private static T AssertOk<T>(IActionResult result)

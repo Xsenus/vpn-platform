@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Infrastructure.Persistence;
 using VpnPlatform.Infrastructure.Services;
@@ -10,8 +11,50 @@ using Xunit;
 
 namespace VpnPlatform.UnitTests;
 
-public class AppReleaseSeedServiceTests
+public class AppReleaseSeedServiceTests : IDisposable
 {
+    private readonly List<string> _seedRoots = [];
+
+    [Fact]
+    public async Task SyncAsync_Should_Use_Injected_Clock_For_Release_And_Items()
+    {
+        await using var db = CreateDb();
+        var initialTime = new DateTimeOffset(2034, 4, 5, 6, 7, 8, TimeSpan.Zero);
+        var clock = new MutableClock(initialTime);
+        var root = CreateSeedRoot("""
+        [
+          {
+            "releaseId": "clock-release",
+            "version": "1.0.0",
+            "releasedAt": "2034-04-05T05:00:00Z",
+            "title": "Clock release",
+            "summary": "Clock summary",
+            "isActive": true,
+            "source": "agent",
+            "items": [{ "type": "fixed", "text": "Clock item" }]
+          }
+        ]
+        """);
+        var service = CreateService(root, clock);
+
+        await service.SyncAsync(db, root);
+        var created = await db.AppReleases.Include(x => x.Items).SingleAsync();
+
+        Assert.Equal(initialTime, created.CreatedAt);
+        Assert.Equal(initialTime, created.UpdatedAt);
+        Assert.Equal(initialTime, created.Items.Single().CreatedAt);
+        Assert.Equal(initialTime, created.Items.Single().UpdatedAt);
+
+        clock.UtcNow = initialTime.AddHours(1);
+        await service.SyncAsync(db, root);
+        var updated = await db.AppReleases.Include(x => x.Items).SingleAsync();
+
+        Assert.Equal(initialTime, updated.CreatedAt);
+        Assert.Equal(clock.UtcNow, updated.UpdatedAt);
+        Assert.Equal(clock.UtcNow, updated.Items.Single().CreatedAt);
+        Assert.Equal(clock.UtcNow, updated.Items.Single().UpdatedAt);
+    }
+
     [Fact]
     public async Task SyncAsync_Should_Create_Agent_Release_From_Json()
     {
@@ -216,16 +259,28 @@ public class AppReleaseSeedServiceTests
         return new ApplicationDbContext(options);
     }
 
-    private static AppReleaseSeedService CreateService(string contentRootPath)
-        => new(new TestHostEnvironment(contentRootPath), NullLogger<AppReleaseSeedService>.Instance);
+    private static AppReleaseSeedService CreateService(string contentRootPath, IClock? clock = null)
+        => new(new TestHostEnvironment(contentRootPath), NullLogger<AppReleaseSeedService>.Instance, clock);
 
-    private static string CreateSeedRoot(string json)
+    private string CreateSeedRoot(string json)
     {
         var root = Path.Combine(Path.GetTempPath(), "vpn-platform-app-releases", Guid.NewGuid().ToString("N"));
         var dir = Path.Combine(root, "AppReleases");
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "releases.json"), json);
+        _seedRoots.Add(root);
         return root;
+    }
+
+    public void Dispose()
+    {
+        foreach (var root in _seedRoots)
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
     }
 
     private sealed class TestHostEnvironment(string contentRootPath) : IHostEnvironment
@@ -234,5 +289,10 @@ public class AppReleaseSeedServiceTests
         public string ApplicationName { get; set; } = "VpnPlatform.UnitTests";
         public string ContentRootPath { get; set; } = contentRootPath;
         public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+    }
+
+    private sealed class MutableClock(DateTimeOffset utcNow) : IClock
+    {
+        public DateTimeOffset UtcNow { get; set; } = utcNow;
     }
 }

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.714.0 - 2026-08-14
+
+Release entry: `2026-08-14-public-catalog-release-seed-clock`.
+
+### Исправлено
+
+- Public tariff catalog использует внедренный `IClock` для `VisibleFrom`/`VisibleTo`, поэтому витрина и checkout оценивают временные границы одинаково.
+- Release seed sync назначает согласованные `CreatedAt`/`UpdatedAt` релизам и пунктам из одного application clock boundary, сохраняя исходный `CreatedAt` существующего релиза.
+- `AppReleaseSeedServiceTests` удаляют каждый временный seed root после теста; накопленные `4120` каталогов из `%TEMP%` очищены.
+
+### Проверено
+
+- Fail-first regressions `0/2` воспроизвели пустой действующий каталог и системный seed timestamp вместо `2034-04-05T06:07:08Z`; after-fix catalog/seed regression `50/50`, cleanup fixture `6/6`, backend Debug/Release `1501/1501`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow и EF drift зеленые. Актуальный visual/operation gate: Playwright `268/268` на 25 viewport-конфигурациях.
+- Roadmap `732/752` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.713.0 - 2026-08-14
 
 Release entry: `2026-08-14-admin-crud-clock-and-capacity-gates`.

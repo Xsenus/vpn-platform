@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `730/750` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `732/752` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,7 +85,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1499/1499`.
+- [x] Backend full suite: `1501/1501`.
 - [x] Frontend unit tests: `172/172`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -167,7 +167,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-14-admin-crud-clock-and-capacity-gates`, версия `0.713.0`; admin CRUD/Telegram используют application clock, capacity gate учитывает safe early rejection; backend `1499/1499`.
+- [x] Latest "Что нового": `2026-08-14-public-catalog-release-seed-clock`, версия `0.714.0`; public catalog/release seed используют application clock; backend `1501/1501`.
 
 ## Как вести дальше
 

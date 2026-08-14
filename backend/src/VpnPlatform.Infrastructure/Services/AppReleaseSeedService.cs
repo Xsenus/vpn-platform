@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Infrastructure.Persistence;
 
@@ -20,11 +21,13 @@ public sealed class AppReleaseSeedService
 
     private readonly IHostEnvironment _environment;
     private readonly ILogger<AppReleaseSeedService> _logger;
+    private readonly IClock _clock;
 
-    public AppReleaseSeedService(IHostEnvironment environment, ILogger<AppReleaseSeedService> logger)
+    public AppReleaseSeedService(IHostEnvironment environment, ILogger<AppReleaseSeedService> logger, IClock? clock = null)
     {
         _environment = environment;
         _logger = logger;
+        _clock = clock ?? new SystemClock();
     }
 
     public async Task<int> SyncAsync(ApplicationDbContext db, CancellationToken cancellationToken = default)
@@ -51,6 +54,7 @@ public sealed class AppReleaseSeedService
             .Include(x => x.Items)
             .ToListAsync(cancellationToken);
 
+        var now = _clock.UtcNow;
         var changed = 0;
         foreach (var seed in seedByReleaseId.Values)
         {
@@ -66,7 +70,9 @@ public sealed class AppReleaseSeedService
                 release = new AppRelease
                 {
                     ReleaseId = releaseId,
-                    Source = "agent"
+                    Source = "agent",
+                    CreatedAt = now,
+                    UpdatedAt = now
                 };
                 db.AppReleases.Add(release);
                 existing.Add(release);
@@ -78,7 +84,7 @@ public sealed class AppReleaseSeedService
             release.Summary = seed.Summary.Trim();
             release.IsActive = seed.IsActive;
             release.Source = string.IsNullOrWhiteSpace(seed.Source) ? "agent" : seed.Source.Trim();
-            release.UpdatedAt = DateTimeOffset.UtcNow;
+            release.UpdatedAt = now;
 
             var currentItems = release.Items.ToList();
             db.AppReleaseItems.RemoveRange(currentItems);
@@ -91,7 +97,9 @@ public sealed class AppReleaseSeedService
                     AppReleaseId = release.Id,
                     Type = NormalizeItemType(x.Type),
                     Text = x.Text.Trim(),
-                    SortOrder = x.SortOrder ?? (index + 1) * 10
+                    SortOrder = x.SortOrder ?? (index + 1) * 10,
+                    CreatedAt = now,
+                    UpdatedAt = now
                 })
                 .ToList();
 

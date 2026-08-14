@@ -16775,5 +16775,32 @@
         "text": "Roadmap progress is 730/750 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-public-catalog-release-seed-clock",
+    "version": "0.714.0",
+    "releasedAt": "2026-08-14T08:48:00+07:00",
+    "title": "Каталог и история релизов используют единое время",
+    "summary": "Видимость тарифов и startup sync раздела «Что нового» синхронизированы с application clock.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Public tariff VisibleFrom и VisibleTo оцениваются тем же IClock, который используют checkout и заказы."
+      },
+      {
+        "type": "fixed",
+        "text": "Release seed sync назначает согласованные CreatedAt и UpdatedAt релизам и их пунктам из одного clock boundary."
+      },
+      {
+        "type": "improved",
+        "text": "Release seed tests удаляют временные каталоги после каждого теста; накопленные temp-артефакты очищены."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 732/752 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

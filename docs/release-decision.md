@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1499/1499`.
+- Backend full suite: `1501/1501`.
 - API Release build: OK.
 - Frontend unit tests: `172/172`.
 - Frontend typecheck/build: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-14-admin-crud-clock-and-capacity-gates`, версия `0.713.0`; admin CRUD/Telegram timestamps используют application clock, capacity concurrency gate учитывает безопасный ранний отказ. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
-- Roadmap progress: `730/750` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-14-public-catalog-release-seed-clock`, версия `0.714.0`; public tariff visibility и startup release seed timestamps используют application clock. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence все еще требуются.
+- Roadmap progress: `732/752` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

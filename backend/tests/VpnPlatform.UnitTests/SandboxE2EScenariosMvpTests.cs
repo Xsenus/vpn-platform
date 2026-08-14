@@ -374,7 +374,7 @@ public class SandboxE2EScenariosMvpTests
             "{\"apiSecret\":\"raw-extra-secret-must-not-leak\"}"), CancellationToken.None);
         Assert.IsType<OkObjectResult>(providerAccount);
 
-        var publicTariffs = await new CatalogService(harness.Db).GetPublicTariffsAsync(CancellationToken.None);
+        var publicTariffs = await new CatalogService(harness.Db, harness.Clock).GetPublicTariffsAsync(CancellationToken.None);
         var publicProviders = JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(await new PaymentsController(harness.Db).GetAvailableProviders(CancellationToken.None)).Value);
         var providerAdminJson = JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(await admin.GetPaymentProviderAccounts(CancellationToken.None)).Value);
 

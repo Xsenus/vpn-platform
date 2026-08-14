@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: public catalog and release seed clock
+
+Scope:
+- Public tariff visibility и checkout должны использовать один application clock.
+- Startup release seed должен согласованно назначать release/item timestamps и не оставлять временные test roots.
+
+Results:
+- Roadmap progress: `732/752` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-public-catalog-release-seed-clock`, version `0.714.0`.
+- Fail-first: каталог не вернул тариф внутри внедренного visibility window, а seed сохранил системный timestamp вместо `2034-04-05T06:07:08Z`; `0/2`. Cleanup audit обнаружил `4120` накопленных каталогов и `2938` файлов.
+- After fix: catalog использует `_clock.UtcNow`, seed применяет один clock boundary к release/items, fixture удаляет каждый root; catalog/seed regression `50/50`, cleanup `6/6`, backend Debug/Release `1501/1501`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow и EF drift зеленые. Актуальный Playwright `268/268` на 25 viewport-конфигурациях остается применимым, frontend не менялся. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись.
+
 ## Check 2026-08-14: admin CRUD clock and capacity gates
 
 Scope:

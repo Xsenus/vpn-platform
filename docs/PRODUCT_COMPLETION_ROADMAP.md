@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-14.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-admin-crud-clock-and-capacity-gates`, версия `0.713.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `730/750` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-public-catalog-release-seed-clock`, версия `0.714.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `732/752` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-14:
 
-- [x] `STATE-001` Backend test suite проходит: `1499/1499`.
+- [x] `STATE-001` Backend test suite проходит: `1501/1501`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2616,6 +2616,14 @@ git diff --check
   - Что сделать: тест не должен требовать позднюю remote compensation, если конкурентный запрос безопасно отклонен базой до remote create; oversubscription, orphan client и рассогласованная capacity по-прежнему недопустимы.
   - Что сделано: gate допускает `1 add/0 delete` для раннего отказа и `2 add/1 delete` для поздней компенсации, сохраняя строгие проверки одного success, одного failure, одного local client и panel/inbound capacity `1/1`.
   - Доказательство: full Debug suite под параллельной нагрузкой получил безопасный путь `1 add/0 delete`, но упал `1498/1499`; после уточнения контракта изолированные capacity прогоны `5/5` и последовательные backend Debug/Release `1499/1499` зеленые.
+- [x] `P11-ACC-440` Синхронизировать public tariff visibility и release seed с application clock. 2026-08-14.
+  - Что сделать: публичный каталог не должен расходиться с checkout по `VisibleFrom`/`VisibleTo`; startup release sync должен назначать согласованные release/item timestamps и сохранять исходный `CreatedAt` при обновлении.
+  - Что сделано: `CatalogService` получает обязательный `IClock`; `AppReleaseSeedService` использует один clock snapshot на sync, явно задает timestamps новым releases/items и не изменяет `CreatedAt` существующего release.
+  - Доказательство: fail-first regressions `0/2` получили пустой действующий каталог и системный timestamp вместо `2034-04-05T06:07:08Z`; after-fix catalog/seed regression `50/50`, backend Debug/Release `1501/1501`, frontend `172/172`, typecheck/build, bundle budget, fresh SQLite full flow и EF drift зеленые. Актуальный Playwright `268/268` на 25 viewport-конфигурациях остается применимым. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой.
+- [x] `P11-ACC-441` Устранить утечку временных каталогов release seed tests. 2026-08-14.
+  - Что сделать: каждый test seed root должен удаляться после теста; накопленные временные артефакты не должны оставаться на машине разработчика.
+  - Что сделано: `AppReleaseSeedServiceTests` реализует `IDisposable`, регистрирует созданные roots и рекурсивно удаляет их после каждого теста; ранее накопленный абсолютный temp-каталог очищен после проверки пути.
+  - Доказательство: audit обнаружил `4120` каталогов и `2938` файлов; после исправления seed suite `6/6` не увеличил число roots (`4120 -> 4120`), затем накопленный каталог удален и `Directory.Exists = false`.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
