@@ -1,6 +1,6 @@
 # Product/UI roadmap: сайт, кабинет и админка VPN Platform
 
-Дата актуализации: 2026-08-13.
+Дата актуализации: 2026-08-14.
 
 Этот документ был исходным продуктовым планом по единому сайту, кабинету и админке. Актуальный источник правды по production-ready статусу находится в [PRODUCT_COMPLETION_ROADMAP.md](PRODUCT_COMPLETION_ROADMAP.md). Здесь оставлен компактный продуктовый срез, чтобы старые незакрытые чекбоксы не противоречили фактическим проверкам.
 
@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `725/745` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `726/746` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,7 +85,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1492/1492`.
+- [x] Backend full suite: `1493/1493`.
 - [x] Frontend unit tests: `172/172`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -167,7 +167,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-13-sqlite-telegram-dedup-reconciliation`, версия `0.710.0`; SQLite post-migration repair восстанавливает canonical Telegram notification dedup boundary; backend `1492/1492`.
+- [x] Latest "Что нового": `2026-08-14-cabinet-support-clock-consistency`, версия `0.711.0`; cabinet support create/reply/status используют единый application clock; backend `1493/1493`.
 
 ## Как вести дальше
 

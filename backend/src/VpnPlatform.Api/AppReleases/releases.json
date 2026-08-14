@@ -16698,5 +16698,28 @@
         "text": "Roadmap progress is 725/745 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-cabinet-support-clock-consistency",
+    "version": "0.711.0",
+    "releasedAt": "2026-08-14T08:07:40+07:00",
+    "title": "Кабинет сохраняет согласованное время обращений поддержки",
+    "summary": "Create, reply и status mutations используют application clock для conversation и message timestamps.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Cabinet support create, reply и close/reopen больше не смешивают системный DateTimeOffset.UtcNow с внедренным IClock."
+      },
+      {
+        "type": "improved",
+        "text": "Conversation и создаваемые messages получают согласованные CreatedAt, UpdatedAt и ClosedAt из одного application clock boundary."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 726/746 closed, readiness 97.3%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

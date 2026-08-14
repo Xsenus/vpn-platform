@@ -545,13 +545,16 @@ public class MeController : ControllerBase
             OrderId = orderId,
             SubscriptionId = subscriptionId
         });
+        var now = _clock.UtcNow;
         var conversation = new SupportConversation
         {
             UserId = userId,
             Channel = "web",
             Status = "open",
             Subject = subject,
-            InternalNote = BuildSupportContextNote(orderId, subscriptionId)
+            InternalNote = BuildSupportContextNote(orderId, subscriptionId),
+            CreatedAt = now,
+            UpdatedAt = now
         };
         var message = new SupportMessage
         {
@@ -560,7 +563,9 @@ public class MeController : ControllerBase
             Direction = "inbound",
             Text = text,
             RawPayload = contextJson,
-            AttachmentsJson = "[]"
+            AttachmentsJson = "[]",
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         _db.SupportConversations.Add(conversation);
@@ -597,20 +602,23 @@ public class MeController : ControllerBase
             return Conflict(new { error = "Support conversation changed. Reload it and retry.", revision = conversation.Revision });
         }
 
+        var now = _clock.UtcNow;
         var message = new SupportMessage
         {
             SupportConversationId = conversation.Id,
             UserId = userId,
             Direction = "inbound",
             Text = text,
-            AttachmentsJson = "[]"
+            AttachmentsJson = "[]",
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         _db.SupportMessages.Add(message);
         conversation.Status = "open";
         conversation.ClosedAt = null;
         conversation.Revision = checked(conversation.Revision + 1);
-        conversation.UpdatedAt = DateTimeOffset.UtcNow;
+        conversation.UpdatedAt = now;
         try
         {
             await _db.SaveChangesAsync(cancellationToken);
@@ -650,10 +658,11 @@ public class MeController : ControllerBase
             return BadRequest(new { error = "Status must be open or closed." });
         }
 
+        var now = _clock.UtcNow;
         conversation.Status = status;
-        conversation.ClosedAt = status == "closed" ? DateTimeOffset.UtcNow : null;
+        conversation.ClosedAt = status == "closed" ? now : null;
         conversation.Revision = checked(conversation.Revision + 1);
-        conversation.UpdatedAt = DateTimeOffset.UtcNow;
+        conversation.UpdatedAt = now;
         try
         {
             await _db.SaveChangesAsync(cancellationToken);

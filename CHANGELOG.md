@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.711.0 - 2026-08-14
+
+Release entry: `2026-08-14-cabinet-support-clock-consistency`.
+
+### Исправлено
+
+- Создание обращения поддержки в кабинете, reply и close/reopen больше не обходят внедренный `IClock` через системный `DateTimeOffset.UtcNow`.
+- Conversation и создаваемые support messages получают согласованные `CreatedAt`/`UpdatedAt`/`ClosedAt`, поэтому тестовые, скорректированные и production clocks не создают временных скачков в истории обращения.
+
+### Проверено
+
+- Fail-first regression `0/1` сохранил системное время вместо `2032-02-03T07:08:09Z`; after-fix clock regression `1/1`, support/controller regression `15/15`, backend Debug/Release `1493/1493`, frontend `172/172`, typecheck/build и bundle budget зеленые. Актуальный неизмененный visual/operation gate: Playwright `268/268` на 25 viewport-конфигурациях.
+- Roadmap `726/746` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.710.0 - 2026-08-13
 
 Release entry: `2026-08-13-sqlite-telegram-dedup-reconciliation`.

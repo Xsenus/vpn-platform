@@ -2,11 +2,11 @@
 
 Документ нужен как единая рабочая карта проекта. По нему агент или разработчик должен идти сверху вниз, отмечать выполненные пункты и оставлять доказательства: тесты, скриншоты, ссылки на коммиты, результаты smoke-проверок и замечания.
 
-Дата актуализации: 2026-08-13.
+Дата актуализации: 2026-08-14.
 
-Дата последней сверки: 2026-08-13.
+Дата последней сверки: 2026-08-14.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-13-sqlite-telegram-dedup-reconciliation`, версия `0.710.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `725/745` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-cabinet-support-clock-consistency`, версия `0.711.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `726/746` проверяемых пунктов, готовность `97.3%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -35,9 +35,9 @@ git diff --check
 
 ## Текущее резюме состояния
 
-Что подтверждено на 2026-08-13:
+Что подтверждено на 2026-08-14:
 
-- [x] `STATE-001` Backend test suite проходит: `1492/1492`.
+- [x] `STATE-001` Backend test suite проходит: `1493/1493`.
 - [x] `STATE-002` Frontend test suite проходит: `172/172`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2596,6 +2596,10 @@ git diff --check
   - Что сделать: production dependency gate не должен принимать уязвимую версию `nanoid <3.3.18`, получаемую через Vite/PostCSS.
   - Что сделано: lockfile обновлен с `nanoid 3.3.17` до исправленной `3.3.18` без изменения declared dependencies; установленное дерево подтверждает единственную исправленную транзитивную версию.
   - Доказательство: до исправления `npm audit --audit-level=high` вернул `1 high severity vulnerability` (`GHSA-2v37-7h3g-55p8`); после обновления `npm ls nanoid --all` показывает `3.3.18`, повторный audit возвращает `0 vulnerabilities`.
+- [x] `P11-ACC-435` Синхронизировать cabinet support mutations с application clock. 2026-08-14.
+  - Что сделать: create/reply/status операции обращений поддержки не должны смешивать системное время с внедренным `IClock`; conversation и message timestamps обязаны образовывать согласованную хронологию.
+  - Что сделано: create задает `CreatedAt`/`UpdatedAt` conversation и первого message из одного `_clock.UtcNow`; reply использует тот же boundary для нового message и conversation; close/reopen назначает `ClosedAt`/`UpdatedAt` из application clock.
+  - Доказательство: fail-first regression `0/1` ожидал `2032-02-03T07:08:09Z`, но получил системное время; after-fix clock regression `1/1`, support/controller regression `15/15`, backend Debug/Release `1493/1493`, frontend `172/172`, typecheck/build и bundle budget зеленые. Актуальный Playwright `268/268` на 25 viewport-конфигурациях остается применимым. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

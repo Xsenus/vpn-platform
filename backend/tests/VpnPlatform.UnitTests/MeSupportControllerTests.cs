@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using VpnPlatform.Api.Controllers.Admin;
 using VpnPlatform.Api.Controllers.Me;
+using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
 using VpnPlatform.Application.DTOs;
 using VpnPlatform.Domain.Entities;
@@ -282,6 +283,56 @@ public class MeSupportControllerTests
     }
 
     [Fact]
+    public async Task Cabinet_Support_Mutations_Should_Use_Injected_Clock()
+    {
+        var userId = Guid.NewGuid();
+        var mutationTime = new DateTimeOffset(2032, 2, 3, 7, 8, 9, TimeSpan.Zero);
+        await using var db = CreateDbContext();
+        var controller = CreateController(db, userId, new FixedClock(mutationTime));
+        var createResult = await controller.CreateSupportConversation(
+            new CreateMeSupportConversationHttpRequest(
+                "Clock boundary",
+                "Please check the clock boundary.",
+                null,
+                null),
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(createResult);
+        db.ChangeTracker.Clear();
+        var created = await db.SupportConversations.SingleAsync();
+        var initialMessage = await db.SupportMessages.SingleAsync();
+        Assert.Equal(mutationTime, created.CreatedAt);
+        Assert.Equal(mutationTime, created.UpdatedAt);
+        Assert.Equal(mutationTime, initialMessage.CreatedAt);
+        Assert.Equal(mutationTime, initialMessage.UpdatedAt);
+
+        var replyResult = await controller.ReplySupportConversation(
+            created.Id,
+            new MeSupportReplyHttpRequest("Still need help.", created.Revision),
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(replyResult);
+        db.ChangeTracker.Clear();
+        var replied = await db.SupportConversations.SingleAsync();
+        var replyMessage = await db.SupportMessages.SingleAsync(x => x.Text == "Still need help.");
+        Assert.Equal(mutationTime, replied.UpdatedAt);
+        Assert.Null(replied.ClosedAt);
+        Assert.Equal(mutationTime, replyMessage.CreatedAt);
+        Assert.Equal(mutationTime, replyMessage.UpdatedAt);
+
+        var statusResult = await controller.UpdateSupportConversationStatus(
+            created.Id,
+            new MeSupportStatusHttpRequest("closed", replied.Revision),
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(statusResult);
+        db.ChangeTracker.Clear();
+        var closed = await db.SupportConversations.SingleAsync();
+        Assert.Equal(mutationTime, closed.UpdatedAt);
+        Assert.Equal(mutationTime, closed.ClosedAt);
+    }
+
+    [Fact]
     public async Task CreateSupportConversation_Should_Reject_Foreign_Order()
     {
         var userId = Guid.NewGuid();
@@ -363,10 +414,10 @@ public class MeSupportControllerTests
         Assert.Null(unchanged.ClosedAt);
     }
 
-    private static MeController CreateController(ApplicationDbContext db, Guid userId)
+    private static MeController CreateController(ApplicationDbContext db, Guid userId, IClock? clock = null)
     {
         var configuration = new ConfigurationBuilder().Build();
-        return new MeController(db, null!, null!, null!, null!, null!, configuration)
+        return new MeController(db, null!, null!, null!, null!, null!, configuration, clock)
         {
             ControllerContext = new ControllerContext
             {
@@ -379,6 +430,11 @@ public class MeSupportControllerTests
                 }
             }
         };
+    }
+
+    private sealed class FixedClock(DateTimeOffset utcNow) : IClock
+    {
+        public DateTimeOffset UtcNow { get; } = utcNow;
     }
 
     private static AdminOperationsController CreateAdminController(ApplicationDbContext db, Guid userId)

@@ -1,6 +1,18 @@
 # Результаты проверок
 
-Дата проверки: 2026-08-13.
+Дата проверки: 2026-08-14.
+
+## Check 2026-08-14: cabinet support clock consistency
+
+Scope:
+- Cabinet create/reply/status mutations должны использовать внедренный `IClock` для conversation и message timestamps.
+- Reply и close/reopen не должны смешивать system clock с тестовым или скорректированным application clock.
+
+Results:
+- Roadmap progress: `726/746` closed, readiness `97.3%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-cabinet-support-clock-consistency`, version `0.711.0`.
+- Fail-first: ожидался `2032-02-03T07:08:09Z`, но reply сохранил системный timestamp; `0/1`.
+- After fix: create/reply/status применяют один `_clock.UtcNow` к conversation и создаваемым messages; targeted `1/1`, support/controller regression `15/15`, backend Debug/Release `1493/1493`, frontend `172/172`, typecheck/build и bundle budget зеленые. Актуальный Playwright `268/268` на 25 viewport-конфигурациях остается применимым, frontend не менялся. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись.
 
 ## Check 2026-08-13: SQLite Telegram notification dedup reconciliation
 
