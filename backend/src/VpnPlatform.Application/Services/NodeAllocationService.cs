@@ -83,6 +83,7 @@ public class NodeAllocationService
 
         if (panel is not null)
         {
+            var now = _clock.UtcNow;
             var host = Uri.TryCreate(panel.BaseUrl, UriKind.Absolute, out var uri) ? uri.Host : panel.BaseUrl;
             var node = new VpnNode
             {
@@ -102,7 +103,9 @@ public class NodeAllocationService
                 PanelBaseUrl = panel.BaseUrl,
                 PanelUsername = panel.Login,
                 PublicHostname = host,
-                PublicPort = 443
+                PublicPort = 443,
+                CreatedAt = now,
+                UpdatedAt = now
             };
             _db.VpnNodes.Add(node);
             await _db.SaveChangesAsync(cancellationToken);
@@ -139,6 +142,7 @@ public class NodeAllocationService
             return sandboxNode;
         }
 
+        var now = _clock.UtcNow;
         sandboxNode = new VpnNode
         {
             Name = "sandbox-vpn-node",
@@ -153,7 +157,7 @@ public class NodeAllocationService
             UsedCapacity = 0,
             SupportedProtocolsCsv = requiredProtocol,
             HealthStatus = HealthStatus.Healthy,
-            LastHealthCheckAt = _clock.UtcNow,
+            LastHealthCheckAt = now,
             ProvisioningStatus = ProvisioningRunStatus.Succeeded,
             InstalledVersion = "sandbox",
             BackupStatus = "disabled",
@@ -165,7 +169,9 @@ public class NodeAllocationService
             PanelBaseUrl = "https://sandbox-node.local",
             PanelUsername = "sandbox",
             PublicHostname = "sandbox-node.local",
-            PublicPort = 443
+            PublicPort = 443,
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         _db.VpnNodes.Add(sandboxNode);

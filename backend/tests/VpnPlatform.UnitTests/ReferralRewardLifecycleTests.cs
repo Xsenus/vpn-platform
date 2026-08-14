@@ -41,6 +41,11 @@ public class ReferralRewardLifecycleTests
         Assert.True(repeated.IsSuccess, repeated.Error);
         var ledgers = await db.RewardLedgers.AsNoTracking().OrderBy(x => x.UserId).ToListAsync();
         Assert.Equal(2, ledgers.Count);
+        Assert.All(ledgers, ledger =>
+        {
+            Assert.Equal(now, ledger.CreatedAt);
+            Assert.Equal(now, ledger.UpdatedAt);
+        });
         var referrerReward = Assert.Single(ledgers, x => x.UserId == referrer.Id);
         Assert.Equal(referred.Id, referrerReward.SourceUserId);
         Assert.Equal(7m, referrerReward.Value);

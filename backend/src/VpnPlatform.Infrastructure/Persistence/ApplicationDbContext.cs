@@ -2,13 +2,20 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
+using VpnPlatform.Domain.Common;
 using VpnPlatform.Domain.Entities;
+using VpnPlatform.Infrastructure.Services;
 
 namespace VpnPlatform.Infrastructure.Persistence;
 
 public class ApplicationDbContext : DbContext, IApplicationDbContext
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+    private readonly IClock _clock;
+
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IClock? clock = null) : base(options)
+    {
+        _clock = clock ?? new SystemClock();
+    }
 
     public DbSet<User> Users => Set<User>();
     public DbSet<UserRefreshToken> UserRefreshTokens => Set<UserRefreshToken>();
@@ -564,6 +571,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
+        PrepareAddedAuditTimestamps();
         var notifications = ExtractAddedTelegramNotifications();
         var outboxMessages = ExtractAddedOutboxMessages();
         if ((notifications.Count == 0 && outboxMessages.Count == 0) || !Database.IsRelational())
@@ -598,6 +606,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
+        PrepareAddedAuditTimestamps();
         var notifications = ExtractAddedTelegramNotifications();
         var outboxMessages = ExtractAddedOutboxMessages();
         if ((notifications.Count == 0 && outboxMessages.Count == 0) || !Database.IsRelational())
@@ -671,6 +680,16 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         }
 
         return unique;
+    }
+
+    private void PrepareAddedAuditTimestamps()
+    {
+        var now = _clock.UtcNow;
+        foreach (var entry in ChangeTracker.Entries<AuditableEntity>().Where(x => x.State == EntityState.Added))
+        {
+            entry.Entity.CreatedAt = entry.Entity.CreatedAt == default ? now : entry.Entity.CreatedAt;
+            entry.Entity.UpdatedAt = entry.Entity.UpdatedAt == default ? entry.Entity.CreatedAt : entry.Entity.UpdatedAt;
+        }
     }
 
     private List<OutboxMessage> ExtractAddedOutboxMessages()

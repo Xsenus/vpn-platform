@@ -252,7 +252,9 @@ public class OrderService
             ExpiresAt = expiresAt,
             IsFirstPurchase = isFirstPurchase,
             ReferralContext = BuildReferralContext(command.RenewalSubscriptionId, promo?.FreeDays),
-            PendingIntentKey = BuildPendingIntentKey(command, promo?.Id)
+            PendingIntentKey = BuildPendingIntentKey(command, promo?.Id),
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         _db.Orders.Add(order);

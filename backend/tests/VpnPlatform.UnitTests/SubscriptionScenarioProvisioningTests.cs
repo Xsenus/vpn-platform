@@ -61,11 +61,14 @@ public class SubscriptionScenarioProvisioningTests
             new VpnPanel { Name = "selected", BaseUrl = "https://selected.example.test", Region = "eu", Status = VpnPanelStatus.Active, HealthStatus = HealthStatus.Healthy, Capacity = 100, UsedCapacity = 10 });
         await db.SaveChangesAsync();
         interceptor.Commands.Clear();
+        var now = new DateTimeOffset(2034, 4, 5, 6, 7, 8, TimeSpan.Zero);
 
-        var result = await new NodeAllocationService(db).SelectNodeAsync(
+        var result = await new NodeAllocationService(db, new FixedClock(now)).SelectNodeAsync(
             new Tariff { Name = "Panel", Slug = "panel", AllowedRegionsCsv = "eu" });
 
         Assert.Equal("selected", result.Name);
+        Assert.Equal(now, result.CreatedAt);
+        Assert.Equal(now, result.UpdatedAt);
         Assert.Contains(interceptor.Commands, command =>
             command.Contains("FROM \"VpnPanels\"", StringComparison.OrdinalIgnoreCase)
             && command.Contains("LIMIT 1", StringComparison.OrdinalIgnoreCase));
@@ -109,6 +112,8 @@ public class SubscriptionScenarioProvisioningTests
         var node = await service.SelectOrCreateSandboxNodeAsync("vless");
 
         Assert.Equal(now, node.LastHealthCheckAt);
+        Assert.Equal(now, node.CreatedAt);
+        Assert.Equal(now, node.UpdatedAt);
     }
 
     [Fact]

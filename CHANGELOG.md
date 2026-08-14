@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.722.0 - 2026-08-14
+
+Release entry: `2026-08-14-automatic-entity-application-clock`.
+
+### Исправлено
+
+- Доменная модель больше не захватывает process clock в audit и operational date defaults; отсутствующие audit timestamps назначаются на persistence-границе через внедренный `IClock`.
+- Автоматически создаваемые VPN nodes, checkout sessions, orders, payment attempts, refunds, webhook events и referral rewards получают согласованные `CreatedAt`/`UpdatedAt` из одного operation snapshot.
+- Явно заданные исторические audit timestamps сохраняются, а sync/async `SaveChanges` используют одинаковый контракт.
+
+### Проверено
+
+- Fail-first clock regressions `0/7`; after-fix focused `9/9`, domain/seed/payment/provisioning regression `49/49`, backend Debug/Release `1546/1546`, frontend `172/172`, typecheck/build, bundle budget, dependency audit `0 vulnerabilities`, Playwright `270/270`, fresh SQLite full flow, глобальный formatter, EF drift и secret scan `707/0` зелёные.
+- Roadmap `742/762` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.721.0 - 2026-08-14
 
 Release entry: `2026-08-14-service-enum-boundaries`.

@@ -81,7 +81,7 @@ public class InboxMessage : AuditableEntity
     public string ExternalKey { get; set; } = string.Empty;
     public string PayloadJson { get; set; } = "{}";
     public string Status { get; set; } = "received";
-    public DateTimeOffset ReceivedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset ReceivedAt { get; set; }
     public DateTimeOffset? ProcessedAt { get; set; }
 }
 
@@ -108,7 +108,7 @@ public class ProvisioningRun : AuditableEntity
     public int AttemptCount { get; set; }
     public DateTimeOffset? ProcessingStartedAt { get; set; }
     public DateTimeOffset? LeaseExpiresAt { get; set; }
-    public DateTimeOffset StartedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset StartedAt { get; set; }
     public DateTimeOffset? FinishedAt { get; set; }
     public string? LastError { get; set; }
     public string ExecutionLog { get; set; } = string.Empty;
@@ -121,7 +121,7 @@ public class ProvisioningStepRun : AuditableEntity
     public Guid ProvisioningRunId { get; set; }
     public string StepName { get; set; } = string.Empty;
     public ProvisioningRunStatus Status { get; set; } = ProvisioningRunStatus.Pending;
-    public DateTimeOffset StartedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset StartedAt { get; set; }
     public DateTimeOffset? FinishedAt { get; set; }
     public string Output { get; set; } = string.Empty;
     public string ErrorText { get; set; } = string.Empty;
@@ -134,7 +134,7 @@ public class MigrationJob : AuditableEntity
     public MigrationJobStatus Status { get; set; } = MigrationJobStatus.Planned;
     public string Type { get; set; } = "manual";
     public Guid? RequestedByUserId { get; set; }
-    public DateTimeOffset RequestedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset RequestedAt { get; set; }
     public DateTimeOffset? StartedAt { get; set; }
     public DateTimeOffset? FinishedAt { get; set; }
     public string Notes { get; set; } = string.Empty;
@@ -155,7 +155,7 @@ public class MigrationItem : AuditableEntity
 public class NodeHealthCheck : AuditableEntity
 {
     public Guid NodeId { get; set; }
-    public DateTimeOffset CheckedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CheckedAt { get; set; }
     public HealthStatus Status { get; set; } = HealthStatus.Unknown;
     public long LatencyMs { get; set; }
     public string MetadataJson { get; set; } = "{}";

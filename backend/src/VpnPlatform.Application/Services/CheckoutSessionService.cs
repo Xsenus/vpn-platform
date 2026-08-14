@@ -62,6 +62,7 @@ public class CheckoutSessionService
         }
 
         var token = CreateToken();
+        var now = _clock.UtcNow;
         var session = new CheckoutSession
         {
             TokenHash = HashToken(token),
@@ -72,11 +73,13 @@ public class CheckoutSessionService
             PromoCode = OrderService.NormalizePromoCode(command.PromoCode),
             EmailHint = NormalizeEmail(command.EmailHint),
             IsFirstPurchase = command.IsFirstPurchase,
-            ExpiresAt = _clock.UtcNow.AddMinutes(30),
+            ExpiresAt = now.AddMinutes(30),
             Status = "open",
             MetadataJson = string.IsNullOrWhiteSpace(returnUrl)
                 ? "{}"
-                : JsonSerializer.Serialize(new { returnUrl })
+                : JsonSerializer.Serialize(new { returnUrl }),
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         _db.CheckoutSessions.Add(session);

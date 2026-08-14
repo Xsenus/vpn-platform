@@ -199,6 +199,8 @@ public class CheckoutSessionTests
         var session = await db.CheckoutSessions.SingleAsync();
         Assert.NotEqual(created.Value!.Token, session.TokenHash);
         Assert.Equal(64, session.TokenHash.Length);
+        Assert.Equal(clock.UtcNow, session.CreatedAt);
+        Assert.Equal(clock.UtcNow, session.UpdatedAt);
 
         var claimed = await service.ClaimAsync(new(created.Value.Token, user.Id));
         Assert.True(claimed.IsSuccess, claimed.Error);
@@ -208,6 +210,8 @@ public class CheckoutSessionTests
         Assert.Equal(user.Id, order.UserId);
         Assert.Equal(ChannelType.Web, order.Channel);
         Assert.True(order.IsFirstPurchase);
+        Assert.Equal(clock.UtcNow, order.CreatedAt);
+        Assert.Equal(clock.UtcNow, order.UpdatedAt);
     }
 
     [Fact]

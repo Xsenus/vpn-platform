@@ -146,6 +146,8 @@ public sealed class ReferralRewardService
                     Value = reward.Value,
                     CurrencyOrUnit = reward.Unit,
                     ProcessedAt = reward.AutoApprove ? now : null,
+                    CreatedAt = now,
+                    UpdatedAt = now,
                     MetadataJson = JsonSerializer.Serialize(new
                     {
                         sourceOrderId = order.Id,

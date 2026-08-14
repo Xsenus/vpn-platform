@@ -2,6 +2,20 @@
 
 Дата проверки: 2026-08-14.
 
+## Check 2026-08-14: automatic entity application clock
+
+Scope:
+- Доменная модель не должна читать process clock при создании audit и operational timestamps.
+- Persistence boundary должна назначать новые audit timestamps из DI `IClock`, сохраняя явно заданные исторические даты.
+- Auto-created node/checkout/order/payment/refund/webhook/reward records должны использовать один application-clock snapshot.
+
+Results:
+- Roadmap progress: `742/762` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-14-automatic-entity-application-clock`, version `0.722.0`.
+- Fail-first: семь service/SQLite regressions завершились `0/7` и зафиксировали process-time timestamps вместо fixed application clock.
+- After fix: `AuditableEntity` и operational date properties не имеют `UtcNow` defaults; `ApplicationDbContext` одинаково штампует новые сущности в sync/async save; явные historical timestamps сохраняются. Focused `9/9`, domain/seed/payment/provisioning `49/49`, backend Debug/Release `1546/1546`, frontend `172/172`, typecheck/build, bundle budget, dependency audit `0 vulnerabilities`, Playwright `270/270`, fresh SQLite full flow, formatter, EF drift и secret scan `707/0` зелёные.
+- External boundary: реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui локально не проверялись; статус остаётся `staging-ready baseline`, не production-ready.
+
 ## Check 2026-08-14: service enum boundaries
 
 Scope:

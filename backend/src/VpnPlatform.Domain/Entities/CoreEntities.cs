@@ -97,7 +97,7 @@ public class ChannelProfile : AuditableEntity
     public string? Username { get; set; }
     public string? ChatId { get; set; }
     public string MetadataJson { get; set; } = "{}";
-    public DateTimeOffset LinkedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset LinkedAt { get; set; }
 
     public User? User { get; set; }
 }
@@ -272,7 +272,7 @@ public class PaymentWebhookEvent : AuditableEntity
     public string HeadersJson { get; set; } = "{}";
     public bool SignatureValidated { get; set; }
     public PaymentWebhookEventStatus Status { get; set; } = PaymentWebhookEventStatus.Received;
-    public DateTimeOffset ReceivedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset ReceivedAt { get; set; }
     public DateTimeOffset? ProcessedAt { get; set; }
     public string ErrorText { get; set; } = string.Empty;
 
@@ -646,7 +646,7 @@ public class AccessCredential : AuditableEntity
     public string QrCodePath { get; set; } = string.Empty;
     public string ConfigPath { get; set; } = string.Empty;
     public AccessCredentialStatus Status { get; set; } = AccessCredentialStatus.Provisioning;
-    public DateTimeOffset IssuedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset IssuedAt { get; set; }
     public DateTimeOffset? DisabledAt { get; set; }
     public DateTimeOffset? LastSyncedAt { get; set; }
     public int Revision { get; set; } = 1;

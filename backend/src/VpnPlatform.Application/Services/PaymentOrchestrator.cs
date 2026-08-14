@@ -159,7 +159,9 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             IdempotencyKey = BuildPaymentIdempotencyKey(currentOrder.Id, command.Provider, account.Id),
             ReturnUrl = returnUrl,
             RawRequest = "{}",
-            RawResponse = "{}"
+            RawResponse = "{}",
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         if (existingPending is null)
@@ -379,7 +381,9 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
                 HeadersJson = SerializeSafeHeaders(headers),
                 SignatureValidated = false,
                 Status = PaymentWebhookEventStatus.Received,
-                ReceivedAt = now
+                ReceivedAt = now,
+                CreatedAt = now,
+                UpdatedAt = now
             };
             _db.PaymentWebhookEvents.Add(webhookEvent);
             try
@@ -704,6 +708,8 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             return Result<RefundDto>.Failure("Refund reason must not exceed 120 characters.");
         }
 
+        var now = _clock.UtcNow;
+
         var payment = await _db.Payments
             .Include(x => x.Order)
             .Include(x => x.PaymentProviderAccount)
@@ -792,7 +798,9 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
                 Currency = currentPayment.Currency,
                 Reason = reason,
                 RawRequest = JsonSerializer.Serialize(new { paymentId = currentPayment.Id, amount, currency = currentPayment.Currency, reason, idempotencyKey = refundIdempotencyKey }),
-                RawResponse = "{}"
+                RawResponse = "{}",
+                CreatedAt = now,
+                UpdatedAt = now
             };
             _db.Refunds.Add(refund);
 
@@ -1361,6 +1369,7 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
 
     private async Task SaveRejectedWebhookAsync(PaymentProvider provider, string providerPaymentId, string externalEventId, string eventType, string rawBody, IReadOnlyDictionary<string, string> headers, string error, CancellationToken cancellationToken)
     {
+        var now = _clock.UtcNow;
         var webhookEvent = new PaymentWebhookEvent
         {
             Provider = provider,
@@ -1372,8 +1381,10 @@ public class PaymentOrchestrator : IPaymentWebhookProcessor
             HeadersJson = SerializeSafeHeaders(headers),
             Status = PaymentWebhookEventStatus.Rejected,
             ErrorText = error,
-            ReceivedAt = _clock.UtcNow,
-            ProcessedAt = _clock.UtcNow
+            ReceivedAt = now,
+            ProcessedAt = now,
+            CreatedAt = now,
+            UpdatedAt = now
         };
         _db.PaymentWebhookEvents.Add(webhookEvent);
         try

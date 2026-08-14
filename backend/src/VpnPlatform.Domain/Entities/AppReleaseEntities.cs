@@ -7,7 +7,7 @@ public class AppRelease : AuditableEntity
 {
     public string ReleaseId { get; set; } = string.Empty;
     public string Version { get; set; } = string.Empty;
-    public DateTimeOffset ReleasedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset ReleasedAt { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
@@ -40,7 +40,7 @@ public class AppReleaseSeen : AuditableEntity
 {
     public Guid AppReleaseId { get; set; }
     public Guid UserId { get; set; }
-    public DateTimeOffset SeenAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset SeenAt { get; set; }
 
     [JsonIgnore]
     public AppRelease? AppRelease { get; set; }

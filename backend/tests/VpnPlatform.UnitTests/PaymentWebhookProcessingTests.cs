@@ -138,7 +138,10 @@ public class PaymentWebhookProcessingTests
         Assert.False(result.IsSuccess);
         Assert.Equal(0, await db.Subscriptions.CountAsync());
         Assert.Equal(1, await db.PaymentWebhookEvents.CountAsync());
-        Assert.Equal(PaymentWebhookEventStatus.Rejected, (await db.PaymentWebhookEvents.SingleAsync()).Status);
+        var webhookEvent = await db.PaymentWebhookEvents.SingleAsync();
+        Assert.Equal(PaymentWebhookEventStatus.Rejected, webhookEvent.Status);
+        Assert.Equal(clock.UtcNow, webhookEvent.CreatedAt);
+        Assert.Equal(clock.UtcNow, webhookEvent.UpdatedAt);
     }
 
     [Fact]

@@ -150,6 +150,8 @@ public class PaymentRefundResilienceTests
             var payment = await verificationDb.Payments.SingleAsync(x => x.Id == paymentId);
             Assert.Equal(RefundStatus.Unknown, refund.Status);
             Assert.NotEmpty(refund.ProviderRefundId);
+            Assert.Equal(now, refund.CreatedAt);
+            Assert.Equal(now, refund.UpdatedAt);
             Assert.Equal(PaymentStatus.Succeeded, payment.Status);
             Assert.Equal(0m, payment.RefundedAmount);
         }

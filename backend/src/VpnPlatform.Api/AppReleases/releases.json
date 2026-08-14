@@ -16995,5 +16995,32 @@
         "text": "Roadmap progress is 741/761 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-14-automatic-entity-application-clock",
+    "version": "0.722.0",
+    "releasedAt": "2026-08-14T13:18:02+07:00",
+    "title": "Создание сущностей синхронизировано с application clock",
+    "summary": "Audit и operational timestamps новых сущностей больше не зависят от скрытых domain process-time defaults.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Новые audit timestamps назначаются persistence-границей через DI IClock с сохранением явно заданной истории."
+      },
+      {
+        "type": "fixed",
+        "text": "VPN nodes, checkout sessions, orders, payments, refunds, webhooks и referral rewards используют согласованный operation timestamp."
+      },
+      {
+        "type": "improved",
+        "text": "Доменная модель больше не читает process clock при конструировании audit и operational date properties."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 742/762 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

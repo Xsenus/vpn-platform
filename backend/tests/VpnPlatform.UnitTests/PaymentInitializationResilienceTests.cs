@@ -46,6 +46,8 @@ public class PaymentInitializationResilienceTests
         Assert.Equal(provider.PaymentId, payment.ProviderPaymentId);
         Assert.Equal(provider.RedirectUrl, payment.ConfirmationUrl);
         Assert.Equal(PaymentStatus.Pending, payment.Status);
+        Assert.Equal(fixture.Now, payment.CreatedAt);
+        Assert.Equal(fixture.Now, payment.UpdatedAt);
         Assert.Equal(OrderStatus.PendingPayment, order.Status);
     }
 
@@ -285,6 +287,7 @@ public class PaymentInitializationResilienceTests
 
         public FailingSaveApplicationDbContext Db { get; }
         public Guid OrderId { get; }
+        public DateTimeOffset Now => _now;
         public PaymentInitCommand Command => new(OrderId, PaymentProvider.YooKassa, "https://example.test/return");
 
         public static async Task<PaymentFixture> CreateAsync(OrderStatus status = OrderStatus.PendingPayment, DateTimeOffset? paidAt = null, bool deadlineElapsed = false)
