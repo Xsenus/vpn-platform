@@ -17535,5 +17535,32 @@
         "text": "Roadmap progress is 764/784 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-15-server-state-transition-integrity",
+    "version": "0.742.0",
+    "releasedAt": "2026-08-15T18:43:53+07:00",
+    "title": "VPN server state actions follow an explicit transition model",
+    "summary": "VPN server mode actions now reject repeated and invalid transitions without mutation, while the administrative panel exposes only actions valid for the current state.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Repeated and invalid maintenance, allocation and disable actions return a controlled validation error without changing status, revision, timestamp or audit history."
+      },
+      {
+        "type": "fixed",
+        "text": "Disabled, archived, new and provisioning servers cannot be returned to Ready through maintenance or allocation endpoints, and stale revision conflicts retain priority."
+      },
+      {
+        "type": "improved",
+        "text": "The administrative server card shows only actions allowed for its current state and allocation mode on desktop and mobile."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 765/785 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

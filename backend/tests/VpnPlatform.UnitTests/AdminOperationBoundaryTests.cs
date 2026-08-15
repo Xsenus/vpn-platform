@@ -310,6 +310,55 @@ public class AdminOperationBoundaryTests
         Assert.Equal(5, await db.AuditLogs.CountAsync());
     }
 
+    [Theory]
+    [InlineData("disable", NodeStatus.Disabled, false)]
+    [InlineData("maintenance", NodeStatus.Maintenance, false)]
+    [InlineData("ready", NodeStatus.Ready, true)]
+    [InlineData("drain", NodeStatus.Draining, false)]
+    [InlineData("allocate", NodeStatus.Ready, true)]
+    [InlineData("maintenance", NodeStatus.Disabled, false)]
+    [InlineData("ready", NodeStatus.Disabled, false)]
+    [InlineData("drain", NodeStatus.Disabled, false)]
+    [InlineData("allocate", NodeStatus.Disabled, false)]
+    [InlineData("allocate", NodeStatus.New, false)]
+    public async Task Server_Mode_Actions_Should_Reject_NoOp_And_Invalid_Transitions_Without_Mutation(
+        string action,
+        NodeStatus status,
+        bool available)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var node = Node($"invalid-{action}-{status}", status, available);
+        node.UpdatedAt = new DateTimeOffset(2026, 8, 15, 10, 0, 0, TimeSpan.Zero);
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        var originalUpdatedAt = node.UpdatedAt;
+        var controller = CreateController(db, Guid.NewGuid(), new FixedClock(originalUpdatedAt.AddHours(1)));
+        var request = new ServerStateActionHttpRequest(node.Revision);
+
+        var result = action switch
+        {
+            "disable" => await controller.DisableServer(node.Id, request, CancellationToken.None),
+            "maintenance" => await controller.Maintenance(node.Id, request, CancellationToken.None),
+            "ready" => await controller.DisableMaintenance(node.Id, request, CancellationToken.None),
+            "drain" => await controller.DisableAllocation(node.Id, request, CancellationToken.None),
+            "allocate" => await controller.EnableAllocation(node.Id, request, CancellationToken.None),
+            _ => throw new InvalidOperationException($"Unsupported test action {action}.")
+        };
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        db.ChangeTracker.Clear();
+        var persisted = await db.VpnNodes.SingleAsync(x => x.Id == node.Id);
+        Assert.Equal(status, persisted.Status);
+        Assert.Equal(available, persisted.IsAvailableForNewUsers);
+        Assert.Equal(0, persisted.Revision);
+        Assert.Equal(originalUpdatedAt, persisted.UpdatedAt);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
     [Fact]
     public async Task Revoked_Access_Should_Reject_Admin_Qr_On_Sqlite()
     {

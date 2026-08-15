@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-15.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-server-editor-noop-draft-integrity`, версия `0.741.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `764/784` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-server-state-transition-integrity`, версия `0.742.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `765/785` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,8 +37,8 @@ git diff --check
 
 Что подтверждено на 2026-08-15:
 
-- [x] `STATE-001` Backend test suite проходит: `1575/1575`.
-- [x] `STATE-002` Frontend test suite проходит: `193/193`.
+- [x] `STATE-001` Backend test suite проходит: `1585/1585`.
+- [x] `STATE-002` Frontend test suite проходит: `195/195`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2752,6 +2752,10 @@ git diff --check
   - Что сделать: неизменённый нормализованный PUT не должен повышать revision, менять timestamp или писать audit; UI должен блокировать no-op, а delayed conflict не должен закрывать редактор с более новым local draft.
   - Что сделано: backend строит полный нормализованный candidate сервера до mutation и возвращает controlled `400`; frontend helper повторяет нормализацию host/protocol/system tags и write-only секретов, а conflict recovery адресно обновляет список и переводит только новый draft на winning revision.
   - Доказательство: fail-first backend `0/1` и browser no-op regression; after-fix targeted server backend `89/89`, backend Debug/Release `1575/1575`, frontend `193/193`, typecheck/build, admin bundle raw `585800/586752`, gzip `155817/156672`, targeted Playwright desktop/mobile `2/2`, полный Playwright `282/282` за `13.0 min`, fresh SQLite `serverNoOp=400`, все 17 admin sections и 25 responsive viewport-конфигураций, formatter, EF drift, encoding, secret scan `725/0` и dependency audit `0 vulnerabilities` зелёные. Реальные VPS/SSH/Ansible и production-like 3x-ui проверки этим пунктом не закрываются.
+- [x] `P11-ACC-474` Защитить операции состояния VPN-сервера от повторных и недопустимых переходов. 2026-08-15.
+  - Что сделать: mode-actions должны иметь явную таблицу разрешённых исходных состояний, не менять запись при no-op/invalid transition, сохранять приоритет stale `409` и не позволять UI вернуть отключённый или неподготовленный сервер в работу.
+  - Что сделано: backend принимает именованный transition, сверяет актуальную persisted revision, проверяет state/allocation matrix до mutation и только затем меняет status/revision/audit; frontend helper вычисляет доступность пяти действий и скрывает недопустимые кнопки после каждого reload.
+  - Доказательство: fail-first backend matrix `0/10` и отсутствующий frontend helper; after-fix targeted transition/concurrency backend `26/26`, backend Debug/Release `1585/1585`, frontend `195/195`, typecheck/build, admin bundle raw `586228/586752`, gzip `155984/156672`, targeted Playwright desktop/mobile `4/4`, полный Playwright `282/282` за `13.2 min`, fresh SQLite `serverGuards=400,400`, все 17 admin sections и 25 responsive viewport-конфигураций, formatter, EF drift, encoding, secret scan `727/0` и dependency audit `0 vulnerabilities` зелёные. Реальные VPS/SSH/Ansible и production-like 3x-ui проверки этим пунктом не закрываются.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3401,6 +3405,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-15-007` | P0 | Admin VPN server state | Повторные mode-actions меняли revision/audit, а maintenance/allocation endpoints позволяли перевести отключённый или неподготовленный сервер в `Ready`; UI показывал взаимоисключающие действия одновременно. | Исправлено локально | Explicit transition matrix, fresh revision priority и state-aware UI проверены backend/fresh SQLite/frontend/desktop/mobile/full responsive regressions. Реальные VPS/SSH/Ansible/3x-ui outcomes остаются отдельным evidence. |
 | `BUG-2026-08-15-006` | P1 | Admin VPN servers | Неизменённый server PUT повышал revision и писал audit; UI разрешал no-op, а delayed `409` закрывал редактор и терял более новый local draft. | Исправлено локально | Full normalized backend candidate, API-aligned dirty-state, targeted list reload и revision rebase проверены backend/fresh SQLite/frontend/desktop/mobile/full responsive regressions. Реальные VPS/SSH/Ansible/3x-ui outcomes остаются отдельным evidence. |
 | `BUG-2026-08-15-005` | P1 | Admin conflict recovery | Новый local draft переживал delayed `409`, но сохранял losing revision, поэтому payment/tariff/referral/release/panel/inbound editor зацикливался на повторных конфликтах. | Исправлено локально | Draft revision rebase, filter-independent release lookup, deleted-record reset и desktop/mobile retry regressions проверены полной responsive-матрицей. Внешние provider/VPS/3x-ui outcomes остаются отдельным evidence. |
 | `BUG-2026-08-15-004` | P0 | Admin payment providers | Аккаунты провайдеров не имели persisted revision: параллельные администраторы могли молча перезаписать настройки и ротацию секретов; no-op save менял timestamp/audit, а UI разрешал пустую отправку. | Исправлено локально | EF revision/migration, normalized no-op guards, versioned state action, fail-closed decoder и draft-safe delayed `409` проверены backend/fresh SQLite/frontend/desktop/mobile/responsive regressions. Реальные provider кабинеты и live payment остаются внешним evidence. |

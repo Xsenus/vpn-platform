@@ -2600,7 +2600,7 @@ public class AdminOperationsController : ControllerBase
         Guid id,
         [FromBody] ServerStateActionHttpRequest? request,
         CancellationToken cancellationToken)
-        => ChangeServerStateAsync(id, request, NodeStatus.Disabled, false, "server.disable", cancellationToken);
+        => ChangeServerStateAsync(id, request, ServerStateTransition.Disable, cancellationToken);
 
     [HttpDelete("servers/{id:guid}")]
     [Authorize(Policy = AdminPolicies.ProvisioningManage)]
@@ -3052,7 +3052,7 @@ public class AdminOperationsController : ControllerBase
         Guid id,
         [FromBody] ServerStateActionHttpRequest? request,
         CancellationToken cancellationToken)
-        => ChangeServerStateAsync(id, request, NodeStatus.Maintenance, false, "server.maintenance.enable", cancellationToken);
+        => ChangeServerStateAsync(id, request, ServerStateTransition.EnterMaintenance, cancellationToken);
 
     [HttpPost("servers/{id:guid}/disable-maintenance")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
@@ -3060,7 +3060,7 @@ public class AdminOperationsController : ControllerBase
         Guid id,
         [FromBody] ServerStateActionHttpRequest? request,
         CancellationToken cancellationToken)
-        => ChangeServerStateAsync(id, request, NodeStatus.Ready, true, "server.maintenance.disable", cancellationToken);
+        => ChangeServerStateAsync(id, request, ServerStateTransition.LeaveMaintenance, cancellationToken);
 
     [HttpPost("servers/{id:guid}/disable-allocation")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
@@ -3068,7 +3068,7 @@ public class AdminOperationsController : ControllerBase
         Guid id,
         [FromBody] ServerStateActionHttpRequest? request,
         CancellationToken cancellationToken)
-        => ChangeServerStateAsync(id, request, NodeStatus.Draining, false, "server.allocation.disable", cancellationToken);
+        => ChangeServerStateAsync(id, request, ServerStateTransition.DisableAllocation, cancellationToken);
 
     [HttpPost("servers/{id:guid}/enable-allocation")]
     [Authorize(Policy = AdminPolicies.VpnManage)]
@@ -3076,14 +3076,21 @@ public class AdminOperationsController : ControllerBase
         Guid id,
         [FromBody] ServerStateActionHttpRequest? request,
         CancellationToken cancellationToken)
-        => ChangeServerStateAsync(id, request, NodeStatus.Ready, true, "server.allocation.enable", cancellationToken);
+        => ChangeServerStateAsync(id, request, ServerStateTransition.EnableAllocation, cancellationToken);
+
+    private enum ServerStateTransition
+    {
+        Disable,
+        EnterMaintenance,
+        LeaveMaintenance,
+        DisableAllocation,
+        EnableAllocation
+    }
 
     private async Task<IActionResult> ChangeServerStateAsync(
         Guid id,
         ServerStateActionHttpRequest? request,
-        NodeStatus status,
-        bool isAvailableForNewUsers,
-        string auditAction,
+        ServerStateTransition transition,
         CancellationToken cancellationToken)
     {
         if (request?.Revision is null or < 0)
@@ -3092,14 +3099,54 @@ public class AdminOperationsController : ControllerBase
         }
 
         await using var gate = await PaymentProcessingGate.AcquireVpnNodeStateAsync(id, cancellationToken);
-        var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (node is null) return NotFound(new { error = "Server not found." });
-        if (request.Revision.Value != node.Revision)
+        var persistedNode = await _db.VpnNodes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (persistedNode is null) return NotFound(new { error = "Server not found." });
+        if (request.Revision.Value != persistedNode.Revision)
         {
-            return Conflict(new { error = "Server changed. Reload it and retry.", revision = node.Revision });
+            return Conflict(new { error = "Server changed. Reload it and retry.", revision = persistedNode.Revision });
         }
-        if (node.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
+        if (persistedNode.Status == NodeStatus.Archived) return Conflict(new { error = "Archived server state cannot be changed." });
 
+        var transitionAllowed = transition switch
+        {
+            ServerStateTransition.Disable => persistedNode.Status != NodeStatus.Disabled,
+            ServerStateTransition.EnterMaintenance => persistedNode.Status is NodeStatus.Ready
+                or NodeStatus.Degraded
+                or NodeStatus.Full
+                or NodeStatus.Draining
+                or NodeStatus.Error,
+            ServerStateTransition.LeaveMaintenance => persistedNode.Status == NodeStatus.Maintenance,
+            ServerStateTransition.DisableAllocation => persistedNode.Status == NodeStatus.Ready && persistedNode.IsAvailableForNewUsers,
+            ServerStateTransition.EnableAllocation => (persistedNode.Status is NodeStatus.Ready or NodeStatus.Draining) && !persistedNode.IsAvailableForNewUsers,
+            _ => false
+        };
+        if (!transitionAllowed)
+        {
+            return BadRequest(new { error = "Server state transition is not allowed from the current state." });
+        }
+
+        var (status, isAvailableForNewUsers, auditAction) = transition switch
+        {
+            ServerStateTransition.Disable => (NodeStatus.Disabled, false, "server.disable"),
+            ServerStateTransition.EnterMaintenance => (NodeStatus.Maintenance, false, "server.maintenance.enable"),
+            ServerStateTransition.LeaveMaintenance => (NodeStatus.Ready, true, "server.maintenance.disable"),
+            ServerStateTransition.DisableAllocation => (NodeStatus.Draining, false, "server.allocation.disable"),
+            ServerStateTransition.EnableAllocation => (NodeStatus.Ready, true, "server.allocation.enable"),
+            _ => throw new InvalidOperationException("Unsupported server state transition.")
+        };
+
+        var node = _db.VpnNodes.Local.FirstOrDefault(x => x.Id == id);
+        if (node is null)
+        {
+            node = persistedNode;
+            _db.VpnNodes.Attach(node);
+        }
+        else
+        {
+            node.Revision = persistedNode.Revision;
+            node.Status = persistedNode.Status;
+            node.IsAvailableForNewUsers = persistedNode.IsAvailableForNewUsers;
+        }
         var before = JsonSerializer.Serialize(new { node.Status, node.IsAvailableForNewUsers });
         node.Status = status;
         node.IsAvailableForNewUsers = isAvailableForNewUsers;

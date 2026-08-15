@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.742.0 - 2026-08-15
+
+Release entry: `2026-08-15-server-state-transition-integrity`.
+
+### Исправлено
+
+- Повторные и недопустимые действия VPN-сервера теперь возвращают controlled `400` без изменения status, allocation, revision, timestamp или audit; stale revision по-прежнему имеет приоритет и возвращает `409`.
+- Отключённые, архивные, новые и подготавливаемые серверы нельзя вернуть в `Ready` через maintenance/allocation endpoints.
+- Admin-панель показывает только допустимые для текущего состояния действия и после каждого перехода синхронизирует набор кнопок на desktop и mobile.
+- Fresh SQLite smoke проверяет не только server PUT no-op, но и недопустимый выход из maintenance для `Ready`-сервера.
+
+### Проверено
+
+- Fail-first backend transition matrix завершилась `0/10`, а frontend helper отсутствовал; после исправления targeted transition/concurrency backend `26/26`, frontend `195/195`, целевой Playwright desktop/mobile `4/4` и полный Playwright `282/282` за `13.2 min` зелёные.
+- Backend Debug/Release `1585/1585`, typecheck/build, admin bundle raw `586228/586752` и gzip `155984/156672`, fresh SQLite `serverGuards=400,400`, dependency audit `0 vulnerabilities`, responsive all-screens на 25 viewport-конфигурациях, EF drift, formatter, strict UTF-8 и secret scan `727/0` зелёные. Roadmap `765/785` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.741.0 - 2026-08-15
 
 Release entry: `2026-08-15-server-editor-noop-draft-integrity`.

@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: VPN server state transition integrity
+
+Scope:
+- Repeated or invalid server mode actions must not mutate state, allocation, revision, timestamp or audit history.
+- Disabled, archived, new and provisioning servers must not be revived through maintenance or allocation actions.
+- Stale revision conflicts must take priority over transition validation, and the UI must expose only currently valid actions.
+
+Results:
+- Roadmap progress: `765/785` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-server-state-transition-integrity`, version `0.742.0`.
+- Fail-first: the backend transition matrix completed `0/10` because all repeated and invalid actions returned success; the frontend state-action helper did not exist.
+- After fix: targeted transition/concurrency backend `26/26`, frontend `195/195`, typecheck/build, admin bundle budget `586228/586752` raw and `155984/156672` gzip, targeted server Playwright desktop/mobile `4/4`, and full Playwright `282/282` in `13.2 min` are green.
+- Release gate: backend Debug/Release `1585/1585`, API Release build `0 warnings / 0 errors`, fresh SQLite full flow including `serverGuards=400,400`, all 17 admin sections and 25 responsive viewport configurations, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, `RoadmapCurrentStateTests`, secret scan `727/0` and strict UTF-8/BOM guard are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: VPN server no-op and conflict draft integrity
 
 Scope:

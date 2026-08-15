@@ -387,6 +387,9 @@ try {
         nodeGroupId = $adminServer.nodeGroupId
         revision = $adminServer.revision
     }
+    $serverStateNoOpStatus = Assert-SmokeJsonStatus -Method "POST" -Uri "$apiUrl/api/admin/servers/$($adminServer.id)/disable-maintenance" -Headers $adminHeaders -ExpectedStatus 400 -Body @{
+        revision = $adminServer.revision
+    }
 
     $vpnPanels = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/admin/vpn-panels" -Headers $adminHeaders)
     $vpnPanel = $vpnPanels | Select-Object -First 1
@@ -502,7 +505,7 @@ try {
         throw "Unexpected access URI protocol: $($access.accessUri)"
     }
 
-    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) managedNoOp=$managedNoOpStatus commerceNoOps=$tariffNoOpStatus,$referralNoOpStatus,$releaseNoOpStatus providerGuards=$providerNoOpStatus,$providerStateNoOpStatus,$providerConflictStatus serverNoOp=$serverNoOpStatus vpnNoOps=$vpnPanelNoOpStatus,$vpnInboundNoOpStatus telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
+    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) managedNoOp=$managedNoOpStatus commerceNoOps=$tariffNoOpStatus,$referralNoOpStatus,$releaseNoOpStatus providerGuards=$providerNoOpStatus,$providerStateNoOpStatus,$providerConflictStatus serverGuards=$serverNoOpStatus,$serverStateNoOpStatus vpnNoOps=$vpnPanelNoOpStatus,$vpnInboundNoOpStatus telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
 }
 finally {
     if ($process -and -not $process.HasExited) {
