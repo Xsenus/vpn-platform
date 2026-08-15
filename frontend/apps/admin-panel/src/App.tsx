@@ -64,6 +64,7 @@ import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlock
 import { canCancelProvisioningRun, canRetryProvisioningRun, isProvisioningStateConflict } from './provisioning-state'
 import { adminAccessDeniedMessage, adminSessionEndedMessage, isAdminAccessTokenExpired, isAdminSessionRejected } from './admin-session'
 import { isOptionalSafeAdminHttpUrl, validateTelegramBotUrlFields } from './admin-url-validation'
+import { isServerFormChanged } from './admin-server-editors'
 import { validateServerForm } from './admin-server-validation'
 import { isVpnInboundFormChanged, isVpnPanelFormChanged } from './admin-vpn-editors'
 import { getAdminOrderPaymentRecheckBlocker, getAdminPaymentRecheckBlocker } from './admin-payments'
@@ -3810,10 +3811,26 @@ export function App() {
     setServerForm(defaultServerForm)
   }
 
-  const throwServerConflict = async (error: unknown, action: AdminActionContext, serverId: string): Promise<never> => {
+  const throwServerConflict = async (
+    error: unknown,
+    action: AdminActionContext,
+    serverId: string,
+    draft?: { form: ServerFormState; revision: number }
+  ): Promise<never> => {
     if (!(error instanceof ApiClientError) || error.status !== 409) throw error
-    await action.reloadAll()
-    if (action.isCurrent() && editingServerIdRef.current === serverId) cancelServerEdit()
+    const latestServers = await api.getAdminServers(token)
+    if (action.isCurrent()) {
+      setServers(latestServers)
+      if (editingServerIdRef.current === serverId) {
+        const submittedDraftIsCurrent = draft && serverFormRef.current === draft.form
+        const latestServer = latestServers.find((server) => server.id === serverId)
+        if (!draft || submittedDraftIsCurrent || !latestServer) {
+          cancelServerEdit()
+        } else {
+          setEditingServerRevision((current) => rebaseAdminRevision(current, draft.revision, latestServer.revision) ?? null)
+        }
+      }
+    }
     throw new ApiClientError('Сервер уже изменен другим администратором. Список обновлен. Повторите.', 409, error.payload)
   }
 
@@ -3828,16 +3845,25 @@ export function App() {
     const editingId = editingServerId
     const submittedRevision = editingServerRevision
     const submittedForm = serverForm
+    const currentServer = editingId ? servers.find((server) => server.id === editingId) : undefined
     const validationErrors = validateServerForm(submittedForm)
     if (validationErrors.length > 0) {
       setError(`Сервер: ${validationErrors.join(' ')}`)
+      return
+    }
+    if (editingId && !currentServer) {
+      setError('Редактируемый сервер больше не найден. Обновите список.')
+      return
+    }
+    if (currentServer && !isServerFormChanged(submittedForm, currentServer)) {
+      setError('Изменения VPN-сервера не обнаружены.')
       return
     }
     await runAction('nodes', 'server-save', async (action) => {
       if (editingId && submittedRevision === null) throw new ApiClientError('Не удалось определить ревизию сервера. Откройте его заново.', 409, null)
       const saved = editingId
         ? await api.updateAdminServer(token, editingId, submittedForm, submittedRevision as number)
-            .catch((error: unknown) => throwServerConflict(error, action, editingId))
+            .catch((error: unknown) => throwServerConflict(error, action, editingId, { form: submittedForm, revision: submittedRevision as number }))
         : await api.createAdminServer(token, submittedForm)
       if (!action.isCurrent()) return
       setNotice(`Сервер ${saved.name} ${editingId ? 'обновлен' : 'создан'}. Секреты не возвращаются из API.`)
@@ -4043,6 +4069,8 @@ export function App() {
   const referralProgramFormChanged = !editingReferralProgramId || Boolean(editingReferralProgram && isReferralProgramFormChanged(referralProgramForm, editingReferralProgram))
   const referralProgramFormActionBusy = isActionResourceBusy(referralProgramActionResourceKey)
   const serverFormErrors = validateServerForm(serverForm)
+  const editingServer = editingServerId ? servers.find((server) => server.id === editingServerId) : undefined
+  const serverFormChanged = !editingServerId || Boolean(editingServer && isServerFormChanged(serverForm, editingServer))
   const serverFormActionBusy = isActionResourceBusy(serverActionResourceKey(editingServerId || 'create'))
   const editingVpnPanel = editingVpnPanelId ? vpnPanels.find((panel) => panel.id === editingVpnPanelId) : undefined
   const vpnPanelFormChanged = !editingVpnPanelId || Boolean(editingVpnPanel && isVpnPanelFormChanged(vpnPanelForm, editingVpnPanel))
@@ -5189,7 +5217,7 @@ export function App() {
             <p className="muted">SSH-доступ защищается API и не возвращается обратно. Проверочный режим не выполняет реальный SSH-деплой.</p>
             <FormValidationSummary errors={serverForm !== defaultServerForm ? serverFormErrors : []} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={serverFormActionBusy || !token || serverFormErrors.length > 0} title={adminDisabledTitle} aria-busy={serverFormActionBusy}>{editingServerId ? 'Сохранить сервер' : 'Создать сервер'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={serverFormActionBusy || !token || serverFormErrors.length > 0 || !serverFormChanged} title={adminDisabledTitle} aria-busy={serverFormActionBusy}>{editingServerId ? 'Сохранить сервер' : 'Создать сервер'}</PrimaryButton>
               {editingServerId && <PrimaryButton type="button" className="button-ghost" onClick={cancelServerEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>

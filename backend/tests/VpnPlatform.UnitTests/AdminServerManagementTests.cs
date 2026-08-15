@@ -33,6 +33,36 @@ public class AdminServerManagementTests
         Assert.True(revision.IsConcurrencyToken);
     }
 
+    [Fact]
+    public async Task UpdateServer_Should_Reject_Normalized_NoOp_Without_Revision_Timestamp_Or_Audit()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var node = NewNode("no-op-server");
+        node.TagsCsv = "source:admin,owner:admin,ssh-auth:ssh_key,credentials:missing,validation-mode:true,autodeploy-after-precheck:false";
+        node.UpdatedAt = new DateTimeOffset(2026, 8, 15, 8, 0, 0, TimeSpan.Zero);
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        var originalUpdatedAt = node.UpdatedAt;
+        var request = UpdateRequest(node) with
+        {
+            SshAuthMethod = "ssh_key",
+            ValidationMode = true,
+            OwnerType = "admin"
+        };
+
+        var result = await CreateController(db).UpdateServer(node.Id, request, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        db.ChangeTracker.Clear();
+        var persisted = await db.VpnNodes.SingleAsync(x => x.Id == node.Id);
+        Assert.Equal(0, persisted.Revision);
+        Assert.Equal(originalUpdatedAt, persisted.UpdatedAt);
+        Assert.DoesNotContain(await db.AuditLogs.ToListAsync(), x => x.Action is "server.update" or "server.secret.rotate");
+    }
+
     [Theory]
     [InlineData("name", 201)]
     [InlineData("provider", 121)]

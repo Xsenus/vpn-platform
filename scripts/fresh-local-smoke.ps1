@@ -352,6 +352,42 @@ try {
     $staleProviderBody.revision = [int]$providerAccount.revision + 1
     $providerConflictStatus = Assert-SmokeJsonStatus -Method "PATCH" -Uri "$apiUrl/api/admin/payment-providers/accounts/$($providerAccount.id)" -Headers $adminHeaders -ExpectedStatus 409 -Body $staleProviderBody
 
+    $adminServers = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/admin/servers" -Headers $adminHeaders)
+    $adminServer = $adminServers | Select-Object -First 1
+    if ($null -eq $adminServer) {
+        throw "Admin VPN server seed is missing."
+    }
+    $serverValidationMode = [string]$adminServer.tagsCsv -match '(^|,)validation-mode:true(,|$)'
+    $serverNoOpStatus = Assert-SmokeJsonStatus -Method "PUT" -Uri "$apiUrl/api/admin/servers/$($adminServer.id)" -Headers $adminHeaders -ExpectedStatus 400 -Body @{
+        name = $adminServer.name
+        host = $adminServer.host
+        ipAddress = $adminServer.ipAddress
+        provider = $adminServer.provider
+        region = $adminServer.region
+        country = $adminServer.country
+        datacenter = $adminServer.datacenter
+        capacity = $adminServer.capacity
+        supportedProtocolsCsv = $adminServer.supportedProtocolsCsv
+        priority = $adminServer.priority
+        tagsCsv = $adminServer.tagsCsv
+        sshUser = $adminServer.sshUser
+        sshPort = $adminServer.sshPort
+        sshPrivateKeyPath = ""
+        sshAuthMethod = $adminServer.sshAuthMethod
+        sshCredential = ""
+        validationMode = $serverValidationMode
+        ownerType = $null
+        skipHostKeyChecking = $adminServer.skipHostKeyChecking
+        panelBaseUrl = $adminServer.panelBaseUrl
+        panelUsername = $adminServer.panelUsername
+        panelPassword = ""
+        panelInboundId = $adminServer.panelInboundId
+        publicHostname = $adminServer.publicHostname
+        publicPort = $adminServer.publicPort
+        nodeGroupId = $adminServer.nodeGroupId
+        revision = $adminServer.revision
+    }
+
     $vpnPanels = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/admin/vpn-panels" -Headers $adminHeaders)
     $vpnPanel = $vpnPanels | Select-Object -First 1
     if ($null -eq $vpnPanel) {
@@ -466,7 +502,7 @@ try {
         throw "Unexpected access URI protocol: $($access.accessUri)"
     }
 
-    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) managedNoOp=$managedNoOpStatus commerceNoOps=$tariffNoOpStatus,$referralNoOpStatus,$releaseNoOpStatus providerGuards=$providerNoOpStatus,$providerStateNoOpStatus,$providerConflictStatus vpnNoOps=$vpnPanelNoOpStatus,$vpnInboundNoOpStatus telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
+    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) managedNoOp=$managedNoOpStatus commerceNoOps=$tariffNoOpStatus,$referralNoOpStatus,$releaseNoOpStatus providerGuards=$providerNoOpStatus,$providerStateNoOpStatus,$providerConflictStatus serverNoOp=$serverNoOpStatus vpnNoOps=$vpnPanelNoOpStatus,$vpnInboundNoOpStatus telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
 }
 finally {
     if ($process -and -not $process.HasExited) {

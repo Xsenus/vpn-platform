@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.741.0 - 2026-08-15
+
+Release entry: `2026-08-15-server-editor-noop-draft-integrity`.
+
+### Исправлено
+
+- Неизменённый VPN-сервер возвращает `400` до повышения revision, изменения `UpdatedAt` и записи audit; нормализация охватывает host, протоколы, системные теги, SSH и параметры панели.
+- Admin-форма выключает сохранение без изменений и отклоняет программную no-op отправку до API.
+- При delayed `409` список получает внешнюю версию, но более новый локальный черновик сохраняется, получает winning revision и успешно отправляется повторно.
+- Fresh SQLite smoke проверяет новый no-op контракт настоящим HTTP-запросом; FAQ, контент и сценарии дополнительно проверяют успешный retry после конфликта.
+
+### Проверено
+
+- Fail-first backend regression завершился `0/1`, а browser regression сначала подтвердил активную no-op кнопку; после исправления targeted server backend `89/89`, frontend `193/193`, целевой Playwright desktop/mobile `2/2` и полный Playwright `282/282` за `13.0 min` зелёные.
+- Backend Debug/Release `1575/1575`, typecheck/build, admin bundle raw `585800/586752` и gzip `155817/156672`, fresh SQLite `serverNoOp=400`, dependency audit `0 vulnerabilities`, responsive all-screens на 25 viewport-конфигурациях, EF drift, formatter, strict UTF-8 и secret scan `725/0` зелёные. Roadmap `764/784` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.740.0 - 2026-08-15
 
 Release entry: `2026-08-15-admin-conflict-draft-recovery`.

@@ -326,7 +326,7 @@ function vpnServer(overrides: Record<string, unknown> = {}) {
     backupStatus: 'Ready',
     monitoringStatus: 'Ready',
     loggingStatus: 'Ready',
-    tagsCsv: 'validation-mode:true',
+    tagsCsv: 'source:admin,owner:admin,ssh-auth:ssh_key,credentials:protected,validation-mode:true,autodeploy-after-precheck:false',
     priority: 10,
     isAvailableForNewUsers: true,
     sshUser: 'root',
@@ -1715,6 +1715,11 @@ async function mockAdminApi(page: Page) {
 
     const serverMutationMatch = path.match(/^\/api\/admin\/servers\/([^/]+)$/)
     if (serverMutationMatch && method === 'PUT') {
+      if (delayedManagedUpdatePath === path) {
+        delayedManagedUpdatePath = null
+        await new Promise<void>((resolve) => { releaseDelayedManagedUpdate = resolve })
+        releaseDelayedManagedUpdate = null
+      }
       const index = servers.findIndex((item) => item.id === serverMutationMatch[1])
       const payload = body as Record<string, unknown>
       if (index < 0 || payload.revision !== servers[index].revision) {
@@ -5229,7 +5234,7 @@ test('admin tariff delete keeps an externally changed tariff', async ({ page }) 
   expect(api.getRequestCount('/api/admin/tariffs/tariff-admin-pro', 'DELETE')).toBe(1)
 })
 
-test('admin server editor and delete recover from stale revisions', async ({ page }) => {
+test('admin server editor rejects no-op and keeps a newer conflict draft retryable', async ({ page }) => {
   const api = await mockAdminApi(page)
   await seedAdminSession(page, 'admin-server-conflict-token', 'admin-server-conflict-refresh')
   await page.goto('/#nodes')
@@ -5237,17 +5242,31 @@ test('admin server editor and delete recover from stale revisions', async ({ pag
   const nodesPanel = page.locator('#nodes')
   let serverRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox' })
   await serverRow.getByRole('button', { name: 'Редактировать' }).click()
-  await nodesPanel.getByLabel('Название').fill('Устаревшая локальная версия')
+  const serverForm = nodesPanel.locator('form')
+  const saveButton = serverForm.getByRole('button', { name: 'Сохранить сервер' })
+  await expect(saveButton).toBeDisabled()
+  await serverForm.evaluate((form) => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+  expect(api.getRequestCount('/api/admin/servers/server-eu', 'PUT')).toBe(0)
 
+  await nodesPanel.getByLabel('Название').fill('Устаревшая локальная версия')
+  api.delayNextManagedUpdate('/api/admin/servers/server-eu')
+  await saveButton.click()
+  await expect.poll(() => api.hasDelayedManagedUpdate()).toBe(true)
+  await nodesPanel.getByLabel('Название').fill('Новый локальный черновик сервера')
   api.changeServerExternally('server-eu', 'Актуальный внешний сервер')
-  await nodesPanel.getByRole('button', { name: 'Сохранить сервер' }).click()
+  api.releaseManagedUpdate()
 
   await expect(page.locator('.error-block')).toContainText('Сервер уже изменен другим администратором')
-  await expect(nodesPanel.getByRole('heading', { name: 'Добавить VPN-сервер' })).toBeVisible()
+  await expect(nodesPanel.getByRole('heading', { name: 'Редактировать VPN-сервер' })).toBeVisible()
+  await expect(nodesPanel.getByLabel('Название')).toHaveValue('Новый локальный черновик сервера')
   await expect(nodesPanel.getByText('Актуальный внешний сервер', { exact: true })).toBeVisible()
   expect(api.getLastRequest('/api/admin/servers/server-eu', 'PUT')?.body).toMatchObject({ revision: 0 })
 
-  serverRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'Актуальный внешний сервер' })
+  await saveButton.click()
+  await expect(page.getByText('Сервер Новый локальный черновик сервера обновлен. Секреты не возвращаются из API.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/servers/server-eu', 'PUT')?.body).toMatchObject({ revision: 1 })
+
+  serverRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'Новый локальный черновик сервера' })
   await serverRow.getByRole('button', { name: 'Удалить' }).click()
   api.changeServerExternally('server-eu', 'Актуальный сервер перед удалением')
   await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
@@ -5373,6 +5392,11 @@ test('admin FAQ editor recovers from a stale revision', async ({ page }) => {
   await expect(faqPanel.locator('.list-stack').getByText('Актуальный внешний ответ', { exact: true })).toBeVisible()
   await expect(saveButton).toBeEnabled()
   expect(api.getRequestCount('/api/admin/faq/faq-created-e2e', 'PUT')).toBe(1)
+
+  await saveButton.click()
+  await expect(page.getByText('Вопрос FAQ обновлен.')).toBeVisible()
+  await expect(faqPanel.getByText('Новая локальная версия', { exact: true })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/faq/faq-created-e2e', 'PUT')?.body).toMatchObject({ revision: 1 })
 })
 
 test('admin FAQ delete keeps an externally changed entry', async ({ page }) => {
@@ -5418,6 +5442,11 @@ test('admin site content editor recovers from a stale revision', async ({ page }
   await expect(contentPanel.locator('.list-stack').getByText('Актуальный внешний текст', { exact: true })).toBeVisible()
   await expect(saveButton).toBeEnabled()
   expect(api.getRequestCount('/api/admin/site-content/content-created-e2e', 'PUT')).toBe(1)
+
+  await saveButton.click()
+  await expect(page.getByText('Блок контента обновлен.')).toBeVisible()
+  await expect(contentPanel.getByText('Новая локальная версия', { exact: true })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/site-content/content-created-e2e', 'PUT')?.body).toMatchObject({ revision: 1 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
@@ -5464,6 +5493,11 @@ test('admin work scenario editor recovers from a stale revision', async ({ page 
   await expect(scenariosPanel.getByText('Актуальный внешний сценарий', { exact: true })).toBeVisible()
   await expect(saveButton).toBeEnabled()
   expect(api.getRequestCount('/api/admin/work-scenarios/scenario-auto', 'PUT')).toBe(1)
+
+  await saveButton.click()
+  await expect(page.getByText('Сценарий работы обновлен.')).toBeVisible()
+  await expect(scenariosPanel.getByText('Новая локальная версия', { exact: true })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/work-scenarios/scenario-auto', 'PUT')?.body).toMatchObject({ revision: 1 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 

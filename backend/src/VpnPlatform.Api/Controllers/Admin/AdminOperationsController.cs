@@ -2401,6 +2401,67 @@ public class AdminOperationsController : ControllerBase
             ? ProvisioningService.ExtractTag(node.TagsCsv, "owner") ?? "admin"
             : request.OwnerType.Trim().ToLowerInvariant();
 
+        var rotatedSshCredential = !string.IsNullOrWhiteSpace(request.SshCredential);
+        var rotatedPanelPassword = !string.IsNullOrWhiteSpace(request.PanelPassword);
+        var replacesSshCredentialWithLegacyPath = !rotatedSshCredential && !string.IsNullOrWhiteSpace(request.SshPrivateKeyPath);
+        var normalizedSshPrivateKeyPath = replacesSshCredentialWithLegacyPath
+            ? request.SshPrivateKeyPath!.Trim()
+            : node.SshPrivateKeyPath;
+        var sshCredentialConfigured = rotatedSshCredential
+            || replacesSshCredentialWithLegacyPath
+            || ProvisioningService.CredentialsConfigured(node);
+        var normalizedName = TrimOrEmpty(request.Name);
+        var normalizedIpAddress = TrimOrEmpty(request.IpAddress);
+        var normalizedProvider = string.IsNullOrWhiteSpace(request.Provider) ? "admin-vps" : request.Provider.Trim();
+        var normalizedRegion = TrimOrEmpty(request.Region);
+        var normalizedCountry = TrimOrEmpty(request.Country);
+        var normalizedDatacenter = TrimOrEmpty(request.Datacenter);
+        var normalizedProtocols = NormalizeServerProtocols(request.SupportedProtocolsCsv);
+        var normalizedSshUser = string.IsNullOrWhiteSpace(request.SshUser) ? "root" : request.SshUser.Trim();
+        var normalizedPanelUsername = string.IsNullOrWhiteSpace(request.PanelUsername) ? "admin" : request.PanelUsername.Trim();
+        var normalizedPublicHostname = NormalizePublicHostname(request.PublicHostname);
+        var normalizedTags = NormalizeServerTags(
+            request.TagsCsv,
+            owner,
+            authMethod,
+            sshCredentialConfigured ? "protected" : "missing",
+            request.ValidationMode);
+        if (normalizedTags.Length > 2000)
+        {
+            return BadRequest(new { error = "Server tagsCsv must not exceed 2000 characters after normalization." });
+        }
+
+        var hasChanges = rotatedSshCredential
+            || rotatedPanelPassword
+            || replacesSshCredentialWithLegacyPath && (
+                !string.Equals(node.SshPrivateKeyPath, normalizedSshPrivateKeyPath, StringComparison.Ordinal)
+                || !string.IsNullOrWhiteSpace(node.ProtectedSshCredential)
+                || !string.IsNullOrWhiteSpace(node.SshCredentialRef))
+            || !string.Equals(node.Name, normalizedName, StringComparison.Ordinal)
+            || !string.Equals(node.Host, host, StringComparison.Ordinal)
+            || !string.Equals(node.IpAddress, normalizedIpAddress, StringComparison.Ordinal)
+            || !string.Equals(node.Provider, normalizedProvider, StringComparison.Ordinal)
+            || !string.Equals(node.Region, normalizedRegion, StringComparison.Ordinal)
+            || !string.Equals(node.Country, normalizedCountry, StringComparison.Ordinal)
+            || !string.Equals(node.Datacenter, normalizedDatacenter, StringComparison.Ordinal)
+            || node.Capacity != capacity
+            || !string.Equals(node.SupportedProtocolsCsv, normalizedProtocols, StringComparison.Ordinal)
+            || node.Priority != request.Priority
+            || !string.Equals(node.SshUser, normalizedSshUser, StringComparison.Ordinal)
+            || node.SshPort != request.SshPort
+            || node.SkipHostKeyChecking != request.SkipHostKeyChecking
+            || !string.Equals(node.PanelBaseUrl, panelBaseUrl, StringComparison.Ordinal)
+            || !string.Equals(node.PanelUsername, normalizedPanelUsername, StringComparison.Ordinal)
+            || node.PanelInboundId != request.PanelInboundId
+            || !string.Equals(node.PublicHostname, normalizedPublicHostname, StringComparison.Ordinal)
+            || node.PublicPort != request.PublicPort
+            || node.NodeGroupId != request.NodeGroupId
+            || !string.Equals(node.TagsCsv, normalizedTags, StringComparison.Ordinal);
+        if (!hasChanges)
+        {
+            return BadRequest(new { error = "No server changes detected." });
+        }
+
         var oldSnapshot = new
         {
             node.Name,
@@ -2416,9 +2477,6 @@ public class AdminOperationsController : ControllerBase
             PanelPasswordConfigured = ProvisioningService.PanelPasswordConfigured(node),
             SshCredentialConfigured = ProvisioningService.CredentialsConfigured(node)
         };
-
-        var rotatedSshCredential = !string.IsNullOrWhiteSpace(request.SshCredential);
-        var rotatedPanelPassword = !string.IsNullOrWhiteSpace(request.PanelPassword);
 
         if (rotatedSshCredential)
         {
@@ -2442,30 +2500,26 @@ public class AdminOperationsController : ControllerBase
             node.PanelPassword = string.Empty;
         }
 
-        node.Name = TrimOrEmpty(request.Name);
+        node.Name = normalizedName;
         node.Host = host;
-        node.IpAddress = TrimOrEmpty(request.IpAddress);
-        node.Provider = string.IsNullOrWhiteSpace(request.Provider) ? "admin-vps" : request.Provider.Trim();
-        node.Region = TrimOrEmpty(request.Region);
-        node.Country = TrimOrEmpty(request.Country);
-        node.Datacenter = TrimOrEmpty(request.Datacenter);
+        node.IpAddress = normalizedIpAddress;
+        node.Provider = normalizedProvider;
+        node.Region = normalizedRegion;
+        node.Country = normalizedCountry;
+        node.Datacenter = normalizedDatacenter;
         node.Capacity = capacity;
-        node.SupportedProtocolsCsv = NormalizeServerProtocols(request.SupportedProtocolsCsv);
+        node.SupportedProtocolsCsv = normalizedProtocols;
         node.Priority = request.Priority;
-        node.SshUser = string.IsNullOrWhiteSpace(request.SshUser) ? "root" : request.SshUser.Trim();
+        node.SshUser = normalizedSshUser;
         node.SshPort = request.SshPort;
         node.SkipHostKeyChecking = request.SkipHostKeyChecking;
         node.PanelBaseUrl = panelBaseUrl;
-        node.PanelUsername = string.IsNullOrWhiteSpace(request.PanelUsername) ? "admin" : request.PanelUsername.Trim();
+        node.PanelUsername = normalizedPanelUsername;
         node.PanelInboundId = request.PanelInboundId;
-        node.PublicHostname = NormalizePublicHostname(request.PublicHostname);
+        node.PublicHostname = normalizedPublicHostname;
         node.PublicPort = request.PublicPort;
         node.NodeGroupId = request.NodeGroupId;
-        node.TagsCsv = NormalizeServerTags(request.TagsCsv, owner, authMethod, ProvisioningService.CredentialsConfigured(node) ? "protected" : "missing", request.ValidationMode);
-        if (node.TagsCsv.Length > 2000)
-        {
-            return BadRequest(new { error = "Server tagsCsv must not exceed 2000 characters after normalization." });
-        }
+        node.TagsCsv = normalizedTags;
         node.Revision = checked(node.Revision + 1);
         node.UpdatedAt = _clock.UtcNow;
 

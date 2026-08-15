@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: VPN server no-op and conflict draft integrity
+
+Scope:
+- A normalized no-op VPN server update must not advance revision, timestamp or audit history.
+- The server editor must reject unchanged submission before the API call.
+- A newer draft entered while a stale save is pending must adopt the winning revision and remain retryable.
+
+Results:
+- Roadmap progress: `764/784` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-server-editor-noop-draft-integrity`, version `0.741.0`.
+- Fail-first: the backend no-op regression completed `0/1` because an unchanged update returned success; the browser regression exposed an enabled unchanged save button.
+- After fix: targeted server backend `89/89`, frontend `193/193`, typecheck/build, admin bundle budget `585800/586752` raw and `155817/156672` gzip, targeted server Playwright desktop/mobile `2/2`, and full Playwright `282/282` in `13.0 min` are green.
+- Release gate: backend Debug/Release `1575/1575`, API Release build `0 warnings / 0 errors`, fresh SQLite full flow including `serverNoOp=400`, all 17 admin sections and 25 responsive viewport configurations, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, `RoadmapCurrentStateTests`, secret scan `725/0` and strict UTF-8/BOM guard are green.
+- Stability note: a concurrent final Debug run completed `1574/1575` because the Ansible runner timing assertion took `14.5s` under parallel load; the isolated test then passed `1/1`, and the load-free full Debug rerun passed `1575/1575` in `35s`.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: retryable admin conflict draft recovery
 
 Scope:

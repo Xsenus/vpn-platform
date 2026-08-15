@@ -17508,5 +17508,32 @@
         "text": "Roadmap progress is 763/783 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-15-server-editor-noop-draft-integrity",
+    "version": "0.741.0",
+    "releasedAt": "2026-08-15T18:07:25+07:00",
+    "title": "VPN server edits preserve revision integrity",
+    "summary": "VPN server updates now reject normalized no-op requests and preserve newer administrative drafts across delayed conflicts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Unchanged VPN server updates return a controlled validation error without advancing revision, UpdatedAt or audit history."
+      },
+      {
+        "type": "improved",
+        "text": "The server form disables normalized no-op saves and rejects programmatic unchanged submission before an API request."
+      },
+      {
+        "type": "fixed",
+        "text": "A newer server draft survives delayed conflict recovery, adopts the winning revision and succeeds on the next save."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 764/784 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
