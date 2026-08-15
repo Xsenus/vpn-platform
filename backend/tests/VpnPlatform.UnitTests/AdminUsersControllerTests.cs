@@ -107,7 +107,14 @@ public class AdminUsersControllerTests
         });
         await db.SaveChangesAsync();
 
-        using var payload = JsonDocument.Parse("{\"displayName\":\"After\",\"isBlocked\":true,\"status\":\"Suspended\"}");
+        var updatedAt = await db.Users.Where(x => x.Id == userId).Select(x => x.UpdatedAt).SingleAsync();
+        using var payload = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            displayName = "After",
+            isBlocked = true,
+            status = "Suspended",
+            updatedAt
+        }));
         var result = await new AdminUsersController(db).Patch(userId, payload.RootElement, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
@@ -128,6 +135,150 @@ public class AdminUsersControllerTests
         Assert.Equal(userId.ToString(), audit.EntityId);
         Assert.NotEqual(audit.BeforeJson, audit.AfterJson);
         Assert.DoesNotContain("secret-hash", audit.BeforeJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Patch_Should_Reject_Unknown_Fields_Without_Mutating_User()
+    {
+        await using var db = CreateDbContext();
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "unknown-field@example.test",
+            DisplayName = "Before",
+            PasswordHash = "secret-hash",
+            RolesCsv = UserRoles.User,
+            Status = UserStatus.Active,
+            ReferralCode = "UNKNOWN-FIELD"
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        using var payload = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            displayName = "After",
+            updatedAt = user.UpdatedAt,
+            displayNmae = "Typo"
+        }));
+        var result = await new AdminUsersController(db).Patch(user.Id, payload.RootElement, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        var persisted = await db.Users.AsNoTracking().SingleAsync(x => x.Id == user.Id);
+        Assert.Equal("Before", persisted.DisplayName);
+        Assert.Empty(await db.AuditLogs.AsNoTracking().ToListAsync());
+    }
+
+    [Fact]
+    public async Task Patch_Should_Reject_Stale_Profile_Version_Without_Overwriting_Newer_State()
+    {
+        await using var db = CreateDbContext();
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "stale-profile@example.test",
+            DisplayName = "Before",
+            PasswordHash = "secret-hash",
+            RolesCsv = UserRoles.User,
+            Status = UserStatus.Active,
+            ReferralCode = "STALE-PROFILE"
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+        var staleUpdatedAt = user.UpdatedAt;
+
+        user.DisplayName = "Newer state";
+        user.UpdatedAt = staleUpdatedAt.AddSeconds(1);
+        await db.SaveChangesAsync();
+
+        using var payload = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            status = UserStatus.Suspended.ToString(),
+            updatedAt = staleUpdatedAt
+        }));
+        var result = await new AdminUsersController(db).Patch(user.Id, payload.RootElement, CancellationToken.None);
+
+        Assert.IsType<ConflictObjectResult>(result);
+        var persisted = await db.Users.AsNoTracking().SingleAsync(x => x.Id == user.Id);
+        Assert.Equal("Newer state", persisted.DisplayName);
+        Assert.Equal(UserStatus.Active, persisted.Status);
+        Assert.Empty(await db.AuditLogs.AsNoTracking().ToListAsync());
+    }
+
+    [Fact]
+    public async Task Patch_Should_Roll_Back_Session_Revocation_When_User_Changes_During_Save()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-admin-user-stale-save-{Guid.NewGuid():N}.db");
+        try
+        {
+            var connectionString = $"Data Source={databasePath}";
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite(connectionString)
+                .Options;
+            var userId = Guid.NewGuid();
+            DateTimeOffset expectedUpdatedAt;
+            await using (var seed = new ApplicationDbContext(options))
+            {
+                await seed.Database.EnsureCreatedAsync();
+                var user = new User
+                {
+                    Id = userId,
+                    Email = "stale-save@example.test",
+                    DisplayName = "Before",
+                    PasswordHash = "hash",
+                    RolesCsv = UserRoles.User,
+                    Status = UserStatus.Active,
+                    ReferralCode = "STALE-SAVE"
+                };
+                seed.Users.Add(user);
+                seed.UserRefreshTokens.Add(new UserRefreshToken
+                {
+                    UserId = userId,
+                    TokenHash = "stale-save-token",
+                    ExpiresAt = DateTimeOffset.UtcNow.AddDays(1)
+                });
+                await seed.SaveChangesAsync();
+                expectedUpdatedAt = user.UpdatedAt;
+            }
+
+            var interceptor = new BeforeTransactionInterceptor(async () =>
+            {
+                await using var competitor = new ApplicationDbContext(options);
+                var user = await competitor.Users.SingleAsync(x => x.Id == userId);
+                user.DisplayName = "Concurrent winner";
+                user.UpdatedAt = expectedUpdatedAt.AddSeconds(1);
+                await competitor.SaveChangesAsync();
+            });
+            var raceOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite(connectionString)
+                .AddInterceptors(interceptor)
+                .Options;
+            await using var db = new ApplicationDbContext(raceOptions);
+            using var payload = JsonDocument.Parse(JsonSerializer.Serialize(new
+            {
+                isBlocked = true,
+                status = "Suspended",
+                updatedAt = expectedUpdatedAt
+            }));
+
+            var action = await new AdminUsersController(db).Patch(userId, payload.RootElement, CancellationToken.None);
+
+            Assert.IsType<ConflictObjectResult>(action);
+            await using var verify = new ApplicationDbContext(options);
+            var persistedUser = await verify.Users.AsNoTracking().SingleAsync(x => x.Id == userId);
+            Assert.Equal("Concurrent winner", persistedUser.DisplayName);
+            Assert.False(persistedUser.IsBlocked);
+            Assert.Equal(UserStatus.Active, persistedUser.Status);
+            Assert.Null((await verify.UserRefreshTokens.AsNoTracking().SingleAsync()).RevokedAt);
+            Assert.Empty(await verify.AuditLogs.AsNoTracking().ToListAsync());
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            foreach (var path in new[] { databasePath, databasePath + "-shm", databasePath + "-wal" })
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+        }
     }
 
     [Fact]
@@ -177,7 +328,13 @@ public class AdminUsersControllerTests
                 .AddInterceptors(interceptor)
                 .Options;
             await using var db = new ApplicationDbContext(raceOptions);
-            using var payload = JsonDocument.Parse("{\"isBlocked\":true,\"status\":\"Suspended\"}");
+            var updatedAt = await db.Users.Where(x => x.Id == userId).Select(x => x.UpdatedAt).SingleAsync();
+            using var payload = JsonDocument.Parse(JsonSerializer.Serialize(new
+            {
+                isBlocked = true,
+                status = "Suspended",
+                updatedAt
+            }));
             var action = await new AdminUsersController(db).Patch(
                 userId,
                 payload.RootElement,
@@ -225,11 +382,23 @@ public class AdminUsersControllerTests
             "test"));
         var controller = new AdminUsersController(db);
 
-        using (var blockPayload = JsonDocument.Parse("{\"isBlocked\":true,\"status\":\"Suspended\"}"))
+        var updatedAt = await db.Users.Where(x => x.Id == userId).Select(x => x.UpdatedAt).SingleAsync();
+        using (var blockPayload = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            isBlocked = true,
+            status = "Suspended",
+            updatedAt
+        })))
         {
             Assert.IsType<OkObjectResult>(await controller.Patch(userId, blockPayload.RootElement, CancellationToken.None));
         }
-        using (var unblockPayload = JsonDocument.Parse("{\"isBlocked\":false,\"status\":\"Active\"}"))
+        updatedAt = await db.Users.Where(x => x.Id == userId).Select(x => x.UpdatedAt).SingleAsync();
+        using (var unblockPayload = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            isBlocked = false,
+            status = "Active",
+            updatedAt
+        })))
         {
             Assert.IsType<OkObjectResult>(await controller.Patch(userId, unblockPayload.RootElement, CancellationToken.None));
         }

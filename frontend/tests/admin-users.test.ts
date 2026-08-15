@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { AdminUserOverviewDto } from '../packages/api-client/src/index.ts'
-import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from '../apps/admin-panel/src/admin-users.ts'
+import { adminUserToEditForm, buildAdminUserOverviewStats, formatAdminMoney, isAdminUserEditFormChanged, telegramDisplayName, validateAdminUserEditForm } from '../apps/admin-panel/src/admin-users.ts'
 
 const now = '2026-06-10T12:00:00Z'
 
@@ -76,4 +76,15 @@ test('admin user helpers format money and Telegram display names', () => {
   assert.equal(formatAdminMoney(12.5, 'broken'), '12,50 ₽')
   assert.equal(telegramDisplayName({ id: 'tg-1', telegramUserId: 777001, username: 'client_tg', firstName: '', lastName: '', languageCode: 'ru', isBlocked: false }), '@client_tg')
   assert.equal(telegramDisplayName({ id: 'tg-2', telegramUserId: 777002, username: '', firstName: 'Ivan', lastName: 'Petrov', languageCode: 'ru', isBlocked: false }), 'Ivan Petrov')
+})
+
+test('admin user edit form validates and detects profile changes', () => {
+  const user = overview().user
+  const form = adminUserToEditForm(user)
+
+  assert.deepEqual(validateAdminUserEditForm(form), [])
+  assert.equal(isAdminUserEditFormChanged(form, user), false)
+  assert.equal(isAdminUserEditFormChanged({ ...form, isBlocked: true }, user), true)
+  assert.deepEqual(validateAdminUserEditForm({ ...form, displayName: ' '.repeat(2) }), ['Имя должно содержать от 1 до 80 символов.'])
+  assert.deepEqual(validateAdminUserEditForm({ ...form, status: 'Root' }), ['Выберите допустимый статус пользователя.'])
 })

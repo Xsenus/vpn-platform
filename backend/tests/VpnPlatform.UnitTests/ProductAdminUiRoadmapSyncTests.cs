@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-15",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `1557/1557`",
-                     "Frontend unit tests: `180/180`",
-                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `270/270`",
+                     "Backend full suite: `1560/1560`",
+                     "Frontend unit tests: `182/182`",
+                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `274/274`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-15-admin-payment-provisioning-label-localization",
-                     "0.733.0"
+                     "2026-08-15-admin-user-versioned-management",
+                     "0.734.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-15-admin-payment-provisioning-label-localization", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-15-admin-payment-provisioning-label-localization", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-15-admin-user-versioned-management", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-15-admin-user-versioned-management", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `1557/1557`",
-                     "Frontend unit tests: `180/180`",
+                     "Backend full suite: `1560/1560`",
+                     "Frontend unit tests: `182/182`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-15-admin-payment-provisioning-label-localization",
-                     "0.733.0",
+                     "2026-08-15-admin-user-versioned-management",
+                     "0.734.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

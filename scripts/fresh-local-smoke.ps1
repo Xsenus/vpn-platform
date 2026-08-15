@@ -189,6 +189,34 @@ try {
     Assert-HasValue $auth.accessToken "Register response does not contain accessToken."
     $headers = @{ Authorization = "Bearer $($auth.accessToken)" }
 
+    $adminAuth = Invoke-SmokeJson -Method "POST" -Uri "$apiUrl/api/auth/login" -Body @{
+        email = "fresh-admin@example.test"
+        password = "LocalSmokePassword123!"
+    }
+    Assert-HasValue $adminAuth.accessToken "Admin login response does not contain accessToken."
+    $adminHeaders = @{ Authorization = "Bearer $($adminAuth.accessToken)" }
+
+    $encodedEmail = [Uri]::EscapeDataString($email)
+    $adminUsers = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/admin/users?search=$encodedEmail" -Headers $adminHeaders)
+    $adminUser = $adminUsers | Where-Object { $_.email -eq $email } | Select-Object -First 1
+    if ($null -eq $adminUser) {
+        throw "Registered user is missing from the admin user list."
+    }
+
+    Assert-HasValue $adminUser.updatedAt "Admin user response does not contain updatedAt."
+    $updatedAdminUser = Invoke-SmokeJson -Method "PATCH" -Uri "$apiUrl/api/admin/users/$($adminUser.id)" -Headers $adminHeaders -Body @{
+        displayName = "Fresh Local User Updated"
+        updatedAt = $adminUser.updatedAt
+    }
+    if ($updatedAdminUser.displayName -ne "Fresh Local User Updated") {
+        throw "Admin user update did not return the updated display name."
+    }
+
+    $adminOverview = Invoke-SmokeJson -Uri "$apiUrl/api/admin/users/$($adminUser.id)/overview" -Headers $adminHeaders
+    if ($adminOverview.user.displayName -ne "Fresh Local User Updated") {
+        throw "Admin user overview does not contain the persisted display name."
+    }
+
     $order = Invoke-SmokeJson -Method "POST" -Uri "$apiUrl/api/me/checkout-sessions/$($checkout.token)/claim" -Headers $headers
     Assert-HasValue $order.id "Claim response does not contain order id."
 
@@ -247,7 +275,7 @@ try {
         throw "Unexpected access URI protocol: $($access.accessUri)"
     }
 
-    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
+    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
 }
 finally {
     if ($process -and -not $process.HasExited) {

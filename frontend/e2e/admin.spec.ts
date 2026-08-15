@@ -807,6 +807,34 @@ async function mockAdminApi(page: Page) {
       return
     }
 
+    const userPatchMatch = path.match(/^\/api\/admin\/users\/([^/]+)$/)
+    if (method === 'PATCH' && userPatchMatch) {
+      const userId = decodeURIComponent(userPatchMatch[1])
+      const index = users.findIndex((item) => item.id === userId)
+      const current = users[index]
+      const payload = body as { displayName?: string; status?: string; isBlocked?: boolean; updatedAt?: string }
+      if (!current) {
+        await fulfillJson(route, { error: 'user_not_found' }, 404)
+        return
+      }
+      if (payload.updatedAt !== current.updatedAt) {
+        await fulfillJson(route, { error: 'Профиль пользователя уже изменён. Обновите карточку и повторите действие.' }, 409)
+        return
+      }
+      const updated = {
+        ...current,
+        displayName: payload.displayName ?? current.displayName,
+        status: payload.status ?? current.status,
+        isBlocked: payload.isBlocked ?? current.isBlocked,
+        updatedAt: '2026-06-14T08:01:00Z'
+      }
+      users[index] = updated
+      const overview = userOverviews.get(userId)
+      if (overview) userOverviews.set(userId, { ...overview, user: updated })
+      await fulfillJson(route, updated)
+      return
+    }
+
     if (method === 'GET' && path === '/api/admin/subscriptions') {
       await fulfillJson(route, expiringAdminSubscription
         ? subscriptions.map((subscription, index) => index === 0
@@ -2369,6 +2397,14 @@ async function mockAdminApi(page: Page) {
       userOverviews.set('user-first', adminUserOverview(nextUser))
       supportMessages.set('support-first', [adminSupportMessage('message-first-current', 'support-first', 'user-first', messageText)])
     },
+    changeUserExternally: (userId: string, displayName: string) => {
+      const index = users.findIndex((item) => item.id === userId)
+      if (index < 0) throw new Error(`User fixture ${userId} was not found.`)
+      const updated = { ...users[index], displayName, updatedAt: '2026-06-14T08:00:30Z' }
+      users[index] = updated
+      const overview = userOverviews.get(userId)
+      if (overview) userOverviews.set(userId, { ...overview, user: updated })
+    },
     failLogout: () => { logoutShouldFail = true }
   }
 }
@@ -2535,6 +2571,59 @@ test('admin order links keep section history and focus operable', async ({ page 
   await expect(page).toHaveURL(/#payments$/)
   await expect(orderRow).toBeVisible()
   expect(browserErrors).toEqual([])
+})
+
+test('admin updates a user profile with session-revocation confirmation on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 })
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-user-update-token', 'admin-user-update-refresh')
+
+  await page.goto('/#users')
+  const usersSection = page.locator('#users')
+  const editor = usersSection.locator('.user-profile-editor')
+  await expect(editor).toBeVisible()
+  await editor.getByLabel('Имя').fill('Обновлённый клиент')
+  await editor.getByLabel('Статус аккаунта').selectOption('Suspended')
+  await editor.getByLabel('Заблокирован вручную').check()
+
+  await editor.getByRole('button', { name: 'Сохранить и завершить сессии' }).click()
+  const confirmation = editor.getByRole('dialog')
+  await expect(confirmation).toContainText('завершить все его активные сессии')
+  const patchRequest = page.waitForRequest((request) => request.method() === 'PATCH' && request.url().endsWith('/api/admin/users/user-e2e'))
+  await confirmation.getByRole('button', { name: 'Подтвердить' }).click()
+  const request = await patchRequest
+
+  expect(request.postDataJSON()).toEqual({
+    displayName: 'Обновлённый клиент',
+    status: 'Suspended',
+    isBlocked: true,
+    updatedAt: now
+  })
+  expect(api.getRequestCount('/api/admin/users/user-e2e', 'PATCH')).toBe(1)
+  await expect(usersSection.locator('.user-overview-card').getByText('Обновлённый клиент', { exact: true })).toBeVisible()
+  await expect(page.getByText('Профиль пользователя Обновлённый клиент обновлён.', { exact: true })).toBeVisible()
+  await expect(editor.getByRole('button', { name: 'Сохранить профиль' })).toBeDisabled()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+})
+
+test('admin reloads a newer user profile after a stale update conflict', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-user-stale-token', 'admin-user-stale-refresh')
+
+  await page.goto('/#users')
+  const usersSection = page.locator('#users')
+  const editor = usersSection.locator('.user-profile-editor')
+  await expect(editor.getByLabel('Имя')).toHaveValue('Client E2E')
+  await editor.getByLabel('Имя').fill('Устаревший черновик')
+  api.changeUserExternally('user-e2e', 'Свежий профиль')
+
+  await editor.getByRole('button', { name: 'Сохранить профиль' }).click()
+
+  await expect(usersSection.locator('.user-overview-card').getByText('Свежий профиль', { exact: true })).toBeVisible()
+  await expect(editor.getByLabel('Имя')).toHaveValue('Свежий профиль')
+  await expect(page.getByRole('alert').filter({ hasText: 'Профиль пользователя уже изменён' })).toBeVisible()
+  expect(api.getRequestCount('/api/admin/users/user-e2e', 'PATCH')).toBe(1)
+  expect(api.getRequestCount('/api/admin/users/user-e2e/overview')).toBe(2)
 })
 
 test('admin detail views ignore older selections and keep support actions scoped', async ({ page }) => {

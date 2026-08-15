@@ -209,12 +209,12 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-15 локально подтверждено:
 
-- backend на .NET 9: `1557/1557` unit tests;
+- backend на .NET 9: `1560/1560` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `180/180`;
+- frontend unit tests: `182/182`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
-- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `270/270`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
+- Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `274/274`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
 - local SQLite HTTP-smoke проходит: live/ready, admin login и latest release;
 - VPS production smoke runner добавлен и локально проверяется через SQLite dry-run;
 - production readiness gate добавлен и fail-closed блокирует production-ready без passed staging/VPS smoke report и закрытых P0/P11/STATE blockers;
@@ -352,10 +352,11 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - verified `CHECKOUT.ORDER.APPROVED` запускает server-side PayPal capture с idempotency/reconciliation и не активирует VPN без capture proof;
 - manual recheck Stripe, YooKassa и Т-Банка сверяет фактические provider ID, сумму, валюту, internal order/account и paid marker до активации;
 - refund YooKassa/Stripe/PayPal/Т-Банка применяет результат только после совпадения provider source reference и доступных amount/currency/internal payment proof; последовательные partial refund Т-Банка имеют отдельные operation IDs;
-- backend `1557/1557`, frontend `180/180`, полный console-responsive Playwright `270/270`, dashboard RBAC desktop/mobile Playwright `4/4`, notification masking/retry desktop/mobile Playwright `2/2`, audit RBAC desktop/mobile Playwright `4/4`, order/recheck/finance RBAC desktop/mobile Playwright `8/8`, finance/recheck/refund lifecycle desktop/mobile Playwright `8/8`, support lifecycle desktop/mobile Playwright `8/8`, dependency audit `0 vulnerabilities`;
+- backend `1560/1560`, frontend `182/182`, полный console-responsive Playwright `274/274`, targeted user management desktop/mobile Playwright `2/2`, dashboard RBAC desktop/mobile Playwright `4/4`, notification masking/retry desktop/mobile Playwright `2/2`, audit RBAC desktop/mobile Playwright `4/4`, order/recheck/finance RBAC desktop/mobile Playwright `8/8`, finance/recheck/refund lifecycle desktop/mobile Playwright `8/8`, support lifecycle desktop/mobile Playwright `8/8`, dependency audit `0 vulnerabilities`;
 - user overview, 3x-ui client и operational admin surfaces используют bounded Russian labels для source/auth/roles/email/counts/events/sync, user status, audit actor/category, SSL, access history, QR и health/support fallback; технические VPN identifiers не подменяются;
 - карточки рабочих сценариев, платежные аккаунты, серверы и подготовка VPS локализуют bounded business/operation metadata без изменения raw API-значений, а локальный SQLite repair обновляет существующие базы с revision-колонками;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-15-admin-payment-provisioning-label-localization`, версия `0.733.0`;
+- управление профилем пользователя в админке использует strict versioned PATCH, валидируемую адаптивную форму и явное подтверждение отзыва сессий; конфликт загружает актуальную карточку без stale overwrite;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-15-admin-user-versioned-management`, версия `0.734.0`;
 - server API, own-VPS onboarding, queue и executor отклоняют inventory-breaking IP/SSH values; executor использует фиксированный alias и `ArgumentList`, а admin-форма показывает те же diagnostics до submit;
 - 3x-ui panel/inbound/client mutations требуют актуальную revision, diagnostics ограничены до materialization, а stale UI восстанавливает актуальные данные;
 - provisioning queue/run actions требуют актуальную revision, coordinator/admin diagnostics ограничены в БД, а exact DTO отклоняет расширенные ответы;
@@ -369,6 +370,6 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - admin notification status/template/search и latest top-500 выполняются в БД до materialization;
 - admin dashboard subscription/recent/payment readiness metrics считаются DB-side aggregates без загрузки строк;
 - auto-target миграция подписки выбирает node/panel/inbound одним ordered SQL query без N+1;
-- roadmap progress: `756/776` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- roadmap progress: `757/777` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

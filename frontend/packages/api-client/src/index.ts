@@ -1140,6 +1140,12 @@ export type AdminUserDto = {
   updatedAt: string
 }
 
+export type UpdateAdminUserPayload = {
+  displayName?: string
+  status?: 'New' | 'Active' | 'Suspended' | 'Deleted'
+  isBlocked?: boolean
+}
+
 export type AdminTelegramAccountDto = {
   id: string
   telegramUserId: number
@@ -1828,10 +1834,17 @@ function isAdminDashboardSummaryDto(value: unknown): value is AdminDashboardSumm
   return hasUniqueStringKey(value.productionReadiness.checks, 'key')
 }
 
+const adminUserFields = new Set([
+  'id', 'email', 'displayName', 'rolesCsv', 'status', 'isBlocked', 'preferredLanguage',
+  'referralCode', 'authSource', 'emailConfirmed', 'lastLoginAt',
+  'telegramRegistrationCompletedAt', 'createdAt', 'updatedAt'
+])
+
 function isAdminUserDto(value: unknown): value is AdminUserDto {
   if (!isRecord(value)) return false
 
-  return hasString(value, 'id', true)
+  return Object.keys(value).every((key) => adminUserFields.has(key))
+    && hasString(value, 'id', true)
     && hasNullableString(value, 'email')
     && hasString(value, 'displayName', true)
     && hasString(value, 'rolesCsv', true)
@@ -3794,6 +3807,15 @@ export class ApiClient {
 
   getAdminUserOverview(token: string, userId: string): Promise<AdminUserOverviewDto> {
     return this.request<AdminUserOverviewDto>(`/api/admin/users/${userId}/overview`, { token, errorMessage: apiFallbackErrorMessage }, 'object', isAdminUserOverviewDto)
+  }
+
+  updateAdminUser(token: string, userId: string, payload: UpdateAdminUserPayload, updatedAt: string): Promise<AdminUserDto> {
+    return this.request<AdminUserDto>(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      token,
+      body: JSON.stringify({ ...payload, updatedAt }),
+      errorMessage: apiFallbackErrorMessage
+    }, 'object', (value): value is AdminUserDto => isAdminUserDto(value) && value.id === userId)
   }
 
   getAdminSubscriptions(token: string): Promise<SubscriptionDto[]> {

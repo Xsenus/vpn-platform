@@ -39,6 +39,7 @@ import {
   SupportConversationDto,
   SupportMessageDto,
   UpdateTariffPayload,
+  UpdateAdminUserPayload,
   UpdateTelegramBotSettingsPayload,
   UpsertPaymentProviderAccountPayload,
   VpnClientDto,
@@ -52,7 +53,7 @@ import {
   normalizeApiError
 } from '@vpn-platform/api-client'
 import { Card, CodeBlock, ConfirmButton, CopyButton, EmptyState, ErrorBlock, FormValidationSummary, formatReferralRewardType, formatReferralRewardValue, formatStatusLabel, LoadingBlock, PageShell, PasswordField, PrimaryButton, QrCodePreview, SecretField, SectionCard, SkipLink, StatTile, StatusBadge, ValidationModeBadge } from '@vpn-platform/ui'
-import { buildAdminUserOverviewStats, formatAdminMoney, telegramDisplayName } from './admin-users'
+import { adminUserToEditForm, buildAdminUserOverviewStats, formatAdminMoney, isAdminUserEditFormChanged, telegramDisplayName, validateAdminUserEditForm, type AdminUserEditForm } from './admin-users'
 import { formatAdminDisplayLabel, formatAdminRoleLabels } from './admin-display-labels'
 import { adminSectionIds, adminSectionLabels, canAccessAdminSection, canWriteAdminSection, parseAdminSectionHref, type AdminSectionId } from './admin-capabilities'
 import { getAdminPageMetadata } from './admin-page-metadata'
@@ -530,6 +531,10 @@ function supportActionResourceKey(conversationId: string) {
   return `support:${conversationId}`
 }
 
+function userActionResourceKey(userId: string) {
+  return `user:${userId}`
+}
+
 function subscriptionActionResourceKey(subscriptionId: string) {
   return `subscription:${subscriptionId}`
 }
@@ -638,6 +643,12 @@ type AdminSessionCommandRequest = {
   operationId: number
   key: string
   promise: Promise<void>
+}
+
+const defaultAdminUserEditForm: AdminUserEditForm = {
+  displayName: '',
+  status: 'New',
+  isBlocked: false
 }
 
 type AdminActionContext = {
@@ -1112,6 +1123,7 @@ export function App() {
   const [userOverview, setUserOverview] = useState<AdminUserOverviewDto | null>(null)
   const [userOverviewLoading, setUserOverviewLoading] = useState(false)
   const [userOverviewError, setUserOverviewError] = useState('')
+  const [userEditForm, setUserEditForm] = useState<AdminUserEditForm>(defaultAdminUserEditForm)
   const [summary, setSummary] = useState<AdminDashboardSummaryDto | null>(null)
   const [auditLogs, setAuditLogs] = useState<AdminAuditLogDto[]>([])
   const [notificationDeliveries, setNotificationDeliveries] = useState<AdminNotificationDeliveryDto[]>([])
@@ -1323,6 +1335,12 @@ export function App() {
   const dashboardFailedProvisioningRuns = provisioningRuns.filter((run) => ['Failed', 'PrecheckFailed'].includes(run.status)).slice(0, 3)
   const dashboardOpenSupportConversations = canReadSupport ? supportConversations.filter((conversation) => conversation.status !== 'closed').slice(0, 3) : []
   const userOverviewStats = useMemo(() => buildAdminUserOverviewStats(userOverview, adminAccessNow), [adminAccessNow, userOverview])
+  const userEditErrors = useMemo(() => validateAdminUserEditForm(userEditForm), [userEditForm])
+  const userEditChanged = Boolean(userOverview && isAdminUserEditFormChanged(userEditForm, userOverview.user))
+  const userEditRevokesSessions = Boolean(userOverview
+    && !userOverview.user.isBlocked
+    && userOverview.user.status === 'Active'
+    && (userEditForm.isBlocked || userEditForm.status !== 'Active'))
   const filteredOrders = useMemo(() => {
     const searchText = orderSearch.trim().toLowerCase()
     return orders.filter((order) => {
@@ -1362,6 +1380,7 @@ export function App() {
     userOverviewRequestId.current += 1
     userOverviewLoadInFlight.current = null
     setUserOverview(null)
+    setUserEditForm(defaultAdminUserEditForm)
     setUserOverviewLoading(false)
     setUserOverviewError('')
     setSelectedUserId(userId)
@@ -1937,6 +1956,7 @@ export function App() {
     selectedUserIdRef.current = ''
     setSelectedUserId('')
     setUserOverview(null)
+    setUserEditForm(defaultAdminUserEditForm)
     userOverviewRequestId.current += 1
     userOverviewLoadInFlight.current = null
     setUserOverviewLoading(false)
@@ -2230,6 +2250,7 @@ export function App() {
         const overview = await api.getAdminUserOverview(currentToken, userId)
         if (!requestIsCurrent()) return false
         setUserOverview(overview)
+        setUserEditForm(adminUserToEditForm(overview.user))
         setUserOverviewError('')
         return true
       } catch (e) {
@@ -2244,6 +2265,46 @@ export function App() {
     request.promise = promise
     userOverviewLoadInFlight.current = request
     return promise
+  }
+
+  const handleSaveAdminUser = () => {
+    const currentUser = userOverview?.user
+    if (!currentUser || selectedUserIdRef.current !== currentUser.id) return Promise.resolve()
+    const submittedForm = { ...userEditForm, displayName: userEditForm.displayName.trim() }
+    const validationErrors = validateAdminUserEditForm(submittedForm)
+    if (validationErrors.length > 0) {
+      setError(`Пользователь: ${validationErrors.join(' ')}`)
+      return Promise.resolve()
+    }
+    if (!isAdminUserEditFormChanged(submittedForm, currentUser)) {
+      setError('Пользователь: изменения профиля не обнаружены.')
+      return Promise.resolve()
+    }
+
+    const payload: UpdateAdminUserPayload = {
+      displayName: submittedForm.displayName,
+      status: submittedForm.status as UpdateAdminUserPayload['status'],
+      isBlocked: submittedForm.isBlocked
+    }
+    return runAction('users', `user:update:${currentUser.id}:${currentUser.updatedAt}`, async ({ isCurrent }) => {
+      let saved: AdminUserDto
+      try {
+        saved = await api.updateAdminUser(token, currentUser.id, payload, currentUser.updatedAt)
+      } catch (actionError) {
+        if (actionError instanceof ApiClientError
+          && actionError.status === 409
+          && isCurrent()
+          && selectedUserIdRef.current === currentUser.id) {
+          await loadUserOverview(currentUser.id, token, sessionOperationId.current)
+        }
+        throw actionError
+      }
+      if (!isCurrent() || selectedUserIdRef.current !== currentUser.id) return
+      setUsers((items) => items.map((item) => item.id === saved.id ? saved : item))
+      setUserOverview((overview) => overview?.user.id === saved.id ? { ...overview, user: saved } : overview)
+      setUserEditForm(adminUserToEditForm(saved))
+      setNotice(`Профиль пользователя ${saved.displayName} обновлён.`)
+    }, userActionResourceKey(currentUser.id))
   }
 
   const loadSupportMessages = (
@@ -4292,6 +4353,37 @@ export function App() {
                 <StatusBadge value={formatAdminDisplayLabel(userOverview.user.emailConfirmed ? 'EmailConfirmed' : 'EmailNotConfirmed')} />
               </div>
             </div>
+            {canWriteSection('users') && (
+              <div className="user-profile-editor mt-12" aria-busy={isActionResourceBusy(userActionResourceKey(userOverview.user.id))}>
+                <fieldset className="form-section">
+                  <legend>Управление профилем</legend>
+                  <div className="form-grid">
+                    <label>
+                      <span>Имя</span>
+                      <input value={userEditForm.displayName} maxLength={80} onChange={(event) => setUserEditForm((current) => ({ ...current, displayName: event.target.value }))} />
+                    </label>
+                    <label>
+                      <span>Статус аккаунта</span>
+                      <select value={userEditForm.status} onChange={(event) => setUserEditForm((current) => ({ ...current, status: event.target.value }))}>
+                        <option value="New">Новый</option>
+                        <option value="Active">Активный</option>
+                        <option value="Suspended">Ограниченный</option>
+                        <option value="Deleted">Удалённый</option>
+                      </select>
+                    </label>
+                  </div>
+                  <label className="checkbox-row"><input type="checkbox" checked={userEditForm.isBlocked} onChange={(event) => setUserEditForm((current) => ({ ...current, isBlocked: event.target.checked }))} /> Заблокирован вручную</label>
+                  <p className="muted">Ограничение, удаление или ручная блокировка активного пользователя завершает все его текущие сессии.</p>
+                </fieldset>
+                <FormValidationSummary errors={userEditChanged ? userEditErrors : []} />
+                <div className="form-footer">
+                  {userEditRevokesSessions
+                    ? <ConfirmButton className="button-danger" disabled={!userEditChanged || userEditErrors.length > 0 || isActionResourceBusy(userActionResourceKey(userOverview.user.id))} message={`Ограничить доступ пользователя "${userOverview.user.displayName}" и завершить все его активные сессии?`} onConfirm={handleSaveAdminUser}>Сохранить и завершить сессии</ConfirmButton>
+                    : <PrimaryButton type="button" disabled={!userEditChanged || userEditErrors.length > 0 || isActionResourceBusy(userActionResourceKey(userOverview.user.id))} aria-busy={isActionResourceBusy(userActionResourceKey(userOverview.user.id))} onClick={() => void handleSaveAdminUser()}>Сохранить профиль</PrimaryButton>}
+                  <PrimaryButton type="button" className="button-ghost" disabled={!userEditChanged || isActionResourceBusy(userActionResourceKey(userOverview.user.id))} onClick={() => setUserEditForm(adminUserToEditForm(userOverview.user))}>Отменить изменения</PrimaryButton>
+                </div>
+              </div>
+            )}
             <div className="user-overview-stats">
               <div className="user-metric"><span>Заказы</span><strong>{userOverviewStats.ordersCount}</strong></div>
               <div className="user-metric"><span>Оплачено</span><strong>{formatAdminMoney(userOverviewStats.totalPaidAmount, userOverviewStats.currency)}</strong></div>

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.734.0 - 2026-08-15
+
+Release entry: `2026-08-15-admin-user-versioned-management`.
+
+### Исправлено
+
+- Административное изменение пользователя больше не принимает неизвестные, повторяющиеся или пустые поля и требует точную версию `updatedAt`.
+- Конфликт параллельного изменения возвращает `409`, не перезаписывает более новые данные и откатывает отзыв пользовательских сессий вместе с незавершённой транзакцией.
+- В разделе пользователей добавлен адаптивный редактор имени, статуса и ручной блокировки с локальной проверкой, подтверждением завершения сессий и загрузкой актуальной карточки после конфликта.
+
+### Проверено
+
+- Fail-first backend regression завершился `0/2`: опечатка в поле и устаревшая версия пользователя ошибочно возвращали успех; после исправления targeted user/session boundary `16/16` зелёный.
+- Backend Release `1560/1560`, frontend `182/182`, полный Playwright `274/274`, typecheck/build, admin bundle raw `572159/573440` и gzip `152028/152576`, fresh SQLite full flow с реальным admin PATCH, formatter, EF drift, dependency audit `0 vulnerabilities` и secret scan `711/0` зелёные. Все 17 разделов админки прошли desktop и 25 responsive viewport-конфигураций; users desktop/mobile просмотрены без overflow, clipping, overlap или diagnostics. Roadmap `757/777` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.733.0 - 2026-08-15
 
 Release entry: `2026-08-15-admin-payment-provisioning-label-localization`.

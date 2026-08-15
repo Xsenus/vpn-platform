@@ -47,7 +47,7 @@ powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -KeepArti
 После успешного запуска скрипт выводит строку вида:
 
 ```text
-fresh local smoke ok live=ok ready=Ready tariffs=3 providers=8 order=<id> payment=<id> subscription=<id> access=<id> latest=<releaseId>
+fresh local smoke ok live=ok ready=Ready tariffs=3 providers=8 adminUser=<id> order=<id> payment=<id> subscription=<id> access=<id> latest=<releaseId>
 ```
 
 ## Безопасность

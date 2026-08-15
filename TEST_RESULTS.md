@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: versioned admin user management
+
+Scope:
+- Admin user updates must reject unknown, duplicate, empty and stale payloads instead of silently accepting or replaying them.
+- Blocking or suspending a user must revoke sessions atomically with the user update and audit entry.
+- The users section must expose a validated responsive editor and make session-revoking changes explicit.
+
+Results:
+- Roadmap progress: `757/777` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-admin-user-versioned-management`, version `0.734.0`.
+- Fail-first: focused backend regression completed `0/2`; unknown fields and stale `updatedAt` both returned success before the contract was hardened.
+- After fix: targeted user/session boundary `16/16`, frontend `182/182`, typecheck/build, admin bundle budget `572159/573440` raw and `152028/152576` gzip, dependency audit `0 vulnerabilities`, targeted desktop/mobile conflict and session-revocation flows `2/2`, and full Playwright `274/274` are green.
+- Visual gate: all 17 admin sections passed desktop and 25 responsive viewport configurations; the user editor was reviewed on desktop and compact mobile, document overflow `0`, clipped buttons `0`, browser diagnostics `0`.
+- Release gate: backend Release `1560/1560`, fresh SQLite full flow including versioned admin PATCH, global formatter, EF pending-model check, secret scan `711/0` and strict UTF-8/BOM guard are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: admin payment and provisioning label localization
 
 Scope:

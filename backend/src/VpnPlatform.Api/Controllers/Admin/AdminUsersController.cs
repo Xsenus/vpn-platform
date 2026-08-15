@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Security.Claims;
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -391,14 +392,7 @@ public class AdminUsersController : ControllerBase
 
     [HttpPatch("{id:guid}")]
     [Authorize(Policy = AdminPolicies.AdminWrite)]
-    public Task<IActionResult> Patch(Guid id, [FromBody] JsonElement payload, CancellationToken cancellationToken)
-        => PatchCoreAsync(id, payload, 0, cancellationToken);
-
-    private async Task<IActionResult> PatchCoreAsync(
-        Guid id,
-        JsonElement payload,
-        int attempt,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> Patch(Guid id, [FromBody] JsonElement payload, CancellationToken cancellationToken)
     {
         var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (user is null) return NotFound();
@@ -406,6 +400,36 @@ public class AdminUsersController : ControllerBase
         if (payload.ValueKind != JsonValueKind.Object)
         {
             return BadRequest(new { error = "User patch must be a JSON object." });
+        }
+
+        var propertyNames = payload.EnumerateObject().Select(property => property.Name).ToList();
+        if (propertyNames.Count != propertyNames.Distinct(StringComparer.Ordinal).Count())
+        {
+            return BadRequest(new { error = "User patch contains duplicate fields." });
+        }
+
+        var allowedFields = new HashSet<string>(["displayName", "isBlocked", "status", "updatedAt"], StringComparer.Ordinal);
+        var unknownField = propertyNames.FirstOrDefault(propertyName => !allowedFields.Contains(propertyName));
+        if (unknownField is not null)
+        {
+            return BadRequest(new { error = $"Unknown user patch field: {unknownField}." });
+        }
+
+        if (!payload.TryGetProperty("updatedAt", out var updatedAt)
+            || updatedAt.ValueKind != JsonValueKind.String
+            || !DateTimeOffset.TryParse(updatedAt.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var expectedUpdatedAt))
+        {
+            return BadRequest(new { error = "User updatedAt version is required." });
+        }
+
+        if (expectedUpdatedAt != user.UpdatedAt)
+        {
+            return Conflict(new { error = "Профиль пользователя уже изменён. Обновите карточку и повторите действие." });
+        }
+
+        if (!propertyNames.Any(propertyName => propertyName is "displayName" or "isBlocked" or "status"))
+        {
+            return BadRequest(new { error = "User patch must contain at least one mutable field." });
         }
 
         string? nextDisplayName = null;
@@ -416,7 +440,11 @@ public class AdminUsersController : ControllerBase
                 return BadRequest(new { error = "Display name must be a string." });
             }
 
-            nextDisplayName = displayName.GetString();
+            nextDisplayName = displayName.GetString()?.Trim();
+            if (string.IsNullOrWhiteSpace(nextDisplayName) || nextDisplayName.Length > 80)
+            {
+                return BadRequest(new { error = "Display name must contain from 1 to 80 characters." });
+            }
         }
 
         bool? nextIsBlocked = null;
@@ -456,19 +484,22 @@ public class AdminUsersController : ControllerBase
             user.SessionVersion = checked(user.SessionVersion + 1);
         }
 
+        if (before.DisplayName == user.DisplayName
+            && before.IsBlocked == user.IsBlocked
+            && before.Status == user.Status.ToString())
+        {
+            return BadRequest(new { error = "Изменения профиля пользователя не обнаружены." });
+        }
+
         user.UpdatedAt = now;
+        if (_db is DbContext concurrencyContext)
+        {
+            concurrencyContext.Entry(user).Property(x => x.UpdatedAt).OriginalValue = expectedUpdatedAt;
+        }
         AdminAuditLogWriter.Add(_db, this, "user.update", "User", user.Id, before, MapUser(user));
         try
         {
             await SaveUserPatchAsync(user.Id, !isActive, now, cancellationToken);
-        }
-        catch (DbUpdateConcurrencyException) when (attempt < 4)
-        {
-            if (_db is DbContext dbContext)
-            {
-                dbContext.ChangeTracker.Clear();
-            }
-            return await PatchCoreAsync(id, payload, attempt + 1, cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -476,7 +507,7 @@ public class AdminUsersController : ControllerBase
             {
                 dbContext.ChangeTracker.Clear();
             }
-            return Conflict(new { error = "User state changed concurrently. Retry the operation." });
+            return Conflict(new { error = "Профиль пользователя уже изменён. Обновите карточку и повторите действие." });
         }
         return Ok(MapUser(user));
     }

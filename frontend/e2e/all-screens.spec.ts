@@ -1285,9 +1285,11 @@ test('every admin section renders without blank screens or browser errors', asyn
       await expect(usersPanel.getByText('Email подтверждён', { exact: true })).toBeVisible()
       await expect(usersPanel.getByText('Платежей: 1', { exact: true })).toBeVisible()
       await expect(usersPanel.getByText('Аккаунтов: 0', { exact: true })).toBeVisible()
+      await expect(usersPanel.getByRole('group', { name: 'Управление профилем' })).toBeVisible()
+      await expect(usersPanel.getByRole('button', { name: 'Сохранить профиль' })).toBeDisabled()
       await expect(usersPanel.getByText(/синхронизация 14\.06\.2026/)).toBeVisible()
       await expect(usersPanel.getByText(/^(?:1 active|1 payments|0 accounts|Email confirmed)$/)).toHaveCount(0)
-      await expect(usersPanel.getByLabel('Статус').getByRole('option')).toHaveText(['Все', 'Активные', 'Ограниченные', 'Удалённые', 'Новые'])
+      await expect(usersPanel.locator('form.toolbar-form').getByLabel('Статус').getByRole('option')).toHaveText(['Все', 'Активные', 'Ограниченные', 'Удалённые', 'Новые'])
     }
     if (section === 'panels') {
       await expect(page.locator('#panels').getByText(/Синхронизация: Синхронизирован/)).toBeVisible()
@@ -1672,9 +1674,11 @@ test('every admin section fits representative responsive viewports', async ({ pa
         await expect(usersPanel.getByText('Email подтверждён', { exact: true })).toBeVisible()
         await expect(usersPanel.getByText('Платежей: 1', { exact: true })).toBeVisible()
         await expect(usersPanel.getByText('Аккаунтов: 0', { exact: true })).toBeVisible()
+        await expect(usersPanel.getByRole('group', { name: 'Управление профилем' })).toBeVisible()
+        await expect(usersPanel.getByRole('button', { name: 'Сохранить профиль' })).toBeDisabled()
         await expect(usersPanel.getByText(/синхронизация 14\.06\.2026/)).toBeVisible()
         await expect(usersPanel.getByText(/^(?:1 active|1 payments|0 accounts|Email confirmed)$/)).toHaveCount(0)
-        await expect(usersPanel.getByLabel('Статус').getByRole('option')).toHaveText(['Все', 'Активные', 'Ограниченные', 'Удалённые', 'Новые'])
+        await expect(usersPanel.locator('form.toolbar-form').getByLabel('Статус').getByRole('option')).toHaveText(['Все', 'Активные', 'Ограниченные', 'Удалённые', 'Новые'])
       }
       if (section === 'payments') {
         await expect(page.locator('#payments').getByText(/транзакция: yk-all-screens · режим Проверка/)).toBeVisible()

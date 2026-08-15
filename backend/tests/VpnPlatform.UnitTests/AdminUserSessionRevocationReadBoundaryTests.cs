@@ -51,7 +51,12 @@ public class AdminUserSessionRevocationReadBoundaryTests
         db.ChangeTracker.Clear();
         interceptor.Commands.Clear();
 
-        using var payload = JsonDocument.Parse("{\"isBlocked\":true,\"status\":\"Suspended\"}");
+        using var payload = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            isBlocked = true,
+            status = "Suspended",
+            updatedAt = user.UpdatedAt
+        }));
         var controller = new AdminUsersController(db, new FixedClock(now))
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }

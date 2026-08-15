@@ -2,6 +2,36 @@ import { AdminUserOverviewDto } from '@vpn-platform/api-client'
 import { getAdminAccessTerminalReason } from './admin-accesses'
 import { getAdminSubscriptionActionAvailability } from './admin-subscriptions'
 
+export type AdminUserEditForm = {
+  displayName: string
+  status: string
+  isBlocked: boolean
+}
+
+const editableUserStatuses = new Set(['New', 'Active', 'Suspended', 'Deleted'])
+
+export function adminUserToEditForm(user: AdminUserOverviewDto['user']): AdminUserEditForm {
+  return {
+    displayName: user.displayName,
+    status: user.status,
+    isBlocked: user.isBlocked
+  }
+}
+
+export function validateAdminUserEditForm(form: AdminUserEditForm) {
+  const errors: string[] = []
+  const displayName = form.displayName.trim()
+  if (!displayName || displayName.length > 80) errors.push('Имя должно содержать от 1 до 80 символов.')
+  if (!editableUserStatuses.has(form.status)) errors.push('Выберите допустимый статус пользователя.')
+  return errors
+}
+
+export function isAdminUserEditFormChanged(form: AdminUserEditForm, user: AdminUserOverviewDto['user']) {
+  return form.displayName.trim() !== user.displayName
+    || form.status !== user.status
+    || form.isBlocked !== user.isBlocked
+}
+
 export type AdminUserOverviewStats = {
   ordersCount: number
   paymentsCount: number

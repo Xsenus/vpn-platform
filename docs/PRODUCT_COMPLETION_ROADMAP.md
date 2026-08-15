@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-15.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-admin-payment-provisioning-label-localization`, версия `0.733.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `756/776` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-admin-user-versioned-management`, версия `0.734.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `757/777` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,8 +37,8 @@ git diff --check
 
 Что подтверждено на 2026-08-15:
 
-- [x] `STATE-001` Backend test suite проходит: `1557/1557`.
-- [x] `STATE-002` Frontend test suite проходит: `180/180`.
+- [x] `STATE-001` Backend test suite проходит: `1560/1560`.
+- [x] `STATE-002` Frontend test suite проходит: `182/182`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2720,6 +2720,10 @@ git diff --check
 - [x] `P11-ACC-465` Локализировать платежные аккаунты, серверы и подготовку VPS в админке. 2026-08-15.
   - Что сделано: payment attempts локализуют режим провайдера; provider readiness возвращает русские blockers, capabilities и required fields; server/provisioning rows локализуют SSH auth, source, owner, step, deploy mode и bounded legacy diagnostic; precheck/deploy/retry notices не используют английский `modeTitle` API.
   - Доказательство: fail-first frontend `1/3`, desktop all-sections с raw `Sandbox`, backend `0/1` с `Provider account is disabled.`, первый полный Playwright `266/270` с четырьмя stale English expectations; after-fix focused frontend `3/3`, payment/backend `20/20`, browser regression `4/4`, frontend `180/180`, typecheck/build, admin bundle raw `567958/568320`, gzip `151024/151552`, полный Playwright `270/270`, backend Debug/Release `1557/1557`, API build `0 warnings / 0 errors`, existing/fresh SQLite, formatter, EF drift, encoding, secret scan `719/0` и dependency audit `0 vulnerabilities` зелёные; все 17 admin sections прошли desktop и 25 responsive viewport-конфигураций, actual nodes/payments desktop/mobile проверены без overflow, clipping, overlap или browser diagnostics.
+- [x] `P11-ACC-466` Защитить административное управление профилем пользователя от устаревшей записи. 2026-08-15.
+  - Что сделать: раздел пользователей должен позволять изменить имя, статус и ручную блокировку; API обязан отклонять неизвестные и stale поля, а отзыв сессий должен быть атомарным с изменением пользователя.
+  - Что сделано: PATCH использует strict JSON allowlist, обязательный `updatedAt` concurrency token, no-op/duplicate/validation guards и не повторяет команду после `DbUpdateConcurrencyException`; отзыв сессий и аудит остаются в одной транзакции. Адаптивный редактор валидирует форму, явно подтверждает session-revoking переходы и обновляет карточку после `409`.
+  - Доказательство: fail-first backend `0/2`; after-fix targeted user/session boundary `16/16`, backend Release `1560/1560`, frontend `182/182`, typecheck/build, admin bundle raw `572159/573440`, gzip `152028/152576`, targeted desktop/mobile `2/2`, полный Playwright `274/274`, fresh SQLite full flow с реальным admin PATCH, formatter, EF drift, encoding, secret scan `711/0` и dependency audit `0 vulnerabilities` зелёные; все 17 admin sections прошли desktop и 25 responsive viewport-конфигураций, users desktop/mobile проверены без overflow, clipping, overlap или browser diagnostics.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3369,6 +3373,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-15-001` | P1 | Admin users | UI не позволял управлять профилем, PATCH молча принимал неизвестные поля и после concurrency conflict повторял устаревшую команду поверх более новых данных. | Исправлено локально | Strict allowlist и обязательный `updatedAt`, атомарный rollback отзыва сессий, fail-closed client decoder и адаптивный редактор проверены backend/SQLite/frontend/desktop/mobile/responsive regressions. Реальный VPS admin smoke остаётся внешним evidence. |
 | `BUG-2026-08-13-036` | P1 | Admin referral programs | Structured editor сбрасывал anti-fraud и неизвестные rule/reward extensions, список materialize-ил всю таблицу, PATCH игнорировал опечатки и позволял stale overwrite. | Исправлено локально | Lossless helper, DB-side top-200, strict PATCH allowlist/no-op/duplicate guard и EF optimistic revision проверены SQLite/backend/frontend/stateful CRUD/focused responsive regressions. Live provider/VPS outcome остаётся внешним evidence. |
 | `BUG-2026-08-13-035` | P1 | Referral reward boundary | Cabinet/admin API materialize-или всю историю начислений до сортировки, cabinet validator принимал внутренние поля, а русские интерфейсы показывали техническое `days`. | Исправлено локально | Minimal cabinet DTO, DB-side top-100/top-200, fail-closed cabinet decoder и общий русский formatter проверены SQLite/backend/frontend/desktop/mobile/all-screens regressions. Live provider/VPS outcome остаётся внешним evidence. |
 | `BUG-2026-08-12-034` | P0 | Cabinet support boundary | Cabinet API использовал административные conversation/message DTO с user/Telegram/assignment/internal-note/attachment полями; обращения ограничивались после materialization, сообщения не имели лимита. | Исправлено локально | Minimal read/create/reply DTO, DB-side top-100/top-200, internal-note filtering, fail-closed frontend и desktop/mobile/responsive regressions проверены. Live Telegram/provider delivery остаётся внешним evidence. |

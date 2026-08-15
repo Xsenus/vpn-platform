@@ -17319,5 +17319,32 @@
         "text": "Roadmap progress is 756/776 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-15-admin-user-versioned-management",
+    "version": "0.734.0",
+    "releasedAt": "2026-08-15T12:30:55+07:00",
+    "title": "User management prevents stale administrative updates",
+    "summary": "Administrators can edit user profiles through a validated responsive form backed by an exact versioned API contract and atomic session revocation.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "User updates reject unknown, duplicate, empty and stale payloads instead of silently accepting or replaying them."
+      },
+      {
+        "type": "improved",
+        "text": "The users section provides validated name, status and manual-block controls with explicit confirmation when active sessions will end."
+      },
+      {
+        "type": "improved",
+        "text": "Fresh SQLite and browser gates verify persisted profile changes, conflict recovery and transactional session-revocation rollback."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 757/777 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -2026,12 +2026,19 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
   assert.equal(new Headers(calls[0]?.init?.headers).get('Authorization'), 'Bearer admin-token')
 })
 
-test('ApiClient admin dashboard and user overview endpoints are tokenized', async () => {
+test('ApiClient admin dashboard, user overview and versioned update endpoints are tokenized', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = []
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init })
     if (String(url).includes('/overview')) {
       return new Response(JSON.stringify(adminUserOverviewFixture({ payments: [adminOverviewPaymentFixture()] })), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (init?.method === 'PATCH') {
+      return new Response(JSON.stringify({ ...adminUserOverviewFixture().user, displayName: 'Обновлённый клиент', status: 'Suspended', isBlocked: true, updatedAt: '2026-06-12T10:31:00Z' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       })
@@ -2052,13 +2059,32 @@ test('ApiClient admin dashboard and user overview endpoints are tokenized', asyn
   const client = new ApiClient('http://localhost:8080')
   const dashboard = await client.getAdminDashboardSummary('admin-token')
   const overview = await client.getAdminUserOverview('admin-token', 'user-1')
+  const updated = await client.updateAdminUser('admin-token', 'user-1', { displayName: 'Обновлённый клиент', status: 'Suspended', isBlocked: true }, overview.user.updatedAt)
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/dashboard/summary')
   assert.equal(calls[1]?.url, 'http://localhost:8080/api/admin/users/user-1/overview')
   assert.equal(new Headers(calls[1]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.equal(calls[2]?.url, 'http://localhost:8080/api/admin/users/user-1')
+  assert.equal(calls[2]?.init?.method, 'PATCH')
+  assert.equal(new Headers(calls[2]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+  assert.deepEqual(JSON.parse(String(calls[2]?.init?.body)), { displayName: 'Обновлённый клиент', status: 'Suspended', isBlocked: true, updatedAt: overview.user.updatedAt })
   assert.equal(dashboard.productionReadiness?.checks[0]?.actionHref, '#payments')
   assert.equal(dashboard.productionReadiness?.checks[0]?.category, 'Платежи')
   assert.equal(overview.payments[0]?.providerPaymentId, 'provider-payment-1')
+  assert.equal(updated.displayName, 'Обновлённый клиент')
+})
+
+test('ApiClient rejects unknown fields in admin user responses', async () => {
+  globalThis.fetch = (async () => new Response(JSON.stringify([{ ...adminUserOverviewFixture().user, passwordHash: 'must-not-reach-browser' }]), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+
+  const client = new ApiClient('http://localhost:8080')
+  await assert.rejects(
+    () => client.getAdminUsers('admin-token'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)
+  )
 })
 
 test('ApiClient admin audit logs endpoint sends filters and auth token', async () => {
