@@ -58,6 +58,7 @@ import { formatAdminDisplayLabel, formatAdminRoleLabels } from './admin-display-
 import { adminSectionIds, adminSectionLabels, canAccessAdminSection, canWriteAdminSection, parseAdminSectionHref, type AdminSectionId } from './admin-capabilities'
 import { getAdminPageMetadata } from './admin-page-metadata'
 import { isTelegramBotSettingsFormChanged, telegramBotSettingsToForm } from './admin-telegram-settings'
+import { isFaqFormChanged, isSiteContentFormChanged, isWorkScenarioFormChanged, normalizeFaqPayload, normalizeSiteContentPayload, normalizeWorkScenarioPayload, parseWorkScenarioTariffIds, scenarioTariffIdsToJson } from './admin-managed-editors'
 import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason, getNextAdminAccessExpiryDelay, isAdminAccessExpired } from './admin-accesses'
 import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlocker, getAdminSubscriptionEffectiveEndTime, getNextAdminSubscriptionExpiryDelay, type AdminSubscriptionAction } from './admin-subscriptions'
 import { canCancelProvisioningRun, canRetryProvisioningRun, isProvisioningStateConflict } from './provisioning-state'
@@ -953,21 +954,6 @@ function validateTariffForm(form: UpdateTariffPayload, featuresText = '') {
   if (form.visibleFrom && form.visibleTo && new Date(form.visibleFrom) > new Date(form.visibleTo)) errors.push('Начало публикации должно быть раньше окончания.')
 
   return errors
-}
-
-function parseWorkScenarioTariffIds(value?: string | null) {
-  if (!value) return []
-
-  try {
-    const parsed = JSON.parse(value)
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
-  } catch {
-    return []
-  }
-}
-
-function scenarioTariffIdsToJson(ids: string[]) {
-  return JSON.stringify(Array.from(new Set(ids.filter(Boolean))))
 }
 
 function validatePaymentProviderForm(
@@ -2872,33 +2858,34 @@ export function App() {
     if (!token || !canWriteSection('faq')) return
     const submittedForm = faqForm
     const editingId = editingFaqId
-    const payload: FaqUpsertPayload = {
-      ...submittedForm,
-      question: submittedForm.question.trim(),
-      answer: submittedForm.answer.trim(),
-      category: submittedForm.category?.trim() || 'Общее',
-      sortOrder: Number(submittedForm.sortOrder) || 0
-    }
+    const payload = normalizeFaqPayload(submittedForm)
+    const current = editingId ? faqEntries.find((entry) => entry.id === editingId) : undefined
 
     if (!payload.question || !payload.answer) {
       setError('FAQ: заполните вопрос и ответ.')
       return
     }
+    if (editingId && !current) {
+      setError('Вопрос FAQ больше не найден. Обновите список.')
+      return
+    }
+    if (current && !isFaqFormChanged(submittedForm, current)) {
+      setError('Изменения вопроса FAQ не обнаружены.')
+      return
+    }
 
     await runAction('faq', editingId ? `faq-update-${editingId}` : 'faq-create', async (action) => {
       if (editingId) {
-        const current = faqEntries.find((entry) => entry.id === editingId)
-        if (!current) throw new ApiClientError('Вопрос FAQ больше не найден. Список обновлен.', 409, null)
         try {
-          await api.updateAdminFaq(token, editingId, payload, current.revision)
+          await api.updateAdminFaq(token, editingId, payload, current!.revision)
         } catch (error) {
           if (error instanceof ApiClientError && error.status === 409) {
             const latest = await api.getAdminFaq(token)
             if (!action.isCurrent()) return
             setFaqEntries(latest)
             const refreshed = latest.find((entry) => entry.id === editingId)
-            if (refreshed) editFaq(refreshed)
-            else resetFaqForm()
+            if (!refreshed) resetFaqForm()
+            else if (faqFormRef.current === submittedForm && editingFaqIdRef.current === editingId) editFaq(refreshed)
             throw new ApiClientError('Вопрос уже изменен другим администратором. Форма обновлена актуальными данными.', 409, error.payload)
           }
           throw error
@@ -2958,35 +2945,33 @@ export function App() {
     if (!token || !canWriteSection('content')) return
     const submittedForm = siteContentForm
     const editingId = editingSiteContentId
-    const key = submittedForm.key.trim()
-    const label = submittedForm.label?.trim() || key
-    if (!key || !label) {
+    const payload = normalizeSiteContentPayload(submittedForm)
+    const current = editingId ? siteContentBlocks.find((block) => block.id === editingId) : undefined
+    if (!payload.key || !payload.label) {
       setError('Контент сайта: заполните ключ и название поля.')
       return
     }
-    const payload: SiteContentBlockUpsertPayload = {
-      ...submittedForm,
-      key,
-      label,
-      group: submittedForm.group?.trim() || 'home',
-      inputType: submittedForm.inputType?.trim() || 'text',
-      sortOrder: Number(submittedForm.sortOrder) || 0
+    if (editingId && !current) {
+      setError('Редактируемый блок больше не найден. Обновите список.')
+      return
+    }
+    if (current && !isSiteContentFormChanged(submittedForm, current)) {
+      setError('Изменения блока контента не обнаружены.')
+      return
     }
 
     await runAction('content', editingId ? `content-update-${editingId}` : 'content-create', async (action) => {
       if (editingId) {
-        const current = siteContentBlocks.find((block) => block.id === editingId)
-        if (!current) throw new ApiClientError('Редактируемый блок больше не найден. Список обновлен.', 409, null)
         try {
-          await api.updateAdminSiteContent(token, editingId, payload, current.revision)
+          await api.updateAdminSiteContent(token, editingId, payload, current!.revision)
         } catch (error) {
           if (error instanceof ApiClientError && error.status === 409) {
             const refreshed = await api.getAdminSiteContent(token)
             if (action.isCurrent()) {
               setSiteContentBlocks(refreshed)
               const latest = refreshed.find((block) => block.id === editingId)
-              if (latest) editSiteContent(latest)
-              else resetSiteContentForm()
+              if (!latest) resetSiteContentForm()
+              else if (siteContentFormRef.current === submittedForm && editingSiteContentIdRef.current === editingId) editSiteContent(latest)
             }
             throw new ApiClientError('Блок уже изменен другим администратором. В форму загружена актуальная версия.', 409, error.payload)
           }
@@ -3073,30 +3058,29 @@ export function App() {
       return
     }
 
-    const payload: WorkScenarioUpsertPayload = {
-      ...submittedForm,
-      name: submittedForm.name.trim(),
-      key: submittedForm.key.trim().toLowerCase(),
-      allowedTariffIdsJson: scenarioTariffIdsToJson(parseWorkScenarioTariffIds(submittedForm.allowedTariffIdsJson)),
-      provisioningMode: submittedForm.provisioningMode.trim().toLowerCase(),
-      maxDevices: Number(submittedForm.maxDevices) || 1,
-      sortOrder: Number(submittedForm.sortOrder) || 0
+    const payload = normalizeWorkScenarioPayload(submittedForm)
+    const current = editingId ? workScenarios.find((scenario) => scenario.id === editingId) : undefined
+    if (editingId && !current) {
+      setError('Редактируемый сценарий больше не найден. Обновите список.')
+      return
+    }
+    if (current && !isWorkScenarioFormChanged(submittedForm, current)) {
+      setError('Изменения рабочего сценария не обнаружены.')
+      return
     }
 
     await runAction('scenarios', editingId ? `scenario-update-${editingId}` : 'scenario-create', async (action) => {
       if (editingId) {
-        const current = workScenarios.find((scenario) => scenario.id === editingId)
-        if (!current) throw new ApiClientError('Редактируемый сценарий больше не найден. Список обновлен.', 409, null)
         try {
-          await api.updateAdminWorkScenario(token, editingId, payload, current.revision)
+          await api.updateAdminWorkScenario(token, editingId, payload, current!.revision)
         } catch (error) {
           if (error instanceof ApiClientError && error.status === 409) {
             const latest = await api.getAdminWorkScenarios(token)
             if (!action.isCurrent()) return
             setWorkScenarios(latest)
             const refreshed = latest.find((scenario) => scenario.id === editingId)
-            if (refreshed) editWorkScenario(refreshed)
-            else resetWorkScenarioForm()
+            if (!refreshed) resetWorkScenarioForm()
+            else if (workScenarioFormRef.current === submittedForm && editingWorkScenarioIdRef.current === editingId) editWorkScenario(refreshed)
             throw new ApiClientError('Сценарий уже изменен другим администратором. Форма обновлена актуальными данными.', 409, error.payload)
           }
           throw error
@@ -3904,8 +3888,14 @@ export function App() {
   const tariffFormErrors = validateTariffForm(tariffForm, tariffFeaturesText)
   const tariffFormActionBusy = isActionResourceBusy(tariffActionResourceKey(editingTariffId || 'create'))
   const releaseFormActionBusy = isActionResourceBusy(appReleaseActionResourceKey(editingReleaseId || 'create'))
+  const editingFaq = editingFaqId ? faqEntries.find((entry) => entry.id === editingFaqId) : undefined
+  const faqFormChanged = !editingFaqId || Boolean(editingFaq && isFaqFormChanged(faqForm, editingFaq))
   const faqFormActionBusy = isActionResourceBusy(faqActionResourceKey(editingFaqId || 'create'))
+  const editingSiteContent = editingSiteContentId ? siteContentBlocks.find((block) => block.id === editingSiteContentId) : undefined
+  const siteContentFormChanged = !editingSiteContentId || Boolean(editingSiteContent && isSiteContentFormChanged(siteContentForm, editingSiteContent))
   const siteContentActionBusy = isActionResourceBusy(siteContentActionResourceKey)
+  const editingWorkScenario = editingWorkScenarioId ? workScenarios.find((scenario) => scenario.id === editingWorkScenarioId) : undefined
+  const workScenarioFormChanged = !editingWorkScenarioId || Boolean(editingWorkScenario && isWorkScenarioFormChanged(workScenarioForm, editingWorkScenario))
   const workScenarioFormActionBusy = isActionResourceBusy(workScenarioActionResourceKey(editingWorkScenarioId || 'create'))
   const botSettingsActionBusy = isActionResourceBusy(botSettingsActionResourceKey)
   const referralProgramFormActionBusy = isActionResourceBusy(referralProgramActionResourceKey)
@@ -5390,7 +5380,7 @@ export function App() {
               <label className="checkbox-row"><input checked={faqForm.showOnFaqPage} onChange={(e) => updateFaqForm('showOnFaqPage', e.target.checked)} type="checkbox" /> Показывать на странице FAQ</label>
             </fieldset>
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || faqFormActionBusy || !faqForm.question || !faqForm.answer} title={adminDisabledTitle} aria-busy={faqFormActionBusy}>
+              <PrimaryButton type="submit" disabled={!token || faqFormActionBusy || !faqForm.question || !faqForm.answer || !faqFormChanged} title={adminDisabledTitle} aria-busy={faqFormActionBusy}>
                 {editingFaqId ? 'Сохранить вопрос' : 'Создать вопрос'}
               </PrimaryButton>
               {editingFaqId && <PrimaryButton type="button" className="button-secondary" onClick={resetFaqForm}>Отменить редактирование</PrimaryButton>}
@@ -5509,7 +5499,7 @@ export function App() {
               <p>{siteContentForm.value || 'Предпросмотр текста'}</p>
             </div>
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || siteContentActionBusy || !siteContentForm.key} title={adminDisabledTitle} aria-busy={siteContentActionBusy}>{editingSiteContentId ? 'Сохранить блок' : 'Создать блок'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!token || siteContentActionBusy || !siteContentForm.key || !siteContentFormChanged} title={adminDisabledTitle} aria-busy={siteContentActionBusy}>{editingSiteContentId ? 'Сохранить блок' : 'Создать блок'}</PrimaryButton>
               {editingSiteContentId && <PrimaryButton type="button" className="button-secondary" onClick={resetSiteContentForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -5588,7 +5578,7 @@ export function App() {
             </fieldset>
             <FormValidationSummary errors={workScenarioForm !== defaultWorkScenarioForm ? workScenarioFormErrors : []} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || workScenarioFormActionBusy || workScenarioFormErrors.length > 0} title={adminDisabledTitle} aria-busy={workScenarioFormActionBusy}>{editingWorkScenarioId ? 'Сохранить сценарий' : 'Создать сценарий'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!token || workScenarioFormActionBusy || workScenarioFormErrors.length > 0 || !workScenarioFormChanged} title={adminDisabledTitle} aria-busy={workScenarioFormActionBusy}>{editingWorkScenarioId ? 'Сохранить сценарий' : 'Создать сценарий'}</PrimaryButton>
               {editingWorkScenarioId && <PrimaryButton type="button" className="button-secondary" onClick={resetWorkScenarioForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>

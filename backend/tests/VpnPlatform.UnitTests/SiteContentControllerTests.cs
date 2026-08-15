@@ -135,6 +135,22 @@ public class SiteContentControllerTests
     }
 
     [Fact]
+    public async Task AdminSiteContent_Should_Reject_NoOp_Update_Without_Revision_Or_Audit_Churn()
+    {
+        await using var db = CreateDb();
+        var controller = CreateAdminController(db);
+        var request = new SiteContentBlockUpsertRequest("home.hero.title", "Заголовок", "home", "Hero title", "Первый экран", "text", true, 10);
+        var created = AssertOk<SiteContentBlockDto>(await controller.Create(request, CancellationToken.None));
+
+        var result = await controller.Update(created.Id, request with { Revision = created.Revision }, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        var persisted = await db.SiteContentBlocks.SingleAsync();
+        Assert.Equal(created.Revision, persisted.Revision);
+        Assert.Single(await db.AuditLogs.ToListAsync(), audit => audit.Action == "site_content.create");
+    }
+
+    [Fact]
     public async Task AdminSiteContent_Should_Reject_Empty_Key()
     {
         await using var db = CreateDb();

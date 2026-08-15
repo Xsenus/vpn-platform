@@ -492,10 +492,6 @@ public class AdminUsersController : ControllerBase
         }
 
         user.UpdatedAt = now;
-        if (_db is DbContext concurrencyContext)
-        {
-            concurrencyContext.Entry(user).Property(x => x.UpdatedAt).OriginalValue = expectedUpdatedAt;
-        }
         AdminAuditLogWriter.Add(_db, this, "user.update", "User", user.Id, before, MapUser(user));
         try
         {

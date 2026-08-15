@@ -50,8 +50,16 @@ function Invoke-SmokeJson {
         Invoke-RestMethod @arguments
     }
     catch {
-        $responseBody = ""
-        if ($_.Exception.Response -and $_.Exception.Response.GetResponseStream()) {
+        $responseBody = [string]$_.ErrorDetails.Message
+        if (-not $responseBody -and $_.Exception.Response -and $_.Exception.Response.Content) {
+            try {
+                $responseBody = $_.Exception.Response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+            }
+            catch {
+                $responseBody = "<response body unavailable>"
+            }
+        }
+        elseif (-not $responseBody -and $_.Exception.Response -and $_.Exception.Response.PSObject.Methods.Name -contains "GetResponseStream" -and $_.Exception.Response.GetResponseStream()) {
             $reader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
             $responseBody = $reader.ReadToEnd()
             $reader.Dispose()
@@ -59,6 +67,30 @@ function Invoke-SmokeJson {
 
         throw "HTTP $Method $Uri failed. Body=$requestBody Response=$responseBody"
     }
+}
+
+function Assert-SmokeJsonStatus {
+    param(
+        [string]$Method,
+        [string]$Uri,
+        [object]$Body,
+        [hashtable]$Headers,
+        [int]$ExpectedStatus
+    )
+
+    $requestBody = $Body | ConvertTo-Json -Depth 10
+    try {
+        Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers -ContentType "application/json" -Body $requestBody -TimeoutSec 10 | Out-Null
+        throw "HTTP $Method $Uri unexpectedly succeeded; expected status $ExpectedStatus."
+    }
+    catch {
+        $actualStatus = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 }
+        if ($actualStatus -ne $ExpectedStatus) {
+            throw "HTTP $Method $Uri returned status $actualStatus; expected $ExpectedStatus."
+        }
+    }
+
+    return $ExpectedStatus
 }
 
 function Assert-HasValue {
@@ -217,6 +249,24 @@ try {
         throw "Admin user overview does not contain the persisted display name."
     }
 
+    $siteContentBlocks = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/admin/site-content?group=home" -Headers $adminHeaders)
+    $siteContentBlock = $siteContentBlocks | Select-Object -First 1
+    if ($null -eq $siteContentBlock) {
+        throw "Managed site content seed is missing."
+    }
+
+    $managedNoOpStatus = Assert-SmokeJsonStatus -Method "PUT" -Uri "$apiUrl/api/admin/site-content/$($siteContentBlock.id)" -Headers $adminHeaders -ExpectedStatus 400 -Body @{
+        key = $siteContentBlock.key
+        value = $siteContentBlock.value
+        group = $siteContentBlock.group
+        label = $siteContentBlock.label
+        description = $siteContentBlock.description
+        inputType = $siteContentBlock.inputType
+        isActive = $siteContentBlock.isActive
+        sortOrder = $siteContentBlock.sortOrder
+        revision = $siteContentBlock.revision
+    }
+
     $telegramSettings = Invoke-SmokeJson -Uri "$apiUrl/api/admin/telegram-bot/settings" -Headers $adminHeaders
     if ($telegramSettings.revision -lt 0) {
         throw "Telegram bot settings response does not contain a valid revision."
@@ -293,7 +343,7 @@ try {
         throw "Unexpected access URI protocol: $($access.accessUri)"
     }
 
-    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
+    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) managedNoOp=$managedNoOpStatus telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
 }
 finally {
     if ($process -and -not $process.HasExited) {

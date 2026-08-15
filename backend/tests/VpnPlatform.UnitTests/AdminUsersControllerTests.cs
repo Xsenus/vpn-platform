@@ -138,6 +138,56 @@ public class AdminUsersControllerTests
     }
 
     [Fact]
+    public async Task Patch_Should_Accept_Equivalent_UpdatedAt_Offset_In_File_Sqlite()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"vpn-admin-user-offset-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite($"Data Source={databasePath}")
+                .Options;
+            var userId = Guid.NewGuid();
+            DateTimeOffset updatedAt;
+            await using (var seed = new ApplicationDbContext(options))
+            {
+                await seed.Database.EnsureCreatedAsync();
+                seed.Users.Add(new User
+                {
+                    Id = userId,
+                    Email = "offset-version@example.test",
+                    DisplayName = "Before",
+                    PasswordHash = "hash",
+                    RolesCsv = UserRoles.User,
+                    Status = UserStatus.Active,
+                    ReferralCode = "OFFSET-VERSION"
+                });
+                await seed.SaveChangesAsync();
+                updatedAt = await seed.Users.Where(x => x.Id == userId).Select(x => x.UpdatedAt).SingleAsync();
+            }
+
+            await using var db = new ApplicationDbContext(options);
+            using var payload = JsonDocument.Parse(JsonSerializer.Serialize(new
+            {
+                displayName = "After",
+                updatedAt = updatedAt.ToOffset(TimeSpan.FromHours(7))
+            }));
+
+            var result = await new AdminUsersController(db).Patch(userId, payload.RootElement, CancellationToken.None);
+
+            Assert.IsType<OkObjectResult>(result);
+            Assert.Equal("After", await db.Users.Where(x => x.Id == userId).Select(x => x.DisplayName).SingleAsync());
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            foreach (var path in new[] { databasePath, databasePath + "-shm", databasePath + "-wal" })
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
     public async Task Patch_Should_Reject_Unknown_Fields_Without_Mutating_User()
     {
         await using var db = CreateDbContext();

@@ -132,6 +132,22 @@ public class FaqControllerTests
     }
 
     [Fact]
+    public async Task AdminFaq_Should_Reject_NoOp_Update_Without_Revision_Or_Audit_Churn()
+    {
+        await using var db = CreateDb();
+        var controller = CreateAdminController(db);
+        var request = new FaqEntryUpsertRequest("Как оплатить?", "Через страницу тарифов.", "Оплата", true, true, true, 10);
+        var created = AssertOk<FaqEntryDto>(await controller.Create(request, CancellationToken.None));
+
+        var result = await controller.Update(created.Id, request with { Revision = created.Revision }, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        var persisted = await db.FaqEntries.SingleAsync();
+        Assert.Equal(created.Revision, persisted.Revision);
+        Assert.Single(await db.AuditLogs.ToListAsync(), audit => audit.Action == "faq.create");
+    }
+
+    [Fact]
     public async Task AdminFaq_Should_Limit_List_And_Require_Revision_For_Mutations()
     {
         await using var db = CreateDb();

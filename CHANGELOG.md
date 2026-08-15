@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.736.0 - 2026-08-15
+
+Release entry: `2026-08-15-managed-editor-draft-integrity`.
+
+### Исправлено
+
+- FAQ, контент сайта и рабочие сценарии больше не создают ложную новую revision и audit-запись при сохранении без фактических изменений; API возвращает `400`, а исходная кнопка сохранения выключена.
+- При `409` редакторы обновляют список победившей версией, но не затирают более новый локальный черновик, введённый во время ожидающего запроса.
+- Административный PATCH пользователя принимает эквивалентный `updatedAt` с другим часовым offset в файловой SQLite и сохраняет concurrency-проверку по фактически загруженной версии.
+
+### Проверено
+
+- Fail-first managed regressions завершились `0/3`, а файловый SQLite offset regression `0/1`; после исправления controller suites `58/58`, user boundary `16/16`, frontend `184/184` и targeted desktop/mobile browser flows `6/6` зелёные.
+- Backend Debug/Release `1566/1566`, полный Playwright `276/276`, typecheck/build, admin bundle raw `576571/577536` и gzip `153129/153600`, fresh SQLite full flow с `managedNoOp=400`, dependency audit `0 vulnerabilities`, EF drift, strict UTF-8 и secret scan `715/0` зелёные. Roadmap `759/779` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.735.0 - 2026-08-15
 
 Release entry: `2026-08-15-telegram-settings-versioned-management`.

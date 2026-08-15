@@ -92,6 +92,10 @@ public class AdminWorkScenariosController : ControllerBase
         {
             return BadRequest(new { error = "Scenario key cannot be changed while the scenario is selected in tariffs." });
         }
+        if (!HasChanges(scenario, candidate))
+        {
+            return BadRequest(new { error = "Изменения рабочего сценария не обнаружены." });
+        }
 
         var before = Map(scenario);
         Copy(candidate, scenario);
@@ -212,6 +216,27 @@ public class AdminWorkScenariosController : ControllerBase
         target.TrafficLimit = source.TrafficLimit;
         target.SortOrder = source.SortOrder;
     }
+
+    private static bool HasChanges(WorkScenario current, WorkScenario candidate)
+        => current.Name != candidate.Name
+            || current.Key != candidate.Key
+            || current.IsActive != candidate.IsActive
+            || current.AllowedTariffIdsJson != candidate.AllowedTariffIdsJson
+            || current.VpnProtocol != candidate.VpnProtocol
+            || current.ServerSelectionRule != candidate.ServerSelectionRule
+            || current.InboundSelectionRule != candidate.InboundSelectionRule
+            || current.ProvisioningMode != candidate.ProvisioningMode
+            || current.OnPaymentSucceeded != candidate.OnPaymentSucceeded
+            || current.OnPaymentFailed != candidate.OnPaymentFailed
+            || current.OnRefund != candidate.OnRefund
+            || current.OnSubscriptionExpired != candidate.OnSubscriptionExpired
+            || current.OnRenewal != candidate.OnRenewal
+            || current.CabinetText != candidate.CabinetText
+            || current.TelegramText != candidate.TelegramText
+            || current.GenerateQrCode != candidate.GenerateQrCode
+            || current.MaxDevices != candidate.MaxDevices
+            || current.TrafficLimit != candidate.TrafficLimit
+            || current.SortOrder != candidate.SortOrder;
 
     private static string NormalizeScenarioToken(string? value, string fallback)
         => string.IsNullOrWhiteSpace(value) ? fallback : value.Trim().ToLowerInvariant();

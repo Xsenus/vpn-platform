@@ -17373,5 +17373,32 @@
         "text": "Roadmap progress is 758/778 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-15-managed-editor-draft-integrity",
+    "version": "0.736.0",
+    "releasedAt": "2026-08-15T14:10:34+07:00",
+    "title": "Managed editors preserve revisions and newer drafts",
+    "summary": "FAQ, site-content, scenario and user administration now distinguish real changes from no-ops and preserve exact concurrency state across delayed conflicts and timezone offsets.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "FAQ, site-content and work-scenario updates reject normalized no-op payloads without advancing revisions or writing false audit entries."
+      },
+      {
+        "type": "fixed",
+        "text": "Delayed stale-conflict recovery refreshes the winning list state without overwriting a newer local editor draft."
+      },
+      {
+        "type": "fixed",
+        "text": "File-backed SQLite user updates accept the same updatedAt instant with an equivalent client timezone offset while retaining optimistic concurrency."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 759/779 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

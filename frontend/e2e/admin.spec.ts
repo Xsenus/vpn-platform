@@ -480,6 +480,8 @@ async function mockAdminApi(page: Page) {
   let releaseDelayedTariffPatch: (() => void) | null = null
   let delayNextHomeDefaultsResponse = false
   let releaseDelayedHomeDefaults: (() => void) | null = null
+  let delayedManagedUpdatePath: string | null = null
+  let releaseDelayedManagedUpdate: (() => void) | null = null
   let delayNextBotSettingsSaveResponse = false
   let releaseDelayedBotSettingsSave: (() => void) | null = null
   let delayNextProviderCreateResponse = false
@@ -1488,6 +1490,11 @@ async function mockAdminApi(page: Page) {
 
     const faqMutationMatch = path.match(/^\/api\/admin\/faq\/([^/]+)$/)
     if (faqMutationMatch && method === 'PUT') {
+      if (delayedManagedUpdatePath === path) {
+        delayedManagedUpdatePath = null
+        await new Promise<void>((resolve) => { releaseDelayedManagedUpdate = resolve })
+        releaseDelayedManagedUpdate = null
+      }
       const index = faqEntries.findIndex((item) => item.id === faqMutationMatch[1])
       const faqBody = body as Record<string, unknown>
       if (index < 0 || faqBody.revision !== faqEntries[index].revision) {
@@ -1551,6 +1558,11 @@ async function mockAdminApi(page: Page) {
 
     const siteContentMutationMatch = path.match(/^\/api\/admin\/site-content\/([^/]+)$/)
     if (siteContentMutationMatch && method === 'PUT') {
+      if (delayedManagedUpdatePath === path) {
+        delayedManagedUpdatePath = null
+        await new Promise<void>((resolve) => { releaseDelayedManagedUpdate = resolve })
+        releaseDelayedManagedUpdate = null
+      }
       const index = siteContentBlocks.findIndex((item) => item.id === siteContentMutationMatch[1])
       const current = siteContentBlocks[index]
       if (!current || body.revision !== current.revision) {
@@ -1590,6 +1602,11 @@ async function mockAdminApi(page: Page) {
 
     const workScenarioMutationMatch = path.match(/^\/api\/admin\/work-scenarios\/([^/]+)$/)
     if (workScenarioMutationMatch && method === 'PUT') {
+      if (delayedManagedUpdatePath === path) {
+        delayedManagedUpdatePath = null
+        await new Promise<void>((resolve) => { releaseDelayedManagedUpdate = resolve })
+        releaseDelayedManagedUpdate = null
+      }
       const index = scenarios.findIndex((item) => item.id === workScenarioMutationMatch[1])
       const scenarioBody = body as Record<string, unknown>
       if (index < 0 || scenarioBody.revision !== scenarios[index].revision) {
@@ -2234,6 +2251,9 @@ async function mockAdminApi(page: Page) {
     releaseTariffPatch: () => { releaseDelayedTariffPatch?.() },
     delayNextHomeDefaults: () => { delayNextHomeDefaultsResponse = true },
     releaseHomeDefaults: () => { releaseDelayedHomeDefaults?.() },
+    delayNextManagedUpdate: (path: string) => { delayedManagedUpdatePath = path },
+    hasDelayedManagedUpdate: () => releaseDelayedManagedUpdate !== null,
+    releaseManagedUpdate: () => { releaseDelayedManagedUpdate?.() },
     delayNextBotSettingsSave: () => { delayNextBotSettingsSaveResponse = true },
     releaseBotSettingsSave: () => { releaseDelayedBotSettingsSave?.() },
     delayNextProviderCreate: () => { delayNextProviderCreateResponse = true },
@@ -5077,15 +5097,22 @@ test('admin FAQ editor recovers from a stale revision', async ({ page }) => {
   const faqPanel = page.locator('#faq')
   const faqRow = faqPanel.locator('.list-item-vertical').filter({ hasText: 'Как проверить управляемый FAQ?' })
   await faqRow.getByRole('button', { name: 'Редактировать' }).click()
+  const saveButton = faqPanel.getByRole('button', { name: 'Сохранить вопрос' })
+  await expect(saveButton).toBeDisabled()
   await faqPanel.getByLabel('Ответ').fill('Устаревшая локальная версия')
 
+  api.delayNextManagedUpdate('/api/admin/faq/faq-created-e2e')
+  await saveButton.click()
+  await expect.poll(() => api.hasDelayedManagedUpdate()).toBe(true)
+  await faqPanel.getByLabel('Ответ').fill('Новая локальная версия')
   api.changeFaqExternally('faq-created-e2e', 'Актуальный внешний ответ')
-  await faqPanel.getByRole('button', { name: 'Сохранить вопрос' }).click()
+  api.releaseManagedUpdate()
 
   await expect(page.getByRole('alert')).toContainText('Вопрос уже изменен другим администратором')
   await expect(faqPanel.getByRole('heading', { name: 'Редактировать вопрос' })).toBeVisible()
-  await expect(faqPanel.getByLabel('Ответ')).toHaveValue('Актуальный внешний ответ')
+  await expect(faqPanel.getByLabel('Ответ')).toHaveValue('Новая локальная версия')
   await expect(faqPanel.locator('.list-stack').getByText('Актуальный внешний ответ', { exact: true })).toBeVisible()
+  await expect(saveButton).toBeEnabled()
   expect(api.getRequestCount('/api/admin/faq/faq-created-e2e', 'PUT')).toBe(1)
 })
 
@@ -5115,15 +5142,22 @@ test('admin site content editor recovers from a stale revision', async ({ page }
   const contentPanel = page.locator('#content')
   const contentRow = contentPanel.locator('.list-item-vertical').filter({ hasText: 'Заголовок E2E' })
   await contentRow.getByRole('button', { name: 'Редактировать' }).click()
+  const saveButton = contentPanel.getByRole('button', { name: 'Сохранить блок' })
+  await expect(saveButton).toBeDisabled()
   await contentPanel.getByLabel('Значение').fill('Устаревшая локальная версия')
 
+  api.delayNextManagedUpdate('/api/admin/site-content/content-created-e2e')
+  await saveButton.click()
+  await expect.poll(() => api.hasDelayedManagedUpdate()).toBe(true)
+  await contentPanel.getByLabel('Значение').fill('Новая локальная версия')
   api.changeSiteContentExternally('content-created-e2e', 'Актуальный внешний текст')
-  await contentPanel.getByRole('button', { name: 'Сохранить блок' }).click()
+  api.releaseManagedUpdate()
 
   await expect(page.getByRole('alert')).toContainText('Блок уже изменен другим администратором')
   await expect(contentPanel.getByRole('heading', { name: 'Редактировать блок контента' })).toBeVisible()
-  await expect(contentPanel.getByLabel('Значение')).toHaveValue('Актуальный внешний текст')
+  await expect(contentPanel.getByLabel('Значение')).toHaveValue('Новая локальная версия')
   await expect(contentPanel.locator('.list-stack').getByText('Актуальный внешний текст', { exact: true })).toBeVisible()
+  await expect(saveButton).toBeEnabled()
   expect(api.getRequestCount('/api/admin/site-content/content-created-e2e', 'PUT')).toBe(1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
@@ -5154,15 +5188,22 @@ test('admin work scenario editor recovers from a stale revision', async ({ page 
   const scenariosPanel = page.locator('#scenarios')
   const scenarioRow = scenariosPanel.locator('.list-item-vertical').filter({ hasText: 'Автовыдача E2E' })
   await scenarioRow.getByRole('button', { name: 'Редактировать' }).click()
+  const saveButton = scenariosPanel.getByRole('button', { name: 'Сохранить сценарий' })
+  await expect(saveButton).toBeDisabled()
   await scenariosPanel.getByLabel('Название').fill('Устаревшая локальная версия')
 
+  api.delayNextManagedUpdate('/api/admin/work-scenarios/scenario-auto')
+  await saveButton.click()
+  await expect.poll(() => api.hasDelayedManagedUpdate()).toBe(true)
+  await scenariosPanel.getByLabel('Название').fill('Новая локальная версия')
   api.changeWorkScenarioExternally('scenario-auto', 'Актуальный внешний сценарий')
-  await scenariosPanel.getByRole('button', { name: 'Сохранить сценарий' }).click()
+  api.releaseManagedUpdate()
 
   await expect(page.getByRole('alert')).toContainText('Сценарий уже изменен другим администратором')
   await expect(scenariosPanel.getByRole('heading', { name: 'Редактировать сценарий' })).toBeVisible()
-  await expect(scenariosPanel.getByLabel('Название')).toHaveValue('Актуальный внешний сценарий')
+  await expect(scenariosPanel.getByLabel('Название')).toHaveValue('Новая локальная версия')
   await expect(scenariosPanel.getByText('Актуальный внешний сценарий', { exact: true })).toBeVisible()
+  await expect(saveButton).toBeEnabled()
   expect(api.getRequestCount('/api/admin/work-scenarios/scenario-auto', 'PUT')).toBe(1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })

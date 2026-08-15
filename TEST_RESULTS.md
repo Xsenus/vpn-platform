@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: managed editor draft and version integrity
+
+Scope:
+- FAQ, site-content and work-scenario updates must reject normalized no-op payloads without revision or audit churn.
+- Stale conflict recovery must refresh the winning list state without overwriting a newer local draft entered while the request is pending.
+- File-backed SQLite user concurrency must accept the same `updatedAt` instant regardless of the client timezone offset.
+
+Results:
+- Roadmap progress: `759/779` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-managed-editor-draft-integrity`, version `0.736.0`.
+- Fail-first: managed controller regressions completed `0/3`; the file-SQLite user offset regression completed `0/1` with a false `409` for the same instant represented as `+07:00`.
+- After fix: managed controller suites `58/58`, user boundary `16/16`, frontend `184/184`, typecheck/build, admin bundle budget `576571/577536` raw and `153129/153600` gzip, targeted desktop/mobile conflict flows `6/6`, and full Playwright `276/276` are green.
+- Release gate: backend Debug/Release `1566/1566`, fresh SQLite full flow including `managedNoOp=400`, versioned user/Telegram PATCH, checkout/payment/subscription/access, EF pending-model check, dependency audit `0 vulnerabilities`, secret scan `715/0` and strict UTF-8/BOM guard are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: versioned Telegram bot settings
 
 Scope:

@@ -164,6 +164,10 @@ public sealed class AdminFaqController : ControllerBase
         {
             return BadRequest(new { error = "FAQ question already exists in this category." });
         }
+        if (!HasChanges(entry, candidate))
+        {
+            return BadRequest(new { error = "Изменения вопроса FAQ не обнаружены." });
+        }
 
         var before = MapFaq(entry);
         Copy(candidate, entry);
@@ -235,6 +239,15 @@ public sealed class AdminFaqController : ControllerBase
         target.ShowOnFaqPage = source.ShowOnFaqPage;
         target.SortOrder = source.SortOrder;
     }
+
+    private static bool HasChanges(FaqEntry current, FaqEntry candidate)
+        => current.Question != candidate.Question
+            || current.Answer != candidate.Answer
+            || current.Category != candidate.Category
+            || current.IsActive != candidate.IsActive
+            || current.ShowOnHome != candidate.ShowOnHome
+            || current.ShowOnFaqPage != candidate.ShowOnFaqPage
+            || current.SortOrder != candidate.SortOrder;
 
     private static string? Validate(FaqEntryUpsertRequest request)
     {

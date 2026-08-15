@@ -22,9 +22,9 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1562/1562`.
+- Backend full suite: `1566/1566`.
 - API Release build: OK.
-- Frontend unit tests: `183/183`.
+- Frontend unit tests: `184/184`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
 - Browser console smoke: `276/276`; responsive all-screens `14/14` проверяет ready-state, content/modal/control geometry на 25 viewport-конфигурациях `305x568..2560x1440`, включая точные пары `N/N+1` для всех CSS-breakpoints; production inventory маршрутов и admin sections, local WebP decode и representative screenshots проверены.
@@ -72,7 +72,7 @@ Production-ready решение заблокировано следующими 
 - Admin mutation session ownership исключает duplicate submit, post-logout UI/reload и потерю более нового form draft при delayed save или background reload.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft; reset-code request и password confirmation используют независимые формы с корректным Enter submit.
 - Axe WCAG 2.0/2.1/2.2 A/AA и best-practice gate без allow-list проходит 6 public route-состояний, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px.
-- Admin production bundle: `5` chunks, largest `253573`, total raw `561000`, gzip `149008`; fail-closed budget пройден.
+- Admin production bundle: `5` chunks, largest `267866`, total raw `576571/577536`, gzip `153129/153600`; fail-closed budget пройден.
 - Unknown public route показывает доступное `404` recovery и проходит desktop/mobile, Axe, console и 18 responsive viewport-конфигураций без blank screen/overflow.
 - Public route title/meta/focus lifecycle проходит direct load, SPA navigation и browser Back на desktop/mobile; каждый route имеет точную metadata.
 - Admin hydration/login и 17 sections имеют точную metadata; deep-link, section switch и logout проходят desktop/mobile.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-15-telegram-settings-versioned-management`, версия `0.735.0`; versioned Telegram settings, atomic update/audit, no-op guard и stale conflict recovery проверены desktop/mobile, responsive и на fresh local SQLite. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence всё ещё требуются.
-- Roadmap progress: `758/778` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-15-managed-editor-draft-integrity`, версия `0.736.0`; managed editor no-op/draft integrity и equivalent-offset SQLite user concurrency проверены desktop/mobile и fresh local SQLite. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence всё ещё требуются.
+- Roadmap progress: `759/779` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

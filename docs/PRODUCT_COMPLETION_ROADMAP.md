@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-15.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-telegram-settings-versioned-management`, версия `0.735.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `758/778` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-managed-editor-draft-integrity`, версия `0.736.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `759/779` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,8 +37,8 @@ git diff --check
 
 Что подтверждено на 2026-08-15:
 
-- [x] `STATE-001` Backend test suite проходит: `1562/1562`.
-- [x] `STATE-002` Frontend test suite проходит: `183/183`.
+- [x] `STATE-001` Backend test suite проходит: `1566/1566`.
+- [x] `STATE-002` Frontend test suite проходит: `184/184`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2728,6 +2728,10 @@ git diff --check
   - Что сделать: настройки и шаблоны Telegram-бота должны иметь сохранённую версию, отклонять неизвестные и stale команды, не увеличивать версию при no-op и восстанавливать победившее состояние в UI после конфликта.
   - Что сделано: API использует hidden revision-sentinel с EF concurrency token, exact allowlist, обязательную `revision`, no-op guard и одну транзакцию для параметров, шаблонов, аудита и версии; последовательный и реальный file-SQLite race возвращают `409` проигравшей команде. Клиентский decoder fail-closed проверяет exact DTO, форма определяет нормализованные изменения, очищает секреты, отменяет черновик и загружает актуальный снимок после конфликта.
   - Доказательство: fail-first backend `0/1`; after-fix controller/automation и deterministic SQLite race `6/6`, backend Debug/Release `1562/1562`, frontend `183/183`, typecheck/build, admin bundle raw `573846/574464`, gzip `152397/152576`, targeted Telegram desktop/mobile `4/4`, полный Playwright `276/276` за `12.3 min`, fresh SQLite full flow с `telegramRevision=1`, visual desktop/`320x720`, formatter, EF drift, encoding, secret scan `721/0` и dependency audit `0 vulnerabilities` зелёные; все 17 admin sections прошли desktop и 25 responsive viewport-конфигураций без overflow, clipping, overlap или browser diagnostics. Реальный Telegram Bot API/VPS остаётся внешним evidence.
+- [x] `P11-ACC-468` Исключить ложные сохранения и потерю черновика в управляемых редакторах. 2026-08-15.
+  - Что сделать: FAQ, контент сайта и рабочие сценарии не должны увеличивать revision или писать аудит без фактических изменений; stale recovery не должен затирать текст, введённый после начала запроса. SQLite concurrency пользователя должна сравнивать один момент времени независимо от offset клиента.
+  - Что сделано: три API-контроллера строят нормализованный candidate и возвращают `400` при no-op; UI использует те же правила, выключает исходную кнопку и сохраняет новый draft при delayed `409`. User PATCH больше не подменяет фактически загруженный EF concurrency token клиентским текстовым offset.
+  - Доказательство: fail-first managed `0/3` и file-SQLite offset `0/1`; after-fix controller suites `58/58`, user boundary `16/16`, backend Debug/Release `1566/1566`, frontend `184/184`, typecheck/build, admin bundle raw `576571/577536`, gzip `153129/153600`, targeted desktop/mobile `6/6`, полный Playwright `276/276`, fresh SQLite `managedNoOp=400`, EF drift, encoding, secret scan `715/0` и dependency audit `0 vulnerabilities` зелёные. Реальные VPS/staging/live provider/3x-ui проверки этим пунктом не закрываются.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

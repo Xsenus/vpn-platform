@@ -88,6 +88,22 @@ public class WorkScenarioControllerTests
     }
 
     [Fact]
+    public async Task AdminWorkScenarios_Should_Reject_NoOp_Update_Without_Revision_Or_Audit_Churn()
+    {
+        await using var db = CreateDb();
+        var controller = CreateController(db);
+        var request = Request("auto-premium");
+        var created = AssertOk<WorkScenarioDto>(await controller.Create(request, CancellationToken.None));
+
+        var result = await controller.Update(created.Id, request with { Revision = created.Revision }, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        var persisted = await db.WorkScenarios.SingleAsync();
+        Assert.Equal(created.Revision, persisted.Revision);
+        Assert.Single(await db.AuditLogs.ToListAsync(), audit => audit.Action == "work_scenario.create");
+    }
+
+    [Fact]
     public async Task AdminWorkScenarios_Should_Reject_Duplicate_Key_On_Create_And_Update()
     {
         await using var db = CreateDb();

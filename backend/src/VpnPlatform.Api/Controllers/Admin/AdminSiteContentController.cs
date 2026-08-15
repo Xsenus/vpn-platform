@@ -217,6 +217,10 @@ public class AdminSiteContentController : ControllerBase
         {
             return BadRequest(new { error = "Content key already exists." });
         }
+        if (!HasChanges(block, candidate))
+        {
+            return BadRequest(new { error = "Изменения блока контента не обнаружены." });
+        }
 
         var before = Map(block);
         Copy(candidate, block);
@@ -299,6 +303,16 @@ public class AdminSiteContentController : ControllerBase
         target.IsActive = source.IsActive;
         target.SortOrder = source.SortOrder;
     }
+
+    private static bool HasChanges(SiteContentBlock current, SiteContentBlock candidate)
+        => current.Key != candidate.Key
+            || current.Value != candidate.Value
+            || current.Group != candidate.Group
+            || current.Label != candidate.Label
+            || current.Description != candidate.Description
+            || current.InputType != candidate.InputType
+            || current.IsActive != candidate.IsActive
+            || current.SortOrder != candidate.SortOrder;
 
     private static SiteContentBlockDto Map(SiteContentBlock block)
         => new(block.Id, block.Revision, block.Key, block.Value, block.Group, block.Label, block.Description, block.InputType, block.IsActive, block.SortOrder, block.CreatedAt, block.UpdatedAt);

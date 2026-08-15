@@ -49,7 +49,7 @@ powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -KeepArti
 После успешного запуска скрипт выводит строку вида:
 
 ```text
-fresh local smoke ok live=ok ready=Ready tariffs=3 providers=8 adminUser=<id> telegramRevision=1 order=<id> payment=<id> subscription=<id> access=<id> latest=<releaseId>
+fresh local smoke ok live=ok ready=Ready tariffs=3 providers=8 adminUser=<id> managedNoOp=400 telegramRevision=1 order=<id> payment=<id> subscription=<id> access=<id> latest=<releaseId>
 ```
 
 ## Безопасность
@@ -66,7 +66,7 @@ fresh local smoke ok live=ok ready=Ready tariffs=3 providers=8 adminUser=<id> te
 
 - API поднялся на чистой SQLite-БД;
 - seed создал тарифы и sandbox-провайдеры;
-- административные изменения пользователя и Telegram-настроек сохранились с актуальными версиями;
+- административное изменение пользователя принимает эквивалентный timestamp offset, неизменённый контент отклоняется с `400`, а Telegram-настройки сохраняются с актуальной revision;
 - пользователь прошел checkout flow;
 - webhook перевел платеж в `Succeeded`;
 - платеж обработал активацию;
