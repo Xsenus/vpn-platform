@@ -1,11 +1,122 @@
 import type {
+  AdminAppReleaseDto,
   AdminFaqItem,
+  AdminTariffDto,
+  AppReleaseUpsertPayload,
   FaqUpsertPayload,
   SiteContentBlockDto,
   SiteContentBlockUpsertPayload,
   WorkScenarioDto,
-  WorkScenarioUpsertPayload
+  WorkScenarioUpsertPayload,
+  UpdateTariffPayload
 } from '@vpn-platform/api-client'
+
+function sameInstant(left?: string | null, right?: string | null): boolean {
+  if (!left || !right) return !left && !right
+  return new Date(left).getTime() === new Date(right).getTime()
+}
+
+function normalizeTariffSlug(value: string): string {
+  return value.trim().toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9а-яё\-_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+export function tariffFeaturesTextToJson(value: string): string {
+  const seen = new Set<string>()
+  return JSON.stringify(value.split('\n')
+    .map((item) => item.trim())
+    .filter((item) => {
+      if (!item) return false
+      const key = item.toLocaleLowerCase()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    }))
+}
+
+export function normalizeTariffPayload(form: UpdateTariffPayload, featuresText: string): UpdateTariffPayload {
+  const name = String(form.name ?? '').trim()
+  return {
+    ...form,
+    name,
+    slug: normalizeTariffSlug(String(form.slug ?? '').trim() || name),
+    description: String(form.description ?? '').trim(),
+    fullDescription: String(form.fullDescription ?? '').trim(),
+    featuresJson: tariffFeaturesTextToJson(featuresText),
+    badge: String(form.badge ?? '').trim(),
+    currency: String(form.currency ?? '').trim().toUpperCase() || 'RUB',
+    category: String(form.category ?? '').trim() || 'default',
+    allowedRegionsCsv: String(form.allowedRegionsCsv ?? '').trim(),
+    allowedNodeGroupsCsv: String(form.allowedNodeGroupsCsv ?? '').trim(),
+    provisioningScenario: String(form.provisioningScenario ?? '').trim() || 'auto',
+    afterPaymentText: String(form.afterPaymentText ?? '').trim()
+  }
+}
+
+export function isTariffFormChanged(form: UpdateTariffPayload, featuresText: string, current: AdminTariffDto): boolean {
+  const candidate = normalizeTariffPayload(form, featuresText)
+  return candidate.name !== current.name
+    || candidate.slug !== current.slug
+    || candidate.description !== current.description
+    || candidate.fullDescription !== current.fullDescription
+    || candidate.featuresJson !== current.featuresJson
+    || candidate.badge !== current.badge
+    || candidate.durationDays !== current.durationDays
+    || candidate.price !== current.price
+    || candidate.currency !== current.currency
+    || candidate.maxDevices !== current.maxDevices
+    || (candidate.trafficLimit ?? null) !== (current.trafficLimit ?? null)
+    || candidate.isTrial !== current.isTrial
+    || candidate.isActive !== current.isActive
+    || candidate.sortOrder !== current.sortOrder
+    || !sameInstant(candidate.visibleFrom, current.visibleFrom)
+    || !sameInstant(candidate.visibleTo, current.visibleTo)
+    || candidate.tariffType !== current.tariffType
+    || candidate.category !== current.category
+    || candidate.allowedRegionsCsv !== current.allowedRegionsCsv
+    || candidate.allowedNodeGroupsCsv !== current.allowedNodeGroupsCsv
+    || candidate.isReferralEligible !== current.isReferralEligible
+    || candidate.provisioningScenario !== current.provisioningScenario
+    || candidate.afterPaymentText !== current.afterPaymentText
+}
+
+export function normalizeAppReleasePayload(form: AppReleaseUpsertPayload): AppReleaseUpsertPayload {
+  return {
+    ...form,
+    releaseId: form.releaseId.trim(),
+    version: form.version.trim(),
+    title: form.title.trim(),
+    summary: form.summary.trim(),
+    source: (form.source ?? 'manual').trim().toLowerCase(),
+    items: form.items.map((item, index) => ({
+      ...item,
+      type: item.type.trim().toLowerCase(),
+      text: item.text.trim(),
+      sortOrder: Number.isInteger(item.sortOrder) ? item.sortOrder : (index + 1) * 10
+    }))
+  }
+}
+
+export function isAppReleaseFormChanged(form: AppReleaseUpsertPayload, current: AdminAppReleaseDto): boolean {
+  const candidate = normalizeAppReleasePayload(form)
+  if (candidate.releaseId !== current.releaseId
+    || candidate.version !== current.version
+    || !sameInstant(candidate.releasedAt, current.releasedAt)
+    || candidate.title !== current.title
+    || candidate.summary !== current.summary
+    || candidate.isActive !== current.isActive
+    || candidate.source !== current.source) return true
+
+  const candidateItems = [...candidate.items].sort((left, right) => left.sortOrder - right.sortOrder)
+  const currentItems = [...current.items].sort((left, right) => left.sortOrder - right.sortOrder)
+  return candidateItems.length !== currentItems.length
+    || candidateItems.some((item, index) => item.type !== currentItems[index].type
+      || item.text !== currentItems[index].text
+      || item.sortOrder !== currentItems[index].sortOrder)
+}
 
 export function normalizeFaqPayload(form: FaqUpsertPayload): FaqUpsertPayload {
   return {

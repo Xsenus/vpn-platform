@@ -3733,7 +3733,7 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(adminSource, /Идентификация сервера|Подключение и безопасность|Тексты сценариев/)
   assert.match(adminSource, /editTariff/)
   assert.match(adminSource, /handleDeleteTariff/)
-  assert.match(adminSource, /featuresTextToJson/)
+  assert.match(adminSource, /normalizeTariffPayload/)
   assert.match(adminSource, /validateTariffForm/)
   assert.match(adminSource, /validatePaymentProviderForm/)
   assert.match(adminSource, /validateServerForm/)

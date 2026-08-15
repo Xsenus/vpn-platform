@@ -17400,5 +17400,32 @@
         "text": "Roadmap progress is 759/779 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-15-commercial-editor-noop-integrity",
+    "version": "0.737.0",
+    "releasedAt": "2026-08-15T14:58:44+07:00",
+    "title": "Commercial editors reject empty saves",
+    "summary": "Tariff, referral-program and app-release editors now share normalized no-op protection and preserve newer tariff drafts across delayed conflicts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Unchanged tariff, referral-program and app-release updates return a controlled validation error without advancing revisions, rebuilding release items or writing audit entries."
+      },
+      {
+        "type": "improved",
+        "text": "Administrative save controls use API-aligned normalization, remain disabled for unchanged records and reject programmatic no-op submission before a network request."
+      },
+      {
+        "type": "fixed",
+        "text": "A delayed stale tariff response refreshes the externally updated list while preserving a newer local draft entered after submission."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 760/780 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -156,6 +156,35 @@ public class AppVersionControllerTests
     }
 
     [Fact]
+    public async Task Admin_Release_Update_Should_Reject_Unchanged_Content_Without_Revision_Or_Audit_Churn()
+    {
+        await using var db = CreateDb();
+        var adminId = Guid.NewGuid();
+        await SeedUserAsync(db, adminId, UserRoles.Admin);
+        var release = Release("unchanged-release", "1.0.0", DateTimeOffset.UtcNow.AddMinutes(-5));
+        db.AppReleases.Add(release);
+        await db.SaveChangesAsync();
+        var item = Assert.Single(release.Items);
+        var request = new AppReleaseUpsertRequest(
+            release.ReleaseId,
+            release.Version,
+            release.ReleasedAt,
+            release.Title,
+            release.Summary,
+            release.IsActive,
+            release.Source,
+            new[] { new AppReleaseItemDto(item.Id, item.Type, item.Text, item.SortOrder) },
+            release.Revision);
+
+        var result = await CreateController(db, adminId, UserRoles.Admin)
+            .UpdateAdminRelease(release.Id, request, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(0, release.Revision);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Fact]
     public async Task Cabinet_App_Release_Workflow_Should_Use_Injected_Clock()
     {
         await using var db = CreateDb();

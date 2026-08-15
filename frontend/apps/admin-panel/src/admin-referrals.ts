@@ -119,8 +119,22 @@ export function buildReferralProgramPayload(form: ReferralProgramFormState): Ref
     endAt: form.endAt ? new Date(form.endAt).toISOString() : null,
     ruleDefinition: JSON.stringify(rules),
     rewardDefinition: JSON.stringify(rewards),
-    antiFraudSettings: form.antiFraudSettings
+    antiFraudSettings: form.antiFraudSettings.trim()
   }
+}
+
+export function isReferralProgramFormChanged(form: ReferralProgramFormState, current: AdminReferralProgramDto): boolean {
+  const candidate = buildReferralProgramPayload(form)
+  const sameDate = (left?: string | null, right?: string | null) => (!left || !right)
+    ? !left && !right
+    : new Date(left).getTime() === new Date(right).getTime()
+  return candidate.name !== current.name
+    || candidate.status !== current.status
+    || !sameDate(candidate.startAt, current.startAt)
+    || !sameDate(candidate.endAt, current.endAt)
+    || candidate.ruleDefinition !== current.ruleDefinition
+    || candidate.rewardDefinition !== current.rewardDefinition
+    || candidate.antiFraudSettings !== current.antiFraudSettings
 }
 
 export function validateReferralProgramForm(form: ReferralProgramFormState) {

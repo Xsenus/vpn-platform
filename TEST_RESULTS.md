@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: commercial editor no-op and draft integrity
+
+Scope:
+- Tariff, referral-program and app-release updates must reject normalized no-op payloads without revision or audit churn.
+- Admin forms must disable no-op saves and reject programmatic submit before the API call.
+- A delayed tariff conflict must refresh the winning list state without overwriting a newer local draft.
+
+Results:
+- Roadmap progress: `760/780` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-commercial-editor-noop-integrity`, version `0.737.0`.
+- Fail-first: backend regressions completed `0/3` because unchanged tariff, referral and release requests returned `200` and advanced revisions.
+- After fix: targeted backend `3/3`, frontend `185/185`, typecheck/build, admin bundle budget `579420/580608` raw and `154073/154624` gzip, targeted Playwright `3/3`, and full Playwright `276/276` in `13.0 min` are green.
+- Release gate: backend Debug/Release `1569/1569`, fresh SQLite full flow including `managedNoOp=400` and `commerceNoOps=400,400,400`, EF pending-model check, formatter, dependency audit `0 vulnerabilities`, secret scan `715/0` and strict UTF-8/BOM guard are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: managed editor draft and version integrity
 
 Scope:

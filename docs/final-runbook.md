@@ -176,8 +176,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-15 локально подтверждено:
 
-- backend full suite: 1566/1566;
-- frontend tests: 184/184;
+- backend full suite: 1569/1569;
+- frontend tests: 185/185;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
@@ -216,7 +216,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Public session hydration: StrictMode выполняет одну refresh-token rotation, transient profile failure сохраняет токены для ручного retry, logout инвалидирует late response.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft; reset-code request и password confirmation имеют независимые формы и корректный Enter submit.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- admin production bundle budget: `5` JS chunks, largest `267866`, total raw `576571/577536`, gzip `153129/153600`.
+- admin production bundle budget: `5` JS chunks, largest `270715`, total raw `579420/580608`, gzip `154073/154624`.
 - unknown public route: доступное `404` recovery, desktop/mobile и 18 responsive viewport-конфигураций: OK.
 - public route title/meta/focus: direct load, SPA navigation и browser Back desktop/mobile: OK.
 - admin section metadata: hydration/login, deep-link, 17 sections и logout desktop/mobile: OK.
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-15-managed-editor-draft-integrity`, версия `0.736.0`; managed editors защищены от no-op и потери нового draft после stale conflict, а SQLite user version принимает эквивалентный offset.
-- roadmap progress: `759/779` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-15-commercial-editor-noop-integrity`, версия `0.737.0`; tariff/referral/release editors защищены от no-op, а delayed tariff conflict сохраняет более новый draft.
+- roadmap progress: `760/780` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

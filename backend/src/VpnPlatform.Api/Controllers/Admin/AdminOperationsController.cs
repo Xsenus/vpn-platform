@@ -3120,6 +3120,11 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "Tariff slug already exists." });
         }
 
+        if (!HasTariffChanges(tariff, candidate))
+        {
+            return BadRequest(new { error = "Tariff changes were not detected." });
+        }
+
         CopyTariffFields(candidate, tariff);
         tariff.Revision = checked(tariff.Revision + 1);
         tariff.UpdatedAt = _clock.UtcNow;
@@ -3308,6 +3313,13 @@ public class AdminOperationsController : ControllerBase
 
         var validation = ValidateReferralProgram(request);
         if (!validation.IsSuccess) return BadRequest(new { error = validation.Error });
+
+        var candidate = new ReferralProgram();
+        CopyReferralProgramFields(request, candidate);
+        if (!HasReferralProgramChanges(program, candidate))
+        {
+            return BadRequest(new { error = "Referral program changes were not detected." });
+        }
 
         var before = SerializeReferralProgramAudit(program);
         CopyReferralProgramFields(request, program);
@@ -3633,6 +3645,31 @@ public class AdminOperationsController : ControllerBase
         target.ProvisioningScenario = source.ProvisioningScenario;
         target.AfterPaymentText = source.AfterPaymentText;
     }
+
+    private static bool HasTariffChanges(Tariff current, Tariff candidate)
+        => current.Name != candidate.Name
+            || current.Slug != candidate.Slug
+            || current.Description != candidate.Description
+            || current.FullDescription != candidate.FullDescription
+            || current.FeaturesJson != candidate.FeaturesJson
+            || current.Badge != candidate.Badge
+            || current.DurationDays != candidate.DurationDays
+            || current.Price != candidate.Price
+            || current.Currency != candidate.Currency
+            || current.MaxDevices != candidate.MaxDevices
+            || current.TrafficLimit != candidate.TrafficLimit
+            || current.IsTrial != candidate.IsTrial
+            || current.IsActive != candidate.IsActive
+            || current.SortOrder != candidate.SortOrder
+            || current.VisibleFrom != candidate.VisibleFrom
+            || current.VisibleTo != candidate.VisibleTo
+            || current.TariffType != candidate.TariffType
+            || current.Category != candidate.Category
+            || current.AllowedRegionsCsv != candidate.AllowedRegionsCsv
+            || current.AllowedNodeGroupsCsv != candidate.AllowedNodeGroupsCsv
+            || current.IsReferralEligible != candidate.IsReferralEligible
+            || current.ProvisioningScenario != candidate.ProvisioningScenario
+            || current.AfterPaymentText != candidate.AfterPaymentText;
 
     private static IReadOnlyList<string> ParseTariffFeatures(string? featuresJson)
     {
@@ -3960,6 +3997,15 @@ public class AdminOperationsController : ControllerBase
         program.RewardDefinition = request.RewardDefinition.Trim();
         program.AntiFraudSettings = (request.AntiFraudSettings ?? "{}").Trim();
     }
+
+    private static bool HasReferralProgramChanges(ReferralProgram current, ReferralProgram candidate)
+        => current.Name != candidate.Name
+            || current.Status != candidate.Status
+            || current.StartAt != candidate.StartAt
+            || current.EndAt != candidate.EndAt
+            || current.RuleDefinition != candidate.RuleDefinition
+            || current.RewardDefinition != candidate.RewardDefinition
+            || current.AntiFraudSettings != candidate.AntiFraudSettings;
 
     private static bool TryBuildReferralProgramPatch(
         JsonElement payload,

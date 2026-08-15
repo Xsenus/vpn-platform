@@ -130,6 +130,39 @@ public class ReferralProgramControllerTests
     }
 
     [Fact]
+    public async Task Admin_Referral_Patch_Should_Reject_Unchanged_Values_Without_Revision_Or_Audit_Churn()
+    {
+        await using var db = CreateDb();
+        var request = ValidRequest("Original", "draft");
+        var program = new ReferralProgram
+        {
+            Name = request.Name,
+            Status = request.Status,
+            RuleDefinition = request.RuleDefinition,
+            RewardDefinition = request.RewardDefinition,
+            AntiFraudSettings = request.AntiFraudSettings!
+        };
+        db.ReferralPrograms.Add(program);
+        await db.SaveChangesAsync();
+        using var payload = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            revision = program.Revision,
+            name = program.Name,
+            status = program.Status,
+            ruleDefinition = program.RuleDefinition,
+            rewardDefinition = program.RewardDefinition,
+            antiFraudSettings = program.AntiFraudSettings
+        }));
+
+        var result = await new AdminOperationsController(db, null!, null!, null!)
+            .PatchReferralProgram(program.Id, payload.RootElement, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(0, program.Revision);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Fact]
     public async Task Admin_Referral_Patch_Should_Reject_Stale_Revision_Without_Mutating_Program()
     {
         await using var db = CreateDb();

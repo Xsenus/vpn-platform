@@ -1,12 +1,16 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import type { AdminFaqItem, SiteContentBlockDto, WorkScenarioDto } from '../packages/api-client/src/index.ts'
+import type { AdminAppReleaseDto, AdminFaqItem, AdminTariffDto, SiteContentBlockDto, WorkScenarioDto } from '../packages/api-client/src/index.ts'
 import {
+  isAppReleaseFormChanged,
   isFaqFormChanged,
   isSiteContentFormChanged,
+  isTariffFormChanged,
   isWorkScenarioFormChanged,
+  normalizeAppReleasePayload,
   normalizeFaqPayload,
   normalizeSiteContentPayload,
+  normalizeTariffPayload,
   normalizeWorkScenarioPayload
 } from '../apps/admin-panel/src/admin-managed-editors.ts'
 
@@ -31,4 +35,42 @@ test('managed editor helpers detect only normalized FAQ, content and scenario ch
   assert.equal(isWorkScenarioFormChanged(scenarioForm, scenario), false)
   assert.equal(normalizeWorkScenarioPayload({ ...scenarioForm, key: ' auto key! ' }).key, 'auto-key')
   assert.equal(isWorkScenarioFormChanged({ ...scenarioForm, maxDevices: 4 }, scenario), true)
+})
+
+test('managed editor helpers detect only normalized tariff and app release changes', () => {
+  const tariff: AdminTariffDto = {
+    id: 'tariff-1', revision: 2, name: 'Месяц', slug: 'month', description: 'Описание', fullDescription: 'Полное описание',
+    features: ['Быстро', 'Надёжно'], featuresJson: '["Быстро","Надёжно"]', badge: 'Хит', durationDays: 30, price: 490,
+    currency: 'RUB', maxDevices: 3, trafficLimit: null, category: 'default', afterPaymentText: 'Готово', isTrial: false,
+    isActive: true, sortOrder: 10, visibleFrom: null, visibleTo: null, tariffType: 'Monthly', allowedRegionsCsv: 'eu',
+    allowedNodeGroupsCsv: 'main', isReferralEligible: true, provisioningScenario: 'auto', createdAt: now, updatedAt: now
+  }
+  const tariffForm = { ...tariff, name: ' Месяц ', slug: ' MONTH ', description: ' Описание ', currency: ' rub ' }
+  assert.deepEqual(normalizeTariffPayload(tariffForm, ' Быстро \nНадёжно\nбыстро '), {
+    ...tariffForm,
+    name: tariff.name,
+    slug: tariff.slug,
+    description: tariff.description,
+    fullDescription: tariff.fullDescription,
+    featuresJson: tariff.featuresJson,
+    badge: tariff.badge,
+    currency: tariff.currency,
+    category: tariff.category,
+    allowedRegionsCsv: tariff.allowedRegionsCsv,
+    allowedNodeGroupsCsv: tariff.allowedNodeGroupsCsv,
+    provisioningScenario: tariff.provisioningScenario,
+    afterPaymentText: tariff.afterPaymentText
+  })
+  assert.equal(isTariffFormChanged(tariffForm, ' Быстро \nНадёжно\nбыстро ', tariff), false)
+  assert.equal(isTariffFormChanged({ ...tariffForm, price: 590 }, 'Быстро\nНадёжно', tariff), true)
+
+  const release: AdminAppReleaseDto = {
+    id: 'release-1', revision: 3, releaseId: 'release-1', version: '1.0.0', releasedAt: now, title: 'Релиз', summary: 'Описание',
+    isActive: true, source: 'manual', items: [{ id: 'item-1', type: 'new', text: 'Пункт', sortOrder: 10 }],
+    createdByUserId: null, createdByUserName: '', updatedByUserId: null, updatedByUserName: '', createdAt: now, updatedAt: now
+  }
+  const releaseForm = { ...release, releaseId: ' release-1 ', title: ' Релиз ', items: [{ type: ' NEW ', text: ' Пункт ', sortOrder: 10 }] }
+  assert.equal(isAppReleaseFormChanged(releaseForm, release), false)
+  assert.equal(isAppReleaseFormChanged({ ...releaseForm, summary: 'Другое описание' }, release), true)
+  assert.equal(normalizeAppReleasePayload({ ...releaseForm, items: [{ type: 'new', text: 'Пункт', sortOrder: 0 }] }).items[0].sortOrder, 0)
 })

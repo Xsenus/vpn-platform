@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.737.0 - 2026-08-15
+
+Release entry: `2026-08-15-commercial-editor-noop-integrity`.
+
+### Исправлено
+
+- Тарифы, реферальные программы и релизы приложения отклоняют нормализованное сохранение без изменений: revision и audit не меняются, а административные формы блокируют кнопку и программную отправку.
+- Нормализация UI совпадает с API для slug, пробелов, валюты, дат, JSON-преимуществ и упорядоченных пунктов релиза; идентификаторы пунктов не создают ложное изменение.
+- Отложенный `409` тарифа обновляет список внешней версией, но сохраняет более новый локальный черновик, введённый после отправки запроса.
+- Fresh SQLite smoke отправляет JSON ожидаемых ошибок как strict UTF-8 и проверяет четыре реальных no-op HTTP-контракта.
+
+### Проверено
+
+- Fail-first backend regressions завершились `0/3`; после исправления targeted backend `3/3`, frontend `185/185`, целевой Playwright `3/3` и full Playwright `276/276` за `13.0 min` зелёные.
+- Backend Debug/Release `1569/1569`, typecheck/build, admin bundle raw `579420/580608` и gzip `154073/154624`, fresh SQLite `managedNoOp=400` и `commerceNoOps=400,400,400`, dependency audit `0 vulnerabilities`, EF drift, formatter, strict UTF-8 и secret scan `715/0` зелёные. Roadmap `760/780` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.736.0 - 2026-08-15
 
 Release entry: `2026-08-15-managed-editor-draft-integrity`.

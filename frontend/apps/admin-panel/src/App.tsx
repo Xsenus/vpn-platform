@@ -58,7 +58,7 @@ import { formatAdminDisplayLabel, formatAdminRoleLabels } from './admin-display-
 import { adminSectionIds, adminSectionLabels, canAccessAdminSection, canWriteAdminSection, parseAdminSectionHref, type AdminSectionId } from './admin-capabilities'
 import { getAdminPageMetadata } from './admin-page-metadata'
 import { isTelegramBotSettingsFormChanged, telegramBotSettingsToForm } from './admin-telegram-settings'
-import { isFaqFormChanged, isSiteContentFormChanged, isWorkScenarioFormChanged, normalizeFaqPayload, normalizeSiteContentPayload, normalizeWorkScenarioPayload, parseWorkScenarioTariffIds, scenarioTariffIdsToJson } from './admin-managed-editors'
+import { isAppReleaseFormChanged, isFaqFormChanged, isSiteContentFormChanged, isTariffFormChanged, isWorkScenarioFormChanged, normalizeAppReleasePayload, normalizeFaqPayload, normalizeSiteContentPayload, normalizeTariffPayload, normalizeWorkScenarioPayload, parseWorkScenarioTariffIds, scenarioTariffIdsToJson, tariffFeaturesTextToJson } from './admin-managed-editors'
 import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason, getNextAdminAccessExpiryDelay, isAdminAccessExpired } from './admin-accesses'
 import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlocker, getAdminSubscriptionEffectiveEndTime, getNextAdminSubscriptionExpiryDelay, type AdminSubscriptionAction } from './admin-subscriptions'
 import { canCancelProvisioningRun, canRetryProvisioningRun, isProvisioningStateConflict } from './provisioning-state'
@@ -66,7 +66,7 @@ import { adminAccessDeniedMessage, adminSessionEndedMessage, isAdminAccessTokenE
 import { isOptionalSafeAdminHttpUrl, validateTelegramBotUrlFields } from './admin-url-validation'
 import { validateServerForm } from './admin-server-validation'
 import { getAdminOrderPaymentRecheckBlocker, getAdminPaymentRecheckBlocker } from './admin-payments'
-import { buildReferralProgramPayload, defaultReferralProgramForm, referralProgramToForm, validateReferralProgramForm, type ReferralProgramFormState } from './admin-referrals'
+import { buildReferralProgramPayload, defaultReferralProgramForm, isReferralProgramFormChanged, referralProgramToForm, validateReferralProgramForm, type ReferralProgramFormState } from './admin-referrals'
 import { validateWorkScenarioForm } from './admin-work-scenarios'
 
 const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
@@ -916,10 +916,6 @@ function parseTariffFeatures(tariff: Pick<AdminTariffDto, 'features' | 'features
   }
 }
 
-function featuresTextToJson(value: string) {
-  return JSON.stringify(value.split('\n').map((item) => item.trim()).filter(Boolean))
-}
-
 function featuresToText(tariff: Pick<AdminTariffDto, 'features' | 'featuresJson'> | UpdateTariffPayload) {
   return parseTariffFeatures(tariff).join('\n')
 }
@@ -950,7 +946,7 @@ function validateTariffForm(form: UpdateTariffPayload, featuresText = '') {
   for (const [label, value, limit] of fieldLengths) {
     if (String(value ?? '').trim().length > limit) errors.push(`${label}: не более ${limit} символов.`)
   }
-  if (featuresTextToJson(featuresText).length > 4000) errors.push('Преимущества: общий объем не должен превышать 4000 символов.')
+  if (tariffFeaturesTextToJson(featuresText).length > 4000) errors.push('Преимущества: общий объем не должен превышать 4000 символов.')
   if (form.visibleFrom && form.visibleTo && new Date(form.visibleFrom) > new Date(form.visibleTo)) errors.push('Начало публикации должно быть раньше окончания.')
 
   return errors
@@ -2574,10 +2570,18 @@ export function App() {
     setEditingTariffRevision(null)
   }
 
-  const throwTariffConflict = async (error: unknown, action: AdminActionContext, tariffId: string): Promise<never> => {
+  const throwTariffConflict = async (
+    error: unknown,
+    action: AdminActionContext,
+    tariffId: string,
+    submittedForm?: UpdateTariffPayload,
+    submittedFeaturesText?: string
+  ): Promise<never> => {
     if (!(error instanceof ApiClientError) || error.status !== 409) throw error
     await action.reloadAll()
-    if (action.isCurrent() && editingTariffIdRef.current === tariffId) resetTariffForm()
+    const submittedDraftIsCurrent = submittedForm === undefined
+      || (tariffFormRef.current === submittedForm && tariffFeaturesTextRef.current === submittedFeaturesText)
+    if (action.isCurrent() && editingTariffIdRef.current === tariffId && submittedDraftIsCurrent) resetTariffForm()
     throw new ApiClientError('Тариф уже изменен другим администратором. Список обновлен: повторите действие с актуальной версией.', 409, error.payload)
   }
 
@@ -2620,24 +2624,20 @@ export function App() {
       setError(`Тариф: ${validationErrors.join(' ')}`)
       return
     }
-    const payload = {
-      ...tariffForm,
-      name: String(tariffForm.name ?? '').trim(),
-      slug: String(tariffForm.slug ?? '').trim(),
-      currency: String(tariffForm.currency ?? 'RUB').trim().toUpperCase(),
-      featuresJson: featuresTextToJson(tariffFeaturesText)
-    }
+    const payload = normalizeTariffPayload(tariffForm, tariffFeaturesText)
     const editingId = editingTariffId
     const submittedForm = tariffForm
     const submittedFeaturesText = tariffFeaturesText
     const submittedRevision = editingTariffRevision
+    const currentTariff = editingId ? tariffs.find((tariff) => tariff.id === editingId) : undefined
+    if (currentTariff && !isTariffFormChanged(submittedForm, submittedFeaturesText, currentTariff)) return
     await runAction('tariffs', 'tariff-save', async (action) => {
       if (editingId) {
         if (submittedRevision === null) throw new ApiClientError('Не удалось определить ревизию тарифа. Откройте его заново.', 409, null)
         try {
           await api.updateAdminTariff(token, editingId, payload, submittedRevision)
         } catch (error) {
-          await throwTariffConflict(error, action, editingId)
+          await throwTariffConflict(error, action, editingId, submittedForm, submittedFeaturesText)
         }
       } else {
         await api.createAdminTariff(token, payload)
@@ -2709,6 +2709,8 @@ export function App() {
 
     const editingId = editingReferralProgramId
     const submittedForm = referralProgramForm
+    const currentProgram = editingId ? referralPrograms.find((program) => program.id === editingId) : undefined
+    if (currentProgram && !isReferralProgramFormChanged(submittedForm, currentProgram)) return
     await runAction('referrals', 'referral-program-save', async (action) => {
       const payload = buildReferralProgramPayload(submittedForm)
       if (editingId) {
@@ -2762,15 +2764,7 @@ export function App() {
     if (!token || !canWriteSection('releases')) return
     const submittedForm = releaseForm
     const editingId = editingReleaseId
-    const payload = {
-      ...submittedForm,
-      releaseId: submittedForm.releaseId.trim(),
-      version: submittedForm.version.trim(),
-      title: submittedForm.title.trim(),
-      summary: submittedForm.summary.trim(),
-      items: submittedForm.items
-        .map((item, index) => ({ ...item, text: item.text.trim(), sortOrder: item.sortOrder || (index + 1) * 10 }))
-    }
+    const payload = normalizeAppReleasePayload(submittedForm)
 
     if (!payload.releaseId || !appReleaseIdPattern.test(payload.releaseId) || payload.releaseId.length > 160) {
       setError('Release ID: lowercase kebab-case, не более 160 символов.')
@@ -2793,6 +2787,9 @@ export function App() {
       setError('Проверьте каждый пункт, его тип и уникальный порядок (не более 100).')
       return
     }
+
+    const currentRelease = editingId ? appReleases.find((release) => release.id === editingId) : undefined
+    if (currentRelease && !isAppReleaseFormChanged(submittedForm, currentRelease)) return
 
     await runAction('releases', editingId ? `release-update-${editingId}` : 'release-create', async (action) => {
       if (editingId) {
@@ -3886,7 +3883,11 @@ export function App() {
   const providerFormErrors = validatePaymentProviderForm(providerForm, providerFormSetup, editingProviderAccount)
   const providerFormActionBusy = isActionResourceBusy(paymentProviderActionResourceKey(editingProviderAccountId || 'create'))
   const tariffFormErrors = validateTariffForm(tariffForm, tariffFeaturesText)
+  const editingTariff = editingTariffId ? tariffs.find((tariff) => tariff.id === editingTariffId) : undefined
+  const tariffFormChanged = !editingTariffId || Boolean(editingTariff && isTariffFormChanged(tariffForm, tariffFeaturesText, editingTariff))
   const tariffFormActionBusy = isActionResourceBusy(tariffActionResourceKey(editingTariffId || 'create'))
+  const editingRelease = editingReleaseId ? appReleases.find((release) => release.id === editingReleaseId) : undefined
+  const releaseFormChanged = !editingReleaseId || Boolean(editingRelease && isAppReleaseFormChanged(releaseForm, editingRelease))
   const releaseFormActionBusy = isActionResourceBusy(appReleaseActionResourceKey(editingReleaseId || 'create'))
   const editingFaq = editingFaqId ? faqEntries.find((entry) => entry.id === editingFaqId) : undefined
   const faqFormChanged = !editingFaqId || Boolean(editingFaq && isFaqFormChanged(faqForm, editingFaq))
@@ -3898,6 +3899,8 @@ export function App() {
   const workScenarioFormChanged = !editingWorkScenarioId || Boolean(editingWorkScenario && isWorkScenarioFormChanged(workScenarioForm, editingWorkScenario))
   const workScenarioFormActionBusy = isActionResourceBusy(workScenarioActionResourceKey(editingWorkScenarioId || 'create'))
   const botSettingsActionBusy = isActionResourceBusy(botSettingsActionResourceKey)
+  const editingReferralProgram = editingReferralProgramId ? referralPrograms.find((program) => program.id === editingReferralProgramId) : undefined
+  const referralProgramFormChanged = !editingReferralProgramId || Boolean(editingReferralProgram && isReferralProgramFormChanged(referralProgramForm, editingReferralProgram))
   const referralProgramFormActionBusy = isActionResourceBusy(referralProgramActionResourceKey)
   const serverFormErrors = validateServerForm(serverForm)
   const serverFormActionBusy = isActionResourceBusy(serverActionResourceKey(editingServerId || 'create'))
@@ -4788,7 +4791,7 @@ export function App() {
             </div>
             <FormValidationSummary errors={tariffForm !== defaultTariffForm || tariffFeaturesText ? tariffFormErrors : []} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || tariffFormActionBusy || tariffFormErrors.length > 0} title={adminDisabledTitle} aria-busy={tariffFormActionBusy}>{editingTariffId ? 'Сохранить тариф' : 'Создать тариф'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!token || !tariffFormChanged || tariffFormActionBusy || tariffFormErrors.length > 0} title={adminDisabledTitle} aria-busy={tariffFormActionBusy}>{editingTariffId ? 'Сохранить тариф' : 'Создать тариф'}</PrimaryButton>
               {editingTariffId && <PrimaryButton type="button" className="button-ghost" onClick={resetTariffForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -4842,7 +4845,7 @@ export function App() {
             </fieldset>
             <FormValidationSummary errors={referralProgramForm !== defaultReferralProgramForm ? referralProgramFormErrors : []} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={referralProgramFormActionBusy || referralProgramFormErrors.length > 0} aria-busy={referralProgramFormActionBusy}>{editingReferralProgramId ? 'Сохранить программу' : 'Создать программу'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!referralProgramFormChanged || referralProgramFormActionBusy || referralProgramFormErrors.length > 0} aria-busy={referralProgramFormActionBusy}>{editingReferralProgramId ? 'Сохранить программу' : 'Создать программу'}</PrimaryButton>
               {editingReferralProgramId && <PrimaryButton type="button" className="button-ghost" onClick={resetReferralProgramForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -5300,7 +5303,7 @@ export function App() {
               <PrimaryButton type="button" className="button-secondary mt-12" disabled={releaseForm.items.length >= 100} onClick={addReleaseItem}>Добавить пункт</PrimaryButton>
             </fieldset>
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || releaseFormActionBusy || !releaseForm.releaseId || !releaseForm.title || !releaseForm.summary} title={adminDisabledTitle} aria-busy={releaseFormActionBusy}>
+              <PrimaryButton type="submit" disabled={!token || !releaseFormChanged || releaseFormActionBusy || !releaseForm.releaseId || !releaseForm.title || !releaseForm.summary} title={adminDisabledTitle} aria-busy={releaseFormActionBusy}>
                 {editingReleaseId ? 'Сохранить релиз' : 'Создать релиз'}
               </PrimaryButton>
               {editingReleaseId && <PrimaryButton type="button" className="button-secondary" onClick={resetReleaseForm}>Отменить редактирование</PrimaryButton>}

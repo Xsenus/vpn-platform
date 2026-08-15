@@ -2,12 +2,13 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   buildReferralProgramPayload,
+  isReferralProgramFormChanged,
   referralProgramToForm,
   validateReferralProgramForm
 } from '../apps/admin-panel/src/admin-referrals.ts'
 
 test('referral program edit preserves opaque configuration extensions', () => {
-  const form = referralProgramToForm({
+  const program = {
     id: 'program-1',
     revision: 3,
     name: 'Welcome',
@@ -19,9 +20,13 @@ test('referral program edit preserves opaque configuration extensions', () => {
     antiFraudSettings: '{"maxRewardsPerIp":2}',
     createdAt: '2026-08-01T00:00:00Z',
     updatedAt: '2026-08-02T00:00:00Z'
-  })
+  }
+  const form = referralProgramToForm(program)
+
+  assert.equal(isReferralProgramFormChanged(form, program), false)
 
   form.name = 'Welcome Plus'
+  assert.equal(isReferralProgramFormChanged(form, program), true)
   const payload = buildReferralProgramPayload(form)
   const rules = JSON.parse(payload.ruleDefinition)
   const rewards = JSON.parse(payload.rewardDefinition)

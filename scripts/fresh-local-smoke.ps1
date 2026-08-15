@@ -79,8 +79,9 @@ function Assert-SmokeJsonStatus {
     )
 
     $requestBody = $Body | ConvertTo-Json -Depth 10
+    $requestBodyBytes = [System.Text.Encoding]::UTF8.GetBytes($requestBody)
     try {
-        Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers -ContentType "application/json" -Body $requestBody -TimeoutSec 10 | Out-Null
+        Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers -ContentType "application/json; charset=utf-8" -Body $requestBodyBytes -TimeoutSec 10 | Out-Null
         throw "HTTP $Method $Uri unexpectedly succeeded; expected status $ExpectedStatus."
     }
     catch {
@@ -267,6 +268,57 @@ try {
         revision = $siteContentBlock.revision
     }
 
+    $adminTariffs = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/admin/tariffs" -Headers $adminHeaders)
+    $adminTariff = $adminTariffs | Select-Object -First 1
+    if ($null -eq $adminTariff) {
+        throw "Admin tariff seed is missing."
+    }
+    $tariffNoOpStatus = Assert-SmokeJsonStatus -Method "PATCH" -Uri "$apiUrl/api/admin/tariffs/$($adminTariff.id)" -Headers $adminHeaders -ExpectedStatus 400 -Body @{
+        name = $adminTariff.name
+        revision = $adminTariff.revision
+    }
+
+    $referralPrograms = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/admin/referral-programs" -Headers $adminHeaders)
+    $referralProgram = $referralPrograms | Select-Object -First 1
+    if ($null -eq $referralProgram) {
+        $referralProgram = Invoke-SmokeJson -Method "POST" -Uri "$apiUrl/api/admin/referral-programs" -Headers $adminHeaders -Body @{
+            name = "Fresh Local Referral"
+            status = "draft"
+            startAt = $null
+            endAt = $null
+            ruleDefinition = '{"firstPurchaseOnly":true,"minimumOrderAmount":0,"allowedChannels":["Web"]}'
+            rewardDefinition = '{"referrer":{"type":"bonus-days","value":7,"unit":"days","autoApprove":true}}'
+            antiFraudSettings = '{}'
+        }
+    }
+    $referralNoOpStatus = Assert-SmokeJsonStatus -Method "PATCH" -Uri "$apiUrl/api/admin/referral-programs/$($referralProgram.id)" -Headers $adminHeaders -ExpectedStatus 400 -Body @{
+        name = $referralProgram.name
+        status = $referralProgram.status
+        startAt = $referralProgram.startAt
+        endAt = $referralProgram.endAt
+        ruleDefinition = $referralProgram.ruleDefinition
+        rewardDefinition = $referralProgram.rewardDefinition
+        antiFraudSettings = $referralProgram.antiFraudSettings
+        revision = $referralProgram.revision
+    }
+
+    $adminReleases = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/app-version/admin/releases" -Headers $adminHeaders)
+    $adminRelease = $adminReleases | Select-Object -First 1
+    if ($null -eq $adminRelease) {
+        throw "App release seed is missing."
+    }
+    $releaseNoOpStatus = Assert-SmokeJsonStatus -Method "PUT" -Uri "$apiUrl/api/app-version/admin/releases/$($adminRelease.id)" -Headers $adminHeaders -ExpectedStatus 400 -Body @{
+        releaseId = $adminRelease.releaseId
+        version = $adminRelease.version
+        releasedAt = $adminRelease.releasedAt
+        title = $adminRelease.title
+        summary = $adminRelease.summary
+        isActive = $adminRelease.isActive
+        source = $adminRelease.source
+        items = $adminRelease.items
+        revision = $adminRelease.revision
+    }
+
     $telegramSettings = Invoke-SmokeJson -Uri "$apiUrl/api/admin/telegram-bot/settings" -Headers $adminHeaders
     if ($telegramSettings.revision -lt 0) {
         throw "Telegram bot settings response does not contain a valid revision."
@@ -343,7 +395,7 @@ try {
         throw "Unexpected access URI protocol: $($access.accessUri)"
     }
 
-    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) managedNoOp=$managedNoOpStatus telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
+    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) managedNoOp=$managedNoOpStatus commerceNoOps=$tariffNoOpStatus,$referralNoOpStatus,$releaseNoOpStatus telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
 }
 finally {
     if ($process -and -not $process.HasExited) {

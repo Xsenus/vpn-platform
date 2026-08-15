@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `759/779` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `760/780` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,8 +85,8 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1566/1566`.
-- [x] Frontend unit tests: `184/184`.
+- [x] Backend full suite: `1569/1569`.
+- [x] Frontend unit tests: `185/185`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
@@ -152,7 +152,7 @@
 - [x] Subscription actions проходят activate/extend/sync/block/reload/unblock/migrate/reload/cancel lifecycle с persisted access state и terminal masking на desktop/mobile.
 - [x] Payment refund lifecycle сохраняет partial/full refund state, автоматически подставляет остаток и блокирует повторный полный возврат на desktop/mobile.
 - [x] Notification retry сохраняет Pending state, attempts reset/error cleanup и masked recipient; finance/support роли остаются read-only.
-- [x] Admin production bundle budget: `5` chunks, largest `267866`, total raw `576571/577536`, gzip `153129/153600`.
+- [x] Admin production bundle budget: `5` chunks, largest `270715`, total raw `579420/580608`, gzip `154073/154624`.
 - [x] Public catch-all `404` recovery проходит desktop/mobile, Axe и 25 viewport-конфигураций без blank screen/overflow.
 - [x] Public route metadata/focus lifecycle проходит direct load, navigation и browser Back на desktop/mobile.
 - [x] Admin metadata lifecycle проходит hydration/login, deep-link, 17 sections и logout на desktop/mobile.
@@ -170,7 +170,8 @@
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
 - [x] Пользователи управляются через валидируемый адаптивный редактор; destructive status/block transitions явно завершают сессии, а version conflict загружает актуальный профиль без stale overwrite.
 - [x] FAQ, site-content и scenario editors отклоняют no-op, сохраняют более новый local draft при delayed stale conflict, а user PATCH принимает эквивалентный offset SQLite timestamp.
-- [x] Latest "Что нового": `2026-08-15-managed-editor-draft-integrity`, версия `0.736.0`; backend `1566/1566`, frontend `184/184`, полный Playwright `276/276`, fresh SQLite `managedNoOp=400` зелёный.
+- [x] Tariff, referral-program и app-release editors отклоняют нормализованный no-op без revision/audit churn; delayed tariff conflict сохраняет более новый local draft.
+- [x] Latest "Что нового": `2026-08-15-commercial-editor-noop-integrity`, версия `0.737.0`; backend `1569/1569`, frontend `185/185`, полный Playwright `276/276`, fresh SQLite `managedNoOp=400`, `commerceNoOps=400,400,400` зелёные.
 
 ## Как вести дальше
 

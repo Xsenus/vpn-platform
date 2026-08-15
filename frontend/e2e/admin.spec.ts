@@ -1319,7 +1319,14 @@ async function mockAdminApi(page: Page) {
         delayNextTariffCreateResponse = false
         await new Promise<void>((resolve) => { releaseDelayedTariffCreate = resolve })
       }
-      const created = tariff({ ...(body as Record<string, unknown>), id: 'tariff-created-e2e', createdAt: now, updatedAt: now })
+      const tariffBody = body as Record<string, unknown>
+      const created = tariff({
+        ...tariffBody,
+        id: 'tariff-created-e2e',
+        features: JSON.parse(String(tariffBody.featuresJson ?? '[]')),
+        createdAt: now,
+        updatedAt: now
+      })
       tariffs.push(created)
       await fulfillJson(route, created, 201)
       return
@@ -1338,7 +1345,17 @@ async function mockAdminApi(page: Page) {
         await fulfillJson(route, { error: 'Tariff changed. Reload it and retry.', revision: currentRevision }, 409)
         return
       }
-      const updated = tariff({ ...tariffs[index], ...(body as Record<string, unknown>), id: tariffMutationMatch[1], revision: currentRevision + 1, updatedAt: now })
+      const tariffBody = body as Record<string, unknown>
+      const updated = tariff({
+        ...tariffs[index],
+        ...tariffBody,
+        id: tariffMutationMatch[1],
+        revision: currentRevision + 1,
+        features: tariffBody.featuresJson === undefined
+          ? tariffs[index].features
+          : JSON.parse(String(tariffBody.featuresJson)),
+        updatedAt: now
+      })
       if (index >= 0) tariffs[index] = updated
       await fulfillJson(route, updated)
       return
@@ -4784,8 +4801,13 @@ test('admin managed configuration supports complete CRUD lifecycle', async ({ pa
   let tariffRow = tariffsPanel.locator('.list-item-vertical').filter({ hasText: 'CRUD Tariff E2E' })
   await expect(tariffRow).toContainText('690 RUB')
   await tariffRow.getByRole('button', { name: 'Редактировать' }).click()
+  const tariffSaveButton = tariffsPanel.getByRole('button', { name: 'Сохранить тариф' })
+  await expect(tariffSaveButton).toBeDisabled()
+  const tariffPatchCountBeforeNoOp = api.getRequestCount('/api/admin/tariffs/tariff-created-e2e', 'PATCH')
+  await tariffsPanel.locator('form').first().evaluate((element) => element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+  expect(api.getRequestCount('/api/admin/tariffs/tariff-created-e2e', 'PATCH')).toBe(tariffPatchCountBeforeNoOp)
   await tariffsPanel.getByLabel('Название').fill('CRUD Tariff Updated')
-  await tariffsPanel.getByRole('button', { name: 'Сохранить тариф' }).click()
+  await tariffSaveButton.click()
   await expect(page.getByText('Тариф обновлён.')).toBeVisible()
   tariffRow = tariffsPanel.locator('.list-item-vertical').filter({ hasText: 'CRUD Tariff Updated' })
   await tariffRow.getByRole('button', { name: 'Выключить' }).click()
@@ -4806,8 +4828,13 @@ test('admin managed configuration supports complete CRUD lifecycle', async ({ pa
   await expect(page.getByText('Реферальная программа создана.')).toBeVisible()
   let referralRow = referralsPanel.locator('.list-item-vertical').filter({ hasText: 'CRUD Referral E2E' })
   await referralRow.getByRole('button', { name: 'Редактировать' }).click()
+  const referralSaveButton = referralsPanel.getByRole('button', { name: 'Сохранить программу' })
+  await expect(referralSaveButton).toBeDisabled()
+  const referralPatchCountBeforeNoOp = api.getRequestCount('/api/admin/referral-programs/referral-program-created-e2e', 'PATCH')
+  await referralsPanel.locator('form').first().evaluate((element) => element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+  expect(api.getRequestCount('/api/admin/referral-programs/referral-program-created-e2e', 'PATCH')).toBe(referralPatchCountBeforeNoOp)
   await referralsPanel.getByLabel('Название').fill('CRUD Referral Updated')
-  await referralsPanel.getByRole('button', { name: 'Сохранить программу' }).click()
+  await referralSaveButton.click()
   await expect(page.getByText('Реферальная программа обновлена.')).toBeVisible()
   referralRow = referralsPanel.locator('.list-item-vertical').filter({ hasText: 'CRUD Referral Updated' })
   await expect(referralRow).toBeVisible()
@@ -4844,8 +4871,13 @@ test('admin managed configuration supports complete CRUD lifecycle', async ({ pa
   await expect(page.getByText('Релиз создан.')).toBeVisible()
   let releaseRow = releasesPanel.locator('.list-item-vertical').filter({ hasText: 'CRUD Release E2E' })
   await releaseRow.getByRole('button', { name: 'Редактировать' }).click()
+  const releaseSaveButton = releasesPanel.getByRole('button', { name: 'Сохранить релиз' })
+  await expect(releaseSaveButton).toBeDisabled()
+  const releasePutCountBeforeNoOp = api.getRequestCount('/api/app-version/admin/releases/release-created-e2e', 'PUT')
+  await releasesPanel.locator('form').first().evaluate((element) => element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+  expect(api.getRequestCount('/api/app-version/admin/releases/release-created-e2e', 'PUT')).toBe(releasePutCountBeforeNoOp)
   await releasesPanel.getByLabel('Заголовок').fill('CRUD Release Updated')
-  await releasesPanel.getByRole('button', { name: 'Сохранить релиз' }).click()
+  await releaseSaveButton.click()
   await expect(page.getByText('Релиз обновлен.')).toBeVisible()
   releaseRow = releasesPanel.locator('.list-item-vertical').filter({ hasText: 'CRUD Release Updated' })
   await releaseRow.getByRole('button', { name: 'Удалить' }).click()
@@ -4928,6 +4960,7 @@ test('admin app release editor recovers from a stale revision', async ({ page })
   const releaseRow = releasesPanel.locator('.list-item-vertical').filter({ hasText: 'Админский E2E seed' })
   await releaseRow.getByRole('button', { name: 'Редактировать' }).click()
   await expect(releasesPanel.getByRole('heading', { name: 'Редактировать релиз' })).toBeVisible()
+  await expect(releasesPanel.getByRole('button', { name: 'Сохранить релиз' })).toBeDisabled()
   await releasesPanel.getByLabel('Заголовок').fill('Устаревшая локальная правка')
 
   api.changeReleaseExternally('release-admin-e2e', 'Актуальная внешняя версия')
@@ -4982,13 +5015,21 @@ test('admin tariff editor recovers from a stale revision', async ({ page }) => {
   const tariffsPanel = page.locator('#tariffs')
   const tariffRow = tariffsPanel.locator('.list-item-vertical').filter({ hasText: 'Admin Pro 30' })
   await tariffRow.getByRole('button', { name: 'Редактировать' }).click()
+  const tariffSaveButton = tariffsPanel.getByRole('button', { name: 'Сохранить тариф' })
+  await expect(tariffSaveButton).toBeDisabled()
   await tariffsPanel.getByLabel('Название').fill('Устаревшая локальная правка')
 
+  api.delayNextTariffPatch()
+  await tariffSaveButton.click()
+  await expect.poll(() => api.getRequestCount('/api/admin/tariffs/tariff-admin-pro', 'PATCH')).toBe(1)
+  await tariffsPanel.getByLabel('Название').fill('Новый локальный черновик')
   api.changeTariffExternally('tariff-admin-pro', 'Актуальный внешний тариф')
-  await tariffsPanel.getByRole('button', { name: 'Сохранить тариф' }).click()
+  api.releaseTariffPatch()
 
   await expect(page.locator('.error-block')).toContainText('Тариф уже изменен другим администратором')
-  await expect(tariffsPanel.getByRole('heading', { name: 'Новый тариф' })).toBeVisible()
+  await expect(tariffsPanel.getByRole('heading', { name: 'Редактирование тарифа' })).toBeVisible()
+  await expect(tariffsPanel.getByLabel('Название')).toHaveValue('Новый локальный черновик')
+  await expect(tariffSaveButton).toBeEnabled()
   await expect(tariffsPanel.getByText('Актуальный внешний тариф', { exact: true })).toBeVisible()
   expect(api.getRequestCount('/api/admin/tariffs/tariff-admin-pro', 'PATCH')).toBe(1)
 })

@@ -288,6 +288,12 @@ public sealed class AppVersionController : ControllerBase
             return BadRequest(new { error = "ReleaseId already exists." });
         }
 
+        var nextItems = MapRequestItems(request.Items, now).ToList();
+        if (!HasReleaseChanges(release, request, releaseId, nextItems))
+        {
+            return BadRequest(new { error = "App release changes were not detected." });
+        }
+
         var before = MapAdminRelease(release);
         var actor = ResolveActor();
         release.ReleaseId = releaseId;
@@ -302,7 +308,6 @@ public sealed class AppVersionController : ControllerBase
         release.UpdatedByUserId = actor.UserId;
         release.UpdatedByUserName = actor.UserName;
 
-        var nextItems = MapRequestItems(request.Items, now).ToList();
         _db.AppReleaseItems.RemoveRange(release.Items);
         foreach (var item in nextItems)
         {
@@ -503,6 +508,32 @@ public sealed class AppVersionController : ControllerBase
                 CreatedAt = now,
                 UpdatedAt = now
             });
+
+    private static bool HasReleaseChanges(
+        AppRelease current,
+        AppReleaseUpsertRequest request,
+        string releaseId,
+        IReadOnlyList<AppReleaseItem> nextItems)
+    {
+        if (current.ReleaseId != releaseId
+            || current.Version != request.Version.Trim()
+            || current.ReleasedAt != request.ReleasedAt
+            || current.Title != request.Title.Trim()
+            || current.Summary != request.Summary.Trim()
+            || current.IsActive != request.IsActive
+            || current.Source != NormalizeRequestSource(request.Source))
+        {
+            return true;
+        }
+
+        var currentItems = current.Items.OrderBy(x => x.SortOrder).ToList();
+        var orderedNextItems = nextItems.OrderBy(x => x.SortOrder).ToList();
+        return currentItems.Count != orderedNextItems.Count
+            || currentItems.Zip(orderedNextItems).Any(pair =>
+                pair.First.Type != pair.Second.Type
+                || pair.First.Text != pair.Second.Text
+                || pair.First.SortOrder != pair.Second.SortOrder);
+    }
 
     private static string? ValidateReleaseRequest(AppReleaseUpsertRequest request)
     {

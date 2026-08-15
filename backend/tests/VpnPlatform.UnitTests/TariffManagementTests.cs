@@ -378,6 +378,26 @@ public class TariffManagementTests
     }
 
     [Fact]
+    public async Task AdminTariff_Patch_Should_Reject_Unchanged_Value_Without_Revision_Or_Audit_Churn()
+    {
+        await using var db = CreateDb();
+        var tariff = Tariff("unchanged-patch");
+        db.Tariffs.Add(tariff);
+        await db.SaveChangesAsync();
+        using var patch = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            revision = tariff.Revision,
+            name = tariff.Name
+        }));
+
+        var result = await CreateController(db).PatchTariff(tariff.Id, patch.RootElement, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(0, tariff.Revision);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Fact]
     public async Task AdminTariff_Patch_Should_Reject_Stale_Revision()
     {
         await using var db = CreateDb();
