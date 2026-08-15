@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: VPN editor no-op and draft integrity
+
+Scope:
+- 3x-ui panel and inbound updates must reject normalized no-op payloads without revision or audit churn.
+- An unchanged inbound must be rejected before any remote provider mutation.
+- Admin forms must disable no-op saves, reject programmatic submit and preserve a newer draft across delayed `409` recovery.
+
+Results:
+- Roadmap progress: `761/781` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-vpn-editor-noop-draft-integrity`, version `0.738.0`.
+- Fail-first: backend regressions completed `0/2` because unchanged panel and inbound updates returned success, advanced revisions and wrote audit; inbound also called the remote provider.
+- After fix: targeted backend `2/2`, frontend `187/187`, typecheck/build, admin bundle budget `580740/581632` raw and `154568/154624` gzip, targeted Playwright `3/3`, and full Playwright `278/278` in `12.6 min` are green.
+- Release gate: backend Debug/Release `1571/1571`, fresh SQLite full flow including `vpnNoOps=400,400`, all 17 admin sections and 25 responsive viewport configurations, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, secret scan and strict UTF-8/BOM guard are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: commercial editor no-op and draft integrity
 
 Scope:

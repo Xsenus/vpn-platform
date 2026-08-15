@@ -455,6 +455,8 @@ async function mockAdminApi(page: Page) {
   let invalidBotSettingsResponse = false
   let botSettings = telegramBotSettings()
   let delayNextVpnPanelInboundsResponse = false
+  let delayedVpnMutationPath: string | null = null
+  let releaseDelayedVpnMutation: (() => void) | null = null
   let delayNextBotSettingsCheckResponse = false
   let users = [adminUser('user-e2e', 'Client E2E', 'client@example.test')]
   let userOverviews = new Map(users.map((item) => [item.id, adminUserOverview(item)]))
@@ -1904,6 +1906,11 @@ async function mockAdminApi(page: Page) {
 
     const panelMutationMatch = path.match(/^\/api\/admin\/vpn-panels\/([^/]+)$/)
     if (panelMutationMatch && method === 'PATCH') {
+      if (delayedVpnMutationPath === path) {
+        delayedVpnMutationPath = null
+        await new Promise<void>((resolve) => { releaseDelayedVpnMutation = resolve })
+        releaseDelayedVpnMutation = null
+      }
       const index = panels.findIndex((item) => item.id === panelMutationMatch[1])
       const payload = body as Record<string, unknown>
       if (index >= 0 && Number(payload.revision) !== Number(panels[index].revision)) {
@@ -1989,8 +1996,17 @@ async function mockAdminApi(page: Page) {
 
     const inboundMutationMatch = path.match(/^\/api\/admin\/vpn-inbounds\/([^/]+)$/)
     if (method === 'PATCH' && inboundMutationMatch) {
+      if (delayedVpnMutationPath === path) {
+        delayedVpnMutationPath = null
+        await new Promise<void>((resolve) => { releaseDelayedVpnMutation = resolve })
+        releaseDelayedVpnMutation = null
+      }
       const index = inbounds.findIndex((item) => item.id === inboundMutationMatch[1])
       const payload = body as Record<string, unknown>
+      if (index < 0 || Number(payload.revision) !== Number(inbounds[index].revision)) {
+        await fulfillJson(route, { error: 'VPN inbound changed. Reload it and retry.' }, 409)
+        return
+      }
       if (payload.isDefault) {
         inbounds.forEach((item) => {
           if (item.vpnPanelId === inbounds[index]?.vpnPanelId) item.isDefault = false
@@ -2214,6 +2230,18 @@ async function mockAdminApi(page: Page) {
         updatedAt: now
       })
     },
+    changeVpnInboundExternally: (id: string, name = 'Inbound изменен извне') => {
+      const index = inbounds.findIndex((item) => item.id === id)
+      if (index < 0) return
+      inbounds[index] = {
+        ...inbounds[index],
+        name,
+        revision: Number(inbounds[index].revision) + 1
+      }
+    },
+    delayNextVpnMutation: (path: string) => { delayedVpnMutationPath = path },
+    hasDelayedVpnMutation: () => releaseDelayedVpnMutation !== null,
+    releaseVpnMutation: () => { releaseDelayedVpnMutation?.() },
     delayNextVpnPanelInbounds: () => { delayNextVpnPanelInboundsResponse = true },
     delayNextBotSettingsCheck: () => { delayNextBotSettingsCheckResponse = true },
     useDetailRequestRaceFixture: () => {
@@ -4353,8 +4381,12 @@ test('admin VPN infrastructure supports secure managed lifecycle', async ({ page
   await panelRow.getByRole('button', { name: 'Редактировать' }).click()
   await expect(panelForm.getByLabel('Название панели')).toHaveValue('E2E 3x-ui Panel')
   await expect(panelForm.getByRole('textbox', { name: /^Пароль панели/ })).toHaveValue('')
+  const savePanelButton = panelForm.getByRole('button', { name: 'Сохранить панель' })
+  await expect(savePanelButton).toBeDisabled()
+  await panelForm.evaluate((form: HTMLFormElement) => form.requestSubmit())
+  expect(api.getRequestCount('/api/admin/vpn-panels/panel-created-e2e', 'PATCH')).toBe(0)
   await panelForm.getByLabel('Название панели').fill('E2E 3x-ui Panel Updated')
-  await panelForm.getByRole('button', { name: 'Сохранить панель' }).click()
+  await savePanelButton.click()
   await expect(page.getByText('VPN-панель E2E 3x-ui Panel Updated обновлена. Пароль не возвращается из API.')).toBeVisible()
   expect(api.getLastRequest('/api/admin/vpn-panels/panel-created-e2e', 'PATCH')?.body).toMatchObject({
     name: 'E2E 3x-ui Panel Updated',
@@ -4377,9 +4409,13 @@ test('admin VPN infrastructure supports secure managed lifecycle', async ({ page
   expect(api.getLastRequest('/api/admin/vpn-panels/panel-created-e2e/inbounds', 'POST')?.body).toMatchObject({ name: 'e2e-vless', port: 9443, capacity: 200 })
   let inboundRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'e2e-vless' })
   await inboundRow.getByRole('button', { name: 'Редактировать' }).click()
+  const saveInboundButton = inboundForm.getByRole('button', { name: 'Сохранить inbound-правило' })
+  await expect(saveInboundButton).toBeDisabled()
+  await inboundForm.evaluate((form: HTMLFormElement) => form.requestSubmit())
+  expect(api.getRequestCount('/api/admin/vpn-inbounds/inbound-created-e2e', 'PATCH')).toBe(0)
   await inboundForm.getByLabel('Название inbound-правила').fill('e2e-vless-updated')
   await inboundForm.getByLabel('Порт').fill('10443')
-  await inboundForm.getByRole('button', { name: 'Сохранить inbound-правило' }).click()
+  await saveInboundButton.click()
   await expect(page.getByText('Inbound-правило e2e-vless-updated обновлено.')).toBeVisible()
   inboundRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'e2e-vless-updated' })
   await inboundRow.getByRole('button', { name: 'Сделать основным' }).click()
@@ -5094,7 +5130,7 @@ test('admin server mode action reloads after a stale revision', async ({ page })
   expect(api.getLastRequest('/api/admin/servers/server-eu/maintenance', 'POST')?.body).toMatchObject({ revision: 0 })
 })
 
-test('admin VPN panel editor recovers from a stale revision', async ({ page }) => {
+test('admin VPN panel conflict keeps a newer draft while reloading the winning state', async ({ page }) => {
   const api = await mockAdminApi(page)
   await seedAdminSession(page, 'admin-vpn-panel-conflict-token', 'admin-vpn-panel-conflict-refresh')
   await page.goto('/#panels')
@@ -5104,13 +5140,44 @@ test('admin VPN panel editor recovers from a stale revision', async ({ page }) =
   await panelRow.getByRole('button', { name: 'Редактировать' }).click()
   await panelsPanel.getByLabel('Название панели').fill('Устаревшая локальная панель')
 
-  api.changeVpnPanelExternally('panel-eu', 'Актуальная внешняя VPN-панель')
+  api.delayNextVpnMutation('/api/admin/vpn-panels/panel-eu')
   await panelsPanel.getByRole('button', { name: 'Сохранить панель' }).click()
+  await expect.poll(() => api.hasDelayedVpnMutation()).toBe(true)
+  await panelsPanel.getByLabel('Название панели').fill('Новый локальный черновик панели')
+  api.changeVpnPanelExternally('panel-eu', 'Актуальная внешняя VPN-панель')
+  api.releaseVpnMutation()
 
   await expect(page.locator('.error-block')).toContainText('VPN-объект уже изменен другим администратором')
-  await expect(panelsPanel.getByRole('heading', { name: '3x-ui панели' })).toBeVisible()
   await expect(panelsPanel.locator('.list-item-vertical strong').filter({ hasText: 'Актуальная внешняя VPN-панель' })).toBeVisible()
+  await expect(panelsPanel.getByRole('heading', { name: 'Редактировать 3x-ui панель' })).toBeVisible()
+  await expect(panelsPanel.getByLabel('Название панели')).toHaveValue('Новый локальный черновик панели')
+  await expect(panelsPanel.getByRole('button', { name: 'Сохранить панель' })).toBeEnabled()
   expect(api.getLastRequest('/api/admin/vpn-panels/panel-eu', 'PATCH')?.body).toMatchObject({ revision: 0 })
+})
+
+test('admin VPN inbound conflict keeps a newer draft while reloading the winning state', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-vpn-inbound-conflict-token', 'admin-vpn-inbound-conflict-refresh')
+  await page.goto('/#panels')
+
+  const panelsPanel = page.locator('#panels')
+  const inboundRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'backup-vless' }).first()
+  await inboundRow.getByRole('button', { name: 'Редактировать' }).click()
+  const inboundForm = panelsPanel.locator('form').nth(1)
+  await inboundForm.getByLabel('Название inbound-правила').fill('Устаревший локальный inbound')
+
+  api.delayNextVpnMutation('/api/admin/vpn-inbounds/inbound-backup')
+  await inboundForm.getByRole('button', { name: 'Сохранить inbound-правило' }).click()
+  await expect.poll(() => api.hasDelayedVpnMutation()).toBe(true)
+  await inboundForm.getByLabel('Название inbound-правила').fill('Новый локальный черновик inbound')
+  api.changeVpnInboundExternally('inbound-backup', 'Актуальный внешний inbound')
+  api.releaseVpnMutation()
+
+  await expect(page.locator('.error-block')).toContainText('VPN-объект уже изменен другим администратором')
+  await expect(panelsPanel.locator('.list-item-vertical strong').filter({ hasText: 'Актуальный внешний inbound' })).toBeVisible()
+  await expect(inboundForm.getByLabel('Название inbound-правила')).toHaveValue('Новый локальный черновик inbound')
+  await expect(inboundForm.getByRole('button', { name: 'Сохранить inbound-правило' })).toBeEnabled()
+  expect(api.getLastRequest('/api/admin/vpn-inbounds/inbound-backup', 'PATCH')?.body).toMatchObject({ revision: 0 })
 })
 
 test('admin app release delete keeps an externally changed release', async ({ page }) => {

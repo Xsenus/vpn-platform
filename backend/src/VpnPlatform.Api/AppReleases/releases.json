@@ -17427,5 +17427,32 @@
         "text": "Roadmap progress is 760/780 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-15-vpn-editor-noop-draft-integrity",
+    "version": "0.738.0",
+    "releasedAt": "2026-08-15T15:37:18+07:00",
+    "title": "VPN editors avoid redundant remote updates",
+    "summary": "3x-ui panel and inbound editors now reject normalized no-op updates before revision, audit or remote provider state can change, while preserving newer drafts across delayed conflicts.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Unchanged 3x-ui panel updates return a controlled validation error without advancing the revision or writing an audit entry."
+      },
+      {
+        "type": "fixed",
+        "text": "Unchanged inbound updates are rejected before any remote 3x-ui request, local revision change or audit write."
+      },
+      {
+        "type": "improved",
+        "text": "Panel and inbound forms disable no-op saves, reject programmatic submission and preserve a newer local draft when a delayed stale response reloads the winning state."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 761/781 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

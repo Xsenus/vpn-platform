@@ -166,18 +166,38 @@ public class X3UiPanelService
             return Result<VpnPanelDto>.Failure("A VPN panel with the same name or base URL already exists.");
         }
 
+        var region = string.IsNullOrWhiteSpace(command.Region) ? panel.Region : command.Region.Trim();
+        var sslMode = Enum.Parse<VpnSslVerificationMode>(sslModeText, true);
+        var apiVariant = Enum.Parse<X3UiApiVariant>(apiVariantText, true);
+        var autoCreateInbound = command.AutoCreateInbound ?? panel.AutoCreateInbound;
+        var status = Enum.Parse<VpnPanelStatus>(statusText, true);
+        if (string.IsNullOrWhiteSpace(command.Password)
+            && panel.Name == name
+            && panel.BaseUrl == baseUrl
+            && panel.Login == login
+            && panel.Region == region
+            && panel.Capacity == capacity
+            && panel.SslVerificationMode == sslMode
+            && panel.ApiVariant == apiVariant
+            && panel.AutoCreateInbound == autoCreateInbound
+            && panel.DefaultInboundTemplateJson == templateJson
+            && panel.Status == status)
+        {
+            return Result<VpnPanelDto>.Failure("VPN panel changes were not detected.");
+        }
+
         var before = PanelAuditSnapshot(panel);
         panel.Name = name;
         panel.BaseUrl = baseUrl;
         panel.Login = login;
         if (!string.IsNullOrWhiteSpace(command.Password)) panel.EncryptedPassword = _secretProtector.Protect(command.Password);
-        if (!string.IsNullOrWhiteSpace(command.Region)) panel.Region = command.Region.Trim();
+        panel.Region = region;
         panel.Capacity = capacity;
-        panel.SslVerificationMode = Enum.Parse<VpnSslVerificationMode>(sslModeText, true);
-        panel.ApiVariant = Enum.Parse<X3UiApiVariant>(apiVariantText, true);
-        if (command.AutoCreateInbound.HasValue) panel.AutoCreateInbound = command.AutoCreateInbound.Value;
+        panel.SslVerificationMode = sslMode;
+        panel.ApiVariant = apiVariant;
+        panel.AutoCreateInbound = autoCreateInbound;
         panel.DefaultInboundTemplateJson = templateJson;
-        panel.Status = Enum.Parse<VpnPanelStatus>(statusText, true);
+        panel.Status = status;
         panel.UpdatedAt = _clock.UtcNow;
         panel.Revision = checked(panel.Revision + 1);
         AddAudit("vpn_panel.update", "VpnPanel", panel.Id, actorUserId, before, PanelAuditSnapshot(panel));
@@ -880,6 +900,22 @@ public class X3UiPanelService
             return Result<VpnInboundDto>.Failure("Inbound capacity cannot be lower than used capacity.");
         }
 
+        var normalizedProtocol = NormalizeProtocol(command.Protocol);
+        var isDefault = command.IsDefault && command.IsActive;
+        if (inbound.Name == command.Name
+            && inbound.Protocol == normalizedProtocol
+            && inbound.Port == command.Port
+            && inbound.Listen == command.Listen
+            && inbound.SettingsJson == command.SettingsJson
+            && inbound.StreamSettingsJson == command.StreamSettingsJson
+            && inbound.SniffingJson == command.SniffingJson
+            && inbound.IsActive == command.IsActive
+            && inbound.IsDefault == isDefault
+            && inbound.Capacity == command.Capacity)
+        {
+            return Result<VpnInboundDto>.Failure("VPN inbound changes were not detected.");
+        }
+
         var before = InboundAuditSnapshot(inbound);
         var previousRemoteRequest = new X3UiUpdateInboundRequest(
             inbound.ExternalInboundId,
@@ -896,7 +932,7 @@ public class X3UiPanelService
         X3UiInboundDto remote;
         if (IsSandboxMode())
         {
-            remote = new X3UiInboundDto(inbound.ExternalInboundId, command.Name, NormalizeProtocol(command.Protocol), command.Port, command.Listen, command.SettingsJson, command.StreamSettingsJson, command.SniffingJson, command.IsActive);
+            remote = new X3UiInboundDto(inbound.ExternalInboundId, command.Name, normalizedProtocol, command.Port, command.Listen, command.SettingsJson, command.StreamSettingsJson, command.SniffingJson, command.IsActive);
         }
         else
         {
@@ -908,7 +944,7 @@ public class X3UiPanelService
             try
             {
                 remoteMutationAttempted = true;
-                remote = await _client.UpdateInboundAsync(inbound.VpnPanel, password, new X3UiUpdateInboundRequest(inbound.ExternalInboundId, command.Name, NormalizeProtocol(command.Protocol), command.Port, command.Listen, command.SettingsJson, command.StreamSettingsJson, command.SniffingJson, command.IsActive), cancellationToken);
+                remote = await _client.UpdateInboundAsync(inbound.VpnPanel, password, new X3UiUpdateInboundRequest(inbound.ExternalInboundId, command.Name, normalizedProtocol, command.Port, command.Listen, command.SettingsJson, command.StreamSettingsJson, command.SniffingJson, command.IsActive), cancellationToken);
             }
             catch (Exception remoteError)
             {
@@ -927,7 +963,7 @@ public class X3UiPanelService
             inbound.StreamSettingsJson = remote.StreamSettingsJson;
             inbound.SniffingJson = remote.SniffingJson;
             inbound.IsActive = remote.Enable;
-            inbound.IsDefault = command.IsDefault && inbound.IsActive;
+            inbound.IsDefault = isDefault;
             inbound.Capacity = command.Capacity > 0 ? command.Capacity : inbound.Capacity;
             inbound.UpdatedAt = _clock.UtcNow;
             inbound.Revision = checked(inbound.Revision + 1);

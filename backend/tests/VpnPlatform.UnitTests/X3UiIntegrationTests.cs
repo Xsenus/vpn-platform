@@ -89,6 +89,52 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Panel_Update_Should_Reject_A_Normalized_NoOp_Without_Revision_Or_Audit_Churn()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var panel = new VpnPanel
+        {
+            Name = "no-op-panel",
+            BaseUrl = "https://no-op-panel.example.test",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "eu",
+            Status = VpnPanelStatus.Active,
+            Capacity = 100,
+            SslVerificationMode = VpnSslVerificationMode.Strict,
+            ApiVariant = X3UiApiVariant.X3UiOfficial,
+            AutoCreateInbound = false,
+            DefaultInboundTemplateJson = "{}",
+            Revision = 3
+        };
+        db.VpnPanels.Add(panel);
+        await db.SaveChangesAsync();
+        var updatedAt = panel.UpdatedAt;
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.UpdatePanelAsync(panel.Id, new UpdateVpnPanelCommand(
+            Name: " no-op-panel ",
+            BaseUrl: "https://no-op-panel.example.test/",
+            Login: " admin ",
+            Password: "",
+            Region: " eu ",
+            Capacity: 100,
+            SslVerificationMode: "strict",
+            ApiVariant: "x3uiofficial",
+            AutoCreateInbound: false,
+            DefaultInboundTemplateJson: " {} ",
+            Status: "active",
+            Revision: 3), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("changes were not detected", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(3, panel.Revision);
+        Assert.Equal(updatedAt, panel.UpdatedAt);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Fact]
     public async Task Inbound_Update_Should_Reject_A_Stale_Revision_Before_Provider_Mutation()
     {
         await using var db = CreateDbContext();
@@ -107,6 +153,32 @@ public class X3UiIntegrationTests
         Assert.Equal(0, remote.UpdateInboundCalls);
         Assert.Equal("vless", inbound.Name);
         Assert.Equal(4, inbound.Revision);
+    }
+
+    [Fact]
+    public async Task Inbound_Update_Should_Reject_A_Normalized_NoOp_Before_Provider_Mutation()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var ids = await SeedPanelWithLocalClientAsync(db, clock.UtcNow);
+        var inbound = await db.VpnInbounds.SingleAsync(x => x.Id == ids.InboundId);
+        inbound.Revision = 4;
+        await db.SaveChangesAsync();
+        var updatedAt = inbound.UpdatedAt;
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.PatchInboundAsync(
+            inbound.Id,
+            NewInboundCommand(name: "vless", protocol: " VLESS ") with { Revision = 4 },
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("changes were not detected", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, remote.UpdateInboundCalls);
+        Assert.Equal(4, inbound.Revision);
+        Assert.Equal(updatedAt, inbound.UpdatedAt);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
     }
 
     [Fact]

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.738.0 - 2026-08-15
+
+Release entry: `2026-08-15-vpn-editor-noop-draft-integrity`.
+
+### Исправлено
+
+- Обновление неизменённой 3x-ui панели отклоняется до повышения revision и записи audit; форма блокирует кнопку и программную отправку без изменений.
+- Неизменённый inbound отклоняется до удалённого вызова 3x-ui, поэтому no-op больше не затрагивает provider state, локальную revision и audit.
+- Отложенный `409` панели или inbound обновляет список победившей версией, но сохраняет более новый локальный черновик, введённый после отправки запроса.
+- Fresh SQLite smoke проверяет оба новых no-op HTTP-контракта через реальный API.
+
+### Проверено
+
+- Fail-first backend regressions завершились `0/2`; после исправления targeted backend `2/2`, frontend `187/187`, целевой Playwright `3/3` и full Playwright `278/278` за `12.6 min` зелёные.
+- Backend Debug/Release `1571/1571`, typecheck/build, admin bundle raw `580740/581632` и gzip `154568/154624`, fresh SQLite `vpnNoOps=400,400`, dependency audit `0 vulnerabilities`, responsive all-screens на 25 viewport-конфигурациях, EF drift, formatter, strict UTF-8 и secret scan зелёные. Roadmap `761/781` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.737.0 - 2026-08-15
 
 Release entry: `2026-08-15-commercial-editor-noop-integrity`.

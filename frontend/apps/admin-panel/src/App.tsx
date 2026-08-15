@@ -65,6 +65,7 @@ import { canCancelProvisioningRun, canRetryProvisioningRun, isProvisioningStateC
 import { adminAccessDeniedMessage, adminSessionEndedMessage, isAdminAccessTokenExpired, isAdminSessionRejected } from './admin-session'
 import { isOptionalSafeAdminHttpUrl, validateTelegramBotUrlFields } from './admin-url-validation'
 import { validateServerForm } from './admin-server-validation'
+import { isVpnInboundFormChanged, isVpnPanelFormChanged } from './admin-vpn-editors'
 import { getAdminOrderPaymentRecheckBlocker, getAdminPaymentRecheckBlocker } from './admin-payments'
 import { buildReferralProgramPayload, defaultReferralProgramForm, isReferralProgramFormChanged, referralProgramToForm, validateReferralProgramForm, type ReferralProgramFormState } from './admin-referrals'
 import { validateWorkScenarioForm } from './admin-work-scenarios'
@@ -658,6 +659,9 @@ type AdminActionContext = {
   isCurrent: () => boolean
   reloadAll: () => Promise<boolean>
 }
+type VpnConflictDraft =
+  | { kind: 'panel'; id: string; panelId: string; form: CreateVpnPanelPayload }
+  | { kind: 'inbound'; id: string; panelId: string; form: CreateVpnInboundPayload }
 function readTagValue(tagsCsv: string | null | undefined, key: string): string | null {
   const normalizedKey = key.toLowerCase()
   for (const rawTag of (tagsCsv ?? '').split(',')) {
@@ -3423,13 +3427,26 @@ export function App() {
 
   const throwVpnPanelConflict = async (
     error: unknown,
-    action: AdminActionContext
+    action: AdminActionContext,
+    draft?: VpnConflictDraft
   ): Promise<never> => {
     if (!(error instanceof ApiClientError) || error.status !== 409) throw error
     await action.reloadAll()
     if (action.isCurrent()) {
-      cancelVpnPanelEdit()
-      cancelInboundEdit()
+      if (draft?.kind === 'panel') {
+        const submittedDraftIsCurrent = vpnPanelFormRef.current === draft.form
+          && editingVpnPanelIdRef.current === draft.id
+          && selectedVpnPanelIdRef.current === draft.panelId
+        if (submittedDraftIsCurrent) cancelVpnPanelEdit()
+      } else if (draft?.kind === 'inbound') {
+        const submittedDraftIsCurrent = inboundFormRef.current === draft.form
+          && editingInboundIdRef.current === draft.id
+          && selectedVpnPanelIdRef.current === draft.panelId
+        if (submittedDraftIsCurrent) cancelInboundEdit()
+      } else {
+        cancelVpnPanelEdit()
+        cancelInboundEdit()
+      }
       await loadVpnPanelDetails(selectedVpnPanelIdRef.current, token, action.operationId)
     }
     throw new ApiClientError('VPN-объект уже изменен другим администратором. Данные обновлены: повторите действие с актуальной версией.', 409, error.payload)
@@ -3445,10 +3462,12 @@ export function App() {
     }
     const submittedForm = vpnPanelForm
     const selectedPanelId = selectedVpnPanelIdRef.current
+    const currentPanel = editingId ? vpnPanels.find((panel) => panel.id === editingId) : undefined
+    if (currentPanel && !isVpnPanelFormChanged(submittedForm, currentPanel)) return
     await runAction('panels', 'vpn-panel-save', async (action) => {
       const saved = editingId
         ? await api.updateAdminVpnPanel(token, editingId, submittedForm)
-            .catch((error: unknown) => throwVpnPanelConflict(error, action))
+            .catch((error: unknown) => throwVpnPanelConflict(error, action, { kind: 'panel', id: editingId, panelId: selectedPanelId, form: submittedForm }))
         : await api.createAdminVpnPanel(token, submittedForm)
       if (!action.isCurrent()) return
       setNotice(`VPN-панель ${saved.name} ${editingId ? 'обновлена' : 'сохранена'}. Пароль не возвращается из API.`)
@@ -3514,13 +3533,15 @@ export function App() {
       setError(`Inbound: ${validationErrors.join(' ')}`)
       return
     }
+    const currentInbound = editingId ? vpnInbounds.find((inbound) => inbound.id === editingId) : undefined
+    if (currentInbound && !isVpnInboundFormChanged(submittedForm, currentInbound)) return
     const resourceKeys = editingId
       ? [vpnPanelActionResourceKey(panelId), vpnInboundActionResourceKey(editingId)]
       : vpnPanelActionResourceKey(panelId)
     return runAction('panels', editingId ? `update-inbound-${editingId}` : 'create-inbound', async (action) => {
       const saved = editingId
         ? await api.updateAdminVpnInbound(token, editingId, submittedForm)
-            .catch((error: unknown) => throwVpnPanelConflict(error, action))
+            .catch((error: unknown) => throwVpnPanelConflict(error, action, { kind: 'inbound', id: editingId, panelId, form: submittedForm }))
         : await api.createAdminVpnPanelInbound(token, panelId, submittedForm)
       if (!action.isCurrent()) return
       setNotice(editingId ? `Inbound-правило ${saved.name} обновлено.` : `Inbound-правило ${saved.name} создано.`)
@@ -3904,7 +3925,11 @@ export function App() {
   const referralProgramFormActionBusy = isActionResourceBusy(referralProgramActionResourceKey)
   const serverFormErrors = validateServerForm(serverForm)
   const serverFormActionBusy = isActionResourceBusy(serverActionResourceKey(editingServerId || 'create'))
+  const editingVpnPanel = editingVpnPanelId ? vpnPanels.find((panel) => panel.id === editingVpnPanelId) : undefined
+  const vpnPanelFormChanged = !editingVpnPanelId || Boolean(editingVpnPanel && isVpnPanelFormChanged(vpnPanelForm, editingVpnPanel))
   const vpnPanelFormActionBusy = isActionResourceBusy(vpnPanelActionResourceKey(editingVpnPanelId || 'create'))
+  const editingInbound = editingInboundId ? vpnInbounds.find((inbound) => inbound.id === editingInboundId) : undefined
+  const inboundFormChanged = !editingInboundId || Boolean(editingInbound && isVpnInboundFormChanged(inboundForm, editingInbound))
   const inboundFormActionBusy = Boolean(selectedVpnPanelId && isActionResourceBusy(
       vpnPanelActionResourceKey(selectedVpnPanelId),
       ...(editingInboundId ? [vpnInboundActionResourceKey(editingInboundId)] : [])
@@ -5079,7 +5104,7 @@ export function App() {
             </fieldset>
             <FormValidationSummary errors={vpnPanelForm !== defaultVpnPanelForm ? vpnPanelFormErrors : []} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={vpnPanelFormActionBusy || !token || vpnPanelFormErrors.length > 0} title={adminDisabledTitle} aria-busy={vpnPanelFormActionBusy}>{editingVpnPanelId ? 'Сохранить панель' : 'Добавить панель'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!vpnPanelFormChanged || vpnPanelFormActionBusy || !token || vpnPanelFormErrors.length > 0} title={adminDisabledTitle} aria-busy={vpnPanelFormActionBusy}>{editingVpnPanelId ? 'Сохранить панель' : 'Добавить панель'}</PrimaryButton>
               {editingVpnPanelId && <PrimaryButton type="button" className="button-ghost" onClick={cancelVpnPanelEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
@@ -5121,7 +5146,7 @@ export function App() {
             </fieldset>
             <FormValidationSummary errors={inboundFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={inboundFormErrors.length > 0 || inboundFormActionBusy} aria-busy={inboundFormActionBusy}>{editingInboundId ? 'Сохранить inbound-правило' : 'Создать inbound-правило'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!inboundFormChanged || inboundFormErrors.length > 0 || inboundFormActionBusy} aria-busy={inboundFormActionBusy}>{editingInboundId ? 'Сохранить inbound-правило' : 'Создать inbound-правило'}</PrimaryButton>
               {editingInboundId && <PrimaryButton type="button" className="button-ghost" onClick={cancelInboundEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>

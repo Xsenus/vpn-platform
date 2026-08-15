@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-15",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `1569/1569`",
-                     "Frontend unit tests: `185/185`",
-                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `276/276`",
+                     "Backend full suite: `1571/1571`",
+                     "Frontend unit tests: `187/187`",
+                     "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `278/278`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-15-commercial-editor-noop-integrity",
-                     "0.737.0"
+                     "2026-08-15-vpn-editor-noop-draft-integrity",
+                     "0.738.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-15-commercial-editor-noop-integrity", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-15-commercial-editor-noop-integrity", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-15-vpn-editor-noop-draft-integrity", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-15-vpn-editor-noop-draft-integrity", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `1569/1569`",
-                     "Frontend unit tests: `185/185`",
+                     "Backend full suite: `1571/1571`",
+                     "Frontend unit tests: `187/187`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-15-commercial-editor-noop-integrity",
-                     "0.737.0",
+                     "2026-08-15-vpn-editor-noop-draft-integrity",
+                     "0.738.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

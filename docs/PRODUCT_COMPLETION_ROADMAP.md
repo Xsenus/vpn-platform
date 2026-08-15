@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-15.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-commercial-editor-noop-integrity`, версия `0.737.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `760/780` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-vpn-editor-noop-draft-integrity`, версия `0.738.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `761/781` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,8 +37,8 @@ git diff --check
 
 Что подтверждено на 2026-08-15:
 
-- [x] `STATE-001` Backend test suite проходит: `1569/1569`.
-- [x] `STATE-002` Frontend test suite проходит: `185/185`.
+- [x] `STATE-001` Backend test suite проходит: `1571/1571`.
+- [x] `STATE-002` Frontend test suite проходит: `187/187`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2736,6 +2736,10 @@ git diff --check
   - Что сделать: неизменённые нормализованные PATCH/PUT не должны повышать revision, пересоздавать пункты релиза или писать аудит; UI должен блокировать кнопку и программную отправку, а delayed tariff conflict не должен стирать более новый draft.
   - Что сделано: backend сравнивает полный нормализованный tariff/referral candidate и семантически упорядоченные release items без технических ID; общий frontend helper нормализует те же поля, три формы вычисляют dirty-state и fail-closed проверяют handler; tariff conflict сбрасывает только отправленный снимок формы. Fresh SQLite no-op helper отправляет JSON как explicit UTF-8 bytes.
   - Доказательство: fail-first backend `0/3`; after-fix targeted backend `3/3`, backend Debug/Release `1569/1569`, frontend `185/185`, typecheck/build, admin bundle raw `579420/580608`, gzip `154073/154624`, targeted Playwright `3/3`, полный Playwright `276/276` за `13.0 min`, fresh SQLite `managedNoOp=400` и `commerceNoOps=400,400,400`, formatter, EF drift, encoding, secret scan `715/0` и dependency audit `0 vulnerabilities` зелёные. Реальные VPS/staging/live provider/Telegram/SMTP/3x-ui проверки этим пунктом не закрываются.
+- [x] `P11-ACC-470` Исключить ложные remote-обновления и потерю черновика в редакторах 3x-ui. 2026-08-15.
+  - Что сделать: неизменённые panel/inbound PATCH не должны повышать revision, писать audit или обращаться к удалённой 3x-ui; UI должен блокировать кнопку и программную отправку, а delayed conflict не должен стирать более новый draft.
+  - Что сделано: сервис сравнивает нормализованный panel candidate и полный inbound candidate до локальной или удалённой мутации; frontend helper использует те же правила dirty-state, оба handler fail-closed отклоняют no-op, а conflict recovery сбрасывает только отправленный снимок соответствующего редактора.
+  - Доказательство: fail-first backend `0/2`; after-fix targeted backend `2/2`, backend Debug/Release `1571/1571`, frontend `187/187`, typecheck/build, admin bundle raw `580740/581632`, gzip `154568/154624`, targeted Playwright `3/3`, полный Playwright `278/278` за `12.6 min`, fresh SQLite `vpnNoOps=400,400`, все 17 admin sections и 25 responsive viewport-конфигураций, formatter, EF drift, encoding, secret scan и dependency audit `0 vulnerabilities` зелёные. Реальные VPS/staging/production-like 3x-ui проверки этим пунктом не закрываются.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3385,6 +3389,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-15-003` | P1 | Admin 3x-ui configuration | Panel/inbound editors отправляли no-op PATCH; inbound зря менял remote provider state, revision и audit, а общий delayed-conflict recovery стирал более новый panel/inbound draft. | Исправлено локально | Pre-remote no-op guards, API-aligned dirty-state, programmatic submit protection и draft-safe delayed `409` recovery проверены backend/fresh SQLite/frontend/desktop/mobile/responsive regressions. Реальная production-like 3x-ui остаётся внешним evidence. |
 | `BUG-2026-08-15-002` | P1 | Admin Telegram settings | Настройки не имели сохранённой версии, поэтому устаревшая форма и параллельные запросы могли перезаписать более новые параметры и шаблоны; UI разрешал no-op save и не восстанавливался после конфликта. | Исправлено локально | Persisted revision-sentinel, exact request/response contracts, atomic update/audit и conflict recovery проверены backend/file-SQLite/fresh SQLite/frontend/desktop/mobile/responsive regressions. Реальный Telegram Bot API/VPS остаётся внешним evidence. |
 | `BUG-2026-08-15-001` | P1 | Admin users | UI не позволял управлять профилем, PATCH молча принимал неизвестные поля и после concurrency conflict повторял устаревшую команду поверх более новых данных. | Исправлено локально | Strict allowlist и обязательный `updatedAt`, атомарный rollback отзыва сессий, fail-closed client decoder и адаптивный редактор проверены backend/SQLite/frontend/desktop/mobile/responsive regressions. Реальный VPS admin smoke остаётся внешним evidence. |
 | `BUG-2026-08-13-036` | P1 | Admin referral programs | Structured editor сбрасывал anti-fraud и неизвестные rule/reward extensions, список materialize-ил всю таблицу, PATCH игнорировал опечатки и позволял stale overwrite. | Исправлено локально | Lossless helper, DB-side top-200, strict PATCH allowlist/no-op/duplicate guard и EF optimistic revision проверены SQLite/backend/frontend/stateful CRUD/focused responsive regressions. Live provider/VPS outcome остаётся внешним evidence. |

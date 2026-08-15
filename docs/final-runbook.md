@@ -176,12 +176,12 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-15 локально подтверждено:
 
-- backend full suite: 1569/1569;
-- frontend tests: 185/185;
+- backend full suite: 1571/1571;
+- frontend tests: 187/187;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
-- browser console smoke: 276/276; responsive all-screens: 14/14 на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints;
+- browser console smoke: 278/278; responsive all-screens: 14/14 на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints;
 - visual assets: local same-origin WebP decode/dimensions OK; representative desktop/mobile screenshots reviewed;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - API operation boundary regression: malformed enum/JSON returns 400 without partial database mutations; payment webhooks cover all 8 provider routes; VPN provisioning remains fail-closed.
@@ -216,7 +216,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Public session hydration: StrictMode выполняет одну refresh-token rotation, transient profile failure сохраняет токены для ручного retry, logout инвалидирует late response.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft; reset-code request и password confirmation имеют независимые формы и корректный Enter submit.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- admin production bundle budget: `5` JS chunks, largest `270715`, total raw `579420/580608`, gzip `154073/154624`.
+- admin production bundle budget: `5` JS chunks, largest `272035`, total raw `580740/581632`, gzip `154568/154624`.
 - unknown public route: доступное `404` recovery, desktop/mobile и 18 responsive viewport-конфигураций: OK.
 - public route title/meta/focus: direct load, SPA navigation и browser Back desktop/mobile: OK.
 - admin section metadata: hydration/login, deep-link, 17 sections и logout desktop/mobile: OK.
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-15-commercial-editor-noop-integrity`, версия `0.737.0`; tariff/referral/release editors защищены от no-op, а delayed tariff conflict сохраняет более новый draft.
-- roadmap progress: `760/780` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-15-vpn-editor-noop-draft-integrity`, версия `0.738.0`; panel/inbound editors защищены от no-op до remote mutation, а delayed conflicts сохраняют более новый draft.
+- roadmap progress: `761/781` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

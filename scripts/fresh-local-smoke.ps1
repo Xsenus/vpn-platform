@@ -319,6 +319,44 @@ try {
         revision = $adminRelease.revision
     }
 
+    $vpnPanels = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/admin/vpn-panels" -Headers $adminHeaders)
+    $vpnPanel = $vpnPanels | Select-Object -First 1
+    if ($null -eq $vpnPanel) {
+        throw "VPN panel seed is missing."
+    }
+    $vpnPanelNoOpStatus = Assert-SmokeJsonStatus -Method "PATCH" -Uri "$apiUrl/api/admin/vpn-panels/$($vpnPanel.id)" -Headers $adminHeaders -ExpectedStatus 400 -Body @{
+        name = $vpnPanel.name
+        baseUrl = $vpnPanel.baseUrl
+        login = $vpnPanel.login
+        password = ""
+        region = $vpnPanel.region
+        capacity = $vpnPanel.capacity
+        sslVerificationMode = $vpnPanel.sslVerificationMode
+        apiVariant = $vpnPanel.apiVariant
+        autoCreateInbound = $vpnPanel.autoCreateInbound
+        defaultInboundTemplateJson = $vpnPanel.defaultInboundTemplateJson
+        revision = $vpnPanel.revision
+    }
+
+    $vpnInbounds = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/admin/vpn-inbounds" -Headers $adminHeaders)
+    $vpnInbound = $vpnInbounds | Select-Object -First 1
+    if ($null -eq $vpnInbound) {
+        throw "VPN inbound seed is missing."
+    }
+    $vpnInboundNoOpStatus = Assert-SmokeJsonStatus -Method "PATCH" -Uri "$apiUrl/api/admin/vpn-inbounds/$($vpnInbound.id)" -Headers $adminHeaders -ExpectedStatus 400 -Body @{
+        name = $vpnInbound.name
+        protocol = $vpnInbound.protocol
+        port = $vpnInbound.port
+        listen = $vpnInbound.listen
+        settingsJson = $vpnInbound.settingsJson
+        streamSettingsJson = $vpnInbound.streamSettingsJson
+        sniffingJson = $vpnInbound.sniffingJson
+        isDefault = $vpnInbound.isDefault
+        capacity = $vpnInbound.capacity
+        isActive = $vpnInbound.isActive
+        revision = $vpnInbound.revision
+    }
+
     $telegramSettings = Invoke-SmokeJson -Uri "$apiUrl/api/admin/telegram-bot/settings" -Headers $adminHeaders
     if ($telegramSettings.revision -lt 0) {
         throw "Telegram bot settings response does not contain a valid revision."
@@ -395,7 +433,7 @@ try {
         throw "Unexpected access URI protocol: $($access.accessUri)"
     }
 
-    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) managedNoOp=$managedNoOpStatus commerceNoOps=$tariffNoOpStatus,$referralNoOpStatus,$releaseNoOpStatus telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
+    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) managedNoOp=$managedNoOpStatus commerceNoOps=$tariffNoOpStatus,$referralNoOpStatus,$releaseNoOpStatus vpnNoOps=$vpnPanelNoOpStatus,$vpnInboundNoOpStatus telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
 }
 finally {
     if ($process -and -not $process.HasExited) {
