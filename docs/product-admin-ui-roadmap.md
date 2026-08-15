@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `761/781` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `762/782` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,12 +85,12 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1571/1571`.
-- [x] Frontend unit tests: `187/187`.
+- [x] Backend full suite: `1574/1574`.
+- [x] Frontend unit tests: `189/189`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `278/278`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `280/280`.
 - [x] Responsive matrix: 25 viewport-конфигураций `305x568..2560x1440`, точные пары `N/N+1` для всех CSS-breakpoints, same-origin decode локальных WebP и ручной review `18` desktop/`17` mobile admin screenshots.
 - [x] Pristine create-формы шести обязательных admin-сущностей не показывают validation summary до изменения; после interaction invalid feedback сохраняется.
 - [x] Fresh local SQLite smoke: OK.
@@ -152,7 +152,7 @@
 - [x] Subscription actions проходят activate/extend/sync/block/reload/unblock/migrate/reload/cancel lifecycle с persisted access state и terminal masking на desktop/mobile.
 - [x] Payment refund lifecycle сохраняет partial/full refund state, автоматически подставляет остаток и блокирует повторный полный возврат на desktop/mobile.
 - [x] Notification retry сохраняет Pending state, attempts reset/error cleanup и masked recipient; finance/support роли остаются read-only.
-- [x] Admin production bundle budget: `5` chunks, largest `272035`, total raw `580740/581632`, gzip `154568/154624`.
+- [x] Admin production bundle budget: `5` chunks, largest `273472`, total raw `582209/582656`, gzip `154904/155648`.
 - [x] Public catch-all `404` recovery проходит desktop/mobile, Axe и 25 viewport-конфигураций без blank screen/overflow.
 - [x] Public route metadata/focus lifecycle проходит direct load, navigation и browser Back на desktop/mobile.
 - [x] Admin metadata lifecycle проходит hydration/login, deep-link, 17 sections и logout на desktop/mobile.
@@ -172,7 +172,8 @@
 - [x] FAQ, site-content и scenario editors отклоняют no-op, сохраняют более новый local draft при delayed stale conflict, а user PATCH принимает эквивалентный offset SQLite timestamp.
 - [x] Tariff, referral-program и app-release editors отклоняют нормализованный no-op без revision/audit churn; delayed tariff conflict сохраняет более новый local draft.
 - [x] 3x-ui panel/inbound editors отклоняют no-op до revision/audit и remote provider mutation; delayed conflict сохраняет более новый local draft.
-- [x] Latest "Что нового": `2026-08-15-vpn-editor-noop-draft-integrity`, версия `0.738.0`; backend `1571/1571`, frontend `187/187`, полный Playwright `278/278`, fresh SQLite `vpnNoOps=400,400` зелёные.
+- [x] Payment-provider accounts требуют persisted revision, отклоняют no-op/stale update и state action, а delayed conflict сохраняет более новый local draft.
+- [x] Latest "Что нового": `2026-08-15-payment-provider-concurrency-integrity`, версия `0.739.0`; backend `1574/1574`, frontend `189/189`, полный Playwright `280/280`, fresh SQLite `providerGuards=400,400,409` зелёные.
 
 ## Как вести дальше
 

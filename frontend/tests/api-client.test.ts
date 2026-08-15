@@ -724,6 +724,7 @@ function adminPaymentProviderAccountFixture(overrides: Record<string, unknown> =
     requiredFields: [{ key: 'shopId', label: 'ShopId / merchant id', required: true, configured: true, issue: null }],
     readinessBlockers: [],
     isPubliclyAvailable: true,
+    revision: 2,
     createdAt: adminFixtureTimestamp,
     updatedAt: adminFixtureTimestamp,
     ...overrides
@@ -2143,8 +2144,8 @@ test('ApiClient admin payment providers can create, update and toggle accounts',
   const payload = { provider: 'Stripe' as const, mode: 'Sandbox' as const, name: 'stripe-main', publicName: 'Stripe', isEnabled: true, isDefault: true, shopId: 'shop', apiBaseUrl: 'https://api.stripe.com', returnUrl: '', webhookUrl: 'https://api.example.test/webhooks/payments/stripe', secretKey: 'sk_test', webhookSecret: 'whsec_test', useWebhookIpAllowList: false, allowedWebhookIpRangesCsv: '', extraSettingsJson: '{}' }
   const client = new ApiClient('http://localhost:8080')
   await client.createAdminPaymentProviderAccount('admin-token', payload)
-  await client.updateAdminPaymentProviderAccount('admin-token', 'account-1', { ...payload, publicName: 'Stripe cards', secretKey: '', webhookSecret: '', extraSettingsJson: '' })
-  await client.setAdminPaymentProviderAccountEnabled('admin-token', 'account-1', false)
+  await client.updateAdminPaymentProviderAccount('admin-token', 'account-1', { ...payload, publicName: 'Stripe cards', secretKey: '', webhookSecret: '', extraSettingsJson: '', revision: 2 })
+  await client.setAdminPaymentProviderAccountEnabled('admin-token', 'account-1', false, 2)
   const check = await client.checkAdminPaymentProviderAccount('admin-token', 'account-1')
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/payment-providers/accounts')
@@ -2157,6 +2158,7 @@ test('ApiClient admin payment providers can create, update and toggle accounts',
   assert.equal(calls[3]?.init?.method, 'POST')
   assert.equal(new Headers(calls[1]?.init?.headers).get('Authorization'), 'Bearer admin-token')
   assert.equal(JSON.parse(String(calls[1]?.init?.body)).extraSettingsJson, '')
+  assert.deepEqual(JSON.parse(String(calls[2]?.init?.body)), { enabled: false, revision: 2 })
   assert.equal(check.isReady, true)
 })
 
@@ -2777,7 +2779,7 @@ test('ApiClient rejects malformed admin finance, audit, notification and support
     () => client.getAdminPaymentProviderAccounts('admin-token'),
     () => client.createAdminPaymentProviderAccount('admin-token', providerPayload),
     () => client.updateAdminPaymentProviderAccount('admin-token', 'provider-1', providerPayload),
-    () => client.setAdminPaymentProviderAccountEnabled('admin-token', 'provider-1', false),
+    () => client.setAdminPaymentProviderAccountEnabled('admin-token', 'provider-1', false, 0),
     () => client.checkAdminPaymentProviderAccount('admin-token', 'provider-1'),
     () => client.getAdminPaymentWebhookEvents('admin-token'),
     () => client.getAdminRefunds('admin-token'),

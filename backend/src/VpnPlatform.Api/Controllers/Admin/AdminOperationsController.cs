@@ -55,7 +55,7 @@ public sealed record RecheckReadinessDto(bool IsSupported, bool CanRecheck, IRea
 public sealed record RefundRecheckReadinessDto(bool IsSupported, bool CanRecheck, IReadOnlyList<string> Blockers);
 public sealed record RefundRetryReadinessDto(bool IsSupported, bool CanRetry, IReadOnlyList<string> Blockers);
 public sealed record AdminPaymentRecheckDto(Guid OrderId, Guid PaymentId, string Status);
-public sealed record SetProviderEnabledHttpRequest(bool Enabled);
+public sealed record SetProviderEnabledHttpRequest(bool Enabled, int? Revision = null);
 public sealed record AdminSupportReplyHttpRequest(string Text, int? Revision = null);
 public sealed record AdminSupportStatusHttpRequest(string Status, Guid? AssignedToUserId = null, int? Revision = null);
 public sealed record AdminSupportNoteHttpRequest(string Text, int? Revision = null);
@@ -1891,6 +1891,10 @@ public class AdminOperationsController : ControllerBase
         var result = await _paymentProviderAccounts.UpsertAsync(id, request, cancellationToken);
         if (!result.IsSuccess)
         {
+            if (result.Error == PaymentProviderAccountService.AccountChangedError)
+            {
+                return Conflict(new { error = result.Error });
+            }
             return BadRequest(new { error = result.Error });
         }
 
@@ -1905,9 +1909,13 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> SetPaymentProviderAccountEnabled(Guid id, [FromBody] SetProviderEnabledHttpRequest request, CancellationToken cancellationToken)
     {
         var before = await _db.PaymentProviderAccounts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        var result = await _paymentProviderAccounts.SetEnabledAsync(id, request.Enabled, cancellationToken);
+        var result = await _paymentProviderAccounts.SetEnabledAsync(id, request.Enabled, request.Revision, cancellationToken);
         if (!result.IsSuccess)
         {
+            if (result.Error == PaymentProviderAccountService.AccountChangedError)
+            {
+                return Conflict(new { error = result.Error });
+            }
             return BadRequest(new { error = result.Error });
         }
 
@@ -1923,6 +1931,10 @@ public class AdminOperationsController : ControllerBase
         var result = await _paymentProviderAccounts.CheckAsync(id, cancellationToken);
         if (!result.IsSuccess)
         {
+            if (result.Error == PaymentProviderAccountService.AccountChangedError)
+            {
+                return Conflict(new { error = result.Error });
+            }
             return BadRequest(new { error = result.Error });
         }
 
@@ -4208,7 +4220,8 @@ public class AdminOperationsController : ControllerBase
             account.AllowedWebhookIpRangesCsv,
             account.HealthStatus,
             account.IsCheckoutConfigured,
-            account.CheckoutConfigurationIssue
+            account.CheckoutConfigurationIssue,
+            account.Revision
         }, JsonOptions);
 
     private static string RedactSensitiveText(string? value, int maxLength)

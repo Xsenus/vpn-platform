@@ -126,7 +126,7 @@ public class PaymentProviderAccountConcurrencyTests
         await db.SaveChangesAsync();
         var service = new PaymentProviderAccountService(db, new TestSecretProtector(), new TestClock());
 
-        var result = await service.UpsertAsync(second.Id, Command(second.Name));
+        var result = await service.UpsertAsync(second.Id, Command(second.Name) with { Revision = second.Revision });
 
         Assert.True(result.IsSuccess, result.Error);
         db.ChangeTracker.Clear();
@@ -135,6 +135,71 @@ public class PaymentProviderAccountConcurrencyTests
             .ToListAsync();
         Assert.False(accounts.Single(x => x.Id == first.Id).IsDefault);
         Assert.True(accounts.Single(x => x.Id == second.Id).IsDefault);
+    }
+
+    [Fact]
+    public async Task Unchanged_Provider_Account_Update_Should_Not_Write()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new ApplicationDbContext(
+            new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
+        await db.Database.EnsureCreatedAsync();
+        var account = Account("unchanged-provider");
+        account.CreatedAt = new DateTimeOffset(2026, 8, 15, 10, 0, 0, TimeSpan.Zero);
+        account.UpdatedAt = account.CreatedAt;
+        db.PaymentProviderAccounts.Add(account);
+        await db.SaveChangesAsync();
+        var service = new PaymentProviderAccountService(db, new TestSecretProtector(), new TestClock());
+
+        var result = await service.UpsertAsync(account.Id, Command(account.Name) with
+        {
+            ReturnUrl = string.Empty,
+            WebhookUrl = string.Empty,
+            SecretKey = string.Empty,
+            WebhookSecret = string.Empty,
+            UseWebhookIpAllowList = account.UseWebhookIpAllowList,
+            Revision = account.Revision
+        });
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("измен", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(account.CreatedAt, account.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task Stale_Provider_Account_Update_Should_Preserve_Winning_Configuration()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var account = Account("stale-provider");
+        db.PaymentProviderAccounts.Add(account);
+        await db.SaveChangesAsync();
+        var staleRevision = account.Revision;
+        account.PublicName = "Внешнее актуальное название";
+        account.Revision = checked(account.Revision + 1);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        var service = new PaymentProviderAccountService(db, new TestSecretProtector(), new TestClock());
+
+        var result = await service.UpsertAsync(account.Id, Command(account.Name) with
+        {
+            PublicName = "Устаревшее локальное название",
+            ReturnUrl = string.Empty,
+            WebhookUrl = string.Empty,
+            SecretKey = string.Empty,
+            WebhookSecret = string.Empty,
+            Revision = staleRevision
+        });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(PaymentProviderAccountService.AccountChangedError, result.Error);
+        var persisted = await db.PaymentProviderAccounts.AsNoTracking().SingleAsync(x => x.Id == account.Id);
+        Assert.Equal("Внешнее актуальное название", persisted.PublicName);
+        Assert.Equal(staleRevision + 1, persisted.Revision);
     }
 
     [Fact]
@@ -246,7 +311,7 @@ public class PaymentProviderAccountConcurrencyTests
 
         await using (var enabledGate = await PaymentProcessingGate.AcquirePaymentProviderAccountAsync(account.Id, CancellationToken.None))
         {
-            var enabledTask = service.SetEnabledAsync(account.Id, enabled: false);
+            var enabledTask = service.SetEnabledAsync(account.Id, enabled: false, account.Revision);
             await Task.Delay(100);
             Assert.False(enabledTask.IsCompleted);
             await enabledGate.DisposeAsync();
@@ -278,7 +343,7 @@ public class PaymentProviderAccountConcurrencyTests
         await db.SaveChangesAsync();
         var service = new PaymentProviderAccountService(db, new TestSecretProtector(), new TestClock());
 
-        var enable = await service.SetEnabledAsync(account.Id, enabled: true);
+        var enable = await service.SetEnabledAsync(account.Id, enabled: true, account.Revision);
 
         Assert.False(enable.IsSuccess);
         Assert.Contains("логин или пароль", enable.Error, StringComparison.OrdinalIgnoreCase);

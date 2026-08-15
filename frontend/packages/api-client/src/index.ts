@@ -409,6 +409,7 @@ export type PaymentProviderAccountDto = {
   requiredFields: PaymentProviderRequiredFieldDto[]
   readinessBlockers: string[]
   isPubliclyAvailable: boolean
+  revision: number
   createdAt: string
   updatedAt: string
 }
@@ -444,6 +445,7 @@ export type UpsertPaymentProviderAccountPayload = {
   useWebhookIpAllowList: boolean
   allowedWebhookIpRangesCsv: string
   extraSettingsJson: string
+  revision?: number | null
 }
 
 export type PaymentProviderAccountCheckResultDto = {
@@ -2145,6 +2147,7 @@ function isPaymentProviderAccountDto(value: unknown): value is PaymentProviderAc
     && hasUniqueStringKey(value.requiredFields, 'key')
     && hasStringArray(value, 'readinessBlockers', true)
     && hasBoolean(value, 'isPubliclyAvailable')
+    && hasInteger(value, 'revision', 0)
     && hasDateString(value, 'createdAt')
     && hasDateString(value, 'updatedAt')
 }
@@ -3995,11 +3998,11 @@ export class ApiClient {
     }, 'object', isPaymentProviderAccountDto)
   }
 
-  setAdminPaymentProviderAccountEnabled(token: string, id: string, enabled: boolean): Promise<PaymentProviderAccountDto> {
+  setAdminPaymentProviderAccountEnabled(token: string, id: string, enabled: boolean, revision: number): Promise<PaymentProviderAccountDto> {
     return this.request<PaymentProviderAccountDto>(`/api/admin/payment-providers/accounts/${id}/enabled`, {
       method: 'POST',
       token,
-      body: JSON.stringify({ enabled }),
+      body: JSON.stringify({ enabled, revision }),
       errorMessage: apiFallbackErrorMessage
     }, 'object', isPaymentProviderAccountDto)
   }

@@ -195,6 +195,7 @@ public class Order : AuditableEntity
 
 public class PaymentProviderAccount : AuditableEntity
 {
+    public int Revision { get; set; }
     public PaymentProvider Provider { get; set; }
     public PaymentProviderMode Mode { get; set; } = PaymentProviderMode.Disabled;
     public string Name { get; set; } = string.Empty;

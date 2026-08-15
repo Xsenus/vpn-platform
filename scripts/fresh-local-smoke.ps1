@@ -319,6 +319,39 @@ try {
         revision = $adminRelease.revision
     }
 
+    $providerAccounts = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/admin/payment-providers/accounts" -Headers $adminHeaders)
+    $providerAccount = $providerAccounts | Select-Object -First 1
+    if ($null -eq $providerAccount) {
+        throw "Payment provider account seed is missing."
+    }
+    $providerAccountBody = @{
+        provider = $providerAccount.provider
+        mode = $providerAccount.mode
+        name = $providerAccount.name
+        publicName = $providerAccount.publicName
+        isEnabled = $providerAccount.isEnabled
+        isDefault = $providerAccount.isDefault
+        shopId = $providerAccount.shopId
+        apiBaseUrl = $providerAccount.apiBaseUrl
+        returnUrl = $providerAccount.returnUrl
+        webhookUrl = $providerAccount.webhookUrl
+        secretKey = ""
+        webhookSecret = ""
+        useWebhookIpAllowList = $providerAccount.useWebhookIpAllowList
+        allowedWebhookIpRangesCsv = $providerAccount.allowedWebhookIpRangesCsv
+        extraSettingsJson = ""
+        revision = $providerAccount.revision
+    }
+    $providerNoOpStatus = Assert-SmokeJsonStatus -Method "PATCH" -Uri "$apiUrl/api/admin/payment-providers/accounts/$($providerAccount.id)" -Headers $adminHeaders -ExpectedStatus 400 -Body $providerAccountBody
+    $providerStateNoOpStatus = Assert-SmokeJsonStatus -Method "POST" -Uri "$apiUrl/api/admin/payment-providers/accounts/$($providerAccount.id)/enabled" -Headers $adminHeaders -ExpectedStatus 400 -Body @{
+        enabled = $providerAccount.isEnabled
+        revision = $providerAccount.revision
+    }
+    $staleProviderBody = @{} + $providerAccountBody
+    $staleProviderBody.publicName = "$($providerAccount.publicName) stale"
+    $staleProviderBody.revision = [int]$providerAccount.revision + 1
+    $providerConflictStatus = Assert-SmokeJsonStatus -Method "PATCH" -Uri "$apiUrl/api/admin/payment-providers/accounts/$($providerAccount.id)" -Headers $adminHeaders -ExpectedStatus 409 -Body $staleProviderBody
+
     $vpnPanels = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/admin/vpn-panels" -Headers $adminHeaders)
     $vpnPanel = $vpnPanels | Select-Object -First 1
     if ($null -eq $vpnPanel) {
@@ -433,7 +466,7 @@ try {
         throw "Unexpected access URI protocol: $($access.accessUri)"
     }
 
-    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) managedNoOp=$managedNoOpStatus commerceNoOps=$tariffNoOpStatus,$referralNoOpStatus,$releaseNoOpStatus vpnNoOps=$vpnPanelNoOpStatus,$vpnInboundNoOpStatus telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
+    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) managedNoOp=$managedNoOpStatus commerceNoOps=$tariffNoOpStatus,$referralNoOpStatus,$releaseNoOpStatus providerGuards=$providerNoOpStatus,$providerStateNoOpStatus,$providerConflictStatus vpnNoOps=$vpnPanelNoOpStatus,$vpnInboundNoOpStatus telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
 }
 finally {
     if ($process -and -not $process.HasExited) {

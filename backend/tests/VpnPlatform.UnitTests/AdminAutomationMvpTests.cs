@@ -243,7 +243,8 @@ public class AdminAutomationMvpTests
             "",
             false,
             "",
-            ""), CancellationToken.None);
+            "",
+            Revision: account.Revision), CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var dto = Assert.IsType<PaymentProviderAccountDto>(ok.Value);
@@ -257,6 +258,53 @@ public class AdminAutomationMvpTests
         Assert.Contains("must-stay-secret", saved.ExtraSettingsJson, StringComparison.Ordinal);
         Assert.Equal("stripe-shop-updated", saved.ShopId);
         Assert.False(saved.UseWebhookIpAllowList);
+    }
+
+    [Fact]
+    public async Task Provider_Account_Update_Should_Reject_NoOp_And_Stale_Revision_Without_Audit()
+    {
+        await using var db = CreateDbContext();
+        var account = PaymentAccount(PaymentProvider.YooKassa, PaymentProviderMode.Sandbox, true, "shop-current", "protected-secret");
+        db.PaymentProviderAccounts.Add(account);
+        await db.SaveChangesAsync();
+        var controller = CreateOperationsController(db);
+        var unchanged = new UpsertPaymentProviderAccountCommand(
+            account.Provider,
+            account.Mode,
+            account.Name,
+            account.PublicName,
+            account.IsEnabled,
+            account.IsDefault,
+            account.ShopId,
+            account.ApiBaseUrl,
+            account.ReturnUrl,
+            account.WebhookUrl,
+            "",
+            "",
+            account.UseWebhookIpAllowList,
+            account.AllowedWebhookIpRangesCsv,
+            "",
+            account.Revision);
+
+        var noOp = await controller.UpdatePaymentProviderAccount(account.Id, unchanged, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(noOp);
+        Assert.Equal(0, account.Revision);
+        Assert.DoesNotContain(await db.AuditLogs.ToListAsync(), x => x.Action == "payment_provider.update" && x.EntityId == account.Id.ToString());
+
+        account.PublicName = "Актуальное внешнее название";
+        account.Revision = checked(account.Revision + 1);
+        await db.SaveChangesAsync();
+
+        var stale = await controller.UpdatePaymentProviderAccount(
+            account.Id,
+            unchanged with { PublicName = "Устаревшее локальное название" },
+            CancellationToken.None);
+
+        Assert.IsType<ConflictObjectResult>(stale);
+        Assert.Equal("Актуальное внешнее название", account.PublicName);
+        Assert.Equal(1, account.Revision);
+        Assert.DoesNotContain(await db.AuditLogs.ToListAsync(), x => x.Action == "payment_provider.update" && x.EntityId == account.Id.ToString());
     }
 
     [Fact]
@@ -346,7 +394,8 @@ public class AdminAutomationMvpTests
             "",
             false,
             "",
-            ""), CancellationToken.None);
+            "",
+            Revision: created.Revision), CancellationToken.None);
 
         var updateJson = JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(update).Value);
         Assert.Contains("HasSecretKey", updateJson, StringComparison.Ordinal);

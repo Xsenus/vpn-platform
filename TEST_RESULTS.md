@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: payment provider concurrency and no-op integrity
+
+Scope:
+- Payment provider account configuration and enabled-state commands must require the current persisted revision.
+- Normalized no-op updates must not change revision, timestamp or audit history.
+- The admin editor must reject no-op submission and preserve a newer local draft across delayed `409` recovery.
+
+Results:
+- Roadmap progress: `762/782` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-payment-provider-concurrency-integrity`, version `0.739.0`.
+- Fail-first: backend regression completed `0/1` because an unchanged provider account update returned success and changed `UpdatedAt`.
+- After fix: targeted backend `15/15`, controller/encoding gate `40/40`, frontend `189/189`, typecheck/build, admin bundle budget `582209/582656` raw and `154904/155648` gzip, targeted Playwright `4/4`, and full Playwright `280/280` in `12.6 min` are green.
+- Release gate: backend Debug `1574/1574`, fresh SQLite full flow including `providerGuards=400,400,409`, all 17 admin sections and 25 responsive viewport configurations, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, secret scan `721/0` and strict UTF-8/BOM guard are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: VPN editor no-op and draft integrity
 
 Scope:

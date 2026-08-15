@@ -99,8 +99,9 @@ public class LocalSqliteSchemaRepairTests
 
         var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt);
 
-        Assert.Equal(2, repaired);
+        Assert.Equal(3, repaired);
         Assert.True(await ColumnExistsAsync(connection, "PaymentProviderAccounts", "WebhookUrl"));
+        Assert.True(await ColumnExistsAsync(connection, "PaymentProviderAccounts", "Revision"));
         Assert.True(await IndexIsUniqueAsync(connection, "PaymentProviderAccounts", "IX_PaymentProviderAccounts_Provider"));
     }
 

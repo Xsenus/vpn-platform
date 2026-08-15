@@ -229,6 +229,7 @@ public sealed record PaymentProviderAccountDto(
     IReadOnlyCollection<PaymentProviderRequiredFieldDto> RequiredFields,
     IReadOnlyCollection<string> ReadinessBlockers,
     bool IsPubliclyAvailable,
+    int Revision,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
@@ -260,7 +261,8 @@ public sealed record UpsertPaymentProviderAccountCommand(
     string? WebhookSecret,
     bool UseWebhookIpAllowList,
     string AllowedWebhookIpRangesCsv,
-    string ExtraSettingsJson);
+    string ExtraSettingsJson,
+    int? Revision = null);
 
 public sealed record PaymentProviderAccountCheckResultDto(
     Guid AccountId,

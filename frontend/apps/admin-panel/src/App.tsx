@@ -67,6 +67,7 @@ import { isOptionalSafeAdminHttpUrl, validateTelegramBotUrlFields } from './admi
 import { validateServerForm } from './admin-server-validation'
 import { isVpnInboundFormChanged, isVpnPanelFormChanged } from './admin-vpn-editors'
 import { getAdminOrderPaymentRecheckBlocker, getAdminPaymentRecheckBlocker } from './admin-payments'
+import { isPaymentProviderAccountFormChanged } from './admin-payment-provider-editors'
 import { buildReferralProgramPayload, defaultReferralProgramForm, isReferralProgramFormChanged, referralProgramToForm, validateReferralProgramForm, type ReferralProgramFormState } from './admin-referrals'
 import { validateWorkScenarioForm } from './admin-work-scenarios'
 
@@ -2414,7 +2415,8 @@ export function App() {
       webhookSecret: '',
       useWebhookIpAllowList: account.useWebhookIpAllowList,
       allowedWebhookIpRangesCsv: account.allowedWebhookIpRangesCsv ?? '',
-      extraSettingsJson: ''
+      extraSettingsJson: '',
+      revision: account.revision
     })
     goToAdminSection('payments')
   }
@@ -2430,9 +2432,20 @@ export function App() {
     }
     const editingId = editingProviderAccountId
     const submittedForm = providerForm
+    const currentAccount = editingId ? paymentProviderAccounts.find((account) => account.id === editingId) : undefined
+    if (currentAccount && !isPaymentProviderAccountFormChanged(submittedForm, currentAccount, providerSetup(submittedForm.provider).apiBaseUrl)) return
     await runAction('payments', 'provider-save', async (action) => {
       const saved = editingId
-        ? await api.updateAdminPaymentProviderAccount(token, editingId, submittedForm)
+        ? await api.updateAdminPaymentProviderAccount(token, editingId, submittedForm).catch(async (e: unknown) => {
+            if (!(e instanceof ApiClientError) || e.status !== 409) throw e
+            await action.reloadAll()
+            if (action.isCurrent()
+              && providerFormRef.current === submittedForm
+              && editingProviderAccountIdRef.current === editingId) {
+              resetProviderForm()
+            }
+            throw new ApiClientError('Способ оплаты уже изменён другим администратором. Список обновлён: повторите действие с актуальной версией.', 409, e.payload)
+          })
         : await api.createAdminPaymentProviderAccount(token, submittedForm)
       if (!action.isCurrent()) return
       setNotice(`Способ оплаты ${saved.name} ${editingId ? 'обновлен' : 'сохранен'}. Секреты не отображаются.`)
@@ -2443,7 +2456,13 @@ export function App() {
 
   const handleSetProviderEnabled = async (account: PaymentProviderAccountDto, enabled: boolean) => {
     await runAction('payments', account.id, async (action) => {
-      await api.setAdminPaymentProviderAccountEnabled(token, account.id, enabled)
+      try {
+        await api.setAdminPaymentProviderAccountEnabled(token, account.id, enabled, account.revision)
+      } catch (e) {
+        if (!(e instanceof ApiClientError) || e.status !== 409) throw e
+        await action.reloadAll()
+        throw new ApiClientError('Способ оплаты уже изменён другим администратором. Список обновлён: повторите действие с актуальной версией.', 409, e.payload)
+      }
       if (!action.isCurrent()) return
       setNotice(`${account.name}: ${enabled ? 'включен' : 'выключен'}`)
       await action.reloadAll()
@@ -3902,6 +3921,8 @@ export function App() {
     ? paymentProviderAccounts.find((account) => account.id === editingProviderAccountId)
     : undefined
   const providerFormErrors = validatePaymentProviderForm(providerForm, providerFormSetup, editingProviderAccount)
+  const providerFormChanged = !editingProviderAccountId || Boolean(editingProviderAccount
+    && isPaymentProviderAccountFormChanged(providerForm, editingProviderAccount, providerFormSetup.apiBaseUrl))
   const providerFormActionBusy = isActionResourceBusy(paymentProviderActionResourceKey(editingProviderAccountId || 'create'))
   const tariffFormErrors = validateTariffForm(tariffForm, tariffFeaturesText)
   const editingTariff = editingTariffId ? tariffs.find((tariff) => tariff.id === editingTariffId) : undefined
@@ -4582,7 +4603,7 @@ export function App() {
             </fieldset>
             <FormValidationSummary errors={providerForm !== defaultProviderForm ? providerFormErrors : []} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={providerFormActionBusy || !token || providerFormErrors.length > 0} title={adminDisabledTitle} aria-busy={providerFormActionBusy}>{editingProviderAccountId ? 'Сохранить изменения' : 'Сохранить способ оплаты'}</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!providerFormChanged || providerFormActionBusy || !token || providerFormErrors.length > 0} title={adminDisabledTitle} aria-busy={providerFormActionBusy}>{editingProviderAccountId ? 'Сохранить изменения' : 'Сохранить способ оплаты'}</PrimaryButton>
               {editingProviderAccountId && <PrimaryButton type="button" className="button-ghost" onClick={resetProviderForm}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>

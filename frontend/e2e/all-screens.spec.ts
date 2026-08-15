@@ -378,6 +378,7 @@ const providerAccount = {
   requiredFields: [{ key: 'shopId', label: 'Shop ID', required: true, configured: true, issue: null }],
   readinessBlockers: [],
   isPubliclyAvailable: true,
+  revision: 0,
   createdAt: now,
   updatedAt: now
 }

@@ -120,6 +120,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             .HasIndex(x => x.Provider)
             .HasFilter("\"IsDefault\" = true")
             .IsUnique();
+        modelBuilder.Entity<PaymentProviderAccount>().Property(x => x.Revision).IsConcurrencyToken();
         modelBuilder.Entity<PaymentProviderSetting>().HasIndex(x => new { x.PaymentProviderAccountId, x.Key }).IsUnique();
         modelBuilder.Entity<PaymentAttempt>().HasIndex(x => new { x.Provider, x.ProviderPaymentId }).IsUnique();
         modelBuilder.Entity<PaymentAttempt>().HasIndex(x => x.IdempotencyKey).IsUnique();

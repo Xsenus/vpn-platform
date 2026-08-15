@@ -10,6 +10,10 @@ namespace VpnPlatform.Application.Services;
 
 public class PaymentProviderAccountService
 {
+    public const string AccountChangedError = "Аккаунт платёжного провайдера уже изменён. Обновите список и повторите действие.";
+    public const string RevisionRequiredError = "Версия аккаунта платёжного провайдера обязательна для обновления.";
+    public const string ChangesNotDetectedError = "Изменения аккаунта платёжного провайдера не обнаружены.";
+
     private readonly IApplicationDbContext _db;
     private readonly ISecretProtector _secretProtector;
     private readonly IClock _clock;
@@ -110,6 +114,14 @@ public class PaymentProviderAccountService
             {
                 return Result<PaymentProviderAccountDto>.Failure("Аккаунт платёжного провайдера не найден.");
             }
+            if (command.Revision is null or < 0)
+            {
+                return Result<PaymentProviderAccountDto>.Failure(RevisionRequiredError);
+            }
+            if (command.Revision.Value != existing.Revision)
+            {
+                return Result<PaymentProviderAccountDto>.Failure(AccountChangedError);
+            }
 
         }
         else if (command.Provider != PaymentProvider.TelegramStars
@@ -154,6 +166,7 @@ public class PaymentProviderAccountService
                 : _secretProtector.Protect(command.WebhookSecret.Trim()),
             LastHealthCheckAt = existing?.LastHealthCheckAt,
             HealthStatus = existing?.HealthStatus ?? HealthStatus.Unknown,
+            Revision = existing is null ? 0 : checked(existing.Revision + 1),
             CreatedAt = existing?.CreatedAt ?? _clock.UtcNow,
             UpdatedAt = _clock.UtcNow
         };
@@ -168,6 +181,14 @@ public class PaymentProviderAccountService
         if (!string.IsNullOrWhiteSpace(credentialValidationError))
         {
             return Result<PaymentProviderAccountDto>.Failure(credentialValidationError);
+        }
+
+        if (existing is not null
+            && string.IsNullOrWhiteSpace(command.SecretKey)
+            && string.IsNullOrWhiteSpace(command.WebhookSecret)
+            && AccountConfigurationEquals(existing, proposed))
+        {
+            return Result<PaymentProviderAccountDto>.Failure(ChangesNotDetectedError);
         }
 
         var oldDefaults = proposed.IsDefault
@@ -185,6 +206,7 @@ public class PaymentProviderAccountService
             {
                 other.IsDefault = false;
                 other.UpdatedAt = _clock.UtcNow;
+                other.Revision = checked(other.Revision + 1);
             }
 
             if (transaction is not null && oldDefaults.Count > 0)
@@ -217,7 +239,31 @@ public class PaymentProviderAccountService
             return Result<PaymentProviderAccountDto>.Failure(
                 "Аккаунт конфликтует с существующей записью или основным аккаунтом. Обновите список и повторите.");
         }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+            }
+
+            return Result<PaymentProviderAccountDto>.Failure(AccountChangedError);
+        }
     }
+
+    private static bool AccountConfigurationEquals(PaymentProviderAccount current, PaymentProviderAccount proposed)
+        => current.Provider == proposed.Provider
+           && current.Mode == proposed.Mode
+           && current.Name == proposed.Name
+           && current.PublicName == proposed.PublicName
+           && current.IsEnabled == proposed.IsEnabled
+           && current.IsDefault == proposed.IsDefault
+           && current.ShopId == proposed.ShopId
+           && current.ApiBaseUrl == proposed.ApiBaseUrl
+           && current.ReturnUrl == proposed.ReturnUrl
+           && current.WebhookUrl == proposed.WebhookUrl
+           && current.UseWebhookIpAllowList == proposed.UseWebhookIpAllowList
+           && current.AllowedWebhookIpRangesCsv == proposed.AllowedWebhookIpRangesCsv
+           && current.ExtraSettingsJson == proposed.ExtraSettingsJson;
 
     private static void ApplyProposedAccount(PaymentProviderAccount account, PaymentProviderAccount proposed)
     {
@@ -239,6 +285,7 @@ public class PaymentProviderAccountService
         account.ExtraSettingsJson = proposed.ExtraSettingsJson;
         account.LastHealthCheckAt = proposed.LastHealthCheckAt;
         account.HealthStatus = proposed.HealthStatus;
+        account.Revision = proposed.Revision;
         account.CreatedAt = proposed.CreatedAt;
         account.UpdatedAt = proposed.UpdatedAt;
     }
@@ -351,8 +398,16 @@ public class PaymentProviderAccountService
             account.HealthStatus = HealthStatus.Unknown;
             account.LastHealthCheckAt = null;
             account.UpdatedAt = checkedAt;
+            account.Revision = checked(account.Revision + 1);
         }
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result<PaymentProviderAccountCheckResultDto>.Failure(AccountChangedError);
+        }
 
         var dto = MapToDto(account);
         return Result<PaymentProviderAccountCheckResultDto>.Success(new(
@@ -371,13 +426,25 @@ public class PaymentProviderAccountService
             dto));
     }
 
-    public async Task<Result<PaymentProviderAccountDto>> SetEnabledAsync(Guid id, bool enabled, CancellationToken cancellationToken = default)
+    public async Task<Result<PaymentProviderAccountDto>> SetEnabledAsync(Guid id, bool enabled, int? revision = null, CancellationToken cancellationToken = default)
     {
         await using var gate = await PaymentProcessingGate.AcquirePaymentProviderAccountAsync(id, cancellationToken);
         var account = await _db.PaymentProviderAccounts.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (account is null)
         {
             return Result<PaymentProviderAccountDto>.Failure("Аккаунт платёжного провайдера не найден.");
+        }
+        if (revision is null or < 0)
+        {
+            return Result<PaymentProviderAccountDto>.Failure(RevisionRequiredError);
+        }
+        if (revision.Value != account.Revision)
+        {
+            return Result<PaymentProviderAccountDto>.Failure(AccountChangedError);
+        }
+        if (account.IsEnabled == enabled)
+        {
+            return Result<PaymentProviderAccountDto>.Failure(ChangesNotDetectedError);
         }
 
         if (enabled)
@@ -391,7 +458,15 @@ public class PaymentProviderAccountService
 
         account.IsEnabled = enabled;
         account.UpdatedAt = _clock.UtcNow;
-        await _db.SaveChangesAsync(cancellationToken);
+        account.Revision = checked(account.Revision + 1);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result<PaymentProviderAccountDto>.Failure(AccountChangedError);
+        }
         return Result<PaymentProviderAccountDto>.Success(MapToDto(account));
     }
 
@@ -427,6 +502,7 @@ public class PaymentProviderAccountService
             BuildRequiredFields(account),
             BuildReadinessBlockers(account),
             PaymentProviderConfigurationRules.IsWebCheckoutConfigured(account),
+            account.Revision,
             account.CreatedAt,
             account.UpdatedAt);
 

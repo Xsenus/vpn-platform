@@ -112,6 +112,7 @@ function paymentProviderAccount(overrides: Record<string, unknown> = {}) {
     ],
     readinessBlockers: [],
     isPubliclyAvailable: true,
+    revision: 0,
     createdAt: now,
     updatedAt: now,
     ...overrides
@@ -488,6 +489,8 @@ async function mockAdminApi(page: Page) {
   let releaseDelayedBotSettingsSave: (() => void) | null = null
   let delayNextProviderCreateResponse = false
   let releaseDelayedProviderCreate: (() => void) | null = null
+  let delayNextProviderUpdateResponse = false
+  let releaseDelayedProviderUpdate: (() => void) | null = null
   let delayNextProviderEnabledResponse = false
   let releaseDelayedProviderEnabled: (() => void) | null = null
   let delayNextOrderRecheckResponse = false
@@ -1157,10 +1160,19 @@ async function mockAdminApi(page: Page) {
 
     const providerMutationMatch = path.match(/^\/api\/admin\/payment-providers\/accounts\/([^/]+)$/)
     if (method === 'PATCH' && providerMutationMatch) {
+      if (delayNextProviderUpdateResponse) {
+        delayNextProviderUpdateResponse = false
+        await new Promise<void>((resolve) => { releaseDelayedProviderUpdate = resolve })
+        releaseDelayedProviderUpdate = null
+      }
       const accountId = decodeURIComponent(providerMutationMatch[1])
       const index = providers.findIndex((account) => account.id === accountId)
       const current = providers[index]
       const payload = body as Record<string, unknown>
+      if (!current || Number(payload.revision) !== Number(current.revision)) {
+        await fulfillJson(route, { error: 'Payment provider account changed. Reload it and retry.' }, 409)
+        return
+      }
       const account = paymentProviderAccount({
         ...current,
         provider: payload.provider,
@@ -1179,6 +1191,7 @@ async function mockAdminApi(page: Page) {
         allowedWebhookIpRangesCsv: payload.allowedWebhookIpRangesCsv,
         extraSettingsJson: payload.extraSettingsJson || current?.extraSettingsJson,
         isPubliclyAvailable: Boolean(payload.isEnabled) && payload.mode !== 'Disabled',
+        revision: Number(current.revision) + 1,
         updatedAt: now
       })
       providers[index] = account
@@ -1190,8 +1203,14 @@ async function mockAdminApi(page: Page) {
     if (method === 'POST' && providerEnabledMatch) {
       const accountId = decodeURIComponent(providerEnabledMatch[1])
       const index = providers.findIndex((account) => account.id === accountId)
-      const enabled = Boolean((body as Record<string, unknown>)?.enabled)
-      const account = paymentProviderAccount({ ...providers[index], isEnabled: enabled, isPubliclyAvailable: enabled, updatedAt: now })
+      const payload = body as Record<string, unknown>
+      const current = providers[index]
+      if (!current || Number(payload.revision) !== Number(current.revision)) {
+        await fulfillJson(route, { error: 'Payment provider account changed. Reload it and retry.' }, 409)
+        return
+      }
+      const enabled = Boolean(payload.enabled)
+      const account = paymentProviderAccount({ ...current, isEnabled: enabled, isPubliclyAvailable: enabled, revision: Number(current.revision) + 1, updatedAt: now })
       providers[index] = account
       if (delayNextProviderEnabledResponse) {
         delayNextProviderEnabledResponse = false
@@ -1206,7 +1225,9 @@ async function mockAdminApi(page: Page) {
     if (method === 'POST' && providerCheckMatch) {
       const accountId = decodeURIComponent(providerCheckMatch[1])
       const index = providers.findIndex((item) => item.id === accountId)
-      const account = paymentProviderAccount({ ...providers[index], healthStatus: 'Unknown', updatedAt: '2026-06-13T07:05:00Z' })
+      const current = providers[index]
+      const revision = current?.healthStatus === 'Unknown' ? Number(current.revision) : Number(current?.revision) + 1
+      const account = paymentProviderAccount({ ...current, healthStatus: 'Unknown', revision, updatedAt: '2026-06-13T07:05:00Z' })
       providers[index] = account
       await fulfillJson(route, {
         accountId: account.id,
@@ -2303,6 +2324,19 @@ async function mockAdminApi(page: Page) {
     releaseBotSettingsSave: () => { releaseDelayedBotSettingsSave?.() },
     delayNextProviderCreate: () => { delayNextProviderCreateResponse = true },
     releaseProviderCreate: () => { releaseDelayedProviderCreate?.() },
+    delayNextProviderUpdate: () => { delayNextProviderUpdateResponse = true },
+    hasDelayedProviderUpdate: () => releaseDelayedProviderUpdate !== null,
+    releaseProviderUpdate: () => { releaseDelayedProviderUpdate?.() },
+    changeProviderExternally: (id: string, publicName = 'Способ оплаты изменён извне') => {
+      const index = providers.findIndex((item) => item.id === id)
+      if (index < 0) return
+      providers[index] = paymentProviderAccount({
+        ...providers[index],
+        publicName,
+        revision: Number(providers[index].revision) + 1,
+        updatedAt: now
+      })
+    },
     delayNextProviderEnabled: () => { delayNextProviderEnabledResponse = true },
     releaseProviderEnabled: () => { releaseDelayedProviderEnabled?.() },
     delayNextOrderRecheck: () => { delayNextOrderRecheckResponse = true },
@@ -4036,8 +4070,12 @@ test('admin payment provider accounts support secure lifecycle', async ({ page }
   await expect(paymentsPanel.getByRole('heading', { name: 'Редактирование способа оплаты' })).toBeVisible()
   await expect(paymentsPanel.getByRole('textbox', { name: /^Секретный ключ/ })).toHaveValue('')
   await expect(paymentsPanel.getByRole('textbox', { name: /^Секрет webhook/ })).toHaveValue('')
+  const saveProviderButton = paymentsPanel.getByRole('button', { name: 'Сохранить изменения' })
+  await expect(saveProviderButton).toBeDisabled()
+  await saveProviderButton.evaluate((button: HTMLButtonElement) => button.form?.requestSubmit())
+  expect(api.getRequestCount('/api/admin/payment-providers/accounts/provider-created-e2e', 'PATCH')).toBe(0)
   await paymentsPanel.getByLabel('Название для пользователя').fill('YooKassa CRUD Updated')
-  await paymentsPanel.getByRole('button', { name: 'Сохранить изменения' }).click()
+  await saveProviderButton.click()
   await expect(page.getByText('Способ оплаты yookassa-crud-e2e обновлен. Секреты не отображаются.')).toBeVisible()
   expect(api.getLastRequest('/api/admin/payment-providers/accounts/provider-created-e2e', 'PATCH')?.body).toMatchObject({
     publicName: 'YooKassa CRUD Updated',
@@ -4058,7 +4096,7 @@ test('admin payment provider accounts support secure lifecycle', async ({ page }
   await expect(confirmation).toHaveCount(0)
   await expect(page.getByText('yookassa-crud-e2e: выключен')).toBeVisible()
   await expect(providerRow.getByRole('button', { name: 'Включить' })).toBeVisible()
-  expect(api.getLastRequest('/api/admin/payment-providers/accounts/provider-created-e2e/enabled')?.body).toEqual({ enabled: false })
+  expect(api.getLastRequest('/api/admin/payment-providers/accounts/provider-created-e2e/enabled')?.body).toEqual({ enabled: false, revision: 1 })
 
   await page.getByRole('button', { name: 'Обновить данные' }).click()
   providerRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: 'YooKassa CRUD Updated' })
@@ -4074,6 +4112,31 @@ test('admin payment provider accounts support secure lifecycle', async ({ page }
   expect(api.getAuthorizedRequestCount('/api/admin/payment-providers/accounts/provider-created-e2e', 'PATCH', 'Bearer admin-provider-token')).toBe(1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
+})
+
+test('admin payment provider conflict keeps a newer draft and reloads the winning revision', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-provider-conflict-token', 'admin-provider-conflict-refresh')
+  await page.goto('/#payments')
+
+  const paymentsPanel = page.locator('#payments')
+  const providerRow = paymentsPanel.locator('.list-item-vertical').filter({ hasText: 'YooKassa sandbox' })
+  await providerRow.getByRole('button', { name: 'Редактировать' }).click()
+  await paymentsPanel.getByLabel('Название для пользователя').fill('Устаревший локальный способ оплаты')
+
+  api.delayNextProviderUpdate()
+  await paymentsPanel.getByRole('button', { name: 'Сохранить изменения' }).click()
+  await expect.poll(() => api.hasDelayedProviderUpdate()).toBe(true)
+  await paymentsPanel.getByLabel('Название для пользователя').fill('Новый локальный черновик оплаты')
+  api.changeProviderExternally('provider-yookassa', 'Актуальный внешний способ оплаты')
+  api.releaseProviderUpdate()
+
+  await expect(page.locator('.error-block')).toContainText('Способ оплаты уже изменён другим администратором')
+  await expect(paymentsPanel.locator('.list-item-vertical strong').filter({ hasText: 'Актуальный внешний способ оплаты' })).toBeVisible()
+  await expect(paymentsPanel.getByRole('heading', { name: 'Редактирование способа оплаты' })).toBeVisible()
+  await expect(paymentsPanel.getByLabel('Название для пользователя')).toHaveValue('Новый локальный черновик оплаты')
+  await expect(paymentsPanel.getByRole('button', { name: 'Сохранить изменения' })).toBeEnabled()
+  expect(api.getLastRequest('/api/admin/payment-providers/accounts/provider-yookassa', 'PATCH')?.body).toMatchObject({ revision: 0 })
 })
 
 test('admin Telegram bot settings support secure save and reload lifecycle', async ({ page }) => {

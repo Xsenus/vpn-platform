@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.739.0 - 2026-08-15
+
+Release entry: `2026-08-15-payment-provider-concurrency-integrity`.
+
+### Исправлено
+
+- Аккаунты платёжных провайдеров получили persisted revision и EF concurrency token; устаревшие PATCH и переключения состояния возвращают `409` вместо перезаписи более новых настроек или ротации секретов.
+- Нормализованный no-op PATCH и повторная установка текущего enabled-state возвращают `400` без изменения revision, `UpdatedAt` и audit.
+- Admin-форма блокирует кнопку и программную отправку без изменений; delayed `409` обновляет победившую запись, но сохраняет более новый локальный черновик.
+- Fresh SQLite smoke проверяет no-op PATCH, no-op enabled-state и неверную revision через настоящий API; миграция и legacy SQLite repair добавляют колонку `Revision`.
+
+### Проверено
+
+- Fail-first backend regression завершился `0/1`; после исправления targeted backend `15/15`, controller/encoding gate `40/40`, frontend `189/189`, целевой Playwright `4/4` и full Playwright `280/280` за `12.6 min` зелёные.
+- Backend Debug `1574/1574`, typecheck/build, admin bundle raw `582209/582656` и gzip `154904/155648`, fresh SQLite `providerGuards=400,400,409`, dependency audit `0 vulnerabilities`, responsive all-screens на 25 viewport-конфигурациях, EF drift, formatter, strict UTF-8 и secret scan `721/0` зелёные. Roadmap `762/782` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.738.0 - 2026-08-15
 
 Release entry: `2026-08-15-vpn-editor-noop-draft-integrity`.

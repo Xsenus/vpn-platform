@@ -94,6 +94,7 @@ public static class LocalSqliteSchemaRepair
                      ("SiteContentBlocks", """ALTER TABLE "SiteContentBlocks" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
                      ("WorkScenarios", """ALTER TABLE "WorkScenarios" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
                      ("Tariffs", """ALTER TABLE "Tariffs" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
+                     ("PaymentProviderAccounts", """ALTER TABLE "PaymentProviderAccounts" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
                      ("VpnNodes", """ALTER TABLE "VpnNodes" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
                      ("VpnPanels", """ALTER TABLE "VpnPanels" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
                      ("VpnInbounds", """ALTER TABLE "VpnInbounds" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),

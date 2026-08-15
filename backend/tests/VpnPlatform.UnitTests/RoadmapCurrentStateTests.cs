@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-15-vpn-editor-noop-draft-integrity";
-    private const string CurrentVersion = "0.738.0";
+    private const string CurrentReleaseId = "2026-08-15-payment-provider-concurrency-integrity";
+    private const string CurrentVersion = "0.739.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -17,7 +17,7 @@ public class RoadmapCurrentStateTests
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
 
         Assert.Contains("Дата актуализации: 2026-08-15", roadmap, StringComparison.Ordinal);
-        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1571/1571`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1574/1574`.", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-468`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-467`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-465`", roadmap, StringComparison.Ordinal);
@@ -87,7 +87,7 @@ public class RoadmapCurrentStateTests
         Assert.Contains("[x] `P11-ACC-387`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-386`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-385`", roadmap, StringComparison.Ordinal);
-        Assert.Contains("[x] `STATE-002` Frontend test suite проходит: `187/187`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `STATE-002` Frontend test suite проходит: `189/189`.", roadmap, StringComparison.Ordinal);
         Assert.Contains("3/3", roadmap, StringComparison.Ordinal);
         Assert.Contains(CurrentReleaseId, roadmap, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(CurrentVersion, roadmap, StringComparison.Ordinal);
@@ -385,9 +385,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("1571/1571", readme, StringComparison.Ordinal);
-        Assert.Contains("1571/1571", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("1571/1571", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("1574/1574", readme, StringComparison.Ordinal);
+        Assert.Contains("1574/1574", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("1574/1574", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,
