@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: archived 3x-ui child mutation boundary
+
+Scope:
+- A terminal archived panel must reject inbound and client mutations before remote provider or local persistence side effects.
+- Revision conflicts must retain priority for versioned child commands.
+- Historical inbound, client, health and sync data must remain visible while forms and child mutation controls are unavailable on desktop and mobile.
+
+Results:
+- Roadmap progress: `768/788` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-vpn-panel-archive-readonly`, version `0.745.0`.
+- Fail-first: backend child-mutation regression completed `0/1` because all archived inbound/client operations remained executable.
+- After fix: seven backend mutation paths and SQLite archive persistence passed targeted `2/2`; frontend helper `3/3`, typecheck/build, admin bundle `586612/586752` raw and `156122/156672` gzip, targeted Playwright `1/1`, and full Playwright `282/282` in `13.4 min` are green.
+- Release gate: backend Debug/Release `1589/1589`, API Release build `0 warnings / 0 errors`, frontend `196/196`, docs/status/encoding `47/47`, all 17 admin sections and 25 responsive viewport configurations, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, strict UTF-8/BOM guard and secret scan `727/0` are green.
+- External boundary: a real production-like 3x-ui/x-ui panel, VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API and SMTP were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: 3x-ui panel terminal archive integrity
 
 Scope:

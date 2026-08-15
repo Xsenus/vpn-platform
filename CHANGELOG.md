@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.745.0 - 2026-08-15
+
+Release entry: `2026-08-15-vpn-panel-archive-readonly`.
+
+### Исправлено
+
+- Архивная 3x-ui панель теперь является read-only не только для самой panel-записи, но и для создания, редактирования и назначения default inbound-а, enable/disable, sync, reset traffic и migration клиента.
+- Backend проверяет terminal status после актуальной revision и до remote 3x-ui/EF/audit mutation; stale conflict сохраняет приоритет, а отклонённая команда не вызывает provider side effects.
+- В деталях архивной панели остаются inbound-ы, клиенты, health-check и sync history, но формы и дочерние action toolbars скрыты на desktop/mobile; программная отправка скрытой формы блокируется без API-запроса.
+- SQLite regression подтверждает, что после архивации нельзя добавить inbound и состояние связей не изменяется.
+
+### Проверено
+
+- Fail-first backend regression завершился `0/1`; после исправления targeted backend/SQLite `2/2`, frontend helper `3/3`, целевой Playwright `1/1` и полный Playwright `282/282` за `13.4 min` зелёные.
+- Backend Debug/Release `1589/1589`, API Release build `0 warnings / 0 errors`, frontend `196/196`, typecheck/build, admin bundle raw `586612/586752` и gzip `156122/156672`, responsive all-screens на 25 viewport-конфигурациях, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, strict UTF-8/BOM guard и secret scan `727/0` проходят. Roadmap `768/788` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальная production-like 3x-ui/x-ui панель, VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API и SMTP остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.744.0 - 2026-08-15
 
 Release entry: `2026-08-15-vpn-panel-archive-integrity`.

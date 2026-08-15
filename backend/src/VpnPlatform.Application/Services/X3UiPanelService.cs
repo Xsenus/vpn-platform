@@ -22,6 +22,7 @@ public class X3UiPanelService
     private const int SyncEventListLimit = 1000;
     private const string PanelChangedError = "VPN panel changed. Reload it and retry.";
     private const string PanelArchivedError = "VPN panel is already archived.";
+    private const string ArchivedPanelReadOnlyError = "Archived VPN panel is read-only.";
     private const string InboundChangedError = "VPN inbound changed. Reload it and retry.";
     private const string ClientChangedError = "VPN client changed. Reload it and retry.";
 
@@ -766,6 +767,10 @@ public class X3UiPanelService
         {
             return Result<VpnInboundDto>.Failure("VPN panel not found.");
         }
+        if (panel.Status == VpnPanelStatus.Archived)
+        {
+            return Result<VpnInboundDto>.Failure(ArchivedPanelReadOnlyError);
+        }
 
         var sandboxMode = IsSandboxMode();
         X3UiInboundDto remote;
@@ -907,6 +912,10 @@ public class X3UiPanelService
         if (command.Revision.HasValue && command.Revision.Value != inbound.Revision)
         {
             return Result<VpnInboundDto>.Failure(InboundChangedError);
+        }
+        if (inbound.VpnPanel.Status == VpnPanelStatus.Archived)
+        {
+            return Result<VpnInboundDto>.Failure(ArchivedPanelReadOnlyError);
         }
         if (command.Capacity < inbound.UsedCapacity)
         {
@@ -1072,14 +1081,18 @@ public class X3UiPanelService
         }
 
         await using var gate = await PaymentProcessingGate.AcquireVpnPanelStateAsync(observedPanelId.Value, cancellationToken);
-        var inbound = await _db.VpnInbounds.FirstOrDefaultAsync(x => x.Id == inboundId, cancellationToken);
-        if (inbound is null)
+        var inbound = await _db.VpnInbounds.Include(x => x.VpnPanel).FirstOrDefaultAsync(x => x.Id == inboundId, cancellationToken);
+        if (inbound?.VpnPanel is null)
         {
             return Result<VpnInboundDto>.Failure("VPN inbound not found.");
         }
         if (expectedRevision.HasValue && expectedRevision.Value != inbound.Revision)
         {
             return Result<VpnInboundDto>.Failure(InboundChangedError);
+        }
+        if (inbound.VpnPanel.Status == VpnPanelStatus.Archived)
+        {
+            return Result<VpnInboundDto>.Failure(ArchivedPanelReadOnlyError);
         }
         if (!inbound.IsActive)
         {
@@ -1301,6 +1314,10 @@ public class X3UiPanelService
         {
             return Result<VpnClientDto>.Failure(ClientChangedError);
         }
+        if (client.VpnPanel.Status == VpnPanelStatus.Archived)
+        {
+            return Result<VpnClientDto>.Failure(ArchivedPanelReadOnlyError);
+        }
 
         var before = ClientAuditSnapshot(client);
         if (!IsSandboxMode())
@@ -1357,6 +1374,10 @@ public class X3UiPanelService
         if (expectedRevision.HasValue && expectedRevision.Value != client.Revision)
         {
             return Result<VpnClientDto>.Failure(ClientChangedError);
+        }
+        if (client.VpnPanel.Status == VpnPanelStatus.Archived)
+        {
+            return Result<VpnClientDto>.Failure(ArchivedPanelReadOnlyError);
         }
 
         var before = ClientAuditSnapshot(client);
@@ -1429,6 +1450,10 @@ public class X3UiPanelService
         if (command.Revision.HasValue && command.Revision.Value != client.Revision)
         {
             return Result<VpnClientDto>.Failure(ClientChangedError);
+        }
+        if (client.VpnPanel.Status == VpnPanelStatus.Archived)
+        {
+            return Result<VpnClientDto>.Failure(ArchivedPanelReadOnlyError);
         }
 
         var targetInbound = await _db.VpnInbounds.Include(x => x.VpnPanel).FirstOrDefaultAsync(x => x.Id == command.TargetInboundId, cancellationToken);
@@ -1748,6 +1773,10 @@ public class X3UiPanelService
         if (expectedRevision.HasValue && expectedRevision.Value != client.Revision)
         {
             return Result<VpnClientDto>.Failure(ClientChangedError);
+        }
+        if (client.VpnPanel.Status == VpnPanelStatus.Archived)
+        {
+            return Result<VpnClientDto>.Failure(ArchivedPanelReadOnlyError);
         }
         if (client.Enable == enabled)
         {

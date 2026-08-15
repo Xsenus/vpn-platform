@@ -4550,6 +4550,22 @@ test('admin VPN infrastructure supports secure managed lifecycle', async ({ page
   for (const actionName of ['Редактировать', 'Проверить', 'Синхронизировать', 'Включить', 'Отключить', 'Удалить']) {
     await expect(panelRow.getByRole('button', { name: actionName, exact: true })).toHaveCount(0)
   }
+  await expect(panelsPanel.getByText('Архивная VPN-панель доступна только для просмотра.')).toBeVisible()
+  await expect(inboundForm).toBeHidden()
+  await expect(inboundRow.getByRole('button')).toHaveCount(0)
+  const archivedInboundRequestCount = api.getRequestCount('/api/admin/vpn-panels/panel-created-e2e/inbounds', 'POST')
+  await inboundForm.evaluate((form: HTMLFormElement) => form.requestSubmit())
+  await expect(page.locator('.error-block').filter({ hasText: 'Архивная VPN-панель доступна только для просмотра.' })).toBeVisible()
+  expect(api.getRequestCount('/api/admin/vpn-panels/panel-created-e2e/inbounds', 'POST')).toBe(archivedInboundRequestCount)
+
+  const euPanelRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'EU 3x-ui Sandbox' }).first()
+  await euPanelRow.getByRole('button', { name: 'Удалить' }).click()
+  await panelsPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByText('Панель EU 3x-ui Sandbox архивирована и сохранена в истории: связей 2.')).toBeVisible()
+  await euPanelRow.getByRole('button', { name: 'Открыть' }).click()
+  const archivedClientRow = panelsPanel.locator('.list-item-vertical').filter({ hasText: 'client@example.test' }).first()
+  await expect(archivedClientRow).toBeVisible()
+  await expect(archivedClientRow.getByRole('button')).toHaveCount(0)
 
   expect(api.getAuthorizedRequestCount('/api/admin/servers', 'POST', 'Bearer admin-infrastructure-token')).toBe(1)
   expect(api.getAuthorizedRequestCount('/api/admin/vpn-panels', 'POST', 'Bearer admin-infrastructure-token')).toBe(1)

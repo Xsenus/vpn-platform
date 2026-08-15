@@ -17616,5 +17616,32 @@
         "text": "Roadmap progress is 767/787 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-15-vpn-panel-archive-readonly",
+    "version": "0.745.0",
+    "releasedAt": "2026-08-15T20:30:58+07:00",
+    "title": "Archived 3x-ui panel details are now read-only",
+    "summary": "Archived panels preserve inbound, client and diagnostic history while rejecting every child mutation before provider or database side effects.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Archived panels reject inbound create, update and default selection plus client enable, disable, sync, traffic reset and migration before remote or local mutation."
+      },
+      {
+        "type": "fixed",
+        "text": "Versioned child commands validate the current revision before the terminal read-only state, preserving conflict recovery semantics without provider calls or audit churn."
+      },
+      {
+        "type": "improved",
+        "text": "The administrative panel keeps archived inbound, client, health and sync history visible but removes child forms and action controls on desktop and mobile."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 768/788 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

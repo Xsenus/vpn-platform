@@ -1097,16 +1097,116 @@ public class X3UiIntegrationTests
         var firstResult = await service.DeletePanelAsync(panelId, CancellationToken.None);
         var archivedRevision = (await db.VpnPanels.SingleAsync(x => x.Id == panelId)).Revision;
         var repeatedResult = await service.DeletePanelAsync(panelId, CancellationToken.None);
+        var archivedMutation = await service.CreateInboundAsync(panelId, new CreateVpnInboundCommand(
+            "blocked-vless",
+            "vless",
+            443,
+            "0.0.0.0",
+            "{\"clients\":[]}",
+            "{\"network\":\"tcp\",\"security\":\"tls\"}",
+            "{}",
+            IsDefault: true,
+            Capacity: 100), CancellationToken.None);
 
         Assert.True(firstResult.IsSuccess, firstResult.Error);
         Assert.True(firstResult.Value!.Archived);
         Assert.False(repeatedResult.IsSuccess);
         Assert.Equal("VPN panel is already archived.", repeatedResult.Error);
+        Assert.Equal("Archived VPN panel is read-only.", archivedMutation.Error);
         db.ChangeTracker.Clear();
         var archivedPanel = await db.VpnPanels.SingleAsync(x => x.Id == panelId);
         Assert.Equal(VpnPanelStatus.Archived, archivedPanel.Status);
         Assert.Equal(archivedRevision, archivedPanel.Revision);
+        Assert.Empty(await db.VpnInbounds.Where(x => x.VpnPanelId == panelId).ToListAsync());
         Assert.Equal(1, await db.AuditLogs.CountAsync(x => x.Action == "vpn_panel.archive" && x.EntityId == panelId.ToString()));
+    }
+
+    [Fact]
+    public async Task Archived_Panel_Should_Reject_Inbound_And_Client_Mutations_Without_Remote_Or_Local_Churn()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var panelId = Guid.NewGuid();
+        var inboundId = Guid.NewGuid();
+        var clientId = Guid.NewGuid();
+        db.VpnPanels.Add(new VpnPanel
+        {
+            Id = panelId,
+            Name = "archived-panel",
+            BaseUrl = "https://archived-panel.example.test:2053",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "eu",
+            Status = VpnPanelStatus.Archived,
+            Capacity = 100
+        });
+        db.VpnInbounds.Add(new VpnInbound
+        {
+            Id = inboundId,
+            VpnPanelId = panelId,
+            ExternalInboundId = "1",
+            Name = "archived-vless",
+            Protocol = "vless",
+            Port = 443,
+            SettingsJson = "{\"clients\":[]}",
+            StreamSettingsJson = "{\"network\":\"tcp\",\"security\":\"tls\"}",
+            SniffingJson = "{}",
+            IsActive = true,
+            Capacity = 100
+        });
+        db.VpnClients.Add(new VpnClient
+        {
+            Id = clientId,
+            UserId = Guid.NewGuid(),
+            SubscriptionId = Guid.NewGuid(),
+            VpnPanelId = panelId,
+            VpnInboundId = inboundId,
+            ExternalClientId = "archived-client",
+            Email = "archived@example.test",
+            Uuid = Guid.NewGuid().ToString("D"),
+            ExpiryTime = clock.UtcNow.AddDays(30),
+            Enable = false
+        });
+        await db.SaveChangesAsync();
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+        var command = new CreateVpnInboundCommand(
+            "updated-vless",
+            "vless",
+            8443,
+            "0.0.0.0",
+            "{\"clients\":[]}",
+            "{\"network\":\"tcp\",\"security\":\"tls\"}",
+            "{}",
+            IsDefault: false,
+            Capacity: 100,
+            IsActive: true,
+            Revision: 0);
+
+        var createInbound = await service.CreateInboundAsync(panelId, command, CancellationToken.None);
+        var updateInbound = await service.PatchInboundAsync(inboundId, command, CancellationToken.None);
+        var setDefault = await service.SetDefaultInboundAsync(inboundId, expectedRevision: 0, actorUserId: null, CancellationToken.None);
+        var enableClient = await service.EnableClientAsync(clientId, expectedRevision: 0, actorUserId: null, CancellationToken.None);
+        var syncClient = await service.SyncClientAsync(clientId, expectedRevision: 0, actorUserId: null, CancellationToken.None);
+        var resetTraffic = await service.ResetClientTrafficAsync(clientId, expectedRevision: 0, actorUserId: null, CancellationToken.None);
+        var migrateClient = await service.MigrateClientAsync(clientId, new MigrateVpnClientCommand(Guid.NewGuid(), Revision: 0), CancellationToken.None);
+
+        const string expectedError = "Archived VPN panel is read-only.";
+        Assert.Equal(expectedError, createInbound.Error);
+        Assert.Equal(expectedError, updateInbound.Error);
+        Assert.Equal(expectedError, setDefault.Error);
+        Assert.Equal(expectedError, enableClient.Error);
+        Assert.Equal(expectedError, syncClient.Error);
+        Assert.Equal(expectedError, resetTraffic.Error);
+        Assert.Equal(expectedError, migrateClient.Error);
+        Assert.Equal(0, remote.CreateInboundCalls);
+        Assert.Equal(0, remote.UpdateInboundCalls);
+        Assert.Equal(0, remote.UpdateClientCalls);
+        db.ChangeTracker.Clear();
+        Assert.Equal(1, await db.VpnInbounds.CountAsync(x => x.VpnPanelId == panelId));
+        Assert.Equal(0, (await db.VpnInbounds.SingleAsync(x => x.Id == inboundId)).Revision);
+        Assert.Equal(0, (await db.VpnClients.SingleAsync(x => x.Id == clientId)).Revision);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
     }
 
     [Theory]

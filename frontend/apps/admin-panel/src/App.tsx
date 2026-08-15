@@ -67,7 +67,7 @@ import { isOptionalSafeAdminHttpUrl, validateTelegramBotUrlFields } from './admi
 import { isServerFormChanged } from './admin-server-editors'
 import { getServerStateActionAvailability } from './admin-server-actions'
 import { validateServerForm } from './admin-server-validation'
-import { isVpnInboundFormChanged, isVpnPanelFormChanged } from './admin-vpn-editors'
+import { isVpnInboundFormChanged, isVpnPanelFormChanged, isVpnPanelReadOnly } from './admin-vpn-editors'
 import { getAdminOrderPaymentRecheckBlocker, getAdminPaymentRecheckBlocker } from './admin-payments'
 import { isPaymentProviderAccountFormChanged } from './admin-payment-provider-editors'
 import { rebaseAdminRevision, rebaseAdminRevisionedDraft } from './admin-revision-recovery'
@@ -81,6 +81,7 @@ const ADMIN_EMAIL_STORAGE_KEY = 'vpn-platform-admin-email'
 const yookassaAllowedIps = '185.71.76.0/27,185.71.77.0/27,77.75.153.0/25,77.75.156.11,77.75.156.35,77.75.154.128/25,2a02:5180::/32'
 const paymentProviderOptions: PaymentProvider[] = ['YooKassa', 'RoboKassa', 'YooMoney', 'TelegramStars', 'CloudPayments', 'TBankAcquiring', 'Prodamus', 'Stripe', 'PayPal']
 const adminAuthRequiredMessage = 'Войдите как администратор, чтобы включить загрузку данных и действия в разделах.'
+const archivedVpnPanelReadOnlyMessage = 'Архивная VPN-панель доступна только для просмотра.'
 
 type PaymentProviderSetup = {
   title: string
@@ -3647,6 +3648,10 @@ export function App() {
     const editingId = editingInboundId
     const submittedForm = inboundForm
     const panelId = selectedVpnPanelId
+    if (isVpnPanelReadOnly(vpnPanels.find((panel) => panel.id === panelId))) {
+      setError(archivedVpnPanelReadOnlyMessage)
+      return
+    }
     const validationErrors = validateInboundForm(submittedForm, panelId)
     if (validationErrors.length > 0) {
       setError(`Inbound: ${validationErrors.join(' ')}`)
@@ -4076,6 +4081,7 @@ export function App() {
   const editingVpnPanel = editingVpnPanelId ? vpnPanels.find((panel) => panel.id === editingVpnPanelId) : undefined
   const vpnPanelFormChanged = !editingVpnPanelId || Boolean(editingVpnPanel && isVpnPanelFormChanged(vpnPanelForm, editingVpnPanel))
   const vpnPanelFormActionBusy = isActionResourceBusy(vpnPanelActionResourceKey(editingVpnPanelId || 'create'))
+  const selectedVpnPanelReadOnly = isVpnPanelReadOnly(vpnPanels.find((panel) => panel.id === selectedVpnPanelId))
   const editingInbound = editingInboundId ? vpnInbounds.find((inbound) => inbound.id === editingInboundId) : undefined
   const inboundFormChanged = !editingInboundId || Boolean(editingInbound && isVpnInboundFormChanged(inboundForm, editingInbound))
   const inboundFormActionBusy = Boolean(selectedVpnPanelId && isActionResourceBusy(
@@ -5275,8 +5281,9 @@ export function App() {
           )}
           {!selectedVpnPanelId && <p className="muted">Выберите панель.</p>}
           {selectedVpnPanelId && !vpnPanelDetailsLoading && !vpnPanelDetailsError && <>
+          {selectedVpnPanelReadOnly && <p className="muted">{archivedVpnPanelReadOnlyMessage}</p>}
           <h4>Inbound-правила</h4>
-          <form hidden={!canWriteSection('panels')} aria-busy={inboundFormActionBusy} onSubmit={(event) => { event.preventDefault(); void handleSaveInbound() }}>
+          <form hidden={!canWriteSection('panels') || selectedVpnPanelReadOnly} aria-busy={inboundFormActionBusy} onSubmit={(event) => { event.preventDefault(); void handleSaveInbound() }}>
             <fieldset className="form-section">
               <legend>{editingInboundId ? 'Редактирование inbound-правила' : 'Параметры нового inbound-правила'}</legend>
               <div className="form-grid">
@@ -5300,7 +5307,7 @@ export function App() {
               {editingInboundId && <PrimaryButton type="button" className="button-ghost" onClick={cancelInboundEdit}>Отменить редактирование</PrimaryButton>}
             </div>
           </form>
-          <div className="list-stack mt-12">{vpnInbounds.map((inbound) => <div key={inbound.id} className="list-item-vertical"><div className="item-head"><div><strong>{inbound.name}</strong><div className="muted">{inbound.protocol}:{inbound.port} · внешний ID {inbound.externalInboundId} · емкость {inbound.usedCapacity}/{inbound.capacity}</div><div className="muted">stream: {inbound.streamSettingsJson}</div></div><div className="item-status"><StatusBadge value={inbound.isActive ? 'Active' : 'Inactive'} />{inbound.isDefault && <StatusBadge value="Default" />}</div></div><div className="toolbar" hidden={!canWriteSection('panels')}><PrimaryButton className="button-secondary" disabled={isActionResourceBusy(vpnPanelActionResourceKey(inbound.vpnPanelId), vpnInboundActionResourceKey(inbound.id))} onClick={() => editInbound(inbound)}>Редактировать</PrimaryButton>{!inbound.isDefault && inbound.isActive && <PrimaryButton disabled={isActionResourceBusy(vpnPanelActionResourceKey(inbound.vpnPanelId), vpnInboundActionResourceKey(inbound.id))} onClick={() => void handleSetDefaultInbound(inbound.id)}>Сделать основным</PrimaryButton>}{inbound.isActive ? <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(vpnPanelActionResourceKey(inbound.vpnPanelId), vpnInboundActionResourceKey(inbound.id))} message={`Выключить inbound-правило "${inbound.name}"? Новые VPN-доступы не будут использовать его для выдачи.`} onConfirm={() => handleToggleInboundActive(inbound)}>Выключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={isActionResourceBusy(vpnPanelActionResourceKey(inbound.vpnPanelId), vpnInboundActionResourceKey(inbound.id))} onClick={() => void handleToggleInboundActive(inbound)}>Включить</PrimaryButton>}</div></div>)}</div>
+          <div className="list-stack mt-12">{vpnInbounds.map((inbound) => <div key={inbound.id} className="list-item-vertical"><div className="item-head"><div><strong>{inbound.name}</strong><div className="muted">{inbound.protocol}:{inbound.port} · внешний ID {inbound.externalInboundId} · емкость {inbound.usedCapacity}/{inbound.capacity}</div><div className="muted">stream: {inbound.streamSettingsJson}</div></div><div className="item-status"><StatusBadge value={inbound.isActive ? 'Active' : 'Inactive'} />{inbound.isDefault && <StatusBadge value="Default" />}</div></div><div className="toolbar" hidden={!canWriteSection('panels') || selectedVpnPanelReadOnly}><PrimaryButton className="button-secondary" disabled={isActionResourceBusy(vpnPanelActionResourceKey(inbound.vpnPanelId), vpnInboundActionResourceKey(inbound.id))} onClick={() => editInbound(inbound)}>Редактировать</PrimaryButton>{!inbound.isDefault && inbound.isActive && <PrimaryButton disabled={isActionResourceBusy(vpnPanelActionResourceKey(inbound.vpnPanelId), vpnInboundActionResourceKey(inbound.id))} onClick={() => void handleSetDefaultInbound(inbound.id)}>Сделать основным</PrimaryButton>}{inbound.isActive ? <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(vpnPanelActionResourceKey(inbound.vpnPanelId), vpnInboundActionResourceKey(inbound.id))} message={`Выключить inbound-правило "${inbound.name}"? Новые VPN-доступы не будут использовать его для выдачи.`} onConfirm={() => handleToggleInboundActive(inbound)}>Выключить</ConfirmButton> : <PrimaryButton className="button-ghost" disabled={isActionResourceBusy(vpnPanelActionResourceKey(inbound.vpnPanelId), vpnInboundActionResourceKey(inbound.id))} onClick={() => void handleToggleInboundActive(inbound)}>Включить</PrimaryButton>}</div></div>)}</div>
           <h4>Клиенты, здоровье и синхронизация</h4>
           <div className="list-stack">{vpnClients.map((client) => {
             const inbound = vpnInbounds.find((item) => item.id === client.vpnInboundId)
@@ -5330,7 +5337,7 @@ export function App() {
                     {inbound && <StatusBadge value={inbound.protocol} />}
                   </div>
                 </div>
-                <div className="toolbar" hidden={!canWriteSection('panels')}>
+                <div className="toolbar" hidden={!canWriteSection('panels') || selectedVpnPanelReadOnly}>
                   {client.enable
                     ? <ConfirmButton className="button-secondary" disabled={clientActionBusy} message={`Отключить VPN-клиента "${client.email}"? Пользователь потеряет подключение.`} onConfirm={() => handleVpnClientAction(client, 'disable')}>Отключить</ConfirmButton>
                     : <PrimaryButton className="button-ghost" disabled={clientActionBusy} onClick={() => void handleVpnClientAction(client, 'enable')}>Включить</PrimaryButton>}

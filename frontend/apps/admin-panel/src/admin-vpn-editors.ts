@@ -31,3 +31,7 @@ export function isVpnInboundFormChanged(form: CreateVpnInboundPayload, current: 
     || form.capacity !== current.capacity
     || form.isActive !== current.isActive
 }
+
+export function isVpnPanelReadOnly(panel: Pick<VpnPanelDto, 'status'> | undefined): boolean {
+  return panel?.status === 'Archived'
+}
