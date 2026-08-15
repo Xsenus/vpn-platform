@@ -38,14 +38,14 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1555/1555", readme, StringComparison.Ordinal);
+        Assert.Contains("1556/1556", readme, StringComparison.Ordinal);
         Assert.Contains("180/180", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CHANGELOG.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("docs/release-decision.md", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-15-admin-operational-label-localization", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-15-admin-scenario-lifecycle-and-local-sqlite-repair", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("270/270", readme, StringComparison.Ordinal);
     }
 
@@ -58,9 +58,9 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "1555/1555",
-                     "2026-08-15-admin-operational-label-localization",
-                     "0.731.0",
+                     "1556/1556",
+                     "2026-08-15-admin-scenario-lifecycle-and-local-sqlite-repair",
+                     "0.732.0",
                      "staging-ready baseline",
                      "production-ready",
                      "VPS smoke",

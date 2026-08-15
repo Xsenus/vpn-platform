@@ -17265,5 +17265,32 @@
         "text": "Roadmap progress is 754/774 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-15-admin-scenario-lifecycle-and-local-sqlite-repair",
+    "version": "0.732.0",
+    "releasedAt": "2026-08-15T09:54:36+07:00",
+    "title": "Scenario lifecycle labels and local SQLite upgrades are reliable",
+    "summary": "Administrative scenario cards use bounded Russian lifecycle labels, while existing local SQLite databases receive the managed concurrency revisions required by current releases.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Scenario cards translate server and inbound strategies plus payment, failure, refund, expiry and renewal actions while editor values remain exact API tokens."
+      },
+      {
+        "type": "fixed",
+        "text": "The idempotent local SQLite repair adds Revision columns to ten managed legacy tables so databases created by earlier versions start successfully."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop, mobile and responsive browser gates cover the localized scenario lifecycle, and checkout cancellation uses a deterministic delayed-response fixture."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 755/775 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

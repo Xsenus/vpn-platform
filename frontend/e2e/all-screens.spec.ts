@@ -1257,7 +1257,15 @@ test('every admin section renders without blank screens or browser errors', asyn
       await expect(auditPanel.getByRole('status', { name: 'Статус: Поддержка' })).toBeVisible()
       await expect(auditPanel.getByRole('status', { name: 'Статус: Telegram-бот' })).toBeVisible()
     }
-    if (section === 'scenarios') await expect(page.locator('#scenarios').getByText('QR не создаётся', { exact: true })).toBeVisible()
+    if (section === 'scenarios') {
+      const scenariosPanel = page.locator('#scenarios')
+      const scenarioRow = scenariosPanel.locator('.list-item-vertical').filter({ hasText: 'Auto provisioning' })
+      await expect(scenarioRow.getByText('QR не создаётся', { exact: true })).toBeVisible()
+      await expect(scenarioRow.getByText(/сервер Наименее загруженный сервер · inbound Основное inbound-правило/)).toBeVisible()
+      await expect(scenarioRow.getByText(/Оплата: Создать подписку и VPN-доступ · Ошибка оплаты: Оставить заказ в ожидании/)).toBeVisible()
+      await expect(scenarioRow.getByText(/Возврат: Отключить VPN-доступ · Окончание: Отключить доступ после льготного периода · Продление: Продлить подписку/)).toBeVisible()
+      await expect(scenarioRow.getByText(/create_subscription_and_access|keep_order_pending|disable_access_after_grace|extend_subscription/)).toHaveCount(0)
+    }
     if (section === 'support') {
       await expect(page.getByText(/Сайт · tg:—/)).toBeVisible()
       await expect(page.getByText('От пользователя', { exact: true })).toBeVisible()
@@ -1624,7 +1632,15 @@ test('every admin section fits representative responsive viewports', async ({ pa
         await expect(auditPanel.getByRole('status', { name: 'Статус: Поддержка' })).toBeVisible()
         await expect(auditPanel.getByRole('status', { name: 'Статус: Telegram-бот' })).toBeVisible()
       }
-      if (section === 'scenarios') await expect(page.locator('#scenarios').getByText('QR не создаётся', { exact: true })).toBeVisible()
+      if (section === 'scenarios') {
+        const scenariosPanel = page.locator('#scenarios')
+        const scenarioRow = scenariosPanel.locator('.list-item-vertical').filter({ hasText: 'Auto provisioning' })
+        await expect(scenarioRow.getByText('QR не создаётся', { exact: true })).toBeVisible()
+        await expect(scenarioRow.getByText(/сервер Наименее загруженный сервер · inbound Основное inbound-правило/)).toBeVisible()
+        await expect(scenarioRow.getByText(/Оплата: Создать подписку и VPN-доступ · Ошибка оплаты: Оставить заказ в ожидании/)).toBeVisible()
+        await expect(scenarioRow.getByText(/Возврат: Отключить VPN-доступ · Окончание: Отключить доступ после льготного периода · Продление: Продлить подписку/)).toBeVisible()
+        await expect(scenarioRow.getByText(/create_subscription_and_access|keep_order_pending|disable_access_after_grace|extend_subscription/)).toHaveCount(0)
+      }
       await expectResponsiveLayout(page, `admin ${section} at ${viewport.name}`)
       if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin ${section} at ${viewport.name}`)
       if (viewport.name === 'compact-mobile') {

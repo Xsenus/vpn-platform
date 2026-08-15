@@ -766,6 +766,49 @@ public class LocalSqliteSchemaRepairTests
         Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt));
     }
 
+    [Fact]
+    public async Task ApplyAsync_Should_Add_Managed_Admin_Revisions_To_Legacy_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        await using var db = new ApplicationDbContext(options);
+        var tables = new[]
+        {
+            "ReferralPrograms",
+            "AppReleases",
+            "FaqEntries",
+            "SiteContentBlocks",
+            "WorkScenarios",
+            "Tariffs",
+            "VpnNodes",
+            "VpnPanels",
+            "VpnInbounds",
+            "VpnClients"
+        };
+
+        foreach (var table in tables)
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = $$"""
+                CREATE TABLE "{{table}}" (
+                    "Id" TEXT NOT NULL PRIMARY KEY
+                );
+                """;
+            await command.ExecuteNonQueryAsync();
+        }
+
+        var repaired = await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt);
+
+        Assert.Equal(tables.Length, repaired);
+        foreach (var table in tables)
+        {
+            Assert.True(await ColumnExistsAsync(connection, table, "Revision"), $"{table}.Revision was not repaired.");
+        }
+
+        Assert.Equal(0, await LocalSqliteSchemaRepair.ApplyAsync(db, RepairAt));
+    }
+
     private static OutboxMessage OutboxMessage(string correlationId)
         => new()
         {

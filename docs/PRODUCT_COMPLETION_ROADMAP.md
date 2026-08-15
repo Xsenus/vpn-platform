@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-15.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-admin-operational-label-localization`, версия `0.731.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `754/774` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-admin-scenario-lifecycle-and-local-sqlite-repair`, версия `0.732.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `755/775` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -35,9 +35,9 @@ git diff --check
 
 ## Текущее резюме состояния
 
-Что подтверждено на 2026-08-14:
+Что подтверждено на 2026-08-15:
 
-- [x] `STATE-001` Backend test suite проходит: `1555/1555`.
+- [x] `STATE-001` Backend test suite проходит: `1556/1556`.
 - [x] `STATE-002` Frontend test suite проходит: `180/180`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2712,6 +2712,10 @@ git diff --check
   - Что сделать: статусы пользователей, инициаторы и категории аудита, SSL-режимы VPN-панелей, события access history, QR-флаг сценариев и fallback-состояния dashboard/health не должны показывать `Active`, `Actor`, `system`, `Strict`, `AccessRevoked`, `No QR`, `Support` или `ok` вместо русских подписей.
   - Что сделано: bounded admin formatter расширен для user status, audit actor/category, SSL, access events, QR state и fallback labels; короткие SSL options не обрезаются в узкой форме, а технические audit action/entity, provider event type, API variant, JSON payload и provisioning diagnostics оставлены raw.
   - Доказательство: fail-first focused unit/source `1/3` с двумя регрессиями и desktop all-sections Playwright с raw status options; after-fix focused localization `3/3`, source timeout guard `7/7`, frontend `180/180`, typecheck/build, admin bundle `565707/566272`, targeted operational desktop/mobile `6/6`, полный Playwright `270/270`, backend Debug/Release `1555/1555`, API build `0 warnings / 0 errors`, fresh SQLite latest release, formatter, EF drift, secret scan `711/0` и dependency audit `0 vulnerabilities` зелёные; users/audit/vpn/panels/scenarios screenshots просмотрены вручную без overflow, clipping, overlap или browser diagnostics.
+- [x] `P11-ACC-464` Локализировать lifecycle рабочих сценариев и восстановить upgrade существующей local SQLite. 2026-08-15.
+  - Что сделать: карточка сценария не должна показывать raw server/inbound strategy и payment/failure/refund/expiry/renewal actions; существующая SQLite должна запускаться после добавления revision concurrency в управляемые сущности, а checkout race-тест не должен зависеть от wall-clock задержки.
+  - Что сделано: bounded admin formatter покрывает lifecycle-команды только на display boundary и сохраняет raw editor values; SQLite repair идемпотентно добавляет `Revision` в десять legacy-таблиц; Playwright fixture явно удерживает и освобождает checkout response после ухода со страницы.
+  - Доказательство: fail-first frontend `1/3`, desktop all-sections с raw lifecycle, SQLite repair `0/1` с `0/10` и actual `start-local` с `no such column: a.Revision`; after-fix localization `3/3`, SQLite targeted `1/1`, repair suite `17/17`, checkout race `10/10`, frontend `180/180`, typecheck/build, admin bundle raw `566437/567296`, gzip `150542/151552`, полный Playwright `270/270`, backend Debug/Release `1556/1556`, API build `0 warnings / 0 errors`, existing/fresh SQLite, formatter, EF drift, encoding, secret scan `719/0` и dependency audit `0 vulnerabilities` зелёные; все 17 admin sections прошли desktop и 25 responsive viewport-конфигураций, actual scenarios desktop/mobile проверены без overflow, clipping, overlap или browser diagnostics.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

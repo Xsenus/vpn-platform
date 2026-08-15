@@ -86,6 +86,30 @@ public static class LocalSqliteSchemaRepair
             }
         }
 
+        foreach (var (table, sql) in new[]
+                 {
+                     ("ReferralPrograms", """ALTER TABLE "ReferralPrograms" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
+                     ("AppReleases", """ALTER TABLE "AppReleases" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
+                     ("FaqEntries", """ALTER TABLE "FaqEntries" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
+                     ("SiteContentBlocks", """ALTER TABLE "SiteContentBlocks" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
+                     ("WorkScenarios", """ALTER TABLE "WorkScenarios" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
+                     ("Tariffs", """ALTER TABLE "Tariffs" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
+                     ("VpnNodes", """ALTER TABLE "VpnNodes" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
+                     ("VpnPanels", """ALTER TABLE "VpnPanels" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
+                     ("VpnInbounds", """ALTER TABLE "VpnInbounds" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;"""),
+                     ("VpnClients", """ALTER TABLE "VpnClients" ADD COLUMN "Revision" INTEGER NOT NULL DEFAULT 0;""")
+                 })
+        {
+            if (!await TableExistsAsync(db, table, cancellationToken)
+                || await ColumnExistsAsync(db, table, "Revision", cancellationToken))
+            {
+                continue;
+            }
+
+            await db.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+            repaired++;
+        }
+
         if (await TableExistsAsync(db, "SupportConversations", cancellationToken)
             && !await ColumnExistsAsync(db, "SupportConversations", "Revision", cancellationToken))
         {

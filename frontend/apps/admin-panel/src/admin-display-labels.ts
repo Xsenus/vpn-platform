@@ -57,7 +57,14 @@ const adminDisplayLabels: Record<string, string> = {
   accesssyncfailed: 'Не удалось синхронизировать доступ',
   accesstrafficreset: 'Счётчики трафика сброшены',
   accesstrafficresetcancelled: 'Сброс трафика отменён',
-  accesstrafficresetfailed: 'Сброс трафика не выполнен'
+  accesstrafficresetfailed: 'Сброс трафика не выполнен',
+  'least-loaded': 'Наименее загруженный сервер',
+  default: 'Основное inbound-правило',
+  create_subscription_and_access: 'Создать подписку и VPN-доступ',
+  keep_order_pending: 'Оставить заказ в ожидании',
+  disable_access: 'Отключить VPN-доступ',
+  disable_access_after_grace: 'Отключить доступ после льготного периода',
+  extend_subscription: 'Продлить подписку'
 }
 
 export function formatAdminDisplayLabel(value: unknown) {

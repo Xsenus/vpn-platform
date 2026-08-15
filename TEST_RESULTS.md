@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: admin scenario lifecycle and local SQLite repair
+
+Scope:
+- Scenario cards must translate bounded server/inbound strategies and all payment lifecycle actions while preserving raw editor values.
+- An existing local SQLite database from an earlier release must start after managed entities gained optimistic-concurrency revisions.
+- Checkout cancellation coverage must deterministically complete the delayed response after leaving tariffs.
+
+Results:
+- Roadmap progress: `755/775` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-admin-scenario-lifecycle-and-local-sqlite-repair`, version `0.732.0`.
+- Fail-first: focused frontend localization completed `1/3`; desktop all-sections reproduced raw scenario lifecycle values; SQLite repair completed `0/1` with `0/10` columns repaired, and existing local startup failed with `no such column: a.Revision`.
+- After fix: scenario localization `3/3`, SQLite targeted `1/1`, complete repair regression `17/17`, frontend `180/180`, typecheck/build, admin bundle budget `566437/567296` raw and `150542/151552` gzip, dependency audit `0 vulnerabilities`, deterministic checkout race `10/10` and full Playwright `270/270` are green.
+- Visual gate: all 17 admin sections passed desktop and 25 responsive viewport configurations; the actual local scenario page was reviewed at `1280x720` and `320x720`, document/section overflow `0`, clipped elements `0`, browser diagnostics `0`.
+- Release gate: backend Debug/Release `1556/1556`, API Release build `0 warnings / 0 errors`, existing and fresh SQLite full flow with latest release, global formatter, EF pending-model check, secret scan `719/0` and strict UTF-8/BOM guard are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: admin operational label localization
 
 Scope:

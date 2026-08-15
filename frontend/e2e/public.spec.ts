@@ -83,8 +83,11 @@ async function mockPublicApi(page: Page) {
   let rejectNextProfileRequest = true
   let rejectNextCheckoutPromo = false
   let checkoutDelayMs = 0
+  let holdNextCheckout = false
+  let releaseDelayedCheckout: (() => void) | null = null
   let checkoutClaimDelayMs = 0
   let checkoutRequestCount = 0
+  let checkoutResponseCount = 0
   let checkoutClaimRequestCount = 0
   let paymentInitRequestCount = 0
   let expiredCheckoutSession = false
@@ -209,6 +212,11 @@ async function mockPublicApi(page: Page) {
 
     checkoutPayload = route.request().postDataJSON()
     checkoutRequestCount += 1
+    if (holdNextCheckout) {
+      holdNextCheckout = false
+      await new Promise<void>((resolve) => { releaseDelayedCheckout = resolve })
+      releaseDelayedCheckout = null
+    }
     if (checkoutDelayMs > 0) {
       const delay = checkoutDelayMs
       checkoutDelayMs = 0
@@ -240,6 +248,7 @@ async function mockPublicApi(page: Page) {
           : '2099-06-14T00:00:00Z',
       emailHint: null
     })
+    checkoutResponseCount += 1
   })
 
   await page.route('**/api/auth/register', async (route) => {
@@ -430,6 +439,9 @@ async function mockPublicApi(page: Page) {
     failLogout: () => { logoutShouldFail = true },
     rejectCheckoutPromo: () => { rejectNextCheckoutPromo = true },
     delayNextCheckout: (delayMs: number) => { checkoutDelayMs = delayMs },
+    holdNextCheckout: () => { holdNextCheckout = true },
+    releaseCheckout: () => { releaseDelayedCheckout?.() },
+    getCheckoutResponseCount: () => checkoutResponseCount,
     returnExpiredCheckoutSession: () => { expiredCheckoutSession = true },
     returnExpiringCheckoutSession: () => { expiringCheckoutSession = true },
     failCheckoutClaimAsExpired: () => { expiredCheckoutClaimResponse = true },
@@ -689,7 +701,7 @@ test('public checkout and auth reject malformed success DTOs without persisting 
 
 test('public checkout ignores duplicate clicks and completion after leaving tariffs', async ({ page }) => {
   const api = await mockPublicApi(page)
-  api.delayNextCheckout(400)
+  api.holdNextCheckout()
 
   await page.goto('/tariffs')
   const buyButton = page.getByRole('button', { name: 'Купить' }).first()
@@ -702,7 +714,8 @@ test('public checkout ignores duplicate clicks and completion after leaving tari
 
   await page.getByRole('link', { name: 'Помощь' }).click()
   await expect(page).toHaveURL(/\/help$/)
-  await page.waitForTimeout(500)
+  api.releaseCheckout()
+  await expect.poll(api.getCheckoutResponseCount).toBe(1)
 
   await expect(page).toHaveURL(/\/help$/)
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem('vpn-platform-pending-checkout'))).toBeNull()

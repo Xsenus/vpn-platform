@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `754/774` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `755/775` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,7 +85,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1555/1555`.
+- [x] Backend full suite: `1556/1556`.
 - [x] Frontend unit tests: `180/180`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -168,7 +168,7 @@
 - [x] VPN server/inbound handlers повторно валидируют programmatic submit; server, panel и inbound формы проверяют ranges, credentials, JSON и safe URL по backend-контракту.
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
-- [x] Latest "Что нового": `2026-08-15-admin-operational-label-localization`, версия `0.731.0`; operational admin surfaces используют bounded Russian labels для user status, audit actor/category, SSL, access history, QR и health/support fallback; backend `1555/1555`, frontend `180/180`.
+- [x] Latest "Что нового": `2026-08-15-admin-scenario-lifecycle-and-local-sqlite-repair`, версия `0.732.0`; scenario cards локализуют server/inbound strategy и пять lifecycle-команд без изменения raw API values, existing local SQLite repair добавляет managed revisions; backend `1556/1556`, frontend `180/180`.
 
 ## Как вести дальше
 

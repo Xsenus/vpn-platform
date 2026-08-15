@@ -5496,8 +5496,9 @@ export function App() {
                 <div className="item-head">
                   <div>
                     <strong>{scenario.name}</strong>
-                    <div className="muted">{scenario.key} · {scenario.vpnProtocol} · {provisioningModeLabel(scenario.provisioningMode)} · сервер {scenario.serverSelectionRule}</div>
-                    <div className="muted">Оплата: {scenario.onPaymentSucceeded} · продление: {scenario.onRenewal}</div>
+                    <div className="muted">{scenario.key} · {scenario.vpnProtocol} · {provisioningModeLabel(scenario.provisioningMode)} · сервер {formatAdminDisplayLabel(scenario.serverSelectionRule)} · inbound {formatAdminDisplayLabel(scenario.inboundSelectionRule)}</div>
+                    <div className="muted">Оплата: {formatAdminDisplayLabel(scenario.onPaymentSucceeded)} · Ошибка оплаты: {formatAdminDisplayLabel(scenario.onPaymentFailed)}</div>
+                    <div className="muted">Возврат: {formatAdminDisplayLabel(scenario.onRefund)} · Окончание: {formatAdminDisplayLabel(scenario.onSubscriptionExpired)} · Продление: {formatAdminDisplayLabel(scenario.onRenewal)}</div>
                     <div className="muted">Тарифы: {tariffs.filter((tariff) => tariff.provisioningScenario === scenario.key).map((tariff) => tariff.name).join(', ') || 'не выбраны'}</div>
                   </div>
                   <div className="item-status"><StatusBadge value={scenario.isActive ? 'Active' : 'Hidden'} /><StatusBadge value={formatAdminDisplayLabel(scenario.generateQrCode ? 'QrEnabled' : 'QrDisabled')} /></div>

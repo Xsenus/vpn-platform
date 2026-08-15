@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.732.0 - 2026-08-15
+
+Release entry: `2026-08-15-admin-scenario-lifecycle-and-local-sqlite-repair`.
+
+### Исправлено
+
+- Карточка рабочего сценария локализует стратегию сервера, inbound и все пять lifecycle-команд оплаты, ошибки, возврата, истечения и продления; редактор по-прежнему сохраняет точные API-значения.
+- Обновление существующей локальной SQLite теперь идемпотентно добавляет `Revision` в десять управляемых таблиц, поэтому API стартует на базе, созданной предыдущими версиями.
+- Checkout E2E больше не зависит от фиксированной задержки: завершение ответа после ухода со страницы управляется явно и стабильно проверяет single-flight и отмену устаревшего результата.
+
+### Проверено
+
+- Fail-first frontend localization завершился `1/3`, desktop all-sections показал raw lifecycle values; SQLite upgrade regression завершился `0/1` с `0/10` отсутствующих repair-операций, а реальный `start-local` воспроизвёл `no such column: a.Revision`. После исправления localization `3/3`, SQLite repair `1/1` и полный repair suite `17/17` зелёные; checkout race прошёл `10/10` повторов.
+- Все 17 разделов админки прошли desktop и 25 responsive viewport-конфигураций; сценарии дополнительно проверены в браузере на `1280x720` и `320x720` без overflow, clipping, overlap или diagnostics. Frontend `180/180`, полный Playwright `270/270`, backend Debug/Release `1556/1556`, API build, existing/fresh SQLite, formatter, EF drift, encoding, dependency audit и secret scan `719/0` подтверждены release gate. Roadmap `755/775` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.731.0 - 2026-08-15
 
 Release entry: `2026-08-15-admin-operational-label-localization`.
