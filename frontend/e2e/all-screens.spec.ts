@@ -271,6 +271,7 @@ const adminProvisioningRun = {
   nodeId: 'server-all-screens',
   revision: 0,
   nodeName: 'EU All Screens',
+  nodeStatus: 'Ready',
   targetHost: 'vpn.example.test',
   sshPort: 22,
   username: 'root',

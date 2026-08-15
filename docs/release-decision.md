@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1591/1591`.
+- Backend full suite: `1595/1595`.
 - API Release build: OK.
 - Frontend unit tests: `196/196`.
 - Frontend typecheck/build: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-15-server-archive-readonly`, версия `0.747.0`; archived health guard, SQLite no-churn и zero-action historical card проверены backend/desktop/mobile regressions. Real VPS/SSH/Ansible, production-like 3x-ui/x-ui, provider/Telegram/SMTP delivery и полный staging evidence всё ещё требуются.
-- Roadmap progress: `770/790` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-15-server-archive-provisioning-readonly`, версия `0.748.0`; active-run archive conflict, DB-side worker filter, terminal-preserving recovery и zero-action historical run проверены SQLite/backend/desktop/mobile regressions. Real VPS/SSH/Ansible, production-like 3x-ui/x-ui, provider/Telegram/SMTP delivery и полный staging evidence всё ещё требуются.
+- Roadmap progress: `771/791` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

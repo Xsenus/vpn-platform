@@ -47,14 +47,21 @@ public sealed class ProvisioningRunCoordinator
         var limit = Math.Clamp(take, 1, 100);
         var candidates = _db.Database.IsSqlite()
             ? await _db.ProvisioningRuns.FromSqlInterpolated($$"""
-                SELECT *
-                FROM "ProvisioningRuns"
-                WHERE "Status" IN (0, 8, 12, 15)
-                ORDER BY julianday("CreatedAt"), "Id"
+                SELECT run.*
+                FROM "ProvisioningRuns" AS run
+                WHERE run."Status" IN (0, 8, 12, 15)
+                  AND EXISTS (
+                    SELECT 1
+                    FROM "VpnNodes" AS node
+                    WHERE node."Id" = run."NodeId"
+                      AND node."Status" <> {{(int)NodeStatus.Archived}}
+                  )
+                ORDER BY julianday(run."CreatedAt"), run."Id"
                 LIMIT {{limit}}
                 """).AsNoTracking().ToListAsync(cancellationToken)
             : await _db.ProvisioningRuns.AsNoTracking()
-                .Where(x => QueuedStatuses.Contains(x.Status))
+                .Where(x => QueuedStatuses.Contains(x.Status)
+                    && _db.VpnNodes.Any(node => node.Id == x.NodeId && node.Status != NodeStatus.Archived))
                 .OrderBy(x => x.CreatedAt)
                 .ThenBy(x => x.Id)
                 .Take(limit)
@@ -67,7 +74,9 @@ public sealed class ProvisioningRunCoordinator
     public async Task<bool> TryClaimAsync(Guid runId, CancellationToken cancellationToken = default)
     {
         var candidate = await _db.ProvisioningRuns.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == runId && QueuedStatuses.Contains(x.Status), cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == runId
+                && QueuedStatuses.Contains(x.Status)
+                && _db.VpnNodes.Any(node => node.Id == x.NodeId && node.Status != NodeStatus.Archived), cancellationToken);
         if (candidate is null)
         {
             return false;
@@ -79,7 +88,9 @@ public sealed class ProvisioningRunCoordinator
         if (IsInMemoryProvider())
         {
             var tracked = await _db.ProvisioningRuns.FirstOrDefaultAsync(x => x.Id == runId, cancellationToken);
-            if (tracked is null || tracked.Status != candidate.Status || tracked.UpdatedAt != candidate.UpdatedAt)
+            var nodeCanRun = tracked is not null && await _db.VpnNodes.AsNoTracking()
+                .AnyAsync(node => node.Id == tracked.NodeId && node.Status != NodeStatus.Archived, cancellationToken);
+            if (tracked is null || !nodeCanRun || tracked.Status != candidate.Status || tracked.UpdatedAt != candidate.UpdatedAt)
             {
                 return false;
             }
@@ -90,7 +101,10 @@ public sealed class ProvisioningRunCoordinator
         }
 
         var affected = await _db.ProvisioningRuns
-            .Where(x => x.Id == runId && x.Status == candidate.Status && x.UpdatedAt == candidate.UpdatedAt)
+            .Where(x => x.Id == runId
+                && x.Status == candidate.Status
+                && x.UpdatedAt == candidate.UpdatedAt
+                && _db.VpnNodes.Any(node => node.Id == x.NodeId && node.Status != NodeStatus.Archived))
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(x => x.Status, claimedStatus)
                 .SetProperty(x => x.AttemptCount, x => x.AttemptCount + 1)
@@ -214,7 +228,7 @@ public sealed class ProvisioningRunCoordinator
         await _db.Entry(run).ReloadAsync(cancellationToken);
         run.ExecutionLog = ProvisioningService.AppendLog(run.ExecutionLog, redactedError);
         var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == run.NodeId, cancellationToken);
-        if (node is not null)
+        if (node is not null && node.Status != NodeStatus.Archived)
         {
             node.ProvisioningStatus = failedStatus;
             node.Status = NodeStatus.Error;

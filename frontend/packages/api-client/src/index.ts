@@ -764,6 +764,7 @@ export type ProvisioningRunDto = {
   revision: number
   status: string
   nodeName: string
+  nodeStatus: string
   targetHost: string
   sshPort: number
   username: string
@@ -2752,6 +2753,8 @@ function isProvisioningRunBase(value: unknown): value is Record<string, unknown>
     && hasProvisioningModeDescriptor(value, 'deployMode', 'deployModeTitle', 'deployRiskLevel', 'deployLiveDeployAllowed', 'deployNextAction', 'deployOperatorWarning')
     && hasString(value, 'status', true)
     && provisioningRunStatusValues.has(value.status as string)
+    && hasString(value, 'nodeStatus')
+    && (value.nodeStatus === '' || nodeStatusValues.has(value.nodeStatus as string))
     && hasString(value, 'currentStep', true)
     && hasNullableString(value, 'requestedByUserId')
     && hasBoolean(value, 'dryRun')
@@ -2774,7 +2777,7 @@ function isProvisioningRunDto(value: unknown): value is ProvisioningRunDto {
   return isProvisioningRunBase(value)
     && hasString(value, 'executionLogPreview')
     && hasString(value, 'precheckReportPreview')
-    && Object.keys(value).length === 40
+    && Object.keys(value).length === 41
 }
 
 function isProvisioningStepDto(value: unknown) {
@@ -2801,7 +2804,7 @@ function isProvisioningRunDetailsDto(value: unknown): value is ProvisioningRunDe
   if (!isProvisioningRunBase(run)
     || !hasString(run, 'precheckReport')
     || !hasNullableString(run, 'linkedAccessId')
-    || Object.keys(run).length !== 40
+    || Object.keys(run).length !== 41
     || !Array.isArray(value.steps)
     || !value.steps.every(isProvisioningStepDto)
     || !hasUniqueStringKey(value.steps, 'id')

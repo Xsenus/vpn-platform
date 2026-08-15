@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: archived server provisioning boundary
+
+Scope:
+- A server with queued or executing provisioning work must not enter terminal archive while worker-side effects are still possible.
+- Legacy queued or expired-lease runs linked to an archived node must not revive or overwrite the terminal node state.
+- Historical provisioning data remains readable while retry, deploy, cancel and support commands are unavailable after archive.
+
+Results:
+- Roadmap progress: `771/791` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-server-archive-provisioning-readonly`, version `0.748.0`.
+- Fail-first: backend completed `0/4` because delete archived an active node, worker claimed its queue, recovery overwrote `Archived` with `Error`, and cancel revived it as `New`; browser completed `0/1` because four historical run actions remained visible.
+- After fix: targeted SQLite `4/4`, server/provisioning/coordinator `144/144`, targeted Playwright `1/1`, frontend `196/196`, typecheck/build, admin bundle `586744/586752` raw and `156174/156672` gzip, and full Playwright `282/282` in `13.0 min` are green.
+- Release gate: backend Debug/Release `1595/1595`, API Release build `0 warnings / 0 errors`, all 17 admin sections and 25 responsive viewport configurations, dependency audit `0 vulnerabilities`, EF pending-model check `2/2`, formatter, strict UTF-8/BOM guard and secret scan `727/0` are green.
+- External boundary: real VPS/SSH/Ansible, a production-like 3x-ui/x-ui panel, provider cabinets, live payment, Telegram Bot API and SMTP were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: archived VPN server read-only boundary
 
 Scope:

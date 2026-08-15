@@ -5804,7 +5804,7 @@ export function App() {
               <div key={run.id} className="list-item-vertical">
                 <div className="item-head">
                   <strong>{run.nodeName || shortId(run.nodeId)}</strong>
-                  <div className="item-status"><StatusBadge value={run.status} /><StatusBadge value={provisioningRiskBadge(run.riskLevel)} /></div>
+                  <div className="item-status"><StatusBadge value={run.status} /><StatusBadge value={run.nodeStatus} /><StatusBadge value={provisioningRiskBadge(run.riskLevel)} /></div>
                 </div>
                 <div className="muted">Запуск: {shortId(run.id)} · источник {formatAdminDisplayLabel(run.source)} · владелец {formatAdminDisplayLabel(run.owner)} · шаг {formatAdminDisplayLabel(run.currentStep || run.status)}</div>
                 <div className="muted">Цель: {run.targetHost || shortId(run.nodeId)}:{run.sshPort ?? 22} · пользователь {run.username || 'root'} · авторизация {formatAdminDisplayLabel(run.authMethod)} · доступы {run.credentialsConfigured ? 'заданы' : 'не заданы'} · {run.validationMode ? 'проверочный сервер' : 'рабочий кандидат'}</div>
@@ -5815,12 +5815,12 @@ export function App() {
                 {run.operatorWarning && <div className="safe-note">{run.operatorWarning}</div>}
                 {run.precheckReportPreview && <pre className="safe-note">{run.precheckReportPreview}</pre>}
                 <div className="muted">{run.lastError || run.errorSummary || run.executionLogPreview || run.executionLog || '—'}</div>
-                <div className="toolbar" hidden={!canWriteSection('provisioning')}>
+                {canWriteSection('provisioning') && run.nodeStatus !== 'Archived' && <div className="toolbar">
                   <PrimaryButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !canRetryProvisioningRun(run.status)} onClick={() => void handleRetryProvisioningRun(run)}>Повторить</PrimaryButton>
                   <ConfirmButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !['ReadyToDeploy', 'Succeeded'].includes(run.status) || run.deployMode === 'live-deploy-blocked'} className="button-danger" message={`Развернуть VPS? Режим: ${provisioningDeployModeLabel(run.deployMode)}. ${run.deployOperatorWarning || run.operatorWarning || 'В рабочем режиме это может выполнить реальные SSH/Ansible-действия.'}`} onConfirm={() => handleDeployProvisioningRun(run)}>Развернуть</ConfirmButton>
                   <ConfirmButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !canCancelProvisioningRun(run.status)} className="button-secondary" message="Отменить запуск подготовки VPS?" onConfirm={() => handleCancelProvisioningRun(run)}>Отменить</ConfirmButton>
                   <PrimaryButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId))} onClick={() => void handleProvisioningSupportNeeded(run)}>Нужна поддержка</PrimaryButton>
-                </div>
+                </div>}
               </div>
             ))}
           </div>

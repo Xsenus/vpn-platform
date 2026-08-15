@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.748.0 - 2026-08-15
+
+Release entry: `2026-08-15-server-archive-provisioning-readonly`.
+
+### Исправлено
+
+- VPN-сервер больше нельзя архивировать, пока его provisioning-run находится в очереди, выполняется или ожидает обязательного шага; оператор должен дождаться завершения либо отменить безопасно отменяемую очередь.
+- Worker не получает queued run архивного узла, lease recovery не переводит архивный сервер в `Error`, а direct cancel/support команды исторического запуска отклоняются без изменения run, node, support или audit данных.
+- Provisioning API возвращает `nodeStatus`; admin UI сохраняет историческую карточку запуска со статусом архива, но полностью удаляет retry, deploy, cancel и support controls из DOM на desktop/mobile.
+
+### Проверено
+
+- Fail-first backend `0/4` и browser `0/1` воспроизвели archive/worker resurrection и четыре доступные кнопки. После исправления targeted SQLite `4/4`, server/provisioning/coordinator `144/144` и целевой Playwright `1/1` зелёные.
+- Backend Debug/Release `1595/1595`, API Release build `0 warnings / 0 errors`, frontend `196/196`, typecheck/build, admin bundle raw `586744/586752` и gzip `156174/156672`, полный Playwright `282/282` за `13.0 min`, все 17 admin sections и 25 responsive viewport-конфигураций, dependency audit `0 vulnerabilities`, EF pending-model check `2/2`, formatter, strict UTF-8/BOM guard и secret scan `727/0` проходят. Roadmap `771/791` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, production-like 3x-ui/x-ui, provider кабинеты, live payment, Telegram Bot API и SMTP остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.747.0 - 2026-08-15
 
 Release entry: `2026-08-15-server-archive-readonly`.

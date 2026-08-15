@@ -307,6 +307,8 @@ public class OwnVpsProvisioningMvpTests
         Assert.Contains("SshCredentialConfigured", json, StringComparison.Ordinal);
         Assert.Contains("AuthMethod", json, StringComparison.Ordinal);
         Assert.Contains("ProvisioningMode", json, StringComparison.Ordinal);
+        Assert.Contains("NodeStatus", json, StringComparison.Ordinal);
+        Assert.Contains(NodeStatus.New.ToString(), json, StringComparison.Ordinal);
         Assert.Contains("Mode", json, StringComparison.Ordinal);
         Assert.Contains("DeployMode", json, StringComparison.Ordinal);
         Assert.Contains("RiskLevel", json, StringComparison.Ordinal);
@@ -630,6 +632,58 @@ public class OwnVpsProvisioningMvpTests
         var run = await db.ProvisioningRuns.SingleAsync(x => x.Id == runId);
         Assert.Equal(ProvisioningRunStatus.Cancelled, run.Status);
         Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "provisioning.cancel" && x.EntityId == runId.ToString());
+    }
+
+    [Fact]
+    public async Task Archived_Node_Provisioning_Commands_Should_Be_Read_Only()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var node = new VpnNode
+        {
+            Name = "Archived node",
+            Host = "archived.example.test",
+            SshUser = "root",
+            SshPort = 22,
+            Status = NodeStatus.Archived,
+            ProvisioningStatus = ProvisioningRunStatus.PrecheckQueued,
+            Revision = 5,
+            UpdatedAt = new DateTimeOffset(2026, 8, 15, 13, 15, 0, TimeSpan.Zero),
+            TagsCsv = "validation-mode:true"
+        };
+        var run = new ProvisioningRun
+        {
+            NodeId = node.Id,
+            Status = ProvisioningRunStatus.PrecheckQueued,
+            DryRun = true,
+            Revision = 4,
+            UpdatedAt = node.UpdatedAt
+        };
+        db.AddRange(node, run);
+        await db.SaveChangesAsync();
+        var service = new ProvisioningService(db, new TestClock(), new TestSecretProtector());
+
+        var cancel = await service.CancelAsync(run.Id, Guid.NewGuid(), expectedRevision: run.Revision);
+        var support = await service.MarkSupportNeededAsync(run.Id, Guid.NewGuid(), expectedRevision: run.Revision);
+
+        Assert.False(cancel.IsSuccess);
+        Assert.Contains("archived", cancel.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.False(support.IsSuccess);
+        Assert.Contains("archived", support.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(NodeStatus.Archived, node.Status);
+        Assert.Equal(ProvisioningRunStatus.PrecheckQueued, node.ProvisioningStatus);
+        Assert.Equal(5, node.Revision);
+        Assert.Equal(new DateTimeOffset(2026, 8, 15, 13, 15, 0, TimeSpan.Zero), node.UpdatedAt);
+        Assert.Equal(ProvisioningRunStatus.PrecheckQueued, run.Status);
+        Assert.Equal(4, run.Revision);
+        Assert.Empty(await db.SupportConversations.ToListAsync());
+        Assert.Empty(await db.SupportMessages.ToListAsync());
+        Assert.Empty(await db.AuditLogs.ToListAsync());
     }
 
     [Fact]

@@ -649,6 +649,39 @@ public class AdminServerManagementTests
         Assert.Contains(db.AuditLogs, x => x.Action == "server.archive" && x.EntityId == node.Id.ToString());
     }
 
+    [Fact]
+    public async Task DeleteServer_Should_Reject_Server_With_Active_Provisioning_Run_Without_Mutation()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var controller = CreateController(db);
+        var node = NewNode("active-provisioning-node");
+        node.Revision = 3;
+        node.UpdatedAt = new DateTimeOffset(2026, 8, 15, 13, 0, 0, TimeSpan.Zero);
+        var run = new ProvisioningRun
+        {
+            NodeId = node.Id,
+            Status = ProvisioningRunStatus.PrecheckQueued,
+            DryRun = true,
+            Revision = 2
+        };
+        db.AddRange(node, run);
+        await db.SaveChangesAsync();
+
+        var result = await controller.DeleteServer(node.Id, node.Revision, CancellationToken.None);
+
+        var conflict = Assert.IsType<ConflictObjectResult>(result);
+        Assert.Contains("active provisioning", conflict.Value!.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(NodeStatus.Ready, node.Status);
+        Assert.Equal(3, node.Revision);
+        Assert.Equal(new DateTimeOffset(2026, 8, 15, 13, 0, 0, TimeSpan.Zero), node.UpdatedAt);
+        Assert.Equal(ProvisioningRunStatus.PrecheckQueued, run.Status);
+        Assert.Equal(2, run.Revision);
+        Assert.Empty(db.AuditLogs);
+    }
+
     [Theory]
     [InlineData("health-check", 1, 0)]
     [InlineData("migration-source", 0, 1)]

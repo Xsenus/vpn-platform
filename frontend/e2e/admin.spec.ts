@@ -353,6 +353,7 @@ function provisioningRun(overrides: Record<string, unknown> = {}) {
     nodeId: 'server-eu',
     revision: 0,
     nodeName: 'EU Sandbox',
+    nodeStatus: 'Ready',
     targetHost: 'eu.example.test',
     sshPort: 22,
     username: 'root',
@@ -1842,6 +1843,7 @@ async function mockAdminApi(page: Page) {
         return
       }
       Object.assign(server, { status: 'Archived', isAvailableForNewUsers: false, revision: Number(server.revision) + 1, updatedAt: now })
+      for (const run of provisioningRuns.filter((item) => item.nodeId === server.id)) run.nodeStatus = 'Archived'
       await fulfillJson(route, { id: 'server-eu', deleted: false, archived: true, linkedSubscriptions: 0, linkedAccesses: 0, linkedProvisioningRuns: 0, linkedHealthChecks: 2, linkedMigrationJobs: 1 })
       return
     }
@@ -5917,7 +5919,10 @@ test('admin panel covers login and critical operational mutations across all sec
 
   await openAdminSection(page, 'Подготовка VPS', 'provisioning')
   const staleProvisioningSection = page.locator('#provisioning')
-  await expect(staleProvisioningSection.getByText('VPS precheck ready.', { exact: true })).toBeVisible()
+  const archivedProvisioningRow = staleProvisioningSection.locator('.list-item-vertical').filter({ hasText: 'VPS precheck ready.' })
+  await expect(archivedProvisioningRow).toBeVisible()
+  await expect(archivedProvisioningRow).toContainText('Архив')
+  await expect(archivedProvisioningRow.getByRole('button')).toHaveCount(0)
 
   await openAdminSection(page, 'Telegram-бот', 'bot')
   const staleBotSection = page.locator('#bot')

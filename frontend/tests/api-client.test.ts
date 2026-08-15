@@ -302,6 +302,7 @@ function provisioningRunFixture(overrides: Record<string, unknown> = {}) {
     nodeId: 'node-1',
     revision: 0,
     nodeName: 'nl-01',
+    nodeStatus: 'Ready',
     targetHost: 'nl-01.example.com',
     sshPort: 22,
     username: 'root',

@@ -371,6 +371,16 @@ public class ProvisioningService
             return Result<string>.Failure("Only queued provisioning runs can be cancelled.");
         }
 
+        await using var gate = await PaymentProcessingGate.AcquireProvisioningNodeAsync(run.NodeId, cancellationToken);
+        var nodeStatus = await _db.VpnNodes.AsNoTracking()
+            .Where(x => x.Id == run.NodeId)
+            .Select(x => (NodeStatus?)x.Status)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (nodeStatus == NodeStatus.Archived)
+        {
+            return Result<string>.Failure("Archived node provisioning run is read-only.");
+        }
+
         var now = _clock.UtcNow;
         var version = now > run.UpdatedAt ? now : run.UpdatedAt.AddTicks(1);
         var cancelledLog = AppendLog(run.ExecutionLog, "Provisioning run cancelled by operator.");
@@ -383,7 +393,11 @@ public class ProvisioningService
         if (transaction is not null)
         {
             affected = await _db.ProvisioningRuns
-                .Where(x => x.Id == run.Id && x.Status == run.Status && x.Revision == run.Revision && x.UpdatedAt == run.UpdatedAt)
+                .Where(x => x.Id == run.Id
+                    && x.Status == run.Status
+                    && x.Revision == run.Revision
+                    && x.UpdatedAt == run.UpdatedAt
+                    && _db.VpnNodes.Any(node => node.Id == x.NodeId && node.Status != NodeStatus.Archived))
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(x => x.Status, ProvisioningRunStatus.Cancelled)
                     .SetProperty(x => x.FinishedAt, now)
@@ -394,7 +408,9 @@ public class ProvisioningService
         else
         {
             var trackedRun = await _db.ProvisioningRuns.FirstOrDefaultAsync(x => x.Id == run.Id, cancellationToken);
-            if (trackedRun is not null && trackedRun.Status == run.Status && trackedRun.Revision == run.Revision && trackedRun.UpdatedAt == run.UpdatedAt)
+            var nodeCanChange = trackedRun is not null && await _db.VpnNodes.AsNoTracking()
+                .AnyAsync(node => node.Id == trackedRun.NodeId && node.Status != NodeStatus.Archived, cancellationToken);
+            if (trackedRun is not null && nodeCanChange && trackedRun.Status == run.Status && trackedRun.Revision == run.Revision && trackedRun.UpdatedAt == run.UpdatedAt)
             {
                 StatusStateMachine.SetProvisioningRunStatus(trackedRun, ProvisioningRunStatus.Cancelled, version);
                 trackedRun.FinishedAt = now;
@@ -405,6 +421,12 @@ public class ProvisioningService
 
         if (affected != 1)
         {
+            var archived = await _db.VpnNodes.AsNoTracking()
+                .AnyAsync(x => x.Id == run.NodeId && x.Status == NodeStatus.Archived, cancellationToken);
+            if (archived)
+            {
+                return Result<string>.Failure("Archived node provisioning run is read-only.");
+            }
             return Result<string>.Failure("Provisioning state changed before cancellation. Refresh the run and try again.", isRetryable: true);
         }
 
@@ -442,7 +464,12 @@ public class ProvisioningService
             return Result<string>.Failure("Provisioning run changed. Reload it and retry.", isRetryable: true);
         }
 
+        await using var gate = await PaymentProcessingGate.AcquireProvisioningNodeAsync(run.NodeId, cancellationToken);
         var node = await _db.VpnNodes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == run.NodeId, cancellationToken);
+        if (node?.Status == NodeStatus.Archived)
+        {
+            return Result<string>.Failure("Archived node provisioning run is read-only.");
+        }
         var userId = run.RequestedByUserId;
         var telegramUserId = node is null ? null : ExtractLongTag(node.TagsCsv, "telegram-user-id");
         var conversation = await EnsureSupportConversationAsync(userId, telegramUserId, "Own VPS provisioning needs support", $"Provisioning run {run.Id} requires support. Node: {node?.Name ?? run.NodeId.ToString()}. Status: {run.Status}. {run.ExecutionLog}", cancellationToken);

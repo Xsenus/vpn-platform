@@ -2625,6 +2625,24 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "Server is already archived." });
         }
 
+        var hasActiveProvisioningRun = await _db.ProvisioningRuns.AsNoTracking().AnyAsync(
+            x => x.NodeId == id
+                && (x.Status == ProvisioningRunStatus.Pending
+                    || x.Status == ProvisioningRunStatus.Running
+                    || x.Status == ProvisioningRunStatus.Requested
+                    || x.Status == ProvisioningRunStatus.AwaitingCredentials
+                    || x.Status == ProvisioningRunStatus.AwaitingConfirmation
+                    || x.Status == ProvisioningRunStatus.PrecheckQueued
+                    || x.Status == ProvisioningRunStatus.Prechecking
+                    || x.Status == ProvisioningRunStatus.DeployQueued
+                    || x.Status == ProvisioningRunStatus.Deploying
+                    || x.Status == ProvisioningRunStatus.Retrying),
+            cancellationToken);
+        if (hasActiveProvisioningRun)
+        {
+            return Conflict(new { error = "Server has an active provisioning run. Wait for completion or cancel the queued run before archiving." });
+        }
+
         var linkedSubscriptions = await _db.Subscriptions.CountAsync(x => x.CurrentServerId == id, cancellationToken);
         var linkedAccesses = await _db.AccessCredentials.CountAsync(x => x.ServerId == id, cancellationToken);
         var linkedRuns = await _db.ProvisioningRuns.CountAsync(x => x.NodeId == id, cancellationToken);
@@ -2838,6 +2856,7 @@ public class AdminOperationsController : ControllerBase
                 x.NodeId,
                 x.Revision,
                 NodeName = node?.Name ?? string.Empty,
+                NodeStatus = node?.Status.ToString() ?? string.Empty,
                 TargetHost = node?.Host ?? node?.IpAddress ?? string.Empty,
                 SshPort = node?.SshPort ?? 0,
                 Username = node?.SshUser ?? string.Empty,
@@ -2933,6 +2952,7 @@ public class AdminOperationsController : ControllerBase
                 run.NodeId,
                 run.Revision,
                 NodeName = node?.Name ?? string.Empty,
+                NodeStatus = node?.Status.ToString() ?? string.Empty,
                 TargetHost = node?.Host ?? node?.IpAddress ?? string.Empty,
                 SshPort = node?.SshPort ?? 0,
                 Username = node?.SshUser ?? string.Empty,

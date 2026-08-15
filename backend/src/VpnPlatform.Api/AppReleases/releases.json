@@ -17697,5 +17697,32 @@
         "text": "Roadmap progress is 770/790 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-15-server-archive-provisioning-readonly",
+    "version": "0.748.0",
+    "releasedAt": "2026-08-15T22:37:54+07:00",
+    "title": "Archived servers now close linked provisioning operations",
+    "summary": "Active provisioning blocks archive, workers skip archived nodes, and historical runs expose no mutation controls.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Servers with queued or executing provisioning work can no longer enter terminal archive until that active lifecycle is resolved safely."
+      },
+      {
+        "type": "fixed",
+        "text": "Provisioning workers skip archived nodes, lease recovery preserves terminal archive, and cancel or support commands cannot mutate historical runs."
+      },
+      {
+        "type": "improved",
+        "text": "Historical provisioning cards show the archived node status while retry, deploy, cancel and support controls are absent on desktop and mobile."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 771/791 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

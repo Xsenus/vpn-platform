@@ -55,6 +55,78 @@ public class ProvisioningRunCoordinatorTests
         }
     }
 
+    [Fact]
+    public async Task Coordinator_Should_Not_Claim_Queued_Run_For_Archived_Node()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateDb(connection);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock(new DateTimeOffset(2026, 8, 15, 13, 30, 0, TimeSpan.Zero));
+        var node = Node();
+        node.Status = NodeStatus.Archived;
+        node.Revision = 6;
+        var run = new ProvisioningRun
+        {
+            NodeId = node.Id,
+            Status = ProvisioningRunStatus.PrecheckQueued,
+            DryRun = true,
+            Revision = 3
+        };
+        db.AddRange(node, run);
+        await db.SaveChangesAsync();
+        var coordinator = Coordinator(db, clock);
+
+        var claimable = await coordinator.GetClaimableIdsAsync(10);
+        var claimed = await coordinator.TryClaimAsync(run.Id);
+
+        Assert.DoesNotContain(run.Id, claimable);
+        Assert.False(claimed);
+        await db.Entry(run).ReloadAsync();
+        await db.Entry(node).ReloadAsync();
+        Assert.Equal(ProvisioningRunStatus.PrecheckQueued, run.Status);
+        Assert.Equal(3, run.Revision);
+        Assert.Equal(NodeStatus.Archived, node.Status);
+        Assert.Equal(6, node.Revision);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Fact]
+    public async Task RecoverExpiredClaim_Should_Keep_Archived_Node_Terminal()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateDb(connection);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock(new DateTimeOffset(2026, 8, 15, 13, 45, 0, TimeSpan.Zero));
+        var node = Node();
+        node.Status = NodeStatus.Archived;
+        node.ProvisioningStatus = ProvisioningRunStatus.Deploying;
+        node.Revision = 7;
+        var run = new ProvisioningRun
+        {
+            NodeId = node.Id,
+            Status = ProvisioningRunStatus.Deploying,
+            DryRun = false,
+            AttemptCount = 1,
+            ProcessingStartedAt = clock.UtcNow.AddHours(-2),
+            LeaseExpiresAt = clock.UtcNow.AddMinutes(-1),
+            UpdatedAt = clock.UtcNow.AddHours(-2)
+        };
+        db.AddRange(node, run);
+        await db.SaveChangesAsync();
+
+        var recovered = await Coordinator(db, clock).RecoverExpiredClaimsAsync();
+
+        Assert.Equal(1, recovered);
+        await db.Entry(run).ReloadAsync();
+        await db.Entry(node).ReloadAsync();
+        Assert.Equal(ProvisioningRunStatus.Failed, run.Status);
+        Assert.Equal(NodeStatus.Archived, node.Status);
+        Assert.Equal(ProvisioningRunStatus.Deploying, node.ProvisioningStatus);
+        Assert.Equal(7, node.Revision);
+    }
+
     [Theory]
     [InlineData(ProvisioningRunStatus.Prechecking, true, ProvisioningRunStatus.PrecheckFailed)]
     [InlineData(ProvisioningRunStatus.Deploying, false, ProvisioningRunStatus.Failed)]
