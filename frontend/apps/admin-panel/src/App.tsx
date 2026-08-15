@@ -5167,7 +5167,7 @@ export function App() {
                   <div className="item-status"><StatusBadge value={server.status} /><StatusBadge value={server.healthStatus} /><StatusBadge value={provisioningRiskBadge(server.provisioningRiskLevel)} /></div>
                 </div>
                 {server.provisioningOperatorWarning && <div className="safe-note">{server.provisioningOperatorWarning}</div>}
-                <div className="toolbar" hidden={!canWriteSection('nodes')}>
+                {canWriteSection('nodes') && server.status !== 'Archived' && <div className="toolbar">
                   <PrimaryButton className="button-secondary" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => editServer(server)}>Редактировать</PrimaryButton>
                   <PrimaryButton disabled={isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleCheckServerHealth(server)}>Health-check</PrimaryButton>
                   <PrimaryButton disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleQueuePrecheck(server)}>Проверить VPS</PrimaryButton>
@@ -5178,7 +5178,7 @@ export function App() {
                   {stateActions.canEnableAllocation && <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} message="Открыть набор на сервер? Это изменит распределение новых пользователей." onConfirm={() => handleServerMode(server, 'allocate')}>Открыть набор</ConfirmButton>}
                   {stateActions.canDisable && <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} message={`Отключить сервер "${server.name}"? Новые подключения и автоматическое распределение будут закрыты.`} onConfirm={() => handleServerMode(server, 'disable')}>Отключить</ConfirmButton>}
                   {stateActions.canDelete && <ConfirmButton className="button-danger" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} message={`Удалить сервер "${server.name}"? При наличии подписок, VPN-доступов, запусков подготовки, health-check или миграций он будет архивирован.`} onConfirm={() => handleDeleteServer(server)}>Удалить</ConfirmButton>}
-                </div>
+                </div>}
               </div>
             })}
           </div>

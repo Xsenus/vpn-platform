@@ -631,8 +631,11 @@ public class AdminServerManagementTests
         await db.SaveChangesAsync();
 
         var result = await controller.DeleteServer(node.Id, node.Revision, CancellationToken.None);
+        var archivedHealth = await controller.CheckServerHealth(node.Id, CancellationToken.None);
 
         var response = Assert.IsType<DeleteServerHttpResponse>(Assert.IsType<OkObjectResult>(result).Value);
+        var archivedHealthError = Assert.IsType<BadRequestObjectResult>(archivedHealth);
+        Assert.Contains("read-only", archivedHealthError.Value!.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.False(response.Deleted);
         Assert.True(response.Archived);
         Assert.Equal(1, response.LinkedSubscriptions);
@@ -686,8 +689,11 @@ public class AdminServerManagementTests
         await db.SaveChangesAsync();
 
         var result = await controller.DeleteServer(node.Id, node.Revision, CancellationToken.None);
+        var archivedHealth = await controller.CheckServerHealth(node.Id, CancellationToken.None);
 
         var response = Assert.IsType<DeleteServerHttpResponse>(Assert.IsType<OkObjectResult>(result).Value);
+        var archivedHealthError = Assert.IsType<BadRequestObjectResult>(archivedHealth);
+        Assert.Contains("read-only", archivedHealthError.Value!.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.False(response.Deleted);
         Assert.True(response.Archived);
         Assert.Equal(expectedHealthChecks, response.LinkedHealthChecks);
@@ -724,6 +730,40 @@ public class AdminServerManagementTests
         Assert.False(node.IsAvailableForNewUsers);
         Assert.Equal(4, node.Revision);
         Assert.Equal(new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero), node.UpdatedAt);
+        Assert.Empty(db.AuditLogs);
+    }
+
+    [Fact]
+    public async Task CheckServerHealth_Should_Reject_Archived_Server_Without_Local_Churn()
+    {
+        await using var db = CreateDbContext();
+        var controller = CreateController(db, new TestVpnProvider(HealthStatus.Healthy));
+        var node = NewNode("archived-health-node");
+        node.Status = NodeStatus.Archived;
+        node.IsAvailableForNewUsers = false;
+        node.HealthStatus = HealthStatus.Healthy;
+        node.Revision = 4;
+        node.LastHealthCheckAt = new DateTimeOffset(2026, 8, 14, 12, 0, 0, TimeSpan.Zero);
+        node.UpdatedAt = new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero);
+        db.VpnNodes.Add(node);
+        db.NodeHealthChecks.Add(new NodeHealthCheck
+        {
+            NodeId = node.Id,
+            CheckedAt = node.LastHealthCheckAt.Value,
+            Status = HealthStatus.Healthy
+        });
+        await db.SaveChangesAsync();
+
+        var result = await controller.CheckServerHealth(node.Id, CancellationToken.None);
+
+        var error = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("read-only", error.Value!.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(NodeStatus.Archived, node.Status);
+        Assert.Equal(HealthStatus.Healthy, node.HealthStatus);
+        Assert.Equal(4, node.Revision);
+        Assert.Equal(new DateTimeOffset(2026, 8, 14, 12, 0, 0, TimeSpan.Zero), node.LastHealthCheckAt);
+        Assert.Equal(new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero), node.UpdatedAt);
+        Assert.Equal(1, await db.NodeHealthChecks.CountAsync(x => x.NodeId == node.Id));
         Assert.Empty(db.AuditLogs);
     }
 

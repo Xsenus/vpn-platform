@@ -2684,16 +2684,20 @@ public class AdminOperationsController : ControllerBase
         {
             return NotFound(new { error = "Server not found." });
         }
+        if (node.Status == NodeStatus.Archived)
+        {
+            return BadRequest(new { error = "Archived server is read-only." });
+        }
 
         var stopwatch = Stopwatch.StartNew();
         var status = HealthStatus.Unknown;
         var errorText = string.Empty;
         var reason = "Проверка выполнена.";
 
-        if (node.Status is NodeStatus.Archived or NodeStatus.Disabled)
+        if (node.Status == NodeStatus.Disabled)
         {
             status = HealthStatus.Unhealthy;
-            reason = node.Status == NodeStatus.Archived ? "Сервер архивирован." : "Сервер отключен.";
+            reason = "Сервер отключен.";
             errorText = reason;
         }
         else if (node.Status is NodeStatus.Maintenance or NodeStatus.Draining)

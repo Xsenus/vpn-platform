@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.747.0 - 2026-08-15
+
+Release entry: `2026-08-15-server-archive-readonly`.
+
+### Исправлено
+
+- Архивный VPN-сервер больше не принимает прямой health-check, который создавал искусственную unhealthy-историю, менял timestamps и писал audit после terminal delete.
+- Admin UI сохраняет карточку, статус и последнюю диагностику архивного сервера, но полностью удаляет edit, health, precheck, provision, state и delete controls из DOM.
+- Допустимое редактирование проверяется до архивации, а после нее backend и desktop/mobile UI используют единый read-only контракт.
+
+### Проверено
+
+- Fail-first backend и browser regressions завершились по `0/1`: API вернул `200`, а UI оставил четыре кнопки. После исправления targeted backend/SQLite `5/5`, server-management `91/91` и целевой Playwright `1/1` зелёные.
+- Backend Debug/Release `1591/1591`, API Release build `0 warnings / 0 errors`, frontend `196/196`, docs/status/encoding `47/47`, typecheck/build, admin bundle raw `586628/586752` и gzip `156120/156672`, полный Playwright `282/282` за `13.0 min`, все 17 admin sections и 25 responsive viewport-конфигураций, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, strict UTF-8/BOM guard и secret scan `727/0` проходят. Roadmap `770/790` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, production-like 3x-ui/x-ui, provider кабинеты, live payment, Telegram Bot API и SMTP остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.746.0 - 2026-08-15
 
 Release entry: `2026-08-15-vpn-panel-archive-operational-readonly`.

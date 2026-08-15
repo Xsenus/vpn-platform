@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-15 локально подтверждено:
 
-- backend full suite: 1590/1590;
+- backend full suite: 1591/1591;
 - frontend tests: 196/196;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-15-vpn-panel-archive-operational-readonly`, версия `0.746.0`; archived panel details сохраняют историю, а direct health/test/sync отклоняются после freshness check и до provider/local side effects.
-- roadmap progress: `769/789` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-15-server-archive-readonly`, версия `0.747.0`; archived VPN server сохраняет историческую карточку, но direct health и все mutation controls недоступны.
+- roadmap progress: `770/790` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

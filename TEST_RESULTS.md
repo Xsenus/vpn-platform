@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: archived VPN server read-only boundary
+
+Scope:
+- A terminal archived server must reject direct health checks before health-history, timestamp or audit mutation.
+- Historical server status and diagnostics remain visible while all mutation controls are absent from the DOM.
+- Valid edit behavior is verified before archive; post-archive behavior is read-only on desktop and mobile.
+
+Results:
+- Roadmap progress: `770/790` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-server-archive-readonly`, version `0.747.0`.
+- Fail-first: backend completed `0/1` because archived health returned `200`; browser completed `0/1` because the archived card exposed four buttons.
+- After fix: targeted backend/SQLite `5/5`, server-management `91/91`, targeted Playwright `1/1`, frontend `196/196`, typecheck/build, admin bundle `586628/586752` raw and `156120/156672` gzip, and full Playwright `282/282` in `13.0 min` are green.
+- Release gate: backend Debug/Release `1591/1591`, API Release build `0 warnings / 0 errors`, frontend `196/196`, docs/status/encoding `47/47`, all 17 admin sections and 25 responsive viewport configurations, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, strict UTF-8/BOM guard and secret scan `727/0` are green.
+- External boundary: real VPS/SSH/Ansible, a production-like 3x-ui/x-ui panel, provider cabinets, live payment, Telegram Bot API and SMTP were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: archived 3x-ui operational command boundary
 
 Scope:
