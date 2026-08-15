@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1556/1556`.
+- Backend full suite: `1557/1557`.
 - API Release build: OK.
 - Frontend unit tests: `180/180`.
 - Frontend typecheck/build: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-15-admin-scenario-lifecycle-and-local-sqlite-repair`, версия `0.732.0`; scenario lifecycle labels проверены desktop/mobile, existing local SQLite upgrade подтверждён реальным startup и regression suite. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence всё ещё требуются.
-- Roadmap progress: `755/775` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-15-admin-payment-provisioning-label-localization`, версия `0.733.0`; payment/server/provisioning labels проверены desktop/mobile и на полной responsive-матрице, existing/fresh local SQLite зелёные. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence всё ещё требуются.
+- Roadmap progress: `756/776` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

@@ -37,7 +37,7 @@ public class PaymentProviderAccountService
     {
         var account = await _db.PaymentProviderAccounts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         return account is null
-            ? Result<PaymentProviderAccountDto>.Failure("Payment provider account not found.")
+            ? Result<PaymentProviderAccountDto>.Failure("Аккаунт платёжного провайдера не найден.")
             : Result<PaymentProviderAccountDto>.Success(MapToDto(account));
     }
 
@@ -58,7 +58,7 @@ public class PaymentProviderAccountService
                 .Select(ValidateAccountUrls)
                 .FirstOrDefault(x => x is not null);
             return Result<PaymentProviderAccount>.Failure(
-                unsafeCandidateError ?? $"Payment provider {provider} is not configured for web checkout or disabled.");
+                unsafeCandidateError ?? $"Провайдер {provider} не настроен для оплаты на сайте или выключен.");
         }
 
         return Result<PaymentProviderAccount>.Success(account);
@@ -68,12 +68,12 @@ public class PaymentProviderAccountService
     {
         if (!Enum.IsDefined(command.Provider))
         {
-            return Result<PaymentProviderAccountDto>.Failure("Payment provider is not supported.");
+            return Result<PaymentProviderAccountDto>.Failure("Платёжный провайдер не поддерживается.");
         }
 
         if (!Enum.IsDefined(command.Mode))
         {
-            return Result<PaymentProviderAccountDto>.Failure("Payment provider mode is not supported.");
+            return Result<PaymentProviderAccountDto>.Failure("Режим платёжного провайдера не поддерживается.");
         }
 
         await using var accountGate = id.HasValue
@@ -90,7 +90,7 @@ public class PaymentProviderAccountService
 
         if (command.Mode == PaymentProviderMode.Production && string.IsNullOrWhiteSpace(shopId))
         {
-            return Result<PaymentProviderAccountDto>.Failure("ShopId is required for production provider account.");
+            return Result<PaymentProviderAccountDto>.Failure("Для рабочего аккаунта провайдера нужен ShopId.");
         }
 
         if (replaceExtraSettings)
@@ -108,7 +108,7 @@ public class PaymentProviderAccountService
             existing = await _db.PaymentProviderAccounts.FirstOrDefaultAsync(x => x.Id == id.Value, cancellationToken);
             if (existing is null)
             {
-                return Result<PaymentProviderAccountDto>.Failure("Payment provider account not found.");
+                return Result<PaymentProviderAccountDto>.Failure("Аккаунт платёжного провайдера не найден.");
             }
 
         }
@@ -116,7 +116,7 @@ public class PaymentProviderAccountService
                  && command.Mode == PaymentProviderMode.Production
                  && string.IsNullOrWhiteSpace(command.SecretKey))
         {
-            return Result<PaymentProviderAccountDto>.Failure("SecretKey is required when creating a production provider account.");
+            return Result<PaymentProviderAccountDto>.Failure("Для нового рабочего аккаунта провайдера нужен SecretKey.");
         }
 
         var name = string.IsNullOrWhiteSpace(command.Name) ? command.Provider.ToString() : command.Name.Trim();
@@ -127,7 +127,7 @@ public class PaymentProviderAccountService
                      && x.Name == name,
                 cancellationToken))
         {
-            return Result<PaymentProviderAccountDto>.Failure("Payment provider account conflicts with an existing provider/mode/name.");
+            return Result<PaymentProviderAccountDto>.Failure("Аккаунт с таким провайдером, режимом и названием уже существует.");
         }
 
         var proposed = new PaymentProviderAccount
@@ -215,7 +215,7 @@ public class PaymentProviderAccountService
             }
 
             return Result<PaymentProviderAccountDto>.Failure(
-                "Payment provider account conflicts with an existing provider/mode/name or default account. Reload and retry.");
+                "Аккаунт конфликтует с существующей записью или основным аккаунтом. Обновите список и повторите.");
         }
     }
 
@@ -277,7 +277,7 @@ public class PaymentProviderAccountService
         var account = await _db.PaymentProviderAccounts.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (account is null)
         {
-            return Result<PaymentProviderAccountCheckResultDto>.Failure("Payment provider account not found.");
+            return Result<PaymentProviderAccountCheckResultDto>.Failure("Аккаунт платёжного провайдера не найден.");
         }
 
         var details = new List<string>();
@@ -315,15 +315,15 @@ public class PaymentProviderAccountService
             details,
             blockingIssues,
             account.ApiBaseUrl,
-            "API base URL",
+            "Базовый URL API",
             required: requiredFields.Any(x => x.Key == "apiBaseUrl" && x.Required));
-        AddUrlCheck(details, blockingIssues, account.ReturnUrl, "Return URL", required: false);
-        AddUrlCheck(details, blockingIssues, account.WebhookUrl, "Webhook URL", required: false);
+        AddUrlCheck(details, blockingIssues, account.ReturnUrl, "URL возврата", required: false);
+        AddUrlCheck(details, blockingIssues, account.WebhookUrl, "URL webhook", required: false);
 
         var hostedCheckoutUrl = PaymentProviderConfigurationRules.ReadExtraSetting(account.ExtraSettingsJson, "hostedCheckoutUrl");
         if (account.Provider == PaymentProvider.CloudPayments)
         {
-            AddUrlCheck(details, blockingIssues, hostedCheckoutUrl ?? string.Empty, "CloudPayments hosted checkout URL", required: false);
+            AddUrlCheck(details, blockingIssues, hostedCheckoutUrl ?? string.Empty, "URL виджета CloudPayments", required: false);
         }
 
         if (account.UseWebhookIpAllowList && string.IsNullOrWhiteSpace(account.AllowedWebhookIpRangesCsv))
@@ -377,7 +377,7 @@ public class PaymentProviderAccountService
         var account = await _db.PaymentProviderAccounts.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (account is null)
         {
-            return Result<PaymentProviderAccountDto>.Failure("Payment provider account not found.");
+            return Result<PaymentProviderAccountDto>.Failure("Аккаунт платёжного провайдера не найден.");
         }
 
         if (enabled)
@@ -446,13 +446,13 @@ public class PaymentProviderAccountService
         var fields = new List<PaymentProviderRequiredFieldDto>
         {
             Field("enabled", "Аккаунт включен", true, account.IsEnabled, "Включите аккаунт, иначе пользователи не увидят способ оплаты."),
-            Field("mode", "Режим Sandbox или Production", true, account.Mode != PaymentProviderMode.Disabled, "Выберите Sandbox или Production."),
-            Field("shopId", telegramStars ? "Bot username" : "ShopId / merchant id", webCheckout || telegramStars, !string.IsNullOrWhiteSpace(account.ShopId), telegramStars ? "Укажите username Telegram-бота для Stars invoice flow." : "Укажите идентификатор магазина или мерчанта."),
-            Field("secretKey", "Secret key", production && webCheckout, !string.IsNullOrWhiteSpace(account.SecretKeyProtected), "Для production нужен защищенный secret key."),
-            Field("webhookSecret", "Webhook secret", webhookSecretRequired, !string.IsNullOrWhiteSpace(account.WebhookSecretProtected), "Для production-уведомлений нужен webhook secret."),
-            Field("apiBaseUrl", "API base URL", webCheckout && account.Provider != PaymentProvider.CloudPayments, !string.IsNullOrWhiteSpace(account.ApiBaseUrl), "Укажите API URL провайдера."),
-            Field("hostedCheckoutUrl", "CloudPayments hostedCheckoutUrl", account.Provider == PaymentProvider.CloudPayments, !string.IsNullOrWhiteSpace(hostedCheckoutUrl), "В ExtraSettingsJson нужен hostedCheckoutUrl со страницей виджета."),
-            Field("telegramBotFlow", "Telegram invoice flow", account.Provider == PaymentProvider.TelegramStars, PaymentProviderConfigurationRules.IsBotCheckoutConfigured(account), "Настройте Telegram-бота и invoice flow.")
+            Field("mode", "Проверочный или рабочий режим", true, account.Mode != PaymentProviderMode.Disabled, "Выберите проверочный или рабочий режим."),
+            Field("shopId", telegramStars ? "Username Telegram-бота" : "ShopId / ID мерчанта", webCheckout || telegramStars, !string.IsNullOrWhiteSpace(account.ShopId), telegramStars ? "Укажите username Telegram-бота для оплаты Stars." : "Укажите идентификатор магазина или мерчанта."),
+            Field("secretKey", "Секретный ключ", production && webCheckout, !string.IsNullOrWhiteSpace(account.SecretKeyProtected), "Для рабочего режима нужен защищённый секретный ключ."),
+            Field("webhookSecret", "Секрет webhook", webhookSecretRequired, !string.IsNullOrWhiteSpace(account.WebhookSecretProtected), "Для рабочих уведомлений нужен секрет webhook."),
+            Field("apiBaseUrl", "Базовый URL API", webCheckout && account.Provider != PaymentProvider.CloudPayments, !string.IsNullOrWhiteSpace(account.ApiBaseUrl), "Укажите URL API провайдера."),
+            Field("hostedCheckoutUrl", "URL виджета CloudPayments", account.Provider == PaymentProvider.CloudPayments, !string.IsNullOrWhiteSpace(hostedCheckoutUrl), "В ExtraSettingsJson нужен hostedCheckoutUrl со страницей виджета."),
+            Field("telegramBotFlow", "Сценарий оплаты Telegram", account.Provider == PaymentProvider.TelegramStars, PaymentProviderConfigurationRules.IsBotCheckoutConfigured(account), "Настройте Telegram-бота и сценарий выставления счёта.")
         };
 
         return fields.Where(x => x.Required || x.Configured).ToArray();
@@ -556,7 +556,7 @@ public class PaymentProviderAccountService
 
         if (SafeHttpUrl.ContainsCredentials(value))
         {
-            return $"{fieldName} must not contain credentials (login or password).";
+            return $"{fieldName} не должен содержать логин или пароль.";
         }
 
         return SafeHttpUrl.TryNormalize(value, out _)
@@ -568,10 +568,10 @@ public class PaymentProviderAccountService
     {
         foreach (var (value, fieldName) in new[]
                  {
-                     (account.ApiBaseUrl, "API base URL"),
-                     (account.ReturnUrl, "Return URL"),
-                     (account.WebhookUrl, "Webhook URL"),
-                     (PaymentProviderConfigurationRules.ReadExtraSetting(account.ExtraSettingsJson, "hostedCheckoutUrl"), "hostedCheckoutUrl")
+                     (account.ApiBaseUrl, "Базовый URL API"),
+                     (account.ReturnUrl, "URL возврата"),
+                     (account.WebhookUrl, "URL webhook"),
+                     (PaymentProviderConfigurationRules.ReadExtraSetting(account.ExtraSettingsJson, "hostedCheckoutUrl"), "URL виджета CloudPayments")
                  })
         {
             var validationError = ValidateOptionalSafeHttpUrl(value, fieldName);
@@ -590,39 +590,39 @@ public class PaymentProviderAccountService
         {
             PaymentProvider.YooKassa => new[]
             {
-                "YooKassa: для sandbox достаточно ShopId и API URL; в production проверьте secret key и webhook в кабинете YooKassa."
+                "YooKassa: для проверочного режима достаточно ShopId и URL API; в рабочем режиме проверьте секретный ключ и webhook в кабинете YooKassa."
             },
             PaymentProvider.RoboKassa => new[]
             {
-                "RoboKassa: проверьте MerchantLogin, Password #1 для создания платежа, Password #2 для уведомлений и ResultURL."
+                "RoboKassa: проверьте MerchantLogin, пароль № 1 для создания платежа, пароль № 2 для уведомлений и ResultURL."
             },
             PaymentProvider.YooMoney => new[]
             {
-                "YooMoney: проверьте receiver/shopId, notification secret для production и URL уведомлений."
+                "YooMoney: проверьте receiver/shopId, секрет уведомлений для рабочего режима и URL уведомлений."
             },
             PaymentProvider.CloudPayments => new[]
             {
-                "CloudPayments: публичный сценарий использует merchant-hosted widget page из ExtraSettingsJson.hostedCheckoutUrl."
+                "CloudPayments: оплата на сайте использует страницу виджета магазина из ExtraSettingsJson.hostedCheckoutUrl."
             },
             PaymentProvider.TBankAcquiring => new[]
             {
-                "TBank: проверьте TerminalKey, password/API token и рабочий API URL терминала."
+                "TBank: проверьте TerminalKey, пароль или токен API и рабочий URL API терминала."
             },
             PaymentProvider.Prodamus => new[]
             {
-                "Prodamus: проверьте payform URL, secret key подписи и webhook URL для уведомлений."
+                "Prodamus: проверьте URL формы оплаты, секретный ключ подписи и URL webhook для уведомлений."
             },
             PaymentProvider.Stripe => new[]
             {
-                "Stripe: проверьте publishable/secret данные, webhook endpoint secret для production и события checkout.session.completed."
+                "Stripe: проверьте публичный и секретный ключи, секрет webhook для рабочего режима и событие checkout.session.completed."
             },
             PaymentProvider.PayPal => new[]
             {
-                "PayPal: проверьте client id, client secret, webhook id и соответствие sandbox/production окружения."
+                "PayPal: проверьте ID клиента, секрет клиента, ID webhook и соответствие проверочного или рабочего окружения."
             },
             PaymentProvider.TelegramStars => new[]
             {
-                "Telegram Stars: web checkout скрыт; оплата должна идти через Telegram invoice flow внутри бота."
+                "Telegram Stars: оплата на сайте скрыта; счёт выставляется внутри Telegram-бота."
             },
             _ => Array.Empty<string>()
         };
@@ -635,11 +635,11 @@ public class PaymentProviderAccountService
             using var document = System.Text.Json.JsonDocument.Parse(extraSettingsJson);
             return document.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object
                 ? null
-                : "ExtraSettingsJson must be a JSON object.";
+                : "ExtraSettingsJson должен содержать объект JSON.";
         }
         catch (System.Text.Json.JsonException)
         {
-            return "ExtraSettingsJson must be a valid JSON object.";
+            return "ExtraSettingsJson должен содержать корректный объект JSON.";
         }
     }
 
@@ -652,21 +652,21 @@ public class PaymentProviderAccountService
 
         if (account.Mode == PaymentProviderMode.Production && string.IsNullOrWhiteSpace(account.ShopId))
         {
-            return "Production provider account requires ShopId/MerchantLogin/Receiver.";
+            return "Для рабочего аккаунта провайдера нужен ShopId, MerchantLogin или Receiver.";
         }
 
         if (account.Provider != PaymentProvider.TelegramStars
             && account.Mode == PaymentProviderMode.Production
             && string.IsNullOrWhiteSpace(account.SecretKeyProtected))
         {
-            return $"Production {account.Provider} provider account requires an encrypted SecretKey.";
+            return $"Для рабочего аккаунта {account.Provider} нужен защищённый SecretKey.";
         }
 
         if (account.Provider is PaymentProvider.RoboKassa or PaymentProvider.YooMoney or PaymentProvider.Stripe or PaymentProvider.PayPal or PaymentProvider.Prodamus
             && account.Mode == PaymentProviderMode.Production
             && string.IsNullOrWhiteSpace(account.WebhookSecretProtected))
         {
-            return $"Production {account.Provider} provider account requires an encrypted WebhookSecret for notification verification.";
+            return $"Для рабочего аккаунта {account.Provider} нужен защищённый WebhookSecret для проверки уведомлений.";
         }
 
         return null;

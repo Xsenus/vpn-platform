@@ -152,7 +152,7 @@ public class PaymentProviderAccountConcurrencyTests
 
         Assert.True(first.IsSuccess, first.Error);
         Assert.False(duplicate.IsSuccess);
-        Assert.Contains("conflicts", duplicate.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("уже существует", duplicate.Error, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(1, await db.PaymentProviderAccounts.CountAsync(x => x.Name == "duplicate-name"));
     }
 
@@ -171,9 +171,9 @@ public class PaymentProviderAccountConcurrencyTests
         var invalidMode = await service.UpsertAsync(null, valid with { Mode = (PaymentProviderMode)999 });
 
         Assert.False(invalidProvider.IsSuccess);
-        Assert.Contains("provider", invalidProvider.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("провайдер", invalidProvider.Error, StringComparison.OrdinalIgnoreCase);
         Assert.False(invalidMode.IsSuccess);
-        Assert.Contains("mode", invalidMode.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("режим", invalidMode.Error, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(await db.PaymentProviderAccounts.ToListAsync());
     }
 
@@ -213,7 +213,7 @@ public class PaymentProviderAccountConcurrencyTests
             ExtraSettingsJson: extraSettingsJson));
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("credentials", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("логин или пароль", result.Error, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(await db.PaymentProviderAccounts.ToListAsync());
     }
 
@@ -281,7 +281,7 @@ public class PaymentProviderAccountConcurrencyTests
         var enable = await service.SetEnabledAsync(account.Id, enabled: true);
 
         Assert.False(enable.IsSuccess);
-        Assert.Contains("credentials", enable.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("логин или пароль", enable.Error, StringComparison.OrdinalIgnoreCase);
         Assert.False(account.IsEnabled);
 
         account.IsEnabled = true;
@@ -289,7 +289,7 @@ public class PaymentProviderAccountConcurrencyTests
         var checkout = await service.GetWebCheckoutAccountEntityAsync(PaymentProvider.YooKassa);
 
         Assert.False(checkout.IsSuccess);
-        Assert.Contains("credentials", checkout.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("логин или пароль", checkout.Error, StringComparison.OrdinalIgnoreCase);
 
         var fallback = Account("safe-fallback");
         fallback.IsDefault = false;

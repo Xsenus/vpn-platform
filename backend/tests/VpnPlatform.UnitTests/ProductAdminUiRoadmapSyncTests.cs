@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-15",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `1556/1556`",
+                     "Backend full suite: `1557/1557`",
                      "Frontend unit tests: `180/180`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `270/270`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-15-admin-scenario-lifecycle-and-local-sqlite-repair",
-                     "0.732.0"
+                     "2026-08-15-admin-payment-provisioning-label-localization",
+                     "0.733.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-15-admin-scenario-lifecycle-and-local-sqlite-repair", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-15-admin-scenario-lifecycle-and-local-sqlite-repair", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-15-admin-payment-provisioning-label-localization", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-15-admin-payment-provisioning-label-localization", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `1556/1556`",
+                     "Backend full suite: `1557/1557`",
                      "Frontend unit tests: `180/180`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-15-admin-scenario-lifecycle-and-local-sqlite-repair",
-                     "0.732.0",
+                     "2026-08-15-admin-payment-provisioning-label-localization",
+                     "0.733.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.733.0 - 2026-08-15
+
+Release entry: `2026-08-15-admin-payment-provisioning-label-localization`.
+
+### Исправлено
+
+- Платёжные попытки и аккаунты провайдеров больше не показывают raw `Sandbox`, английские readiness blockers, capability labels и обязательные поля; технические ключи конфигурации остаются без изменений.
+- Серверы и запуски подготовки VPS локализуют SSH-метод, источник, владельца, текущий шаг, режим и операторскую диагностику, включая legacy-сообщение о заблокированном live provisioning.
+- Уведомления о precheck, подготовке, повторе и развёртывании используют русские названия режимов независимо от английского `modeTitle` в API.
+
+### Проверено
+
+- Fail-first frontend guard завершился `1/3`, desktop all-sections воспроизвёл raw `Sandbox`, а backend localization test завершился `0/1` с `Provider account is disabled.`; первый полный Playwright после исправления выявил четыре устаревших английских ожидания (`266/270`), которые были синхронизированы с новым UI-контрактом.
+- После исправления focused frontend `3/3`, payment/backend `20/20`, browser regression `4/4`, frontend `180/180`, полный Playwright `270/270`, backend Debug/Release `1557/1557`, API build, existing/fresh SQLite, formatter, EF drift, encoding, dependency audit и secret scan `719/0` зелёные. Все 17 разделов админки прошли desktop и 25 responsive viewport-конфигураций; actual nodes/payments просмотрены на `1280x720` и `320x720` без overflow, clipping, overlap или diagnostics. Roadmap `756/776` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.732.0 - 2026-08-15
 
 Release entry: `2026-08-15-admin-scenario-lifecycle-and-local-sqlite-repair`.

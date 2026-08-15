@@ -194,7 +194,9 @@ public class AdminAutomationMvpTests
         Assert.Null(ready.CheckoutConfigurationIssue);
         Assert.Contains("createPayment", ready.CapabilitiesJson, StringComparison.Ordinal);
         Assert.Contains(ready.Capabilities, x => x.Key == "createPayment" && x.Supported);
+        Assert.Contains(ready.Capabilities, x => x.Key == "sandbox" && x.Label == "Проверочный режим");
         Assert.Contains(ready.RequiredFields, x => x.Key == "shopId" && x.Required && x.Configured);
+        Assert.Contains(ready.RequiredFields, x => x.Key == "mode" && x.Label == "Проверочный или рабочий режим");
         Assert.Empty(ready.ReadinessBlockers);
         Assert.Contains("***", ready.ExtraSettingsJson, StringComparison.Ordinal);
         Assert.DoesNotContain("must-not-leak", ready.ExtraSettingsJson, StringComparison.OrdinalIgnoreCase);
@@ -202,8 +204,8 @@ public class AdminAutomationMvpTests
         var disabled = Assert.Single(accounts, x => x.Provider == PaymentProvider.RoboKassa);
         Assert.False(disabled.IsCheckoutConfigured);
         Assert.False(disabled.IsPubliclyAvailable);
-        Assert.Contains("Disabled", disabled.CheckoutConfigurationIssue, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(disabled.ReadinessBlockers, x => x.Contains("Disabled", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("выключен", disabled.CheckoutConfigurationIssue, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(disabled.ReadinessBlockers, x => x.Contains("выключен", StringComparison.OrdinalIgnoreCase));
 
         var json = JsonSerializer.Serialize(ok.Value);
         Assert.DoesNotContain("SecretKeyProtected", json, StringComparison.OrdinalIgnoreCase);
@@ -483,9 +485,9 @@ public class AdminAutomationMvpTests
         Assert.Equal("ConfigurationOnly", check.CheckScope);
         Assert.Equal("NeedsConfiguration", check.ConfigurationStatus);
         Assert.Equal("Unknown", check.HealthStatus);
-        Assert.Contains(check.Details, x => x.Contains("Telegram invoice flow", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(check.Details, x => x.Contains("Сценарий оплаты Telegram", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(check.Details, x => x.Contains("invoice-flow", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(check.Details, x => x.Contains("web checkout", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(check.Details, x => x.Contains("оплата на сайте", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

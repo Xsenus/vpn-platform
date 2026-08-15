@@ -472,10 +472,10 @@ function provisioningModeLabel(mode: string | null | undefined) {
 
 function provisioningDeployModeLabel(mode: string | null | undefined) {
   const normalized = String(mode ?? '').toLowerCase()
-  if (normalized === 'dry-run') return 'Dry-run precheck'
-  if (normalized === 'validation-deploy') return 'Validation deploy'
-  if (normalized === 'live-deploy') return 'Live deploy'
-  if (normalized === 'live-deploy-blocked') return 'Live deploy заблокирован'
+  if (normalized === 'dry-run') return 'Проверка без изменений'
+  if (normalized === 'validation-deploy') return 'Проверочное развёртывание'
+  if (normalized === 'live-deploy') return 'Рабочее развёртывание'
+  if (normalized === 'live-deploy-blocked') return 'Рабочее развёртывание заблокировано'
   if (normalized === 'unknown') return 'Режим не определён'
   return mode || 'Режим не определён'
 }
@@ -3725,7 +3725,7 @@ export function App() {
     const response = await api.precheckAdminServer(token, server.id, server.revision)
       .catch((error: unknown) => throwProvisioningConflict(error, action))
     if (!action.isCurrent()) return
-    setNotice(`Проверка поставлена в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}. ID запуска: ${response.runId}`)
+    setNotice(`Проверка поставлена в очередь. Режим: ${provisioningDeployModeLabel(response.mode)}. ID запуска: ${response.runId}`)
     await action.reloadAll()
   }, serverActionResourceKey(server.id))
 
@@ -3734,7 +3734,7 @@ export function App() {
       const response = await api.queueAdminProvision(token, server.id, server.revision, false)
         .catch((error: unknown) => throwProvisioningConflict(error, action))
       if (!action.isCurrent()) return
-      setNotice(`Подготовка сервера поставлена в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}; риск: ${provisioningRiskLabel(response.riskLevel)}. ID запуска: ${response.runId}`)
+      setNotice(`Подготовка сервера поставлена в очередь. Режим: ${provisioningDeployModeLabel(response.mode)}; риск: ${provisioningRiskLabel(response.riskLevel)}. ID запуска: ${response.runId}`)
       await action.reloadAll()
     }, serverActionResourceKey(server.id))
   }
@@ -3750,7 +3750,7 @@ export function App() {
     const response = await api.retryAdminProvisioningRun(token, run.id, run.revision)
       .catch((error: unknown) => throwProvisioningConflict(error, action))
     if (!action.isCurrent()) return
-    setNotice(`Повтор поставлен в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}. Новый ID запуска: ${response.runId}`)
+    setNotice(`Повтор поставлен в очередь. Режим: ${provisioningDeployModeLabel(response.mode)}. Новый ID запуска: ${response.runId}`)
     await action.reloadAll()
   }, provisioningActionResourceKeys(run.id))
 
@@ -3766,7 +3766,7 @@ export function App() {
       const response = await api.deployAdminProvisioningRun(token, run.id, run.revision)
         .catch((error: unknown) => throwProvisioningConflict(error, action))
       if (!action.isCurrent()) return
-      setNotice(`Развертывание поставлено в очередь. Режим: ${response.modeTitle || provisioningDeployModeLabel(response.mode)}; риск: ${provisioningRiskLabel(response.riskLevel)}. ID запуска: ${response.runId}`)
+      setNotice(`Развёртывание поставлено в очередь. Режим: ${provisioningDeployModeLabel(response.mode)}; риск: ${provisioningRiskLabel(response.riskLevel)}. ID запуска: ${response.runId}`)
       await action.reloadAll()
     }, provisioningActionResourceKeys(run.id))
   }
@@ -4574,7 +4574,7 @@ export function App() {
                   <div className="item-head">
                     <div>
                       <strong>{payment.provider} · {payment.amount} {payment.currency}</strong>
-                      <div className="muted">Заказ: {shortId(payment.orderId)} · транзакция: {payment.providerPaymentId || '—'} · режим {payment.providerMode ?? '—'}</div>
+                      <div className="muted">Заказ: {shortId(payment.orderId)} · транзакция: {payment.providerPaymentId || '—'} · режим {payment.providerMode ? formatStatusLabel(payment.providerMode) : '—'}</div>
                       <div className="muted">Активация: {payment.isActivationProcessed ? 'обработана' : 'ожидает'} · возвращено {payment.refundedAmount ?? 0} {payment.currency} · доступно к возврату {refundableAmount} {payment.currency}</div>
                       {refundBlocker && <div className="safe-note">Возврат недоступен: {refundBlocker}</div>}
                     </div>
@@ -4882,9 +4882,9 @@ export function App() {
                     <div className="muted">{server.region}/{server.country} · {server.provider} · {server.host}</div>
                     <div className="muted">Дата-центр: {server.datacenter || '—'} · приоритет {server.priority} · протоколы {server.supportedProtocolsCsv || '—'} · теги {server.tagsCsv || '—'}</div>
                     <div className="muted">Емкость: {server.usedCapacity}/{server.capacity} · новые пользователи: {server.isAvailableForNewUsers ? 'разрешены' : 'закрыты'} · пароль панели: {server.panelPasswordConfigured ? 'задан' : 'пусто'}</div>
-                    <div className="muted">Панель: {server.panelBaseUrl || '—'} · SSH {server.sshUser ?? 'root'}:{server.sshPort ?? 22} · авторизация: {server.sshAuthMethod || '—'} · доступы: {server.sshCredentialConfigured ? 'заданы' : 'не заданы'}</div>
-                    <div className="muted">Provisioning: {server.provisioningModeTitle || provisioningDeployModeLabel(serverProvisioningMode(server))} · риск {provisioningRiskLabel(server.provisioningRiskLevel)} · live deploy {server.liveDeployAllowed ? 'разрешён' : 'закрыт'} · {server.provisioningNextAction || server.provisioningOperatorWarning || 'сначала выполните precheck'}</div>
-                    <div className="muted">Последняя проверка: {formatDate(server.lastHealthCheckAt)} · latency {server.lastHealthLatencyMs ?? 0}ms · {server.lastHealthError || 'ошибок нет'}</div>
+                    <div className="muted">Панель: {server.panelBaseUrl || '—'} · SSH {server.sshUser ?? 'root'}:{server.sshPort ?? 22} · авторизация: {formatAdminDisplayLabel(server.sshAuthMethod || 'not_configured')} · доступы: {server.sshCredentialConfigured ? 'заданы' : 'не заданы'}</div>
+                    <div className="muted">Подготовка VPS: {provisioningDeployModeLabel(serverProvisioningMode(server))} · риск {provisioningRiskLabel(server.provisioningRiskLevel)} · рабочее развёртывание {server.liveDeployAllowed ? 'разрешено' : 'закрыто'} · {server.provisioningNextAction || server.provisioningOperatorWarning || 'сначала выполните предварительную проверку'}</div>
+                    <div className="muted">Последняя проверка: {formatDate(server.lastHealthCheckAt)} · задержка {server.lastHealthLatencyMs ?? 0} мс · {server.lastHealthError ? formatAdminDisplayLabel(server.lastHealthError) : 'ошибок нет'}</div>
                   </div>
                   <div className="item-status"><StatusBadge value={server.status} /><StatusBadge value={server.healthStatus} /><StatusBadge value={provisioningRiskBadge(server.provisioningRiskLevel)} /></div>
                 </div>
@@ -4892,8 +4892,8 @@ export function App() {
                 <div className="toolbar" hidden={!canWriteSection('nodes')}>
                   <PrimaryButton className="button-secondary" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => editServer(server)}>Редактировать</PrimaryButton>
                   <PrimaryButton disabled={isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleCheckServerHealth(server)}>Health-check</PrimaryButton>
-                  <PrimaryButton disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleQueuePrecheck(server)}>Precheck VPS</PrimaryButton>
-                  <ConfirmButton className="button-danger" disabled={!serverProvisioningCanDeploy(server) || isActionResourceBusy(serverActionResourceKey(server.id))} message={`Запустить подготовку сервера "${server.name}"? Режим: ${server.provisioningModeTitle || provisioningDeployModeLabel(serverProvisioningMode(server))}. ${server.provisioningOperatorWarning || 'Проверьте precheck перед запуском.'}`} onConfirm={() => handleQueueProvision(server)}>Подготовить</ConfirmButton>
+                  <PrimaryButton disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleQueuePrecheck(server)}>Проверить VPS</PrimaryButton>
+                  <ConfirmButton className="button-danger" disabled={!serverProvisioningCanDeploy(server) || isActionResourceBusy(serverActionResourceKey(server.id))} message={`Запустить подготовку сервера "${server.name}"? Режим: ${provisioningDeployModeLabel(serverProvisioningMode(server))}. ${server.provisioningOperatorWarning || 'Проверьте сервер перед запуском.'}`} onConfirm={() => handleQueueProvision(server)}>Подготовить</ConfirmButton>
                   <ConfirmButton className="button-secondary" disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} message="Перевести сервер в обслуживание? Новые пользователи не должны попадать на него." onConfirm={() => handleServerMode(server, 'maintenance')}>В обслуживание</ConfirmButton>
                   <PrimaryButton className="button-secondary" disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton>
                   <ConfirmButton className="button-secondary" disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} message={`${server.isAvailableForNewUsers ? 'Закрыть набор на сервер' : 'Открыть набор на сервер'}? Это изменит распределение новых пользователей.`} onConfirm={() => handleServerMode(server, server.isAvailableForNewUsers ? 'drain' : 'allocate')}>{server.isAvailableForNewUsers ? 'Закрыть набор' : 'Открыть набор'}</ConfirmButton>
@@ -5525,18 +5525,18 @@ export function App() {
                   <strong>{run.nodeName || shortId(run.nodeId)}</strong>
                   <div className="item-status"><StatusBadge value={run.status} /><StatusBadge value={provisioningRiskBadge(run.riskLevel)} /></div>
                 </div>
-                <div className="muted">Запуск: {shortId(run.id)} · источник {run.source || '—'} · владелец {run.owner || '—'} · шаг {run.currentStep || run.status}</div>
-                <div className="muted">Цель: {run.targetHost || shortId(run.nodeId)}:{run.sshPort ?? 22} · пользователь {run.username || 'root'} · авторизация {run.authMethod || '—'} · доступы {run.credentialsConfigured ? 'заданы' : 'не заданы'} · {run.validationMode ? 'validation node' : 'live candidate'}</div>
-                <div className="muted">Режим запуска: {run.modeTitle || provisioningDeployModeLabel(run.mode)} · риск {provisioningRiskLabel(run.riskLevel)} · live deploy {run.liveDeployAllowed ? 'разрешён' : 'закрыт'} · {run.nextAction || 'проверьте результат перед следующим действием'}</div>
-                <div className="muted">Следующий deploy: {run.deployModeTitle || provisioningDeployModeLabel(run.deployMode)} · риск {provisioningRiskLabel(run.deployRiskLevel)} · {run.deployNextAction || 'сначала выполните precheck'}</div>
+                <div className="muted">Запуск: {shortId(run.id)} · источник {formatAdminDisplayLabel(run.source)} · владелец {formatAdminDisplayLabel(run.owner)} · шаг {formatAdminDisplayLabel(run.currentStep || run.status)}</div>
+                <div className="muted">Цель: {run.targetHost || shortId(run.nodeId)}:{run.sshPort ?? 22} · пользователь {run.username || 'root'} · авторизация {formatAdminDisplayLabel(run.authMethod)} · доступы {run.credentialsConfigured ? 'заданы' : 'не заданы'} · {run.validationMode ? 'проверочный сервер' : 'рабочий кандидат'}</div>
+                <div className="muted">Режим запуска: {provisioningDeployModeLabel(run.mode)} · риск {provisioningRiskLabel(run.riskLevel)} · рабочее развёртывание {run.liveDeployAllowed ? 'разрешено' : 'закрыто'} · {run.nextAction || 'проверьте результат перед следующим действием'}</div>
+                <div className="muted">Следующее развёртывание: {provisioningDeployModeLabel(run.deployMode)} · риск {provisioningRiskLabel(run.deployRiskLevel)} · {run.deployNextAction || 'сначала выполните предварительную проверку'}</div>
                 <div className="muted">{run.dryRun ? 'проверка без изменений' : 'развертывание'} · старт {formatDate(run.startedAt)} · финиш {formatDate(run.finishedAt)}</div>
-                {(run.attemptCount ?? 0) > 0 && <div className="muted">Попытка {run.attemptCount} · обработка {formatDate(run.processingStartedAt)} · lease до {formatDate(run.leaseExpiresAt)}</div>}
+                {(run.attemptCount ?? 0) > 0 && <div className="muted">Попытка {run.attemptCount} · обработка {formatDate(run.processingStartedAt)} · аренда задачи до {formatDate(run.leaseExpiresAt)}</div>}
                 {run.operatorWarning && <div className="safe-note">{run.operatorWarning}</div>}
                 {run.precheckReportPreview && <pre className="safe-note">{run.precheckReportPreview}</pre>}
                 <div className="muted">{run.lastError || run.errorSummary || run.executionLogPreview || run.executionLog || '—'}</div>
                 <div className="toolbar" hidden={!canWriteSection('provisioning')}>
                   <PrimaryButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !canRetryProvisioningRun(run.status)} onClick={() => void handleRetryProvisioningRun(run)}>Повторить</PrimaryButton>
-                  <ConfirmButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !['ReadyToDeploy', 'Succeeded'].includes(run.status) || run.deployMode === 'live-deploy-blocked'} className="button-danger" message={`Развернуть VPS? Режим: ${run.deployModeTitle || provisioningDeployModeLabel(run.deployMode)}. ${run.deployOperatorWarning || run.operatorWarning || 'В live-режиме это может выполнить реальные SSH/Ansible-действия.'}`} onConfirm={() => handleDeployProvisioningRun(run)}>Развернуть</ConfirmButton>
+                  <ConfirmButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !['ReadyToDeploy', 'Succeeded'].includes(run.status) || run.deployMode === 'live-deploy-blocked'} className="button-danger" message={`Развернуть VPS? Режим: ${provisioningDeployModeLabel(run.deployMode)}. ${run.deployOperatorWarning || run.operatorWarning || 'В рабочем режиме это может выполнить реальные SSH/Ansible-действия.'}`} onConfirm={() => handleDeployProvisioningRun(run)}>Развернуть</ConfirmButton>
                   <ConfirmButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId)) || !canCancelProvisioningRun(run.status)} className="button-secondary" message="Отменить запуск подготовки VPS?" onConfirm={() => handleCancelProvisioningRun(run)}>Отменить</ConfirmButton>
                   <PrimaryButton disabled={!token || isActionResourceBusy(provisioningRunActionResourceKey(run.id), serverActionResourceKey(run.nodeId))} onClick={() => void handleProvisioningSupportNeeded(run)}>Нужна поддержка</PrimaryButton>
                 </div>

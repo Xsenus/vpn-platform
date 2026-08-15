@@ -64,7 +64,24 @@ const adminDisplayLabels: Record<string, string> = {
   keep_order_pending: 'Оставить заказ в ожидании',
   disable_access: 'Отключить VPN-доступ',
   disable_access_after_grace: 'Отключить доступ после льготного периода',
-  extend_subscription: 'Продлить подписку'
+  extend_subscription: 'Продлить подписку',
+  requested: 'Запрос создан',
+  awaiting_credentials: 'Ожидаются доступы',
+  awaiting_confirmation: 'Ожидается подтверждение',
+  precheck_queued: 'Предварительная проверка в очереди',
+  prechecking: 'Выполняется предварительная проверка',
+  precheck_failed: 'Предварительная проверка не пройдена',
+  ready_to_deploy: 'Готово к развёртыванию',
+  deploy_queued: 'Развёртывание в очереди',
+  deploying: 'Выполняется развёртывание',
+  deployed: 'Развёрнуто',
+  retrying: 'Повторная попытка',
+  pending: 'Ожидает запуска',
+  ssh_key: 'SSH-ключ',
+  password: 'Пароль',
+  not_configured: 'Не настроена',
+  customer: 'Клиент',
+  'live provisioning is disabled by default. use validation/dry-run mode or enable explicit live provisioning on an approved staging target.': 'Рабочее развёртывание по умолчанию выключено. Используйте проверочный режим или явно разрешите рабочее развёртывание для одобренного стенда.'
 }
 
 export function formatAdminDisplayLabel(value: unknown) {

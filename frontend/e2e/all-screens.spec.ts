@@ -266,6 +266,49 @@ const adminPayment = {
   updatedAt: payment.updatedAt
 }
 
+const adminProvisioningRun = {
+  id: 'provisioning-all-screens',
+  nodeId: 'server-all-screens',
+  revision: 0,
+  nodeName: 'EU All Screens',
+  targetHost: 'vpn.example.test',
+  sshPort: 22,
+  username: 'root',
+  authMethod: 'ssh_key',
+  credentialsConfigured: true,
+  source: 'admin',
+  owner: 'admin',
+  validationMode: true,
+  mode: 'dry-run',
+  modeTitle: 'Dry-run precheck',
+  riskLevel: 'safe',
+  liveDeployAllowed: false,
+  nextAction: 'Проверьте результат предварительной проверки.',
+  operatorWarning: 'Проверка не меняет VPS.',
+  deployMode: 'validation-deploy',
+  deployModeTitle: 'Validation deploy',
+  deployRiskLevel: 'low',
+  deployLiveDeployAllowed: false,
+  deployNextAction: 'Запустите проверочное развёртывание.',
+  deployOperatorWarning: 'Проверочное развёртывание не меняет рабочую инфраструктуру.',
+  status: 'ReadyToDeploy',
+  currentStep: 'ready_to_deploy',
+  requestedByUserId: null,
+  dryRun: true,
+  attemptCount: 0,
+  processingStartedAt: null,
+  leaseExpiresAt: null,
+  lastError: '',
+  startedAt: now,
+  finishedAt: now,
+  errorSummary: '',
+  executionLog: 'precheck ok',
+  executionLogPreview: 'precheck ok',
+  precheckReportPreview: 'VPS precheck ready.',
+  createdAt: now,
+  updatedAt: now
+}
+
 const access = {
   id: 'access-all-screens',
   subscriptionId: subscription.id,
@@ -742,7 +785,7 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/provisioning-runs') {
-      await fulfillJson(route, [])
+      await fulfillJson(route, [adminProvisioningRun])
       return
     }
 
@@ -1231,6 +1274,8 @@ test('every admin section renders without blank screens or browser errors', asyn
     if (section === 'payments') {
       await expect(page.getByText(/канал: Сайт · тип: Новая подписка/)).toBeVisible()
       await expect(page.getByText(/YooKassa · Проверка · показывается на сайте/)).toBeVisible()
+      await expect(page.locator('#payments').getByText(/транзакция: yk-all-screens · режим Проверка/)).toBeVisible()
+      await expect(page.locator('#payments').getByText(/режим Sandbox/)).toHaveCount(0)
     }
     if (section === 'users') {
       const usersPanel = page.locator('#users')
@@ -1249,6 +1294,10 @@ test('every admin section renders without blank screens or browser errors', asyn
       await expect(page.locator('#panels').getByText(/SSL Строгая проверка/)).toBeVisible()
       await expect(page.locator('#panels').getByLabel('Проверка SSL').getByRole('option')).toHaveText(['Строгая', 'Самоподписанный', 'Отключена'])
     }
+    if (section === 'nodes') {
+      await expect(page.locator('#nodes').getByText(/SSH root:22 · авторизация: SSH-ключ · доступы: заданы/)).toBeVisible()
+      await expect(page.locator('#nodes').getByText(/авторизация: ssh_key|авторизация: not_configured/)).toHaveCount(0)
+    }
     if (section === 'vpn') await expect(page.locator('#vpn').getByText(/История: Доступ отозван/)).toBeVisible()
     if (section === 'audit') {
       const auditPanel = page.locator('#audit')
@@ -1265,6 +1314,14 @@ test('every admin section renders without blank screens or browser errors', asyn
       await expect(scenarioRow.getByText(/Оплата: Создать подписку и VPN-доступ · Ошибка оплаты: Оставить заказ в ожидании/)).toBeVisible()
       await expect(scenarioRow.getByText(/Возврат: Отключить VPN-доступ · Окончание: Отключить доступ после льготного периода · Продление: Продлить подписку/)).toBeVisible()
       await expect(scenarioRow.getByText(/create_subscription_and_access|keep_order_pending|disable_access_after_grace|extend_subscription/)).toHaveCount(0)
+    }
+    if (section === 'provisioning') {
+      const provisioningPanel = page.locator('#provisioning')
+      await expect(provisioningPanel.getByText(/источник Администратор · владелец Администратор · шаг Готово к развёртыванию/)).toBeVisible()
+      await expect(provisioningPanel.getByText(/авторизация SSH-ключ · доступы заданы · проверочный сервер/)).toBeVisible()
+      await expect(provisioningPanel.getByText(/Режим запуска: Проверка без изменений/)).toBeVisible()
+      await expect(provisioningPanel.getByText(/Следующее развёртывание: Проверочное развёртывание/)).toBeVisible()
+      await expect(provisioningPanel.getByText(/ready_to_deploy|ssh_key|validation node|live candidate|Dry-run precheck|Validation deploy/)).toHaveCount(0)
     }
     if (section === 'support') {
       await expect(page.getByText(/Сайт · tg:—/)).toBeVisible()
@@ -1619,10 +1676,18 @@ test('every admin section fits representative responsive viewports', async ({ pa
         await expect(usersPanel.getByText(/^(?:1 active|1 payments|0 accounts|Email confirmed)$/)).toHaveCount(0)
         await expect(usersPanel.getByLabel('Статус').getByRole('option')).toHaveText(['Все', 'Активные', 'Ограниченные', 'Удалённые', 'Новые'])
       }
+      if (section === 'payments') {
+        await expect(page.locator('#payments').getByText(/транзакция: yk-all-screens · режим Проверка/)).toBeVisible()
+        await expect(page.locator('#payments').getByText(/режим Sandbox/)).toHaveCount(0)
+      }
       if (section === 'panels') {
         await expect(page.locator('#panels').getByText(/Синхронизация: Синхронизирован/)).toBeVisible()
         await expect(page.locator('#panels').getByText(/SSL Строгая проверка/)).toBeVisible()
         await expect(page.locator('#panels').getByLabel('Проверка SSL').getByRole('option')).toHaveText(['Строгая', 'Самоподписанный', 'Отключена'])
+      }
+      if (section === 'nodes') {
+        await expect(page.locator('#nodes').getByText(/SSH root:22 · авторизация: SSH-ключ · доступы: заданы/)).toBeVisible()
+        await expect(page.locator('#nodes').getByText(/авторизация: ssh_key|авторизация: not_configured/)).toHaveCount(0)
       }
       if (section === 'vpn') await expect(page.locator('#vpn').getByText(/История: Доступ отозван/)).toBeVisible()
       if (section === 'audit') {
@@ -1640,6 +1705,14 @@ test('every admin section fits representative responsive viewports', async ({ pa
         await expect(scenarioRow.getByText(/Оплата: Создать подписку и VPN-доступ · Ошибка оплаты: Оставить заказ в ожидании/)).toBeVisible()
         await expect(scenarioRow.getByText(/Возврат: Отключить VPN-доступ · Окончание: Отключить доступ после льготного периода · Продление: Продлить подписку/)).toBeVisible()
         await expect(scenarioRow.getByText(/create_subscription_and_access|keep_order_pending|disable_access_after_grace|extend_subscription/)).toHaveCount(0)
+      }
+      if (section === 'provisioning') {
+        const provisioningPanel = page.locator('#provisioning')
+        await expect(provisioningPanel.getByText(/источник Администратор · владелец Администратор · шаг Готово к развёртыванию/)).toBeVisible()
+        await expect(provisioningPanel.getByText(/авторизация SSH-ключ · доступы заданы · проверочный сервер/)).toBeVisible()
+        await expect(provisioningPanel.getByText(/Режим запуска: Проверка без изменений/)).toBeVisible()
+        await expect(provisioningPanel.getByText(/Следующее развёртывание: Проверочное развёртывание/)).toBeVisible()
+        await expect(provisioningPanel.getByText(/ready_to_deploy|ssh_key|validation node|live candidate|Dry-run precheck|Validation deploy/)).toHaveCount(0)
       }
       await expectResponsiveLayout(page, `admin ${section} at ${viewport.name}`)
       if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin ${section} at ${viewport.name}`)

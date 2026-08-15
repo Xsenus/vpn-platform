@@ -8,6 +8,28 @@ namespace VpnPlatform.UnitTests;
 public class PaymentProviderConfigurationRulesTests
 {
     [Fact]
+    public void Configuration_Issues_Should_Use_Operator_Facing_Russian_Text()
+    {
+        var account = new PaymentProviderAccount
+        {
+            Provider = PaymentProvider.YooKassa,
+            Mode = PaymentProviderMode.Sandbox,
+            IsEnabled = false
+        };
+
+        Assert.Equal("Аккаунт провайдера выключен.", PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account));
+
+        account.IsEnabled = true;
+        account.Mode = PaymentProviderMode.Disabled;
+        Assert.Equal("Режим провайдера выключен.", PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account));
+
+        account.Mode = PaymentProviderMode.Sandbox;
+        account.ShopId = "shop";
+        account.ApiBaseUrl = "https://operator:secret@api.example.test";
+        Assert.Contains("не должен содержать логин или пароль", PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TelegramStars_Should_Be_Bot_Only_And_Hidden_From_Web_Checkout()
     {
         var account = new PaymentProviderAccount
@@ -25,7 +47,7 @@ public class PaymentProviderConfigurationRulesTests
         Assert.True(PaymentProviderConfigurationRules.SupportsTelegramCheckout(account.Provider));
         Assert.False(PaymentProviderConfigurationRules.IsWebCheckoutConfigured(account));
         Assert.False(PaymentProviderConfigurationRules.IsBotCheckoutConfigured(account));
-        Assert.Contains("Telegram bot", PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account) ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Telegram-бота", PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account) ?? string.Empty, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("invoice-flow", PaymentProviderConfigurationRules.GetBotCheckoutConfigurationIssue(account) ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 
         account.ExtraSettingsJson = """{"status":"invoice-flow"}""";
@@ -48,7 +70,7 @@ public class PaymentProviderConfigurationRulesTests
         };
 
         Assert.False(PaymentProviderConfigurationRules.IsBotCheckoutConfigured(account));
-        Assert.Contains("bot username", PaymentProviderConfigurationRules.GetBotCheckoutConfigurationIssue(account) ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("username", PaymentProviderConfigurationRules.GetBotCheckoutConfigurationIssue(account) ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -68,7 +90,7 @@ public class PaymentProviderConfigurationRulesTests
 
         account.ShopId = "acct_test";
         Assert.False(PaymentProviderConfigurationRules.IsWebCheckoutConfigured(account));
-        Assert.Contains("secret", PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account) ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("секрет", PaymentProviderConfigurationRules.GetCheckoutConfigurationIssue(account) ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 
         account.SecretKeyProtected = "protected-secret";
         Assert.True(PaymentProviderConfigurationRules.IsWebCheckoutConfigured(account));
@@ -97,7 +119,7 @@ public class PaymentProviderConfigurationRulesTests
     }
 
     [Theory]
-    [InlineData("https://operator:secret@api.example.test", "https://cabinet.example.test/payments", "https://api.example.test/webhook", "credentials")]
+    [InlineData("https://operator:secret@api.example.test", "https://cabinet.example.test/payments", "https://api.example.test/webhook", "логин")]
     [InlineData("ftp://api.example.test", "https://cabinet.example.test/payments", "https://api.example.test/webhook", "http")]
     [InlineData("https://api.example.test", "javascript:alert(1)", "https://api.example.test/webhook", "http")]
     public void Web_Provider_Should_Reject_Unsafe_Legacy_Urls(

@@ -3830,7 +3830,7 @@ test('frontend sources keep sandbox E2E surfaces safe and user-friendly', () => 
   assert.match(adminSource, /server\.status === 'Archived' \|\| isActionResourceBusy\(serverActionResourceKey\(server\.id\)\)/)
   assert.match(adminSource, /server\.status === 'Disabled' \|\| server\.status === 'Archived' \|\| isActionResourceBusy/)
   assert.match(adminSource, /provisioningRunActionResourceKey\(run\.id\), serverActionResourceKey\(run\.nodeId\)/)
-  assert.match(adminSource, /live deploy/)
+  assert.match(adminSource, /Рабочее развёртывание/)
   assert.match(adminSource, /deployMode === 'live-deploy-blocked'/)
   assert.match(adminSource, /Опрос Telegram/)
   for (const source of [publicSource, cabinetSource, appVersionSource, adminSource, uiSource, apiClientSource]) {

@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: admin payment and provisioning label localization
+
+Scope:
+- Payment attempts and provider readiness must not expose raw modes, English blockers, capabilities or required-field labels.
+- Server and provisioning rows must localize bounded SSH, source, owner, step, deploy-mode and operator diagnostics while preserving API values and commands.
+- Desktop/mobile layouts must keep all controls readable without overflow, clipping or overlap.
+
+Results:
+- Roadmap progress: `756/776` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-admin-payment-provisioning-label-localization`, version `0.733.0`.
+- Fail-first: frontend localization completed `1/3`; desktop all-sections reproduced raw `Sandbox`; backend localization completed `0/1` with `Provider account is disabled.`; the first complete browser pass found four stale English expectations and completed `266/270`.
+- After fix: focused frontend `3/3`, payment/backend `20/20`, browser regression `4/4`, frontend `180/180`, typecheck/build, admin bundle budget `567958/568320` raw and `151024/151552` gzip, dependency audit `0 vulnerabilities` and full Playwright `270/270` are green.
+- Visual gate: all 17 admin sections passed desktop and 25 responsive viewport configurations; actual local nodes/payments were reviewed at `1280x720` and `320x720`, document overflow `0`, clipped buttons `0`, browser diagnostics `0`.
+- Release gate: backend Debug/Release `1557/1557`, API Release build `0 warnings / 0 errors`, existing and fresh SQLite full flow, global formatter, EF pending-model check, secret scan `719/0` and strict UTF-8/BOM guard are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: admin scenario lifecycle and local SQLite repair
 
 Scope:

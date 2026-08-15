@@ -160,32 +160,32 @@ public static class PaymentProviderConfigurationRules
     {
         if (!account.IsEnabled)
         {
-            return "Provider account is disabled.";
+            return "Аккаунт провайдера выключен.";
         }
 
         if (account.Mode == PaymentProviderMode.Disabled)
         {
-            return "Provider mode is Disabled.";
+            return "Режим провайдера выключен.";
         }
 
         if (!SupportsWebCheckout(account.Provider))
         {
-            return "Telegram Stars is available only inside the Telegram bot checkout flow.";
+            return "Telegram Stars доступен только внутри сценария оплаты Telegram-бота.";
         }
 
         if (string.IsNullOrWhiteSpace(account.ShopId))
         {
-            return "ShopId / merchant identifier is required before checkout can use this provider.";
+            return "Перед использованием провайдера укажите ShopId или идентификатор мерчанта.";
         }
 
         if (account.Mode == PaymentProviderMode.Production && string.IsNullOrWhiteSpace(account.SecretKeyProtected))
         {
-            return "Production checkout requires a protected secret key.";
+            return "Для рабочего режима оплаты нужен защищённый секретный ключ.";
         }
 
         if (account.Provider == PaymentProvider.CloudPayments && string.IsNullOrWhiteSpace(ReadExtraSetting(account.ExtraSettingsJson, "hostedCheckoutUrl")))
         {
-            return "CloudPayments checkout requires ExtraSettingsJson.hostedCheckoutUrl with a merchant-hosted widget page.";
+            return "Для CloudPayments укажите ExtraSettingsJson.hostedCheckoutUrl со страницей виджета магазина.";
         }
 
         foreach (var (value, fieldName) in new[]
@@ -215,23 +215,23 @@ public static class PaymentProviderConfigurationRules
 
         if (!account.IsEnabled)
         {
-            return "Provider account is disabled.";
+            return "Аккаунт провайдера выключен.";
         }
 
         if (account.Mode == PaymentProviderMode.Disabled)
         {
-            return "Provider mode is Disabled.";
+            return "Режим провайдера выключен.";
         }
 
         if (string.IsNullOrWhiteSpace(account.ShopId))
         {
-            return "Telegram Stars bot username is required before invoice flow can be enabled.";
+            return "Перед включением оплаты укажите username Telegram Stars-бота.";
         }
 
         var status = ReadExtraSetting(account.ExtraSettingsJson, TelegramStarsStatusKey);
         if (!string.Equals(status, TelegramStarsInvoiceFlowStatus, StringComparison.OrdinalIgnoreCase))
         {
-            return "Telegram Stars invoice flow must be explicitly enabled with ExtraSettingsJson.status = \"invoice-flow\".";
+            return "Сценарий Telegram Stars нужно явно включить: ExtraSettingsJson.status = \"invoice-flow\".";
         }
 
         return null;
@@ -249,12 +249,12 @@ public static class PaymentProviderConfigurationRules
 
         if (SafeHttpUrl.ContainsCredentials(value))
         {
-            return $"{fieldName} must not contain credentials (login or password).";
+            return $"{fieldName} не должен содержать логин или пароль.";
         }
 
         return SafeHttpUrl.TryNormalize(value, out _)
             ? null
-            : $"{fieldName} must be an absolute http/https URL.";
+            : $"{fieldName} должен быть абсолютным URL с http/https.";
     }
 
     public static string GetCapabilitiesJson(PaymentProvider provider)
@@ -277,13 +277,13 @@ public static class PaymentProviderConfigurationRules
         return new[]
         {
             new PaymentProviderCapabilityRule("createPayment", "Создание платежа", supportsWebCheckout, supportsWebCheckout ? "supported" : "bot_only"),
-            new PaymentProviderCapabilityRule("telegramNative", "Telegram invoice", provider == PaymentProvider.TelegramStars, provider == PaymentProvider.TelegramStars ? "supported" : "not_applicable"),
+            new PaymentProviderCapabilityRule("telegramNative", "Счёт Telegram", provider == PaymentProvider.TelegramStars, provider == PaymentProvider.TelegramStars ? "supported" : "not_applicable"),
             new PaymentProviderCapabilityRule("webhook", "Webhook / уведомления", true, "supported"),
             new PaymentProviderCapabilityRule("signatureValidation", "Проверка подписи", provider != PaymentProvider.TelegramStars, provider == PaymentProvider.TelegramStars ? "telegram_update" : "supported"),
             new PaymentProviderCapabilityRule("refund", "Возвраты", supportsRefund, supportsRefund ? "supported" : "not_supported"),
             new PaymentProviderCapabilityRule("recheck", "Ручная перепроверка", supportsRecheck, supportsRecheck ? "supported" : "not_supported"),
-            new PaymentProviderCapabilityRule("sandbox", "Sandbox-режим", supportsSandbox, supportsSandbox ? "supported" : "not_supported"),
-            new PaymentProviderCapabilityRule("live", "Production-режим", true, provider == PaymentProvider.TelegramStars ? "requires_telegram_bot" : "supported")
+            new PaymentProviderCapabilityRule("sandbox", "Проверочный режим", supportsSandbox, supportsSandbox ? "supported" : "not_supported"),
+            new PaymentProviderCapabilityRule("live", "Рабочий режим", true, provider == PaymentProvider.TelegramStars ? "requires_telegram_bot" : "supported")
         };
     }
 

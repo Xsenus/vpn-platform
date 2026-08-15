@@ -35,7 +35,7 @@ public sealed record ProvisioningModeDescriptor(
 
 public class ProvisioningService
 {
-    public const string LiveDeployDisabledError = "Live provisioning is disabled by default. Use validation/dry-run mode or enable explicit live provisioning on an approved staging target.";
+    public const string LiveDeployDisabledError = "Рабочее развёртывание по умолчанию выключено. Используйте проверочный режим или явно разрешите рабочее развёртывание для одобренного стенда.";
 
     private readonly IApplicationDbContext _db;
     private readonly IClock _clock;

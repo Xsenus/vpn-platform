@@ -3410,7 +3410,7 @@ test('admin serializes VPN infrastructure commands across parent resources', asy
   expect(api.getRequestCount('/api/admin/provisioning-runs/provisioning-e2e/support-needed', 'POST')).toBe(0)
 
   api.releaseProvisioningDeploy()
-  await expect(page.getByText(/Развертывание поставлено в очередь/)).toBeVisible()
+  await expect(page.getByText(/Развёртывание поставлено в очередь/)).toBeVisible()
   await openAdminSection(page, 'Серверы', 'nodes')
   serverRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox' }).first()
   await serverRow.getByRole('button', { name: 'Health-check' }).click()
@@ -4251,15 +4251,15 @@ test('admin provisioning supports safe validation lifecycle', async ({ page }) =
   await expect(page.getByText('Health-check EU Sandbox: Работает')).toBeVisible()
   expect(api.getLastRequest('/api/admin/servers/server-eu/health-check', 'POST')?.authorization).toBe('Bearer admin-provisioning-token')
 
-  await serverRow.getByRole('button', { name: 'Precheck VPS' }).click()
-  await expect(page.getByText('Проверка поставлена в очередь. Режим: Dry-run precheck. ID запуска: provisioning-precheck-created-e2e')).toBeVisible()
+  await serverRow.getByRole('button', { name: 'Проверить VPS' }).click()
+  await expect(page.getByText('Проверка поставлена в очередь. Режим: Проверка без изменений. ID запуска: provisioning-precheck-created-e2e')).toBeVisible()
   expect(api.getLastRequest('/api/admin/servers/server-eu/precheck', 'POST')?.body).toEqual({ revision: 0 })
 
   await serverRow.getByRole('button', { name: 'Подготовить' }).click()
-  await expect(nodesPanel.getByRole('dialog')).toContainText('Validation deploy')
+  await expect(nodesPanel.getByRole('dialog')).toContainText('Проверочное развёртывание')
   await expect(nodesPanel.getByRole('dialog')).toContainText('не меняет рабочую инфраструктуру')
   await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
-  await expect(page.getByText('Подготовка сервера поставлена в очередь. Режим: Validation deploy; риск: низкий риск. ID запуска: provisioning-direct-created-e2e')).toBeVisible()
+  await expect(page.getByText('Подготовка сервера поставлена в очередь. Режим: Проверочное развёртывание; риск: низкий риск. ID запуска: provisioning-direct-created-e2e')).toBeVisible()
   expect(api.getLastRequest('/api/admin/servers/server-eu/provision', 'POST')?.body).toEqual({ dryRun: false, revision: 0 })
 
   await openAdminSection(page, 'Подготовка VPS', 'provisioning')
@@ -4271,10 +4271,10 @@ test('admin provisioning supports safe validation lifecycle', async ({ page }) =
   await expect(precheckRow.getByRole('button', { name: 'Отменить' })).toBeEnabled()
 
   await precheckRow.getByRole('button', { name: 'Развернуть' }).click()
-  await expect(provisioningPanel.getByRole('dialog')).toContainText('Validation deploy')
+  await expect(provisioningPanel.getByRole('dialog')).toContainText('Проверочное развёртывание')
   await expect(provisioningPanel.getByRole('dialog')).toContainText('не меняет рабочую инфраструктуру')
   await provisioningPanel.getByRole('button', { name: 'Подтвердить' }).click()
-  await expect(page.getByText('Развертывание поставлено в очередь. Режим: Validation deploy; риск: низкий риск. ID запуска: provisioning-precheck-created-e2e')).toBeVisible()
+  await expect(page.getByText('Развёртывание поставлено в очередь. Режим: Проверочное развёртывание; риск: низкий риск. ID запуска: provisioning-precheck-created-e2e')).toBeVisible()
   expect(api.getLastRequest('/api/admin/provisioning-runs/provisioning-precheck-created-e2e/deploy', 'POST')?.body).toEqual({ revision: 0 })
 
   precheckRow = provisioningPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox Precheck E2E' })
@@ -4285,7 +4285,7 @@ test('admin provisioning supports safe validation lifecycle', async ({ page }) =
   await expect(precheckRow.getByRole('button', { name: 'Повторить' })).toBeEnabled()
 
   await precheckRow.getByRole('button', { name: 'Повторить' }).click()
-  await expect(page.getByText('Повтор поставлен в очередь. Режим: Validation deploy. Новый ID запуска: provisioning-precheck-created-e2e')).toBeVisible()
+  await expect(page.getByText('Повтор поставлен в очередь. Режим: Проверочное развёртывание. Новый ID запуска: provisioning-precheck-created-e2e')).toBeVisible()
   expect(api.getLastRequest('/api/admin/provisioning-runs/provisioning-precheck-created-e2e/retry', 'POST')?.authorization).toBe('Bearer admin-provisioning-token')
   await precheckRow.getByRole('button', { name: 'Нужна поддержка' }).click()
   await expect(page.getByText('Обращение в поддержку: support-provisioning-e2e')).toBeVisible()

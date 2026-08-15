@@ -367,6 +367,7 @@ public class OwnVpsProvisioningMvpTests
 
         Assert.False(blockedLive.IsSuccess);
         Assert.Equal(ProvisioningService.LiveDeployDisabledError, blockedLive.Error);
+        Assert.Contains("Рабочее развёртывание", blockedLive.Error, StringComparison.Ordinal);
         Assert.True(dryRun.IsSuccess, dryRun.Error);
         Assert.True(dryRun.Value!.DryRun);
         Assert.True(explicitLive.IsSuccess, explicitLive.Error);

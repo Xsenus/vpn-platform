@@ -30,6 +30,13 @@ test('admin display formatter localizes bounded operational metadata', () => {
   assert.equal(formatAdminDisplayLabel('disable_access'), 'Отключить VPN-доступ')
   assert.equal(formatAdminDisplayLabel('disable_access_after_grace'), 'Отключить доступ после льготного периода')
   assert.equal(formatAdminDisplayLabel('extend_subscription'), 'Продлить подписку')
+  assert.equal(formatAdminDisplayLabel('ready_to_deploy'), 'Готово к развёртыванию')
+  assert.equal(formatAdminDisplayLabel('ssh_key'), 'SSH-ключ')
+  assert.equal(formatAdminDisplayLabel('not_configured'), 'Не настроена')
+  assert.equal(
+    formatAdminDisplayLabel('Live provisioning is disabled by default. Use validation/dry-run mode or enable explicit live provisioning on an approved staging target.'),
+    'Рабочее развёртывание по умолчанию выключено. Используйте проверочный режим или явно разрешите рабочее развёртывание для одобренного стенда.'
+  )
   assert.equal(formatAdminDisplayLabel('custom_action'), 'custom_action')
 })
 
@@ -68,4 +75,12 @@ test('admin user-facing metadata does not interpolate technical enum values dire
   assert.match(source, /Ошибка оплаты: \{formatAdminDisplayLabel\(scenario\.onPaymentFailed\)\}/)
   assert.match(source, /Возврат: \{formatAdminDisplayLabel\(scenario\.onRefund\)\}/)
   assert.match(source, /Окончание: \{formatAdminDisplayLabel\(scenario\.onSubscriptionExpired\)\}/)
+  assert.doesNotMatch(source, /режим \{payment\.providerMode \?\? '—'\}/)
+  assert.doesNotMatch(source, /источник \{run\.source \|\| '—'\}/)
+  assert.doesNotMatch(source, /владелец \{run\.owner \|\| '—'\}/)
+  assert.doesNotMatch(source, /шаг \{run\.currentStep \|\| run\.status\}/)
+  assert.doesNotMatch(source, /авторизация \{run\.authMethod \|\| '—'\}/)
+  assert.doesNotMatch(source, /'validation node' : 'live candidate'/)
+  assert.doesNotMatch(source, /авторизация: \{server\.sshAuthMethod \|\|/)
+  assert.doesNotMatch(source, /\{server\.lastHealthError \|\|/)
 })
