@@ -1107,17 +1107,23 @@ public class X3UiIntegrationTests
             "{}",
             IsDefault: true,
             Capacity: 100), CancellationToken.None);
+        var archivedHealth = await service.CheckHealthAsync(panelId, CancellationToken.None);
+        var archivedSync = await service.SyncPanelAsync(panelId, CancellationToken.None);
 
         Assert.True(firstResult.IsSuccess, firstResult.Error);
         Assert.True(firstResult.Value!.Archived);
         Assert.False(repeatedResult.IsSuccess);
         Assert.Equal("VPN panel is already archived.", repeatedResult.Error);
         Assert.Equal("Archived VPN panel is read-only.", archivedMutation.Error);
+        Assert.Equal("Archived VPN panel is read-only.", archivedHealth.Error);
+        Assert.Equal("Archived VPN panel is read-only.", archivedSync.Error);
         db.ChangeTracker.Clear();
         var archivedPanel = await db.VpnPanels.SingleAsync(x => x.Id == panelId);
         Assert.Equal(VpnPanelStatus.Archived, archivedPanel.Status);
         Assert.Equal(archivedRevision, archivedPanel.Revision);
         Assert.Empty(await db.VpnInbounds.Where(x => x.VpnPanelId == panelId).ToListAsync());
+        Assert.Equal(1, await db.PanelHealthChecks.CountAsync(x => x.VpnPanelId == panelId));
+        Assert.Empty(await db.PanelSyncRuns.Where(x => x.VpnPanelId == panelId).ToListAsync());
         Assert.Equal(1, await db.AuditLogs.CountAsync(x => x.Action == "vpn_panel.archive" && x.EntityId == panelId.ToString()));
     }
 
@@ -1206,6 +1212,53 @@ public class X3UiIntegrationTests
         Assert.Equal(1, await db.VpnInbounds.CountAsync(x => x.VpnPanelId == panelId));
         Assert.Equal(0, (await db.VpnInbounds.SingleAsync(x => x.Id == inboundId)).Revision);
         Assert.Equal(0, (await db.VpnClients.SingleAsync(x => x.Id == clientId)).Revision);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Archived_Panel_Should_Reject_Health_And_Sync_Without_Remote_Or_Local_Churn()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var remote = new FakeX3UiClient(clock.UtcNow);
+        var panelId = Guid.NewGuid();
+        db.VpnPanels.Add(new VpnPanel
+        {
+            Id = panelId,
+            Name = "archived-operational-panel",
+            BaseUrl = "https://archived-operational-panel.example.test:2053",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "eu",
+            Status = VpnPanelStatus.Archived,
+            HealthStatus = HealthStatus.Healthy,
+            Capacity = 100,
+            Revision = 3
+        });
+        await db.SaveChangesAsync();
+        var service = new X3UiPanelService(db, remote, new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var staleHealth = await service.CheckHealthIfCurrentAsync(panelId, clock.UtcNow, CancellationToken.None);
+        var staleSync = await service.SyncPanelIfCurrentAsync(panelId, clock.UtcNow, CancellationToken.None);
+        var health = await service.CheckHealthAsync(panelId, CancellationToken.None);
+        var sync = await service.SyncPanelAsync(panelId, CancellationToken.None);
+
+        const string expectedError = "Archived VPN panel is read-only.";
+        Assert.Equal("Panel health observation is stale; a newer check already completed.", staleHealth.Error);
+        Assert.Equal("Panel sync observation is stale; a newer sync already completed.", staleSync.Error);
+        Assert.Equal(expectedError, health.Error);
+        Assert.Equal(expectedError, sync.Error);
+        Assert.Equal(0, remote.HealthCheckCalls);
+        Assert.Equal(0, remote.GetInboundsCalls);
+        db.ChangeTracker.Clear();
+        var panel = await db.VpnPanels.SingleAsync(x => x.Id == panelId);
+        Assert.Equal(VpnPanelStatus.Archived, panel.Status);
+        Assert.Equal(3, panel.Revision);
+        Assert.Null(panel.LastHealthCheckAt);
+        Assert.Null(panel.LastSyncAt);
+        Assert.Empty(await db.PanelHealthChecks.ToListAsync());
+        Assert.Empty(await db.PanelSyncRuns.ToListAsync());
+        Assert.Empty(await db.VpnInbounds.ToListAsync());
         Assert.Empty(await db.AuditLogs.ToListAsync());
     }
 
@@ -3059,6 +3112,7 @@ public class X3UiIntegrationTests
         public int CreateInboundCalls { get; private set; }
         public int UpdateInboundCalls { get; private set; }
         public int HealthCheckCalls { get; private set; }
+        public int GetInboundsCalls { get; private set; }
         public int AddClientCalls => _addClientCalls;
         public int UpdateClientCalls { get; private set; }
         public int DeleteClientCalls { get; private set; }
@@ -3095,6 +3149,7 @@ public class X3UiIntegrationTests
         public Task<X3UiInboundDto?> GetInboundAsync(VpnPanel panel, string password, string inboundId, CancellationToken cancellationToken) => Task.FromResult<X3UiInboundDto?>(DefaultInbound());
         public Task<IReadOnlyCollection<X3UiInboundDto>> GetInboundsAsync(VpnPanel panel, string password, CancellationToken cancellationToken)
         {
+            GetInboundsCalls += 1;
             if (CancelGetInboundsWith is not null)
             {
                 CancelGetInboundsWith.Cancel();

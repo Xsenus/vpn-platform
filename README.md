@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-15 локально подтверждено:
 
-- backend на .NET 9: `1589/1589` unit tests;
+- backend на .NET 9: `1590/1590` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `196/196`;
 - frontend typecheck и production build: OK;
@@ -352,7 +352,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - verified `CHECKOUT.ORDER.APPROVED` запускает server-side PayPal capture с idempotency/reconciliation и не активирует VPN без capture proof;
 - manual recheck Stripe, YooKassa и Т-Банка сверяет фактические provider ID, сумму, валюту, internal order/account и paid marker до активации;
 - refund YooKassa/Stripe/PayPal/Т-Банка применяет результат только после совпадения provider source reference и доступных amount/currency/internal payment proof; последовательные partial refund Т-Банка имеют отдельные operation IDs;
-- backend `1589/1589`, frontend `196/196`, полный console-responsive Playwright `282/282`, 3x-ui archive read-only Playwright `1/1`, VPN archive desktop/mobile Playwright `2/2`, VPN state-actions desktop/mobile Playwright `4/4`, VPN-server no-op/conflict desktop/mobile Playwright `2/2`, retryable admin conflict targeted Playwright `12/12`, payment-provider no-op/conflict desktop/mobile Playwright `4/4`, VPN editor no-op/conflict targeted Playwright `3/3`, commercial editor no-op/conflict targeted Playwright `3/3`, managed editor stale/no-op desktop/mobile Playwright `6/6`, Telegram settings save/conflict desktop/mobile Playwright `4/4`, targeted user management desktop/mobile Playwright `2/2`, dashboard RBAC desktop/mobile Playwright `4/4`, notification masking/retry desktop/mobile Playwright `2/2`, audit RBAC desktop/mobile Playwright `4/4`, order/recheck/finance RBAC desktop/mobile Playwright `8/8`, finance/recheck/refund lifecycle desktop/mobile Playwright `8/8`, support lifecycle desktop/mobile Playwright `8/8`, dependency audit `0 vulnerabilities`;
+- backend `1590/1590`, frontend `196/196`, полный console-responsive Playwright `282/282`, 3x-ui archive operational read-only Playwright `1/1`, VPN archive desktop/mobile Playwright `2/2`, VPN state-actions desktop/mobile Playwright `4/4`, VPN-server no-op/conflict desktop/mobile Playwright `2/2`, retryable admin conflict targeted Playwright `12/12`, payment-provider no-op/conflict desktop/mobile Playwright `4/4`, VPN editor no-op/conflict targeted Playwright `3/3`, commercial editor no-op/conflict targeted Playwright `3/3`, managed editor stale/no-op desktop/mobile Playwright `6/6`, Telegram settings save/conflict desktop/mobile Playwright `4/4`, targeted user management desktop/mobile Playwright `2/2`, dashboard RBAC desktop/mobile Playwright `4/4`, notification masking/retry desktop/mobile Playwright `2/2`, audit RBAC desktop/mobile Playwright `4/4`, order/recheck/finance RBAC desktop/mobile Playwright `8/8`, finance/recheck/refund lifecycle desktop/mobile Playwright `8/8`, support lifecycle desktop/mobile Playwright `8/8`, dependency audit `0 vulnerabilities`;
 - user overview, 3x-ui client и operational admin surfaces используют bounded Russian labels для source/auth/roles/email/counts/events/sync, user status, audit actor/category, SSL, access history, QR и health/support fallback; технические VPN identifiers не подменяются;
 - карточки рабочих сценариев, платежные аккаунты, серверы и подготовка VPS локализуют bounded business/operation metadata без изменения raw API-значений, а локальный SQLite repair обновляет существующие базы с revision-колонками;
 - управление профилем пользователя в админке использует strict versioned PATCH, валидируемую адаптивную форму и явное подтверждение отзыва сессий; конфликт загружает актуальную карточку без stale overwrite;
@@ -366,7 +366,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - повторное удаление архивного VPN-сервера отклоняется без relation queries/revision/audit churn, а UI сохраняет diagnostics без недоступной delete-команды;
 - связанная 3x-ui панель получает terminal `Archived`; повторный delete и прямой PATCH-to-archive отклоняются без mutation, а UI сохраняет историю без недоступных команд;
 - archived 3x-ui details доступны для чтения, но семь inbound/client mutations блокируются до remote/EF/audit side effects, а дочерние формы и actions скрыты;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-15-vpn-panel-archive-readonly`, версия `0.745.0`;
+- direct health/test/sync для archived 3x-ui панели блокируются после freshness check и до provider, history, inbound, revision или audit mutation;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-15-vpn-panel-archive-operational-readonly`, версия `0.746.0`;
 - server API, own-VPS onboarding, queue и executor отклоняют inventory-breaking IP/SSH values; executor использует фиксированный alias и `ArgumentList`, а admin-форма показывает те же diagnostics до submit;
 - 3x-ui panel/inbound/client mutations требуют актуальную revision, diagnostics ограничены до materialization, а stale UI восстанавливает актуальные данные;
 - provisioning queue/run actions требуют актуальную revision, coordinator/admin diagnostics ограничены в БД, а exact DTO отклоняет расширенные ответы;
@@ -380,6 +381,6 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - admin notification status/template/search и latest top-500 выполняются в БД до materialization;
 - admin dashboard subscription/recent/payment readiness metrics считаются DB-side aggregates без загрузки строк;
 - auto-target миграция подписки выбирает node/panel/inbound одним ordered SQL query без N+1;
-- roadmap progress: `768/788` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- roadmap progress: `769/789` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

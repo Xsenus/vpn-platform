@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-15.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-vpn-panel-archive-readonly`, версия `0.745.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `768/788` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-vpn-panel-archive-operational-readonly`, версия `0.746.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `769/789` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-15:
 
-- [x] `STATE-001` Backend test suite проходит: `1589/1589`.
+- [x] `STATE-001` Backend test suite проходит: `1590/1590`.
 - [x] `STATE-002` Frontend test suite проходит: `196/196`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2768,6 +2768,10 @@ git diff --check
   - Что сделать: terminal archive должен блокировать create/update/default inbound и enable/disable/sync/reset/migrate клиента до remote/local side effects, сохраняя приоритет stale revision и чтение истории.
   - Что сделано: общий read-only error применяется в семи service paths после revision check; UI скрывает inbound form и inbound/client toolbars, показывает состояние only-view и блокирует programmatic form submit без API request.
   - Доказательство: fail-first backend `0/1`; after-fix targeted backend/SQLite `2/2`, backend Debug/Release `1589/1589`, API Release build `0 warnings / 0 errors`, frontend `196/196`, docs/status/encoding `47/47`, typecheck/build, admin bundle raw `586612/586752`, gzip `156122/156672`, targeted Playwright `1/1`, полный Playwright `282/282` за `13.4 min`, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, strict UTF-8/BOM guard и secret scan `727/0` зелёные. Все 17 admin sections и 25 responsive viewport-конфигураций проходят; реальная production-like 3x-ui/x-ui панель остаётся внешним evidence.
+- [x] `P11-ACC-478` Заблокировать operational-команды архивной 3x-ui панели. 2026-08-15.
+  - Что сделать: terminal archive должен отклонять прямые test-connection/health-check/sync команды после freshness check и до provider, health/sync history, inbound, revision или audit mutation.
+  - Что сделано: `CheckHealthCoreAsync` и `SyncPanelCoreAsync` используют общий archived read-only guard; stale worker observation сохраняет приоритет, а чтение сохранённой диагностики не ограничено.
+  - Доказательство: fail-first backend `0/1`; after-fix targeted backend/SQLite `2/2`, 3x-ui integration/worker/durability `104/104`, backend Debug/Release `1590/1590`, API Release build `0 warnings / 0 errors`, frontend `196/196`, docs/status/encoding `47/47`, typecheck/build, admin bundle raw `586612/586752`, gzip `156122/156672`, targeted Playwright `1/1`, полный Playwright `282/282` за `13.1 min`, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, strict UTF-8/BOM guard и secret scan `727/0` зелёные. Все 17 admin sections и 25 responsive viewport-конфигураций проходят; реальная production-like 3x-ui/x-ui панель остаётся внешним evidence.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3417,6 +3421,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-15-011` | P1 | Admin 3x-ui archived operations | Terminal archive скрывал test/sync в UI, но прямые health/test и sync endpoints продолжали provider и local mutations, создавали историю и повышали revision. | Исправлено локально | Два backend guards, freshness priority, SQLite no-mutation и desktop/mobile/full responsive regressions зелёные. Реальная production-like 3x-ui/x-ui проверка остаётся внешним evidence. |
 | `BUG-2026-08-15-010` | P1 | Admin 3x-ui archived children | Terminal archive блокировал panel edit/delete, но inbound/client endpoints продолжали remote и local mutations, а detail UI показывал формы и дочерние actions. | Исправлено локально | Семь backend read-only guards, SQLite no-mutation, hidden programmatic submit и desktop/mobile/full responsive regressions зелёные. Реальная production-like 3x-ui/x-ui проверка остаётся внешним evidence. |
 | `BUG-2026-08-15-009` | P1 | Admin 3x-ui panel archive | Delete связанной панели сохранял обычный `Disabled`, поэтому архив можно было включить, повторно удалить и повторно записать revision/audit; UI продолжал показывать все mutation-actions. | Исправлено локально | Отдельный terminal `Archived`, repeat/PATCH guards, SQLite persistence и desktop/mobile/full responsive regressions зелёные. Реальная production-like 3x-ui/x-ui проверка остаётся внешним evidence. |
 | `BUG-2026-08-15-008` | P1 | Admin VPN server archive | Повторная DELETE-команда архивного сервера снова выполняла пять relation queries, повышала revision, меняла timestamp и писала audit; UI продолжал показывать удаление. | Исправлено локально | Early archived guard, state-aware delete availability, fresh SQLite first/repeated delete и desktop/mobile/full responsive regressions зелёные. Реальные VPS/SSH/Ansible/3x-ui outcomes остаются отдельным evidence. |

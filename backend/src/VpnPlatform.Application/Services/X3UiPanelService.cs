@@ -321,6 +321,10 @@ public class X3UiPanelService
         {
             return Result<PanelHealthCheckDto>.Failure("Panel health observation is stale; a newer check already completed.");
         }
+        if (panel.Status == VpnPanelStatus.Archived)
+        {
+            return Result<PanelHealthCheckDto>.Failure(ArchivedPanelReadOnlyError);
+        }
         if (requireOperationalStatus && panel.Status is not (VpnPanelStatus.Active or VpnPanelStatus.New))
         {
             return Result<PanelHealthCheckDto>.Failure("Panel is no longer active for scheduled health checks.");
@@ -513,6 +517,10 @@ public class X3UiPanelService
         if (enforceExpectedLastSyncAt && panel.LastSyncAt != expectedLastSyncAt)
         {
             return Result<PanelSyncRunDto>.Failure("Panel sync observation is stale; a newer sync already completed.");
+        }
+        if (panel.Status == VpnPanelStatus.Archived)
+        {
+            return Result<PanelSyncRunDto>.Failure(ArchivedPanelReadOnlyError);
         }
 
         var before = PanelAuditSnapshot(panel);

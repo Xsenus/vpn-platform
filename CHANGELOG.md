@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.746.0 - 2026-08-15
+
+Release entry: `2026-08-15-vpn-panel-archive-operational-readonly`.
+
+### Исправлено
+
+- Прямые admin API-команды test-connection, health-check и sync больше не могут изменять terminal archived 3x-ui панель в обход скрытых UI-кнопок.
+- Read-only guard выполняется после freshness-проверки и до provider, health/sync history, inbound, revision или audit mutation; stale observation сохраняет приоритет.
+- SQLite regression подтверждает, что после реальной архивации panel health/sync отклоняются без новых записей и изменения сохранённого состояния.
+
+### Проверено
+
+- Fail-first backend regression завершился `0/1`; после исправления targeted backend/SQLite `2/2`, полный 3x-ui integration/worker/durability контур `104/104` и целевой Playwright `1/1` зелёные.
+- Backend Debug/Release `1590/1590`, API Release build `0 warnings / 0 errors`, frontend `196/196`, docs/status/encoding `47/47`, typecheck/build, admin bundle raw `586612/586752` и gzip `156122/156672`, полный Playwright `282/282` за `13.1 min`, все 17 admin sections и 25 responsive viewport-конфигураций, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, strict UTF-8/BOM guard и secret scan `727/0` проходят. Roadmap `769/789` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальная production-like 3x-ui/x-ui панель, VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API и SMTP остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.745.0 - 2026-08-15
 
 Release entry: `2026-08-15-vpn-panel-archive-readonly`.

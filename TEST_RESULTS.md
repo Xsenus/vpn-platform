@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: archived 3x-ui operational command boundary
+
+Scope:
+- Terminal archived panels must reject direct health/test and sync commands before remote or local side effects.
+- Scheduled freshness conflicts must retain priority over the terminal-state error.
+- Existing diagnostic history remains readable while no new health, sync, inbound or audit data is created.
+
+Results:
+- Roadmap progress: `769/789` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-vpn-panel-archive-operational-readonly`, version `0.746.0`.
+- Fail-first: the direct archived health/sync regression completed `0/1` because health-check returned success and mutated persisted state.
+- After fix: targeted backend/SQLite `2/2`, 3x-ui integration/worker/durability `104/104`, targeted Playwright `1/1`, frontend `196/196`, typecheck/build, admin bundle `586612/586752` raw and `156122/156672` gzip, and full Playwright `282/282` in `13.1 min` are green.
+- Release gate: backend Debug/Release `1590/1590`, API Release build `0 warnings / 0 errors`, frontend `196/196`, docs/status/encoding `47/47`, all 17 admin sections and 25 responsive viewport configurations, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, strict UTF-8/BOM guard and secret scan `727/0` are green.
+- External boundary: a real production-like 3x-ui/x-ui panel, VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API and SMTP were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: archived 3x-ui child mutation boundary
 
 Scope:

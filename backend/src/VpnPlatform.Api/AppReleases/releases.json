@@ -17643,5 +17643,32 @@
         "text": "Roadmap progress is 768/788 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-15-vpn-panel-archive-operational-readonly",
+    "version": "0.746.0",
+    "releasedAt": "2026-08-15T21:00:07+07:00",
+    "title": "Archived 3x-ui operational commands are now read-only",
+    "summary": "Archived panels reject direct health, connection-test and sync commands before provider calls or persisted state changes.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Direct administrative health, connection-test and panel-sync commands now reject a terminal archived panel before remote provider calls."
+      },
+      {
+        "type": "fixed",
+        "text": "Rejected operational commands do not create health checks, sync runs, inbound changes or audit records and do not advance the panel revision."
+      },
+      {
+        "type": "improved",
+        "text": "Freshness conflicts are evaluated before the archived read-only state, preserving deterministic scheduled-worker recovery semantics."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 769/789 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]
