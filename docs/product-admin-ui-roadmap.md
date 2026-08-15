@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `771/791` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `772/792` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,8 +85,8 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1595/1595`.
-- [x] Frontend unit tests: `196/196`.
+- [x] Backend full suite: `1603/1603`.
+- [x] Frontend unit tests: `197/197`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
@@ -175,7 +175,7 @@
 - [x] Payment-provider accounts требуют persisted revision, отклоняют no-op/stale update и state action, а delayed conflict сохраняет более новый local draft.
 - [x] Payment-provider, tariff, referral-program, app-release, VPN panel и inbound drafts после delayed conflict получают winning revision и повторно сохраняются.
 - [x] VPN-server editor отклоняет no-op без revision/audit churn и сохраняет новый draft при delayed conflict для повторной отправки.
-- [x] Latest "Что нового": `2026-08-15-server-archive-provisioning-readonly`, версия `0.748.0`; backend `1595/1595`, frontend `196/196`, полный Playwright `282/282`, archived provisioning/SQLite `4/4` зелёные.
+- [x] Latest "Что нового": `2026-08-15-server-archive-active-workload-guard`, версия `0.749.0`; backend `1603/1603`, frontend `197/197`, полный Playwright `282/282`, active workload/capacity SQLite `8/8` зелёные.
 
 ## Как вести дальше
 

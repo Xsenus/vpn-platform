@@ -539,8 +539,32 @@ async function mockAdminApi(page: Page) {
   const scenarios = [workScenario()]
   const faqEntries: Array<Record<string, unknown>> = []
   const siteContentBlocks: Array<Record<string, unknown>> = []
-  const servers = [vpnServer()]
-  const provisioningRuns = [provisioningRun()]
+  const servers = [
+    vpnServer(),
+    vpnServer({
+      id: 'server-history',
+      revision: 2,
+      name: 'Historical Sandbox',
+      host: 'history.example.test',
+      status: 'Disabled',
+      usedCapacity: 0,
+      isAvailableForNewUsers: false,
+      provisioningStatus: 'Succeeded'
+    })
+  ]
+  const provisioningRuns = [
+    provisioningRun(),
+    provisioningRun({
+      id: 'provisioning-history',
+      nodeId: 'server-history',
+      nodeName: 'Historical Sandbox',
+      nodeStatus: 'Disabled',
+      targetHost: 'history.example.test',
+      status: 'Succeeded',
+      currentStep: 'completed',
+      precheckReportPreview: 'Historical VPS check.'
+    })
+  ]
   const panels = [
     vpnPanel(),
     vpnPanel({
@@ -1836,15 +1860,15 @@ async function mockAdminApi(page: Page) {
       return
     }
 
-    if (method === 'DELETE' && path === '/api/admin/servers/server-eu') {
-      const server = servers.find((item) => item.id === 'server-eu')
+    if (method === 'DELETE' && path === '/api/admin/servers/server-history') {
+      const server = servers.find((item) => item.id === 'server-history')
       if (!server || url.searchParams.get('revision') !== String(server.revision)) {
         await fulfillJson(route, { error: 'Server changed. Reload it and retry.' }, 409)
         return
       }
       Object.assign(server, { status: 'Archived', isAvailableForNewUsers: false, revision: Number(server.revision) + 1, updatedAt: now })
       for (const run of provisioningRuns.filter((item) => item.nodeId === server.id)) run.nodeStatus = 'Archived'
-      await fulfillJson(route, { id: 'server-eu', deleted: false, archived: true, linkedSubscriptions: 0, linkedAccesses: 0, linkedProvisioningRuns: 0, linkedHealthChecks: 2, linkedMigrationJobs: 1 })
+      await fulfillJson(route, { id: 'server-history', deleted: false, archived: true, linkedSubscriptions: 0, linkedAccesses: 0, linkedProvisioningRuns: 1, linkedHealthChecks: 1, linkedMigrationJobs: 1 })
       return
     }
 
@@ -5301,14 +5325,14 @@ test('admin server editor rejects no-op and keeps a newer conflict draft retryab
   await expect(page.getByText('Сервер Новый локальный черновик сервера обновлен. Секреты не возвращаются из API.')).toBeVisible()
   expect(api.getLastRequest('/api/admin/servers/server-eu', 'PUT')?.body).toMatchObject({ revision: 1 })
 
-  serverRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'Новый локальный черновик сервера' })
+  serverRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'Historical Sandbox' })
   await serverRow.getByRole('button', { name: 'Удалить' }).click()
-  api.changeServerExternally('server-eu', 'Актуальный сервер перед удалением')
+  api.changeServerExternally('server-history', 'Актуальный сервер перед удалением')
   await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
 
   await expect(page.locator('.error-block')).toContainText('Сервер уже изменен другим администратором')
   await expect(nodesPanel.getByText('Актуальный сервер перед удалением', { exact: true })).toBeVisible()
-  expect(api.getRequestCount('/api/admin/servers/server-eu', 'DELETE')).toBe(1)
+  expect(api.getRequestCount('/api/admin/servers/server-history', 'DELETE')).toBe(1)
 })
 
 test('admin server mode action reloads after a stale revision', async ({ page }) => {
@@ -5905,21 +5929,26 @@ test('admin panel covers login and critical operational mutations across all sec
 
   await openAdminSection(page, 'Серверы', 'nodes')
   const staleNodesSection = page.locator('#nodes')
-  await staleNodesSection.getByRole('button', { name: 'Редактировать' }).click()
+  const activeServerRow = staleNodesSection.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox' })
+  await expect(activeServerRow).toContainText('Емкость: 12/1000')
+  await expect(activeServerRow.getByRole('button', { name: 'Удалить' })).toHaveCount(0)
+  expect(api.getLastRequest('/api/admin/servers/server-eu', 'DELETE')).toBeFalsy()
+  const historicalServerRow = staleNodesSection.locator('.list-item-vertical').filter({ hasText: 'Historical Sandbox' })
+  await historicalServerRow.getByRole('button', { name: 'Редактировать' }).click()
   await expect(staleNodesSection.getByRole('heading', { name: 'Редактировать VPN-сервер' })).toBeVisible()
-  await staleNodesSection.getByRole('button', { name: 'Удалить' }).click()
-  await expect(staleNodesSection.getByRole('dialog')).toContainText('health-check или миграций')
+  await historicalServerRow.getByRole('button', { name: 'Удалить' }).click()
+  await expect(staleNodesSection.getByRole('dialog')).toContainText('История будет сохранена')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await staleNodesSection.getByRole('button', { name: 'Подтвердить' }).click()
-  await expect(page.getByText('Сервер EU Sandbox архивирован: связей 3.')).toBeVisible()
-  expect(api.getLastRequest('/api/admin/servers/server-eu', 'DELETE')).toBeTruthy()
-  const archivedServerRow = staleNodesSection.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox' })
+  await expect(page.getByText('Сервер Historical Sandbox архивирован: связей 3.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/servers/server-history', 'DELETE')).toBeTruthy()
+  const archivedServerRow = staleNodesSection.locator('.list-item-vertical').filter({ hasText: 'Historical Sandbox' })
   await expect(archivedServerRow).toContainText('Архив')
   await expect(archivedServerRow.getByRole('button')).toHaveCount(0)
 
   await openAdminSection(page, 'Подготовка VPS', 'provisioning')
   const staleProvisioningSection = page.locator('#provisioning')
-  const archivedProvisioningRow = staleProvisioningSection.locator('.list-item-vertical').filter({ hasText: 'VPS precheck ready.' })
+  const archivedProvisioningRow = staleProvisioningSection.locator('.list-item-vertical').filter({ hasText: 'Historical VPS check.' })
   await expect(archivedProvisioningRow).toBeVisible()
   await expect(archivedProvisioningRow).toContainText('Архив')
   await expect(archivedProvisioningRow.getByRole('button')).toHaveCount(0)

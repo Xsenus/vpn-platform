@@ -608,8 +608,9 @@ public class AdminServerManagementTests
             UserId = Guid.NewGuid(),
             TariffId = Guid.NewGuid(),
             CurrentServerId = node.Id,
+            Status = SubscriptionStatus.Expired,
             StartAt = DateTimeOffset.UtcNow,
-            EndAt = DateTimeOffset.UtcNow.AddDays(30)
+            EndAt = DateTimeOffset.UtcNow.AddDays(-30)
         });
         db.AccessCredentials.Add(new AccessCredential
         {
@@ -619,7 +620,7 @@ public class AdminServerManagementTests
             ProviderType = "x3ui",
             ProviderAccessId = "client-1",
             AccessUri = "vless://client@example.test",
-            Status = AccessCredentialStatus.Active
+            Status = AccessCredentialStatus.Revoked
         });
         db.ProvisioningRuns.Add(new ProvisioningRun
         {
@@ -679,6 +680,90 @@ public class AdminServerManagementTests
         Assert.Equal(new DateTimeOffset(2026, 8, 15, 13, 0, 0, TimeSpan.Zero), node.UpdatedAt);
         Assert.Equal(ProvisioningRunStatus.PrecheckQueued, run.Status);
         Assert.Equal(2, run.Revision);
+        Assert.Empty(db.AuditLogs);
+    }
+
+    [Theory]
+    [InlineData("reserved-capacity")]
+    [InlineData("active-subscription")]
+    [InlineData("active-access")]
+    [InlineData("active-migration")]
+    public async Task DeleteServer_Should_Reject_Active_Workload_Without_Mutation(string dependency)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var controller = CreateController(db);
+        var updatedAt = new DateTimeOffset(2026, 8, 15, 16, 0, 0, TimeSpan.Zero);
+        var node = NewNode($"active-workload-{dependency}");
+        node.Revision = 4;
+        node.UpdatedAt = updatedAt;
+        if (dependency == "reserved-capacity") node.UsedCapacity = 1;
+        db.VpnNodes.Add(node);
+
+        if (dependency is "active-subscription" or "active-access")
+        {
+            var user = new User
+            {
+                Email = $"{dependency}@example.test",
+                DisplayName = dependency,
+                ReferralCode = $"REF-{dependency}"
+            };
+            var tariff = new Tariff
+            {
+                Name = dependency,
+                Slug = dependency,
+                DurationDays = 30,
+                Price = 100
+            };
+            var subscription = new Subscription
+            {
+                UserId = user.Id,
+                TariffId = tariff.Id,
+                Status = dependency == "active-subscription" ? SubscriptionStatus.Active : SubscriptionStatus.Expired,
+                CurrentServerId = dependency == "active-subscription" ? node.Id : null,
+                StartAt = updatedAt.AddDays(-30),
+                EndAt = updatedAt.AddDays(30)
+            };
+            db.Users.Add(user);
+            db.Tariffs.Add(tariff);
+            db.Subscriptions.Add(subscription);
+            if (dependency == "active-access")
+            {
+                db.AccessCredentials.Add(new AccessCredential
+                {
+                    SubscriptionId = subscription.Id,
+                    ServerId = node.Id,
+                    ProviderType = "x3ui",
+                    ProviderAccessId = "active-client",
+                    AccessUri = "vless://active@example.test",
+                    Status = AccessCredentialStatus.Active,
+                    IssuedAt = updatedAt.AddDays(-1)
+                });
+            }
+        }
+        else if (dependency == "active-migration")
+        {
+            db.MigrationJobs.Add(new MigrationJob
+            {
+                SourceNodeId = node.Id,
+                TargetNodeId = Guid.NewGuid(),
+                Status = MigrationJobStatus.Running,
+                Type = "single-subscription",
+                RequestedAt = updatedAt
+            });
+        }
+        await db.SaveChangesAsync();
+
+        var result = await controller.DeleteServer(node.Id, node.Revision, CancellationToken.None);
+
+        Assert.IsType<ConflictObjectResult>(result);
+        db.ChangeTracker.Clear();
+        var persisted = await db.VpnNodes.SingleAsync(x => x.Id == node.Id);
+        Assert.Equal(NodeStatus.Ready, persisted.Status);
+        Assert.Equal(4, persisted.Revision);
+        Assert.Equal(updatedAt, persisted.UpdatedAt);
         Assert.Empty(db.AuditLogs);
     }
 

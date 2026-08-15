@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-15.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-server-archive-provisioning-readonly`, версия `0.748.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `771/791` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-server-archive-active-workload-guard`, версия `0.749.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `772/792` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,8 +37,8 @@ git diff --check
 
 Что подтверждено на 2026-08-15:
 
-- [x] `STATE-001` Backend test suite проходит: `1595/1595`.
-- [x] `STATE-002` Frontend test suite проходит: `196/196`.
+- [x] `STATE-001` Backend test suite проходит: `1603/1603`.
+- [x] `STATE-002` Frontend test suite проходит: `197/197`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2780,6 +2780,10 @@ git diff --check
   - Что сделать: активная очередь/исполнение должны блокировать terminal archive; legacy queued run архивного узла не должен claim-иться worker-ом, а recovery и direct run-команды не должны менять terminal node или создавать связанные mutations.
   - Что сделано: delete проверяет все non-terminal worker/lifecycle states до relation counts; coordinator использует DB-side non-archived filter для list/claim; lease recovery сохраняет `Archived`; cancel/support guards не меняют run/node/support/audit; provisioning DTO передаёт `nodeStatus`, и toolbar исторического запуска отсутствует в DOM.
   - Доказательство: fail-first backend `0/4`, browser `0/1`; after-fix targeted SQLite `4/4`, server/provisioning/coordinator `144/144`, backend Debug/Release `1595/1595`, API Release build `0 warnings / 0 errors`, frontend `196/196`, typecheck/build, admin bundle raw `586744/586752`, gzip `156174/156672`, targeted Playwright `1/1`, полный Playwright `282/282` за `13.0 min`, dependency audit `0 vulnerabilities`, EF pending-model check `2/2`, formatter, strict UTF-8/BOM guard и secret scan `727/0` зелёные. Все 17 admin sections и 25 responsive viewport-конфигураций проходят; реальные VPS/SSH/Ansible/3x-ui outcomes остаются внешним evidence.
+- [x] `P11-ACC-481` Заблокировать архивирование VPN-сервера с активной нагрузкой. 2026-08-15.
+  - Что сделать: занятая емкость, non-terminal subscription/access или активная migration должны блокировать delete/archive до mutation; capacity reservation должна принимать только operational node и участвовать в revision concurrency, а UI не должен предлагать удаление занятого сервера.
+  - Что сделано: delete после freshness/archive checks отклоняет reserved capacity, non-terminal subscription/access и planned/running migration без audit churn; reserve допускает только ready/healthy/allocatable node; reserve/release и 3x-ui migration повышают node revision; frontend helper и handler скрывают и повторно блокируют delete при `usedCapacity > 0`, сохраняя archive завершённой истории.
+  - Доказательство: fail-first backend `0/8`, frontend `2/3`; after-fix targeted backend/SQLite `9/9`, server/capacity/3x-ui/subscription `199/199`, backend Debug/Release `1603/1603`, API Release build `0 warnings / 0 errors`, frontend `197/197`, typecheck/build, admin bundle raw `586693/586752`, gzip `156177/156672`, targeted desktop/mobile Playwright `2/2`, полный Playwright `282/282` за `13.4 min`, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, strict UTF-8/BOM guard и secret scan `727/0` зелёные. Все 17 admin sections и 25 responsive viewport-конфигураций проходят; реальные VPS/SSH/Ansible/3x-ui outcomes остаются внешним evidence.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3429,6 +3433,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-15-014` | P1 | Admin VPN server active workload archive | Сервер с занятым slot, активной подпиской/VPN-доступом или migration переходил в terminal archive; capacity service резервировал Archived/Disabled/Maintenance node, а UI показывал delete занятого сервера. | Исправлено локально | Active workload guards, operational reserve predicate, revisioned capacity mutations и occupied-card zero-delete проверены SQLite, backend, desktop/mobile и полной responsive-матрицей. Реальные VPS/3x-ui concurrency outcomes остаются внешним evidence. |
 | `BUG-2026-08-15-013` | P1 | Admin VPN server provisioning archive | Сервер с queued run архивировался, worker продолжал claim/execution, lease recovery менял archive на Error, cancel возвращал узел в New, а UI оставлял четыре actions исторического запуска. | Исправлено локально | Active-run archive conflict, DB-side worker filter, terminal-preserving recovery, direct command guards и zero-action historical run проверены SQLite/desktop/mobile/full responsive regressions. Реальные VPS/SSH/Ansible/3x-ui outcomes остаются внешним evidence. |
 | `BUG-2026-08-15-012` | P1 | Admin VPN server archive | Terminal server archive блокировал update/state/provision/delete, но health endpoint создавал synthetic history/audit, а UI оставлял edit, health и disabled provisioning controls. | Исправлено локально | Early archived health guard, SQLite no-churn и zero-action historical card проверены desktop/mobile/full responsive regressions. Реальные VPS/SSH/Ansible/3x-ui outcomes остаются внешним evidence. |
 | `BUG-2026-08-15-011` | P1 | Admin 3x-ui archived operations | Terminal archive скрывал test/sync в UI, но прямые health/test и sync endpoints продолжали provider и local mutations, создавали историю и повышали revision. | Исправлено локально | Два backend guards, freshness priority, SQLite no-mutation и desktop/mobile/full responsive regressions зелёные. Реальная production-like 3x-ui/x-ui проверка остаётся внешним evidence. |

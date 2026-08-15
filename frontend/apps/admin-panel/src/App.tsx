@@ -3901,16 +3901,19 @@ export function App() {
     }, serverActionResourceKey(server.id))
   }
 
-  const handleDeleteServer = (server: VpnNodeDto) => runAction('nodes', `delete-server-${server.id}`, async (action) => {
-    const result = await api.deleteAdminServer(token, server.id, server.revision)
-      .catch((error: unknown) => throwServerConflict(error, action, server.id))
-    if (!action.isCurrent()) return
-    setNotice(result.archived
-      ? `Сервер ${server.name} архивирован: связей ${result.linkedSubscriptions + result.linkedAccesses + result.linkedProvisioningRuns + result.linkedHealthChecks + result.linkedMigrationJobs}.`
-      : `Сервер ${server.name} удалён.`)
-    if (editingServerIdRef.current === server.id) cancelServerEdit()
-    await action.reloadAll()
-  }, serverActionResourceKey(server.id))
+  const handleDeleteServer = (server: VpnNodeDto) => {
+    if (server.status === 'Archived' || server.usedCapacity > 0) return
+    return runAction('nodes', `delete-server-${server.id}`, async (action) => {
+      const result = await api.deleteAdminServer(token, server.id, server.revision)
+        .catch((error: unknown) => throwServerConflict(error, action, server.id))
+      if (!action.isCurrent()) return
+      setNotice(result.archived
+        ? `Сервер ${server.name} архивирован: связей ${result.linkedSubscriptions + result.linkedAccesses + result.linkedProvisioningRuns + result.linkedHealthChecks + result.linkedMigrationJobs}.`
+        : `Сервер ${server.name} удалён.`)
+      if (editingServerIdRef.current === server.id) cancelServerEdit()
+      await action.reloadAll()
+    }, serverActionResourceKey(server.id))
+  }
 
   const handleCheckServerHealth = (server: VpnNodeDto) => runAction('nodes', `health-server-${server.id}`, async (action) => {
     const check = await api.checkAdminServerHealth(token, server.id)
@@ -5152,7 +5155,7 @@ export function App() {
           <div className="list-stack">
             {servers.length === 0 && <EmptyState title="VPN-серверы не добавлены" description="Добавьте сервер или запустите проверку собственного VPS." />}
             {servers.map((server) => {
-              const stateActions = getServerStateActionAvailability(server.status, server.isAvailableForNewUsers)
+              const stateActions = getServerStateActionAvailability(server.status, server.isAvailableForNewUsers, server.usedCapacity)
               return <div key={server.id} className="list-item-vertical">
                 <div className="item-head">
                   <div>
@@ -5177,7 +5180,7 @@ export function App() {
                   {stateActions.canDisableAllocation && <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} message="Закрыть набор на сервер? Это изменит распределение новых пользователей." onConfirm={() => handleServerMode(server, 'drain')}>Закрыть набор</ConfirmButton>}
                   {stateActions.canEnableAllocation && <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} message="Открыть набор на сервер? Это изменит распределение новых пользователей." onConfirm={() => handleServerMode(server, 'allocate')}>Открыть набор</ConfirmButton>}
                   {stateActions.canDisable && <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} message={`Отключить сервер "${server.name}"? Новые подключения и автоматическое распределение будут закрыты.`} onConfirm={() => handleServerMode(server, 'disable')}>Отключить</ConfirmButton>}
-                  {stateActions.canDelete && <ConfirmButton className="button-danger" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} message={`Удалить сервер "${server.name}"? При наличии подписок, VPN-доступов, запусков подготовки, health-check или миграций он будет архивирован.`} onConfirm={() => handleDeleteServer(server)}>Удалить</ConfirmButton>}
+                  {stateActions.canDelete && <ConfirmButton className="button-danger" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} message={`Удалить сервер "${server.name}"? История будет сохранена.`} onConfirm={() => handleDeleteServer(server)}>Удалить</ConfirmButton>}
                 </div>}
               </div>
             })}

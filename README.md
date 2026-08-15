@@ -209,9 +209,9 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-15 локально подтверждено:
 
-- backend на .NET 9: `1595/1595` unit tests;
+- backend на .NET 9: `1603/1603` unit tests;
 - API Release build: без ошибок и предупреждений;
-- frontend unit tests: `196/196`;
+- frontend unit tests: `197/197`;
 - frontend typecheck и production build: OK;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - Playwright E2E: public, cabinet, admin, all-screens, mobile и console smoke проходят `282/282`; responsive matrix проверяет 25 конфигураций `305x568..2560x1440`, включая mobile landscape и точные пары `N/N+1` для всех CSS-breakpoints;
@@ -352,7 +352,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - verified `CHECKOUT.ORDER.APPROVED` запускает server-side PayPal capture с idempotency/reconciliation и не активирует VPN без capture proof;
 - manual recheck Stripe, YooKassa и Т-Банка сверяет фактические provider ID, сумму, валюту, internal order/account и paid marker до активации;
 - refund YooKassa/Stripe/PayPal/Т-Банка применяет результат только после совпадения provider source reference и доступных amount/currency/internal payment proof; последовательные partial refund Т-Банка имеют отдельные operation IDs;
-- backend `1595/1595`, frontend `196/196`, полный console-responsive Playwright `282/282`, server archive provisioning/read-only Playwright `1/1`, VPN archive desktop/mobile Playwright `2/2`, VPN state-actions desktop/mobile Playwright `4/4`, VPN-server no-op/conflict desktop/mobile Playwright `2/2`, retryable admin conflict targeted Playwright `12/12`, payment-provider no-op/conflict desktop/mobile Playwright `4/4`, VPN editor no-op/conflict targeted Playwright `3/3`, commercial editor no-op/conflict targeted Playwright `3/3`, managed editor stale/no-op desktop/mobile Playwright `6/6`, Telegram settings save/conflict desktop/mobile Playwright `4/4`, targeted user management desktop/mobile Playwright `2/2`, dashboard RBAC desktop/mobile Playwright `4/4`, notification masking/retry desktop/mobile Playwright `2/2`, audit RBAC desktop/mobile Playwright `4/4`, order/recheck/finance RBAC desktop/mobile Playwright `8/8`, finance/recheck/refund lifecycle desktop/mobile Playwright `8/8`, support lifecycle desktop/mobile Playwright `8/8`, dependency audit `0 vulnerabilities`;
+- backend `1603/1603`, frontend `197/197`, полный console-responsive Playwright `282/282`, active-workload archive desktop/mobile Playwright `2/2`, server archive provisioning/read-only Playwright `1/1`, VPN archive desktop/mobile Playwright `2/2`, VPN state-actions desktop/mobile Playwright `4/4`, VPN-server no-op/conflict desktop/mobile Playwright `2/2`, retryable admin conflict targeted Playwright `12/12`, payment-provider no-op/conflict desktop/mobile Playwright `4/4`, VPN editor no-op/conflict targeted Playwright `3/3`, commercial editor no-op/conflict targeted Playwright `3/3`, managed editor stale/no-op desktop/mobile Playwright `6/6`, Telegram settings save/conflict desktop/mobile Playwright `4/4`, targeted user management desktop/mobile Playwright `2/2`, dashboard RBAC desktop/mobile Playwright `4/4`, notification masking/retry desktop/mobile Playwright `2/2`, audit RBAC desktop/mobile Playwright `4/4`, order/recheck/finance RBAC desktop/mobile Playwright `8/8`, finance/recheck/refund lifecycle desktop/mobile Playwright `8/8`, support lifecycle desktop/mobile Playwright `8/8`, dependency audit `0 vulnerabilities`;
 - user overview, 3x-ui client и operational admin surfaces используют bounded Russian labels для source/auth/roles/email/counts/events/sync, user status, audit actor/category, SSL, access history, QR и health/support fallback; технические VPN identifiers не подменяются;
 - карточки рабочих сценариев, платежные аккаунты, серверы и подготовка VPS локализуют bounded business/operation metadata без изменения raw API-значений, а локальный SQLite repair обновляет существующие базы с revision-колонками;
 - управление профилем пользователя в админке использует strict versioned PATCH, валидируемую адаптивную форму и явное подтверждение отзыва сессий; конфликт загружает актуальную карточку без stale overwrite;
@@ -369,7 +369,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - direct health/test/sync для archived 3x-ui панели блокируются после freshness check и до provider, history, inbound, revision или audit mutation;
 - archived VPN server сохраняет status и последнюю диагностику, но direct health отклоняется без local churn, а mutation toolbar отсутствует;
 - active provisioning блокирует archive, worker не claim-ит legacy очередь архивного узла, recovery сохраняет terminal status, а historical run не показывает mutation controls;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-15-server-archive-provisioning-readonly`, версия `0.748.0`;
+- занятая емкость, активная подписка/VPN-доступ или migration блокируют server archive; capacity reserve принимает только operational node, а каждая capacity mutation повышает revision;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-15-server-archive-active-workload-guard`, версия `0.749.0`;
 - server API, own-VPS onboarding, queue и executor отклоняют inventory-breaking IP/SSH values; executor использует фиксированный alias и `ArgumentList`, а admin-форма показывает те же diagnostics до submit;
 - 3x-ui panel/inbound/client mutations требуют актуальную revision, diagnostics ограничены до materialization, а stale UI восстанавливает актуальные данные;
 - provisioning queue/run actions требуют актуальную revision, coordinator/admin diagnostics ограничены в БД, а exact DTO отклоняет расширенные ответы;
@@ -383,6 +384,6 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - admin notification status/template/search и latest top-500 выполняются в БД до materialization;
 - admin dashboard subscription/recent/payment readiness metrics считаются DB-side aggregates без загрузки строк;
 - auto-target миграция подписки выбирает node/panel/inbound одним ordered SQL query без N+1;
-- roadmap progress: `771/791` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- roadmap progress: `772/792` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

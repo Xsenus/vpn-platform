@@ -2625,6 +2625,11 @@ public class AdminOperationsController : ControllerBase
             return BadRequest(new { error = "Server is already archived." });
         }
 
+        if (node.UsedCapacity > 0)
+        {
+            return Conflict(new { error = "Server has reserved or active VPN capacity. Migrate or revoke linked access before archiving." });
+        }
+
         var hasActiveProvisioningRun = await _db.ProvisioningRuns.AsNoTracking().AnyAsync(
             x => x.NodeId == id
                 && (x.Status == ProvisioningRunStatus.Pending
@@ -2641,6 +2646,23 @@ public class AdminOperationsController : ControllerBase
         if (hasActiveProvisioningRun)
         {
             return Conflict(new { error = "Server has an active provisioning run. Wait for completion or cancel the queued run before archiving." });
+        }
+
+        var hasActiveSubscription = await _db.Subscriptions.AsNoTracking().AnyAsync(
+            x => x.CurrentServerId == id
+                && x.Status != SubscriptionStatus.Expired
+                && x.Status != SubscriptionStatus.Cancelled,
+            cancellationToken);
+        var hasActiveAccess = await _db.AccessCredentials.AsNoTracking().AnyAsync(
+            x => x.ServerId == id && x.Status != AccessCredentialStatus.Revoked,
+            cancellationToken);
+        var hasActiveMigration = await _db.MigrationJobs.AsNoTracking().AnyAsync(
+            x => (x.SourceNodeId == id || x.TargetNodeId == id)
+                && (x.Status == MigrationJobStatus.Planned || x.Status == MigrationJobStatus.Running),
+            cancellationToken);
+        if (hasActiveSubscription || hasActiveAccess || hasActiveMigration)
+        {
+            return Conflict(new { error = "Server has active subscriptions, VPN access, or migration work. Finish or move the workload before archiving." });
         }
 
         var linkedSubscriptions = await _db.Subscriptions.CountAsync(x => x.CurrentServerId == id, cancellationToken);

@@ -1656,6 +1656,7 @@ public class X3UiPanelService
                                 .Where(x => x.Id == sourceNodeId.Value && x.UsedCapacity > 0)
                                 .ExecuteUpdateAsync(setters => setters
                                     .SetProperty(x => x.UsedCapacity, x => x.UsedCapacity - 1)
+                                    .SetProperty(x => x.Revision, x => x.Revision + 1)
                                     .SetProperty(x => x.UpdatedAt, _clock.UtcNow), cancellationToken);
                         }
                         else
@@ -1664,6 +1665,7 @@ public class X3UiPanelService
                             if (trackedSourceNode is not null && trackedSourceNode.UsedCapacity > 0)
                             {
                                 trackedSourceNode.UsedCapacity -= 1;
+                                trackedSourceNode.Revision = checked(trackedSourceNode.Revision + 1);
                                 trackedSourceNode.UpdatedAt = _clock.UtcNow;
                             }
                         }
@@ -1998,6 +2000,7 @@ public class X3UiPanelService
                         && x.UsedCapacity < x.Capacity)
                     .ExecuteUpdateAsync(setters => setters
                         .SetProperty(x => x.UsedCapacity, x => x.UsedCapacity + 1)
+                        .SetProperty(x => x.Revision, x => x.Revision + 1)
                         .SetProperty(x => x.UpdatedAt, _clock.UtcNow), cancellationToken);
                 if (nodeReserved != 1)
                 {
@@ -2039,6 +2042,7 @@ public class X3UiPanelService
                 return Result<bool>.Failure("Target VPN server capacity is exhausted or unavailable.");
             }
             targetNode.UsedCapacity += 1;
+            targetNode.Revision = checked(targetNode.Revision + 1);
             targetNode.UpdatedAt = _clock.UtcNow;
         }
         try
@@ -2052,7 +2056,11 @@ public class X3UiPanelService
             targetInbound.UsedCapacity -= 1;
             targetInbound.VpnPanel.Revision = Math.Max(0, targetInbound.VpnPanel.Revision - 1);
             targetInbound.Revision = Math.Max(0, targetInbound.Revision - 1);
-            if (targetNode is not null) targetNode.UsedCapacity -= 1;
+            if (targetNode is not null)
+            {
+                targetNode.UsedCapacity -= 1;
+                targetNode.Revision = Math.Max(0, targetNode.Revision - 1);
+            }
             throw;
         }
     }
@@ -2081,6 +2089,7 @@ public class X3UiPanelService
                 .Where(x => x.Id == targetNodeId.Value && x.UsedCapacity > 0)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(x => x.UsedCapacity, x => x.UsedCapacity - 1)
+                    .SetProperty(x => x.Revision, x => x.Revision + 1)
                     .SetProperty(x => x.UpdatedAt, _clock.UtcNow), cancellationToken) == 1;
             if (inboundReleased != 1 || panelReleased != 1 || !nodeReleased)
             {
@@ -2111,6 +2120,7 @@ public class X3UiPanelService
                 throw new InvalidOperationException("Reserved target VPN server capacity could not be released consistently.");
             }
             targetNode.UsedCapacity -= 1;
+            targetNode.Revision = checked(targetNode.Revision + 1);
             targetNode.UpdatedAt = _clock.UtcNow;
         }
         await _db.SaveChangesAsync(cancellationToken);

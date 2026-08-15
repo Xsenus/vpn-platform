@@ -40,3 +40,9 @@ test('disabled, archived and unprepared servers cannot be revived by allocation 
     assert.equal(availability.canDelete, status !== 'Archived')
   }
 })
+
+test('server with reserved capacity cannot expose delete action', () => {
+  const availability = getServerStateActionAvailability('Ready', false, 1)
+
+  assert.equal(availability.canDelete, false)
+})

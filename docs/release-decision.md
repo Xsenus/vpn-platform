@@ -22,9 +22,9 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1595/1595`.
+- Backend full suite: `1603/1603`.
 - API Release build: OK.
-- Frontend unit tests: `196/196`.
+- Frontend unit tests: `197/197`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
 - Browser console smoke: `282/282`; responsive all-screens `14/14` проверяет ready-state, content/modal/control geometry на 25 viewport-конфигурациях `305x568..2560x1440`, включая точные пары `N/N+1` для всех CSS-breakpoints; production inventory маршрутов и admin sections, local WebP decode и representative screenshots проверены.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-15-server-archive-provisioning-readonly`, версия `0.748.0`; active-run archive conflict, DB-side worker filter, terminal-preserving recovery и zero-action historical run проверены SQLite/backend/desktop/mobile regressions. Real VPS/SSH/Ansible, production-like 3x-ui/x-ui, provider/Telegram/SMTP delivery и полный staging evidence всё ещё требуются.
-- Roadmap progress: `771/791` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-15-server-archive-active-workload-guard`, версия `0.749.0`; active workload archive guards, operational capacity predicate, revisioned reserve/release и occupied-card zero-delete проверены SQLite/backend/desktop/mobile regressions. Real VPS/SSH/Ansible, production-like 3x-ui/x-ui, provider/Telegram/SMTP delivery и полный staging evidence всё ещё требуются.
+- Roadmap progress: `772/792` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

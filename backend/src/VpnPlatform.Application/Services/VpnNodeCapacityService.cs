@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using VpnPlatform.Application.Abstractions;
 using VpnPlatform.Application.Common;
+using VpnPlatform.Domain.Enums;
 
 namespace VpnPlatform.Application.Services;
 
@@ -19,20 +20,31 @@ public sealed class VpnNodeCapacityService
         if (IsInMemoryProvider())
         {
             var node = await _db.VpnNodes.FirstOrDefaultAsync(x => x.Id == nodeId, cancellationToken);
-            if (node is null || node.UsedCapacity >= node.Capacity)
+            if (node is null
+                || node.Status != NodeStatus.Ready
+                || !node.IsAvailableForNewUsers
+                || node.HealthStatus == HealthStatus.Unhealthy
+                || node.UsedCapacity >= node.Capacity)
             {
                 return false;
             }
 
             node.UsedCapacity += 1;
+            node.Revision = checked(node.Revision + 1);
             await _db.SaveChangesAsync(cancellationToken);
             return true;
         }
 
         var affected = await _db.VpnNodes
-            .Where(x => x.Id == nodeId && x.UsedCapacity < x.Capacity)
+            .Where(x => x.Id == nodeId
+                && x.Status == NodeStatus.Ready
+                && x.IsAvailableForNewUsers
+                && x.HealthStatus != HealthStatus.Unhealthy
+                && x.UsedCapacity < x.Capacity)
             .ExecuteUpdateAsync(
-                setters => setters.SetProperty(x => x.UsedCapacity, x => x.UsedCapacity + 1),
+                setters => setters
+                    .SetProperty(x => x.UsedCapacity, x => x.UsedCapacity + 1)
+                    .SetProperty(x => x.Revision, x => x.Revision + 1),
                 cancellationToken);
         return affected == 1;
     }
@@ -49,6 +61,7 @@ public sealed class VpnNodeCapacityService
             }
 
             node.UsedCapacity -= 1;
+            node.Revision = checked(node.Revision + 1);
             await _db.SaveChangesAsync(cancellationToken);
             return true;
         }
@@ -56,7 +69,9 @@ public sealed class VpnNodeCapacityService
         var affected = await _db.VpnNodes
             .Where(x => x.Id == nodeId && x.UsedCapacity > 0)
             .ExecuteUpdateAsync(
-                setters => setters.SetProperty(x => x.UsedCapacity, x => x.UsedCapacity - 1),
+                setters => setters
+                    .SetProperty(x => x.UsedCapacity, x => x.UsedCapacity - 1)
+                    .SetProperty(x => x.Revision, x => x.Revision + 1),
                 cancellationToken);
         return affected == 1;
     }

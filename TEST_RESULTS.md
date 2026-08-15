@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: active VPN server archive boundary
+
+Scope:
+- A server with reserved capacity, a non-terminal subscription/access or an active migration must not be deleted or archived.
+- Capacity reservation must fail closed unless the node is ready, healthy and open for allocation; every capacity mutation advances its revision.
+- Occupied servers expose no delete command, while a free server with completed history remains archivable on desktop and mobile.
+
+Results:
+- Roadmap progress: `772/792` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-server-archive-active-workload-guard`, version `0.749.0`.
+- Fail-first: backend completed `0/8` because four active workload variants were archived and four non-operational nodes accepted a reservation; frontend completed `2/3` because occupied capacity still exposed delete.
+- After fix: targeted backend/SQLite `9/9`, server/capacity/3x-ui/subscription `199/199`, targeted desktop/mobile Playwright `2/2`, frontend `197/197`, typecheck/build, admin bundle `586693/586752` raw and `156177/156672` gzip, and full Playwright `282/282` in `13.4 min` are green.
+- Release gate: backend Debug/Release `1603/1603`, API Release build `0 warnings / 0 errors`, all 17 admin sections and 25 responsive viewport configurations, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, strict UTF-8/BOM guard and secret scan `727/0` are green.
+- External boundary: real VPS/SSH/Ansible, a production-like 3x-ui/x-ui panel, provider cabinets, live payment, Telegram Bot API and SMTP were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: archived server provisioning boundary
 
 Scope:

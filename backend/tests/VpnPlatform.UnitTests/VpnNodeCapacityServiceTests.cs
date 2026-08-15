@@ -37,14 +37,18 @@ public class VpnNodeCapacityServiceTests
             Assert.Equal(1, results.Count(x => x));
             await using (var verify = new ApplicationDbContext(options))
             {
-                Assert.Equal(1, (await verify.VpnNodes.SingleAsync()).UsedCapacity);
+                var node = await verify.VpnNodes.SingleAsync();
+                Assert.Equal(1, node.UsedCapacity);
+                Assert.Equal(1, node.Revision);
             }
 
             Assert.True(await new VpnNodeCapacityService(firstDb).ReleaseAsync(nodeId));
             Assert.True(await new VpnNodeCapacityService(secondDb).TryReserveAsync(nodeId));
             await using (var verify = new ApplicationDbContext(options))
             {
-                Assert.Equal(1, (await verify.VpnNodes.SingleAsync()).UsedCapacity);
+                var node = await verify.VpnNodes.SingleAsync();
+                Assert.Equal(1, node.UsedCapacity);
+                Assert.Equal(3, node.Revision);
             }
         }
         finally
@@ -71,6 +75,7 @@ public class VpnNodeCapacityServiceTests
         Assert.True(await service.ReleaseAsync(node.Id));
         Assert.False(await service.ReleaseAsync(node.Id));
         Assert.Equal(0, node.UsedCapacity);
+        Assert.Equal(2, node.Revision);
     }
 
     [Fact]
@@ -94,6 +99,36 @@ public class VpnNodeCapacityServiceTests
         Assert.True(await reservation);
         Assert.False(completedBeforeRelease);
         Assert.Equal(1, node.UsedCapacity);
+    }
+
+    [Theory]
+    [InlineData(NodeStatus.Archived, true)]
+    [InlineData(NodeStatus.Disabled, true)]
+    [InlineData(NodeStatus.Maintenance, true)]
+    [InlineData(NodeStatus.Ready, false)]
+    public async Task Reservation_Should_Reject_NonOperational_Node(NodeStatus status, bool available)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var node = CreateNode(Guid.NewGuid(), capacity: 2);
+        node.Status = status;
+        node.IsAvailableForNewUsers = available;
+        node.Revision = 3;
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+
+        var reserved = await new VpnNodeCapacityService(db).TryReserveAsync(node.Id);
+
+        Assert.False(reserved);
+        db.ChangeTracker.Clear();
+        var persisted = await db.VpnNodes.SingleAsync(x => x.Id == node.Id);
+        Assert.Equal(0, persisted.UsedCapacity);
+        Assert.Equal(3, persisted.Revision);
     }
 
     private static VpnNode CreateNode(Guid id, int capacity)

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.749.0 - 2026-08-15
+
+Release entry: `2026-08-15-server-archive-active-workload-guard`.
+
+### Исправлено
+
+- VPN-сервер с занятой емкостью, активной подпиской, незавершённым доступом или миграцией больше нельзя удалить либо перевести в terminal archive.
+- Резервирование емкости теперь допускается только для готового, здорового и открытого для новых пользователей узла; reserve/release и 3x-ui migration повышают server revision, закрывая гонку с архивированием.
+- Admin UI скрывает delete-action у занятого сервера и сохраняет удаление только для свободного узла или записи с завершённой историей на desktop/mobile.
+
+### Проверено
+
+- Fail-first backend `0/8` и frontend `2/3` подтвердили четыре опасные архивации, четыре резервирования нерабочего узла и доступную delete-команду. После исправления targeted backend/SQLite `9/9`, server/capacity/3x-ui/subscription `199/199`, frontend `197/197` и desktop/mobile Playwright `2/2` зелёные.
+- Backend Debug/Release `1603/1603`, API Release build `0 warnings / 0 errors`, typecheck/build, admin bundle raw `586693/586752` и gzip `156177/156672`, полный Playwright `282/282` за `13.4 min`, все 17 admin sections и 25 responsive viewport-конфигураций, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, strict UTF-8/BOM guard и secret scan `727/0` проходят. Roadmap `772/792` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, production-like 3x-ui/x-ui, provider кабинеты, live payment, Telegram Bot API и SMTP остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.748.0 - 2026-08-15
 
 Release entry: `2026-08-15-server-archive-provisioning-readonly`.
