@@ -5775,6 +5775,9 @@ test('admin panel covers login and critical operational mutations across all sec
   await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
   await expect(page.getByText('Сервер EU Sandbox архивирован: связей 3.')).toBeVisible()
   expect(api.getLastRequest('/api/admin/servers/server-eu', 'DELETE')).toBeTruthy()
+  const archivedServerRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'EU Sandbox' })
+  await expect(archivedServerRow.getByRole('button', { name: 'Удалить', exact: true })).toHaveCount(0)
+  await expect(archivedServerRow.getByRole('button', { name: 'Health-check', exact: true })).toBeVisible()
 
   await openAdminSection(page, '3x-ui панели', 'panels')
   await expect(page.locator('#panels strong').filter({ hasText: 'EU 3x-ui Sandbox' })).toBeVisible()

@@ -17562,5 +17562,32 @@
         "text": "Roadmap progress is 765/785 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-15-server-archive-noop-integrity",
+    "version": "0.743.0",
+    "releasedAt": "2026-08-15T19:21:52+07:00",
+    "title": "VPN server archival is now a one-time operation",
+    "summary": "Repeated deletion of an archived VPN server is rejected without mutation, while its diagnostics remain available without another delete action.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "A repeated delete request for an archived server returns a controlled validation error before relation queries, revision changes, timestamp updates or audit writes."
+      },
+      {
+        "type": "improved",
+        "text": "The first delete still removes an unused server or archives a server that has subscription, access, provisioning, health-check or migration history."
+      },
+      {
+        "type": "improved",
+        "text": "Archived server cards keep health diagnostics visible but no longer expose an unavailable delete action on desktop or mobile."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 766/786 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

@@ -209,7 +209,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 На 2026-08-15 локально подтверждено:
 
-- backend на .NET 9: `1585/1585` unit tests;
+- backend на .NET 9: `1586/1586` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `195/195`;
 - frontend typecheck и production build: OK;
@@ -292,7 +292,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - кабинет выполняет Telegram deep-link/unlink и close/reopen обращения с optimistic revision и reload persistence на desktop/mobile;
 - платежные аккаунты проходят secure create/edit/disable/reload/enable/check browser lifecycle без раскрытия write-only secrets на desktop/mobile;
 - настройки Telegram-бота проходят secure save/check/reload/edit browser lifecycle без возврата raw bot/webhook tokens на desktop/mobile;
-- admin production bundle: `5` JS chunks, largest `277491`, total raw `586228/586752`, gzip `155984/156672` bytes; build budget fail-closed проверяет largest/total raw/gzip;
+- admin production bundle: `5` JS chunks, largest `277529`, total raw `586266/586752`, gzip `156003/156672` bytes; build budget fail-closed проверяет largest/total raw/gzip;
 - неизвестный public URL показывает доступную страницу `404` с возвратом на главную/помощь и проходит desktop/mobile плюс 25-viewport responsive gate;
 - public route metadata и focus/scroll lifecycle проходят direct load, SPA navigation и browser Back на desktop/mobile;
 - admin login/hydration и 17 hash-разделов синхронизируют title/meta description при deep-link, section switch и logout;
@@ -352,7 +352,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - verified `CHECKOUT.ORDER.APPROVED` запускает server-side PayPal capture с idempotency/reconciliation и не активирует VPN без capture proof;
 - manual recheck Stripe, YooKassa и Т-Банка сверяет фактические provider ID, сумму, валюту, internal order/account и paid marker до активации;
 - refund YooKassa/Stripe/PayPal/Т-Банка применяет результат только после совпадения provider source reference и доступных amount/currency/internal payment proof; последовательные partial refund Т-Банка имеют отдельные operation IDs;
-- backend `1585/1585`, frontend `195/195`, полный console-responsive Playwright `282/282`, VPN state-actions desktop/mobile Playwright `4/4`, VPN-server no-op/conflict desktop/mobile Playwright `2/2`, retryable admin conflict targeted Playwright `12/12`, payment-provider no-op/conflict desktop/mobile Playwright `4/4`, VPN editor no-op/conflict targeted Playwright `3/3`, commercial editor no-op/conflict targeted Playwright `3/3`, managed editor stale/no-op desktop/mobile Playwright `6/6`, Telegram settings save/conflict desktop/mobile Playwright `4/4`, targeted user management desktop/mobile Playwright `2/2`, dashboard RBAC desktop/mobile Playwright `4/4`, notification masking/retry desktop/mobile Playwright `2/2`, audit RBAC desktop/mobile Playwright `4/4`, order/recheck/finance RBAC desktop/mobile Playwright `8/8`, finance/recheck/refund lifecycle desktop/mobile Playwright `8/8`, support lifecycle desktop/mobile Playwright `8/8`, dependency audit `0 vulnerabilities`;
+- backend `1586/1586`, frontend `195/195`, полный console-responsive Playwright `282/282`, VPN archive desktop/mobile Playwright `2/2`, VPN state-actions desktop/mobile Playwright `4/4`, VPN-server no-op/conflict desktop/mobile Playwright `2/2`, retryable admin conflict targeted Playwright `12/12`, payment-provider no-op/conflict desktop/mobile Playwright `4/4`, VPN editor no-op/conflict targeted Playwright `3/3`, commercial editor no-op/conflict targeted Playwright `3/3`, managed editor stale/no-op desktop/mobile Playwright `6/6`, Telegram settings save/conflict desktop/mobile Playwright `4/4`, targeted user management desktop/mobile Playwright `2/2`, dashboard RBAC desktop/mobile Playwright `4/4`, notification masking/retry desktop/mobile Playwright `2/2`, audit RBAC desktop/mobile Playwright `4/4`, order/recheck/finance RBAC desktop/mobile Playwright `8/8`, finance/recheck/refund lifecycle desktop/mobile Playwright `8/8`, support lifecycle desktop/mobile Playwright `8/8`, dependency audit `0 vulnerabilities`;
 - user overview, 3x-ui client и operational admin surfaces используют bounded Russian labels для source/auth/roles/email/counts/events/sync, user status, audit actor/category, SSL, access history, QR и health/support fallback; технические VPN identifiers не подменяются;
 - карточки рабочих сценариев, платежные аккаунты, серверы и подготовка VPS локализуют bounded business/operation metadata без изменения raw API-значений, а локальный SQLite repair обновляет существующие базы с revision-колонками;
 - управление профилем пользователя в админке использует strict versioned PATCH, валидируемую адаптивную форму и явное подтверждение отзыва сессий; конфликт загружает актуальную карточку без stale overwrite;
@@ -363,7 +363,8 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - платежные аккаунты используют persisted revision, отклоняют stale/no-op update и enabled-state без ложного audit, а delayed conflict сохраняет более новый локальный черновик;
 - более новые черновики payment provider, tariff, referral, release, VPN panel и inbound после delayed `409` получают актуальную revision и повторно сохраняются без цикла конфликтов;
 - повторные и недопустимые server mode-actions отклоняются без mutation, stale revision возвращает `409` до semantic validation, а UI показывает только допустимые переходы текущего состояния;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-15-server-state-transition-integrity`, версия `0.742.0`;
+- повторное удаление архивного VPN-сервера отклоняется без relation queries/revision/audit churn, а UI сохраняет diagnostics без недоступной delete-команды;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-15-server-archive-noop-integrity`, версия `0.743.0`;
 - server API, own-VPS onboarding, queue и executor отклоняют inventory-breaking IP/SSH values; executor использует фиксированный alias и `ArgumentList`, а admin-форма показывает те же diagnostics до submit;
 - 3x-ui panel/inbound/client mutations требуют актуальную revision, diagnostics ограничены до materialization, а stale UI восстанавливает актуальные данные;
 - provisioning queue/run actions требуют актуальную revision, coordinator/admin diagnostics ограничены в БД, а exact DTO отклоняет расширенные ответы;
@@ -377,6 +378,6 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - admin notification status/template/search и latest top-500 выполняются в БД до materialization;
 - admin dashboard subscription/recent/payment readiness metrics считаются DB-side aggregates без загрузки строк;
 - auto-target миграция подписки выбирает node/panel/inbound одним ordered SQL query без N+1;
-- roadmap progress: `765/785` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- roadmap progress: `766/786` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

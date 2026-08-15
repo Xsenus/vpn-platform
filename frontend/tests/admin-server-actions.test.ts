@@ -8,21 +8,24 @@ test('server state actions expose only valid operational transitions', () => {
     canLeaveMaintenance: false,
     canDisableAllocation: true,
     canEnableAllocation: false,
-    canDisable: true
+    canDisable: true,
+    canDelete: true
   })
   assert.deepEqual(getServerStateActionAvailability('Draining', false), {
     canEnterMaintenance: true,
     canLeaveMaintenance: false,
     canDisableAllocation: false,
     canEnableAllocation: true,
-    canDisable: true
+    canDisable: true,
+    canDelete: true
   })
   assert.deepEqual(getServerStateActionAvailability('Maintenance', false), {
     canEnterMaintenance: false,
     canLeaveMaintenance: true,
     canDisableAllocation: false,
     canEnableAllocation: false,
-    canDisable: true
+    canDisable: true,
+    canDelete: true
   })
 })
 
@@ -34,5 +37,6 @@ test('disabled, archived and unprepared servers cannot be revived by allocation 
     assert.equal(availability.canDisableAllocation, false)
     assert.equal(availability.canEnableAllocation, false)
     assert.equal(availability.canDisable, status !== 'Disabled' && status !== 'Archived')
+    assert.equal(availability.canDelete, status !== 'Archived')
   }
 })

@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: VPN server archive no-op integrity
+
+Scope:
+- A linked server may be archived once, but a repeated delete of the archived record must not advance revision, timestamp or audit history.
+- Revision conflict validation must retain priority, and relation counts must not run for an already archived server.
+- The administrative UI must preserve archived diagnostics while removing the unavailable delete action on desktop and mobile.
+
+Results:
+- Roadmap progress: `766/786` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-server-archive-noop-integrity`, version `0.743.0`.
+- Fail-first: the backend regression completed `0/1` because repeated delete returned success and mutated revision/audit; frontend availability completed `1/2` because `canDelete` was absent.
+- After fix: targeted delete backend `5/5`, server-management backend `90/90`, frontend `195/195`, typecheck/build, admin bundle budget `586266/586752` raw and `156003/156672` gzip, targeted Playwright desktop/mobile `2/2`, and full Playwright `282/282` in `14.1 min` are green.
+- Release gate: backend Debug/Release `1586/1586`, API Release build `0 warnings / 0 errors`, fresh SQLite full flow including `serverArchiveNoOp=400`, all 17 admin sections and 25 responsive viewport configurations, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, `RoadmapCurrentStateTests`, secret scan `727/0` and strict UTF-8/BOM guard are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: VPN server state transition integrity
 
 Scope:

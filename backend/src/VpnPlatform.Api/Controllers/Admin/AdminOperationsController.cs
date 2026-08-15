@@ -2620,6 +2620,10 @@ public class AdminOperationsController : ControllerBase
         {
             return Conflict(new { error = "Server changed. Reload it and retry.", revision = node.Revision });
         }
+        if (node.Status == NodeStatus.Archived)
+        {
+            return BadRequest(new { error = "Server is already archived." });
+        }
 
         var linkedSubscriptions = await _db.Subscriptions.CountAsync(x => x.CurrentServerId == id, cancellationToken);
         var linkedAccesses = await _db.AccessCredentials.CountAsync(x => x.ServerId == id, cancellationToken);

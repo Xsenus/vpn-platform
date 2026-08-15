@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.743.0 - 2026-08-15
+
+Release entry: `2026-08-15-server-archive-noop-integrity`.
+
+### Исправлено
+
+- Повторная DELETE-команда уже архивированного VPN-сервера возвращает controlled `400` до подсчёта связей, повышения revision, изменения timestamp и записи audit.
+- Первая команда по-прежнему удаляет свободный сервер или архивирует запись со связанными subscription, access, provisioning, health-check и migration данными.
+- Admin-панель сохраняет архивный сервер и его health diagnostics в списке, но больше не показывает повторную кнопку удаления на desktop и mobile.
+- Fresh SQLite smoke проверяет реальную первую архивацию после sandbox-покупки и повторный `serverArchiveNoOp=400` с актуальной revision.
+
+### Проверено
+
+- Fail-first backend regression завершился `0/1`, frontend availability regression `1/2`; после исправления targeted delete backend `5/5`, server-management backend `90/90`, frontend `195/195`, целевой Playwright desktop/mobile `2/2` и полный Playwright `282/282` за `14.1 min` зелёные.
+- Backend Debug/Release `1586/1586`, typecheck/build, admin bundle raw `586266/586752` и gzip `156003/156672`, fresh SQLite `serverArchiveNoOp=400`, dependency audit `0 vulnerabilities`, responsive all-screens на 25 viewport-конфигурациях, EF drift, formatter, strict UTF-8 и secret scan `727/0` зелёные. Roadmap `766/786` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.742.0 - 2026-08-15
 
 Release entry: `2026-08-15-server-state-transition-integrity`.

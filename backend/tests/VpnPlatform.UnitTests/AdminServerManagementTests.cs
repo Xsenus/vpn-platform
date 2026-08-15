@@ -699,6 +699,35 @@ public class AdminServerManagementTests
     }
 
     [Fact]
+    public async Task DeleteServer_Should_Reject_Already_Archived_Server_Without_Mutation()
+    {
+        await using var db = CreateDbContext();
+        var controller = CreateController(db);
+        var node = NewNode("already-archived-node");
+        node.Status = NodeStatus.Archived;
+        node.IsAvailableForNewUsers = false;
+        node.Revision = 4;
+        node.UpdatedAt = new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero);
+        db.VpnNodes.Add(node);
+        db.NodeHealthChecks.Add(new NodeHealthCheck
+        {
+            NodeId = node.Id,
+            CheckedAt = node.UpdatedAt.AddDays(-1),
+            Status = HealthStatus.Healthy
+        });
+        await db.SaveChangesAsync();
+
+        var result = await controller.DeleteServer(node.Id, node.Revision, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(NodeStatus.Archived, node.Status);
+        Assert.False(node.IsAvailableForNewUsers);
+        Assert.Equal(4, node.Revision);
+        Assert.Equal(new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero), node.UpdatedAt);
+        Assert.Empty(db.AuditLogs);
+    }
+
+    [Fact]
     public async Task CheckServerHealth_Should_Save_Healthy_Result_And_Update_Node()
     {
         await using var db = CreateDbContext();

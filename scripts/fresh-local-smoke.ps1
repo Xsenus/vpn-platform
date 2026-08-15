@@ -505,7 +505,18 @@ try {
         throw "Unexpected access URI protocol: $($access.accessUri)"
     }
 
-    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) managedNoOp=$managedNoOpStatus commerceNoOps=$tariffNoOpStatus,$referralNoOpStatus,$releaseNoOpStatus providerGuards=$providerNoOpStatus,$providerStateNoOpStatus,$providerConflictStatus serverGuards=$serverNoOpStatus,$serverStateNoOpStatus vpnNoOps=$vpnPanelNoOpStatus,$vpnInboundNoOpStatus telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
+    $archiveResult = Invoke-SmokeJson -Method "DELETE" -Uri "$apiUrl/api/admin/servers/$($adminServer.id)?revision=$($adminServer.revision)" -Headers $adminHeaders
+    if ($archiveResult.archived -ne $true -or $archiveResult.deleted -ne $false) {
+        throw "Linked VPN server was not archived by the first delete command."
+    }
+    $archivedServers = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/admin/servers" -Headers $adminHeaders)
+    $archivedServer = $archivedServers | Where-Object { $_.id -eq $adminServer.id } | Select-Object -First 1
+    if ($null -eq $archivedServer -or $archivedServer.status -ne "Archived") {
+        throw "Archived VPN server was not returned by the admin list."
+    }
+    $serverArchiveNoOpStatus = Assert-SmokeJsonStatus -Method "DELETE" -Uri "$apiUrl/api/admin/servers/$($archivedServer.id)?revision=$($archivedServer.revision)" -Headers $adminHeaders -ExpectedStatus 400 -Body @{}
+
+    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) managedNoOp=$managedNoOpStatus commerceNoOps=$tariffNoOpStatus,$referralNoOpStatus,$releaseNoOpStatus providerGuards=$providerNoOpStatus,$providerStateNoOpStatus,$providerConflictStatus serverGuards=$serverNoOpStatus,$serverStateNoOpStatus serverArchiveNoOp=$serverArchiveNoOpStatus vpnNoOps=$vpnPanelNoOpStatus,$vpnInboundNoOpStatus telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
 }
 finally {
     if ($process -and -not $process.HasExited) {
