@@ -1971,7 +1971,7 @@ async function mockAdminApi(page: Page) {
       const index = panels.findIndex((item) => item.id === panelId)
       const linkedInbounds = inbounds.filter((item) => item.vpnPanelId === panelId).length
       if (linkedInbounds > 0) {
-        panels[index] = vpnPanel({ ...panels[index], status: 'Disabled', updatedAt: now })
+        panels[index] = vpnPanel({ ...panels[index], status: 'Archived', revision: Number(panels[index]?.revision ?? 0) + 1, updatedAt: now })
       } else if (index >= 0) {
         panels.splice(index, 1)
       }
@@ -4545,8 +4545,11 @@ test('admin VPN infrastructure supports secure managed lifecycle', async ({ page
   await expect(panelRow.getByRole('button', { name: 'Отключить' })).toBeVisible()
   await panelRow.getByRole('button', { name: 'Удалить' }).click()
   await panelsPanel.getByRole('button', { name: 'Подтвердить' }).click()
-  await expect(page.getByText('Панель E2E 3x-ui Panel Updated отключена и сохранена в истории: связей 1.')).toBeVisible()
-  await expect(panelRow.getByRole('button', { name: 'Включить' })).toBeVisible()
+  await expect(page.getByText('Панель E2E 3x-ui Panel Updated архивирована и сохранена в истории: связей 1.')).toBeVisible()
+  await expect(panelRow).toContainText('Архив')
+  for (const actionName of ['Редактировать', 'Проверить', 'Синхронизировать', 'Включить', 'Отключить', 'Удалить']) {
+    await expect(panelRow.getByRole('button', { name: actionName, exact: true })).toHaveCount(0)
+  }
 
   expect(api.getAuthorizedRequestCount('/api/admin/servers', 'POST', 'Bearer admin-infrastructure-token')).toBe(1)
   expect(api.getAuthorizedRequestCount('/api/admin/vpn-panels', 'POST', 'Bearer admin-infrastructure-token')).toBe(1)

@@ -237,6 +237,7 @@ const statusLabels: Record<string, string> = {
   New: 'Новый',
   Suspended: 'Ограничен',
   Deleted: 'Удален',
+  Archived: 'Архив',
   Open: 'Открыто',
   Closed: 'Закрыто',
   'Checkout ready': 'Готово к оплате',

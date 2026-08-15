@@ -65,6 +65,7 @@ test('formatStatusLabel localizes status text outside badges', () => {
   assert.equal(formatStatusLabel('Web'), 'Сайт')
   assert.equal(formatStatusLabel('inbound'), 'От пользователя')
   assert.equal(formatStatusLabel('fixed'), 'Исправлено')
+  assert.equal(formatStatusLabel('Archived'), 'Архив')
   assert.equal(formatStatusLabel(null), 'Неизвестно')
 })
 

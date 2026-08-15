@@ -695,6 +695,46 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Panel_Update_Should_Reject_Direct_Archive_Status_Without_Mutation()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var panel = new VpnPanel
+        {
+            Name = "active-panel",
+            BaseUrl = "https://active-panel.example.test",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "eu",
+            Status = VpnPanelStatus.Active,
+            Capacity = 100
+        };
+        db.VpnPanels.Add(panel);
+        await db.SaveChangesAsync();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.UpdatePanelAsync(panel.Id, new UpdateVpnPanelCommand(
+            Name: null,
+            BaseUrl: null,
+            Login: null,
+            Password: null,
+            Region: null,
+            Capacity: null,
+            SslVerificationMode: null,
+            ApiVariant: null,
+            AutoCreateInbound: null,
+            DefaultInboundTemplateJson: null,
+            Status: "Archived",
+            Revision: panel.Revision), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("cannot be archived", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(VpnPanelStatus.Active, panel.Status);
+        Assert.Equal(0, panel.Revision);
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Fact]
     public async Task Panel_Update_Should_Reject_Capacity_Below_Used_Slots()
     {
         await using var db = CreateDbContext();
@@ -948,7 +988,7 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
-    public async Task Panel_Delete_Should_Disable_Panel_When_Operational_Data_Is_Linked()
+    public async Task Panel_Delete_Should_Archive_Panel_When_Operational_Data_Is_Linked_And_Reject_Repeat()
     {
         await using var db = CreateDbContext();
         var clock = new FixedClock();
@@ -1006,10 +1046,67 @@ public class X3UiIntegrationTests
         Assert.Equal(1, result.Value.LinkedSyncRuns);
         Assert.Equal(1, result.Value.LinkedHealthChecks);
         var panel = await db.VpnPanels.SingleAsync(x => x.Id == panelId);
-        Assert.Equal(VpnPanelStatus.Disabled, panel.Status);
+        Assert.Equal(VpnPanelStatus.Archived, panel.Status);
         Assert.Equal(HealthStatus.Unknown, panel.HealthStatus);
-        Assert.Contains("disabled", panel.LastError, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("archived", panel.LastError, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_panel.archive" && x.EntityId == panelId.ToString());
+
+        var archivedRevision = panel.Revision;
+        var repeatedResult = await service.DeletePanelAsync(panelId, CancellationToken.None);
+
+        Assert.False(repeatedResult.IsSuccess);
+        Assert.Equal("VPN panel is already archived.", repeatedResult.Error);
+        db.ChangeTracker.Clear();
+        Assert.Equal(archivedRevision, (await db.VpnPanels.SingleAsync(x => x.Id == panelId)).Revision);
+        Assert.Equal(1, await db.AuditLogs.CountAsync(x => x.Action == "vpn_panel.archive" && x.EntityId == panelId.ToString()));
+    }
+
+    [Fact]
+    public async Task Panel_Delete_Should_Persist_Terminal_Archive_Exactly_Once_In_Sqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+        var clock = new FixedClock();
+        var panelId = Guid.NewGuid();
+        db.VpnPanels.Add(new VpnPanel
+        {
+            Id = panelId,
+            Name = "sqlite-linked-panel",
+            BaseUrl = "https://sqlite-linked-panel.example.test:2053",
+            Login = "admin",
+            EncryptedPassword = "secret",
+            Region = "eu",
+            Status = VpnPanelStatus.Active,
+            Capacity = 100
+        });
+        db.PanelHealthChecks.Add(new PanelHealthCheck
+        {
+            Id = Guid.NewGuid(),
+            VpnPanelId = panelId,
+            Status = HealthStatus.Healthy,
+            CheckedAt = clock.UtcNow
+        });
+        await db.SaveChangesAsync();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock);
+
+        var firstResult = await service.DeletePanelAsync(panelId, CancellationToken.None);
+        var archivedRevision = (await db.VpnPanels.SingleAsync(x => x.Id == panelId)).Revision;
+        var repeatedResult = await service.DeletePanelAsync(panelId, CancellationToken.None);
+
+        Assert.True(firstResult.IsSuccess, firstResult.Error);
+        Assert.True(firstResult.Value!.Archived);
+        Assert.False(repeatedResult.IsSuccess);
+        Assert.Equal("VPN panel is already archived.", repeatedResult.Error);
+        db.ChangeTracker.Clear();
+        var archivedPanel = await db.VpnPanels.SingleAsync(x => x.Id == panelId);
+        Assert.Equal(VpnPanelStatus.Archived, archivedPanel.Status);
+        Assert.Equal(archivedRevision, archivedPanel.Revision);
+        Assert.Equal(1, await db.AuditLogs.CountAsync(x => x.Action == "vpn_panel.archive" && x.EntityId == panelId.ToString()));
     }
 
     [Theory]

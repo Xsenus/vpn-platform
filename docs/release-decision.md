@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1586/1586`.
+- Backend full suite: `1588/1588`.
 - API Release build: OK.
 - Frontend unit tests: `195/195`.
 - Frontend typecheck/build: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-15-server-archive-noop-integrity`, версия `0.743.0`; first/repeated server delete, early archived guard и state-aware UI проверены backend/SQLite/desktop/mobile regressions. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence всё ещё требуются.
-- Roadmap progress: `766/786` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-15-vpn-panel-archive-integrity`, версия `0.744.0`; terminal panel archive, repeat/PATCH guards и state-aware UI проверены backend/SQLite/desktop/mobile regressions. Real production-like 3x-ui/x-ui, VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging evidence всё ещё требуются.
+- Roadmap progress: `767/787` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

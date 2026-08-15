@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.744.0 - 2026-08-15
+
+Release entry: `2026-08-15-vpn-panel-archive-integrity`.
+
+### Исправлено
+
+- Связанная 3x-ui панель теперь получает отдельный терминальный статус `Archived`, а не обычный `Disabled`; штатно отключённые панели по-прежнему можно включить или удалить.
+- Повторная DELETE-команда архивной панели возвращает controlled `400` без изменения revision, timestamp и audit; прямой перевод в архив через PATCH также запрещён.
+- Admin-панель показывает архивный статус по-русски, сохраняет просмотр истории и скрывает недоступные редактирование, проверку, синхронизацию, включение, отключение и удаление.
+- SQLite regression подтверждает сохранение числового enum-статуса, единственный audit и неизменную revision после повторной команды.
+
+### Проверено
+
+- Fail-first backend regression завершился `0/1`; после исправления targeted backend `3/3`, SQLite `1/1`, frontend UI `9/9`, целевой Playwright `1/1` и полный Playwright `282/282` за `14.7 min` зелёные.
+- Backend Debug/Release `1588/1588`, frontend `195/195`, typecheck/build, admin bundle raw `586334/586752` и gzip `156015/156672`, dependency audit `0 vulnerabilities`, responsive all-screens на 25 viewport-конфигурациях, EF drift, formatter, strict UTF-8 и secret scan `727/0` проходят release gate. Roadmap `767/787` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальная production-like 3x-ui/x-ui панель, VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API и SMTP остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.743.0 - 2026-08-15
 
 Release entry: `2026-08-15-server-archive-noop-integrity`.

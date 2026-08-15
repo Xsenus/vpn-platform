@@ -21,6 +21,7 @@ public class X3UiPanelService
     private const int DiagnosticsListLimit = 50;
     private const int SyncEventListLimit = 1000;
     private const string PanelChangedError = "VPN panel changed. Reload it and retry.";
+    private const string PanelArchivedError = "VPN panel is already archived.";
     private const string InboundChangedError = "VPN inbound changed. Reload it and retry.";
     private const string ClientChangedError = "VPN client changed. Reload it and retry.";
 
@@ -129,6 +130,10 @@ public class X3UiPanelService
         {
             return Result<VpnPanelDto>.Failure(PanelChangedError);
         }
+        if (panel.Status == VpnPanelStatus.Archived)
+        {
+            return Result<VpnPanelDto>.Failure(PanelArchivedError);
+        }
 
         var name = string.IsNullOrWhiteSpace(command.Name) ? panel.Name : command.Name.Trim();
         var baseUrl = string.IsNullOrWhiteSpace(command.BaseUrl) ? panel.BaseUrl : NormalizeBaseUrl(command.BaseUrl);
@@ -171,6 +176,10 @@ public class X3UiPanelService
         var apiVariant = Enum.Parse<X3UiApiVariant>(apiVariantText, true);
         var autoCreateInbound = command.AutoCreateInbound ?? panel.AutoCreateInbound;
         var status = Enum.Parse<VpnPanelStatus>(statusText, true);
+        if (status == VpnPanelStatus.Archived)
+        {
+            return Result<VpnPanelDto>.Failure("VPN panel cannot be archived through an update.");
+        }
         if (string.IsNullOrWhiteSpace(command.Password)
             && panel.Name == name
             && panel.BaseUrl == baseUrl
@@ -231,6 +240,10 @@ public class X3UiPanelService
         {
             return Result<DeleteVpnPanelResultDto>.Failure(PanelChangedError);
         }
+        if (panel.Status == VpnPanelStatus.Archived)
+        {
+            return Result<DeleteVpnPanelResultDto>.Failure(PanelArchivedError);
+        }
 
         var linkedInbounds = await _db.VpnInbounds.CountAsync(x => x.VpnPanelId == id, cancellationToken);
         var linkedClients = await _db.VpnClients.CountAsync(x => x.VpnPanelId == id, cancellationToken);
@@ -240,9 +253,9 @@ public class X3UiPanelService
 
         if (linkedInbounds > 0 || linkedClients > 0 || linkedSyncRuns > 0 || linkedHealthChecks > 0)
         {
-            panel.Status = VpnPanelStatus.Disabled;
+            panel.Status = VpnPanelStatus.Archived;
             panel.HealthStatus = HealthStatus.Unknown;
-            panel.LastError = "Panel disabled by admin delete action because operational history is linked.";
+            panel.LastError = "Panel archived by admin delete action because operational history is linked.";
             panel.UpdatedAt = _clock.UtcNow;
             panel.Revision = checked(panel.Revision + 1);
             AddAudit("vpn_panel.archive", "VpnPanel", panel.Id, actorUserId, before, new { panel.Status, linkedInbounds, linkedClients, linkedSyncRuns, linkedHealthChecks });

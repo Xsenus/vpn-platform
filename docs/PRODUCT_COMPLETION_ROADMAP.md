@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-15.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-server-archive-noop-integrity`, версия `0.743.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `766/786` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-vpn-panel-archive-integrity`, версия `0.744.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `767/787` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-15:
 
-- [x] `STATE-001` Backend test suite проходит: `1586/1586`.
+- [x] `STATE-001` Backend test suite проходит: `1588/1588`.
 - [x] `STATE-002` Frontend test suite проходит: `195/195`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2760,6 +2760,10 @@ git diff --check
   - Что сделать: первая DELETE-команда должна удалять свободный сервер или архивировать связанный, но повторная команда для `Archived` обязана завершаться до relation queries и не менять revision/timestamp/audit; UI должен сохранять diagnostics без повторного удаления.
   - Что сделано: backend после revision check возвращает controlled `400` для уже архивированной записи; frontend availability helper скрывает delete-action только для `Archived`, оставляя health-check и исторические данные доступными.
   - Доказательство: fail-first backend `0/1` и frontend `1/2`; after-fix targeted delete backend `5/5`, server-management backend `90/90`, backend Debug/Release `1586/1586`, frontend `195/195`, typecheck/build, admin bundle raw `586266/586752`, gzip `156003/156672`, targeted Playwright desktop/mobile `2/2`, полный Playwright `282/282` за `14.1 min`, fresh SQLite first archive + `serverArchiveNoOp=400`, все 17 admin sections и 25 responsive viewport-конфигураций, formatter, EF drift, encoding, secret scan `727/0` и dependency audit `0 vulnerabilities` зелёные. Реальные VPS/SSH/Ansible и production-like 3x-ui проверки этим пунктом не закрываются.
+- [x] `P11-ACC-476` Сделать архив 3x-ui панели отдельным терминальным состоянием. 2026-08-15.
+  - Что сделать: удаление связанной панели не должно маскироваться под обратимый `Disabled`; повторный delete и прямой PATCH-to-archive не должны менять revision/timestamp/audit, а UI не должен показывать недоступные команды архивной записи.
+  - Что сделано: добавлен статус `Archived` без изменения схемы хранения enum; delete с inbound/client/sync/health history переводит панель в архив, повтор возвращает controlled error, PATCH не может создать или изменить архив, а admin-карточка сохраняет просмотр истории с русской подписью статуса без mutation-actions.
+  - Доказательство: fail-first backend `0/1`; after-fix targeted backend `3/3`, SQLite `1/1`, backend Debug/Release `1588/1588`, frontend `195/195`, typecheck/build, admin bundle raw `586334/586752`, gzip `156015/156672`, targeted Playwright `1/1`, полный Playwright `282/282` за `14.7 min`, все 17 admin sections и 25 responsive viewport-конфигураций зелёные. Реальная production-like 3x-ui/x-ui панель остаётся внешним evidence.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3409,6 +3413,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-15-009` | P1 | Admin 3x-ui panel archive | Delete связанной панели сохранял обычный `Disabled`, поэтому архив можно было включить, повторно удалить и повторно записать revision/audit; UI продолжал показывать все mutation-actions. | Исправлено локально | Отдельный terminal `Archived`, repeat/PATCH guards, SQLite persistence и desktop/mobile/full responsive regressions зелёные. Реальная production-like 3x-ui/x-ui проверка остаётся внешним evidence. |
 | `BUG-2026-08-15-008` | P1 | Admin VPN server archive | Повторная DELETE-команда архивного сервера снова выполняла пять relation queries, повышала revision, меняла timestamp и писала audit; UI продолжал показывать удаление. | Исправлено локально | Early archived guard, state-aware delete availability, fresh SQLite first/repeated delete и desktop/mobile/full responsive regressions зелёные. Реальные VPS/SSH/Ansible/3x-ui outcomes остаются отдельным evidence. |
 | `BUG-2026-08-15-007` | P0 | Admin VPN server state | Повторные mode-actions меняли revision/audit, а maintenance/allocation endpoints позволяли перевести отключённый или неподготовленный сервер в `Ready`; UI показывал взаимоисключающие действия одновременно. | Исправлено локально | Explicit transition matrix, fresh revision priority и state-aware UI проверены backend/fresh SQLite/frontend/desktop/mobile/full responsive regressions. Реальные VPS/SSH/Ansible/3x-ui outcomes остаются отдельным evidence. |
 | `BUG-2026-08-15-006` | P1 | Admin VPN servers | Неизменённый server PUT повышал revision и писал audit; UI разрешал no-op, а delayed `409` закрывал редактор и терял более новый local draft. | Исправлено локально | Full normalized backend candidate, API-aligned dirty-state, targeted list reload и revision rebase проверены backend/fresh SQLite/frontend/desktop/mobile/full responsive regressions. Реальные VPS/SSH/Ansible/3x-ui outcomes остаются отдельным evidence. |

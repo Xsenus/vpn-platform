@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: 3x-ui panel terminal archive integrity
+
+Scope:
+- A linked 3x-ui panel must enter a distinct terminal archive state instead of an ordinary reversible disabled state.
+- Repeated delete and direct PATCH-to-archive must not mutate revision, timestamp or audit history.
+- The administrative UI must preserve historical panel details while removing unavailable actions and localizing the archive status.
+
+Results:
+- Roadmap progress: `767/787` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-vpn-panel-archive-integrity`, version `0.744.0`.
+- Fail-first: backend repeated delete regression completed `0/1` because the second command succeeded and advanced revision/audit.
+- After fix: targeted backend `3/3`, SQLite archive persistence `1/1`, frontend UI `9/9`, typecheck/build, admin bundle budget `586334/586752` raw and `156015/156672` gzip, targeted Playwright `1/1`, and full Playwright `282/282` in `14.7 min` are green.
+- Release gate: backend Debug/Release `1588/1588`, frontend `195/195`, all 17 admin sections and 25 responsive viewport configurations, `RoadmapCurrentStateTests`, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, secret scan `727/0` and strict UTF-8/BOM guard are green.
+- External boundary: a real production-like 3x-ui/x-ui panel, VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API and SMTP were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: VPN server archive no-op integrity
 
 Scope:
