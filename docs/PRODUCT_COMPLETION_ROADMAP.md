@@ -2,11 +2,11 @@
 
 Документ нужен как единая рабочая карта проекта. По нему агент или разработчик должен идти сверху вниз, отмечать выполненные пункты и оставлять доказательства: тесты, скриншоты, ссылки на коммиты, результаты smoke-проверок и замечания.
 
-Дата актуализации: 2026-08-14.
+Дата актуализации: 2026-08-15.
 
-Дата последней сверки: 2026-08-14.
+Дата последней сверки: 2026-08-15.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-14-admin-user-vpn-label-localization`, версия `0.730.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `753/773` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-admin-operational-label-localization`, версия `0.731.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `754/774` проверяемых пунктов, готовность `97.4%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -38,7 +38,7 @@ git diff --check
 Что подтверждено на 2026-08-14:
 
 - [x] `STATE-001` Backend test suite проходит: `1555/1555`.
-- [x] `STATE-002` Frontend test suite проходит: `179/179`.
+- [x] `STATE-002` Frontend test suite проходит: `180/180`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-005` GitHub Actions `validation`, `staging-validation`, `deploy-vps` настроены; live deploy все еще требует реального прогона после push.
@@ -2708,6 +2708,10 @@ git diff --check
   - Что сделать: карточка пользователя и строки 3x-ui клиентов не должны показывать `Web`, `Local`, `User`, `Email confirmed`, английские счётчики, `payment`, `sync`, `synced`, `traffic-reset` или `unknown` вместо русских подписей.
   - Что сделано: shared formatter локализует канал регистрации, а bounded admin-only formatter покрывает auth source, роли, email state и sync outcomes без роста public/cabinet bundles; user overview и VPN client notices/rows используют эти UI-boundary labels, все operational controls сохранены.
   - Доказательство: два fail-first прохода targeted guard завершились `2/10 failed`; after-fix focused unit/source `11/11`, frontend `179/179`, typecheck/build, admin bundle `563354/564224`, targeted VPN client desktop/mobile `4/4`, полный Playwright `270/270`, backend Debug/Release `1555/1555`, API build `0 warnings / 0 errors`, fresh SQLite latest release, formatter, EF drift, secret scan `711/0` и dependency audit `0 vulnerabilities` зелёные; все 17 admin sections прошли desktop и 25 responsive viewport-конфигураций, representative users/panels screenshots просмотрены вручную без overflow, clipping, overlap или browser diagnostics.
+- [x] `P11-ACC-463` Локализировать operational metadata в админке. 2026-08-15.
+  - Что сделать: статусы пользователей, инициаторы и категории аудита, SSL-режимы VPN-панелей, события access history, QR-флаг сценариев и fallback-состояния dashboard/health не должны показывать `Active`, `Actor`, `system`, `Strict`, `AccessRevoked`, `No QR`, `Support` или `ok` вместо русских подписей.
+  - Что сделано: bounded admin formatter расширен для user status, audit actor/category, SSL, access events, QR state и fallback labels; короткие SSL options не обрезаются в узкой форме, а технические audit action/entity, provider event type, API variant, JSON payload и provisioning diagnostics оставлены raw.
+  - Доказательство: fail-first focused unit/source `1/3` с двумя регрессиями и desktop all-sections Playwright с raw status options; after-fix focused localization `3/3`, source timeout guard `7/7`, frontend `180/180`, typecheck/build, admin bundle `565707/566272`, targeted operational desktop/mobile `6/6`, полный Playwright `270/270`, backend Debug/Release `1555/1555`, API build `0 warnings / 0 errors`, fresh SQLite latest release, formatter, EF drift, secret scan `711/0` и dependency audit `0 vulnerabilities` зелёные; users/audit/vpn/panels/scenarios screenshots просмотрены вручную без overflow, clipping, overlap или browser diagnostics.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

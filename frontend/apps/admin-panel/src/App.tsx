@@ -4144,7 +4144,7 @@ export function App() {
           <div className="list-stack">
             {dashboardFailedPayments.map((payment) => <div key={payment.id} className="list-item"><span>Платеж {shortId(payment.id)} · {payment.provider}</span><StatusBadge value={payment.status} /></div>)}
             {dashboardFailedProvisioningRuns.map((run) => <div key={run.id} className="list-item"><span>{run.targetHost || run.nodeName || shortId(run.id)} · {run.errorSummary || run.currentStep || 'нужна проверка'}</span><StatusBadge value={run.status} /></div>)}
-            {dashboardOpenSupportConversations.map((conversation) => <div key={conversation.id} className="list-item"><span>{conversation.subject || 'Support'} · tg:{conversation.telegramUserId ?? '—'}</span><StatusBadge value={conversation.status} /></div>)}
+            {dashboardOpenSupportConversations.map((conversation) => <div key={conversation.id} className="list-item"><span>{conversation.subject || 'Обращение в поддержку'} · tg:{conversation.telegramUserId ?? '—'}</span><StatusBadge value={conversation.status} /></div>)}
             {dashboardFailedPayments.length === 0 && dashboardFailedProvisioningRuns.length === 0 && dashboardOpenSupportConversations.length === 0 && <EmptyState title="Нет срочных проблем" description="В доступных очередях сейчас нет ошибок, требующих реакции." />}
           </div>
         </SectionCard>
@@ -4156,8 +4156,8 @@ export function App() {
           <form className="toolbar toolbar-form" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void loadAll(token) }}>
             <label><span>Действие</span><input value={auditActionFilter} onChange={(e) => setAuditActionFilter(e.target.value)} placeholder="payment.status.changed" /></label>
             <label><span>Сущность</span><input value={auditEntityTypeFilter} onChange={(e) => setAuditEntityTypeFilter(e.target.value)} placeholder="PaymentAttempt" /></label>
-            <label><span>Actor</span><select value={auditActorTypeFilter} onChange={(e) => setAuditActorTypeFilter(e.target.value)}><option value="">Все</option><option value="admin">admin</option><option value="system">system</option><option value="user">user</option></select></label>
-            <label><span>Поиск</span><input value={auditSearch} onChange={(e) => setAuditSearch(e.target.value)} placeholder="id, actor или action" /></label>
+            <label><span>Инициатор</span><select value={auditActorTypeFilter} onChange={(e) => setAuditActorTypeFilter(e.target.value)}><option value="">Все</option><option value="admin">Администратор</option><option value="system">Система</option><option value="user">Пользователь</option></select></label>
+            <label><span>Поиск</span><input value={auditSearch} onChange={(e) => setAuditSearch(e.target.value)} placeholder="ID, инициатор или действие" /></label>
             <PrimaryButton type="submit" disabled={!token || busy} title={adminDisabledTitle} aria-busy={busy}>Применить</PrimaryButton>
           </form>
           <div className="list-stack mt-12">
@@ -4168,10 +4168,10 @@ export function App() {
                   <div>
                     <strong>{entry.action}</strong>
                     <div className="muted">{entry.entityType} · {shortId(entry.entityId)} · {formatDate(entry.createdAt)}</div>
-                    <div className="muted">actor: {entry.actorType}/{entry.actorId || 'unknown'} · IP: {entry.ip || '—'}</div>
+                    <div className="muted">Инициатор: {formatAdminDisplayLabel(entry.actorType)}/{entry.actorId || 'Неизвестно'} · IP: {entry.ip || '—'}</div>
                   </div>
                   <div className="item-status">
-                    <StatusBadge value={entry.actorType || 'unknown'} />
+                    <StatusBadge value={formatAdminDisplayLabel(entry.actorType)} />
                     <StatusBadge value={entry.entityType || 'entity'} />
                   </div>
                 </div>
@@ -4222,11 +4222,11 @@ export function App() {
         <Card>
           <h3>Доступные категории аудита</h3>
           <div className="list-stack">
-            {canReadFinance && <div className="list-item"><span>Изменения платежных провайдеров и ротация секретов</span><StatusBadge value="finance" /></div>}
-            {canReadFinance && <div className="list-item"><span>Переходы статусов платежей из webhook и recheck</span><StatusBadge value="system" /></div>}
-            {canReadSupport && <div className="list-item"><span>Ответы, заметки и статусы обращений</span><StatusBadge value="support" /></div>}
-            {adminSession?.capabilities.botManage && <div className="list-item"><span>Настройки и ротация секретов Telegram-бота</span><StatusBadge value="bot" /></div>}
-            <div className="list-item"><span>VPN provisioning и lifecycle-действия доступа</span><StatusBadge value="vpn" /></div>
+            {canReadFinance && <div className="list-item"><span>Изменения платежных провайдеров и ротация секретов</span><StatusBadge value={formatAdminDisplayLabel('finance')} /></div>}
+            {canReadFinance && <div className="list-item"><span>Переходы статусов платежей из webhook и recheck</span><StatusBadge value={formatAdminDisplayLabel('system')} /></div>}
+            {canReadSupport && <div className="list-item"><span>Ответы, заметки и статусы обращений</span><StatusBadge value={formatAdminDisplayLabel('support')} /></div>}
+            {adminSession?.capabilities.botManage && <div className="list-item"><span>Настройки и ротация секретов Telegram-бота</span><StatusBadge value={formatAdminDisplayLabel('bot')} /></div>}
+            <div className="list-item"><span>VPN provisioning и lifecycle-действия доступа</span><StatusBadge value={formatAdminDisplayLabel('vpn')} /></div>
           </div>
         </Card>
       </div>
@@ -4236,7 +4236,7 @@ export function App() {
           <h3>Пользователи</h3>
           <form className="toolbar toolbar-form" aria-busy={busy || usersLoading} onSubmit={(event) => { event.preventDefault(); void loadUsers() }}>
             <label><span>Поиск</span><input value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="email, имя или реферальный код" /></label>
-            <label><span>Статус</span><select value={userStatusFilter} onChange={(e) => setUserStatusFilter(e.target.value)}><option value="">Все</option><option value="Active">Active</option><option value="Suspended">Suspended</option><option value="Deleted">Deleted</option><option value="New">New</option></select></label>
+            <label><span>Статус</span><select value={userStatusFilter} onChange={(e) => setUserStatusFilter(e.target.value)}><option value="">Все</option><option value="Active">Активные</option><option value="Suspended">Ограниченные</option><option value="Deleted">Удалённые</option><option value="New">Новые</option></select></label>
             <PrimaryButton type="submit" disabled={!token || busy || usersLoading} title={adminDisabledTitle} aria-busy={busy || usersLoading}>Применить</PrimaryButton>
           </form>
           {usersLoading && <LoadingBlock label="Загружаем пользователей..." />}
@@ -4847,7 +4847,7 @@ export function App() {
                 {isTerminal
                   ? <p className="safe-note" role="status">{terminalReason}</p>
                   : access.accessUri && <CodeBlock>{access.accessUri}</CodeBlock>}
-                {access.history && access.history.length > 0 && <div className="muted">История: {access.history.slice(0, 3).map((h) => `${h.eventType} ${formatDate(h.createdAt)}`).join(' · ')}</div>}
+                {access.history && access.history.length > 0 && <div className="muted">История: {access.history.slice(0, 3).map((h) => `${formatAdminDisplayLabel(h.eventType)} ${formatDate(h.createdAt)}`).join(' · ')}</div>}
                 {!isTerminal && adminQrSvgs[access.id] && <QrCodePreview svg={adminQrSvgs[access.id]} label={`QR-код доступа ${access.id}`} />}
                 {!isTerminal && <div className="toolbar">
                   <CopyButton value={access.accessUri} label="Скопировать URI" disabled={!access.accessUri} />
@@ -4973,7 +4973,7 @@ export function App() {
               <div className="form-grid">
                 <label><span>Регион</span><input value={vpnPanelForm.region} onChange={(e) => updateVpnPanelForm('region', e.target.value)} placeholder="eu" maxLength={120} /></label>
                 <label><span>Емкость</span><input value={vpnPanelForm.capacity} onChange={(e) => updateVpnPanelForm('capacity', Number(e.target.value) || 0)} placeholder="5000" type="number" min={1} step="1" /></label>
-                <label><span>Проверка SSL</span><select value={vpnPanelForm.sslVerificationMode} onChange={(e) => updateVpnPanelForm('sslVerificationMode', e.target.value)}><option value="Strict">Strict</option><option value="AllowSelfSigned">AllowSelfSigned</option><option value="Disabled">Disabled</option></select></label>
+                <label><span>Проверка SSL</span><select value={vpnPanelForm.sslVerificationMode} onChange={(e) => updateVpnPanelForm('sslVerificationMode', e.target.value)}><option value="Strict">Строгая</option><option value="AllowSelfSigned">Самоподписанный</option><option value="Disabled">Отключена</option></select></label>
                 <label><span>Вариант API</span><select value={vpnPanelForm.apiVariant} onChange={(e) => updateVpnPanelForm('apiVariant', e.target.value)}><option value="X3UiOfficial">X3UiOfficial</option><option value="ThreeXUi">ThreeXUi</option><option value="LegacyXUi">LegacyXUi</option><option value="Custom">Custom</option></select></label>
               </div>
               <label className="checkbox-row"><input checked={vpnPanelForm.autoCreateInbound} onChange={(e) => updateVpnPanelForm('autoCreateInbound', e.target.checked)} type="checkbox" /> Автоматически создавать inbound при выдаче доступа</label>
@@ -4986,7 +4986,7 @@ export function App() {
             </div>
           </form>
           {vpnPanels.length === 0 && <EmptyState title="3x-ui панели не добавлены" description="Добавьте панель, чтобы управлять inbound-правилами, клиентами и синхронизацией." />}
-          <div className="list-stack mt-12">{vpnPanels.map((panel) => <div key={panel.id} className={`list-item-vertical${selectedVpnPanelId === panel.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{panel.name}</strong><div className="muted">{panel.baseUrl} · логин {panel.login ? 'задан' : 'пусто'} · {panel.apiVariant} · SSL {panel.sslVerificationMode}</div><div className="muted">Емкость {panel.usedCapacity}/{panel.capacity} · авто inbound: {panel.autoCreateInbound ? 'включен' : 'выключен'} · версия {panel.version || 'неизвестна'} · проверка {formatDate(panel.lastHealthCheckAt)} · синхронизация {formatDate(panel.lastSyncAt)}</div>{panel.lastError && <div className="error-text">Последняя ошибка: {panel.lastError}</div>}</div><div className="item-status"><StatusBadge value={panel.status} /><StatusBadge value={panel.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className={selectedVpnPanelId === panel.id ? 'button-secondary' : 'button-ghost'} onClick={() => selectVpnPanel(panel.id)}>{selectedVpnPanelId === panel.id ? 'Открыто' : 'Открыть'}</PrimaryButton>{canWriteSection('panels') && <><PrimaryButton className="button-secondary" disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} onClick={() => editVpnPanel(panel)}>Редактировать</PrimaryButton><PrimaryButton className="button-secondary" disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} onClick={() => void handleTestVpnPanel(panel.id)}>Проверить</PrimaryButton><PrimaryButton disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} onClick={() => void handleSyncVpnPanel(panel.id)}>Синхронизировать</PrimaryButton>{panel.status === 'Disabled' ? <PrimaryButton className="button-ghost" disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} onClick={() => void handleSetVpnPanelStatus(panel, 'Active')}>Включить</PrimaryButton> : <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} message={`Отключить 3x-ui панель "${panel.name}"? Новые выдачи не должны выбирать эту панель.`} onConfirm={() => handleSetVpnPanelStatus(panel, 'Disabled')}>Отключить</ConfirmButton>}<ConfirmButton className="button-danger" disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} message={`Удалить 3x-ui панель "${panel.name}"? Если есть inbound-ы, клиенты или история синхронизаций, панель будет отключена и сохранена.`} onConfirm={() => handleDeleteVpnPanel(panel)}>Удалить</ConfirmButton></>}</div></div>)}</div>
+          <div className="list-stack mt-12">{vpnPanels.map((panel) => <div key={panel.id} className={`list-item-vertical${selectedVpnPanelId === panel.id ? ' selected-item' : ''}`}><div className="item-head"><div><strong>{panel.name}</strong><div className="muted">{panel.baseUrl} · логин {panel.login ? 'задан' : 'пусто'} · {panel.apiVariant} · SSL {formatAdminDisplayLabel(panel.sslVerificationMode)}</div><div className="muted">Емкость {panel.usedCapacity}/{panel.capacity} · авто inbound: {panel.autoCreateInbound ? 'включен' : 'выключен'} · версия {panel.version || 'неизвестна'} · проверка {formatDate(panel.lastHealthCheckAt)} · синхронизация {formatDate(panel.lastSyncAt)}</div>{panel.lastError && <div className="error-text">Последняя ошибка: {panel.lastError}</div>}</div><div className="item-status"><StatusBadge value={panel.status} /><StatusBadge value={panel.healthStatus} /></div></div><div className="toolbar"><PrimaryButton className={selectedVpnPanelId === panel.id ? 'button-secondary' : 'button-ghost'} onClick={() => selectVpnPanel(panel.id)}>{selectedVpnPanelId === panel.id ? 'Открыто' : 'Открыть'}</PrimaryButton>{canWriteSection('panels') && <><PrimaryButton className="button-secondary" disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} onClick={() => editVpnPanel(panel)}>Редактировать</PrimaryButton><PrimaryButton className="button-secondary" disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} onClick={() => void handleTestVpnPanel(panel.id)}>Проверить</PrimaryButton><PrimaryButton disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} onClick={() => void handleSyncVpnPanel(panel.id)}>Синхронизировать</PrimaryButton>{panel.status === 'Disabled' ? <PrimaryButton className="button-ghost" disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} onClick={() => void handleSetVpnPanelStatus(panel, 'Active')}>Включить</PrimaryButton> : <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} message={`Отключить 3x-ui панель "${panel.name}"? Новые выдачи не должны выбирать эту панель.`} onConfirm={() => handleSetVpnPanelStatus(panel, 'Disabled')}>Отключить</ConfirmButton>}<ConfirmButton className="button-danger" disabled={isActionResourceBusy(vpnPanelActionResourceKey(panel.id))} message={`Удалить 3x-ui панель "${panel.name}"? Если есть inbound-ы, клиенты или история синхронизаций, панель будет отключена и сохранена.`} onConfirm={() => handleDeleteVpnPanel(panel)}>Удалить</ConfirmButton></>}</div></div>)}</div>
         </Card>
         <Card>
           <h3>Детали панели</h3>
@@ -5073,7 +5073,7 @@ export function App() {
                 </div>
               </div>
             )
-          })}{vpnClients.length === 0 && <EmptyState title="Клиентов нет" description="После выдачи VPN-доступов клиенты 3x-ui появятся здесь." />}{vpnHealthChecks.slice(0, 3).map((check) => <div key={check.id} className="list-item"><span>{check.version || 'неизвестно'} · {check.latencyMs ?? 0}ms · {check.errorMessage || 'ok'}</span><StatusBadge value={check.status} /></div>)}{vpnSyncRuns.slice(0, 3).map((run) => <div key={run.id} className="list-item"><span>{run.errorMessage || (run.summaryJson !== '{}' ? run.summaryJson : '') || shortId(run.id)}</span><StatusBadge value={run.status} /></div>)}</div>
+          })}{vpnClients.length === 0 && <EmptyState title="Клиентов нет" description="После выдачи VPN-доступов клиенты 3x-ui появятся здесь." />}{vpnHealthChecks.slice(0, 3).map((check) => <div key={check.id} className="list-item"><span>{check.version || 'неизвестно'} · {check.latencyMs ?? 0}ms · {check.errorMessage || 'ошибок нет'}</span><StatusBadge value={check.status} /></div>)}{vpnSyncRuns.slice(0, 3).map((run) => <div key={run.id} className="list-item"><span>{run.errorMessage || (run.summaryJson !== '{}' ? run.summaryJson : '') || shortId(run.id)}</span><StatusBadge value={run.status} /></div>)}</div>
           </>}
         </Card>
       </div>
@@ -5500,7 +5500,7 @@ export function App() {
                     <div className="muted">Оплата: {scenario.onPaymentSucceeded} · продление: {scenario.onRenewal}</div>
                     <div className="muted">Тарифы: {tariffs.filter((tariff) => tariff.provisioningScenario === scenario.key).map((tariff) => tariff.name).join(', ') || 'не выбраны'}</div>
                   </div>
-                  <div className="item-status"><StatusBadge value={scenario.isActive ? 'Active' : 'Hidden'} /><StatusBadge value={scenario.generateQrCode ? 'QR' : 'No QR'} /></div>
+                  <div className="item-status"><StatusBadge value={scenario.isActive ? 'Active' : 'Hidden'} /><StatusBadge value={formatAdminDisplayLabel(scenario.generateQrCode ? 'QrEnabled' : 'QrDisabled')} /></div>
                 </div>
                 <div className="toolbar" hidden={!canWriteSection('scenarios')}>
                   <PrimaryButton className="button-secondary" disabled={isActionResourceBusy(workScenarioActionResourceKey(scenario.id))} onClick={() => editWorkScenario(scenario)}>Редактировать</PrimaryButton>

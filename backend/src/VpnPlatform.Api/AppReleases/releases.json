@@ -17238,5 +17238,32 @@
         "text": "Roadmap progress is 753/773 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-15-admin-operational-label-localization",
+    "version": "0.731.0",
+    "releasedAt": "2026-08-15T09:02:57+07:00",
+    "title": "Admin operational metadata uses Russian labels",
+    "summary": "Administrative operational surfaces no longer expose raw user status, audit, SSL, access history, QR or fallback tokens while preserving technical diagnostics.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "User status options, audit actor/category labels, access-history events, scenario QR state and support/health fallbacks now use bounded Russian text instead of backend tokens."
+      },
+      {
+        "type": "fixed",
+        "text": "VPN panel SSL modes use compact Russian select labels that fit narrow forms while row details keep the full human-readable mode and submitted API values remain unchanged."
+      },
+      {
+        "type": "improved",
+        "text": "Desktop, mobile and responsive browser gates verify raw API fixtures for operational admin metadata across all 17 administrative sections and 25 viewport configurations."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 754/774 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

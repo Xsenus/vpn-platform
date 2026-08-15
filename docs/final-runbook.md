@@ -174,10 +174,10 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 ## 7. Текущий статус
 
-На 2026-08-14 локально подтверждено:
+На 2026-08-15 локально подтверждено:
 
 - backend full suite: 1555/1555;
-- frontend tests: 179/179;
+- frontend tests: 180/180;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-14-admin-user-vpn-label-localization`, версия `0.730.0`; user overview и 3x-ui client source/auth/role/email/count/event/sync labels локализованы и проверены desktop/mobile.
-- roadmap progress: `753/773` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-15-admin-operational-label-localization`, версия `0.731.0`; user status, audit actor/category, VPN SSL, access-history, QR и health/support fallback labels локализованы и проверены desktop/mobile.
+- roadmap progress: `754/774` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

@@ -1,6 +1,22 @@
 # Результаты проверок
 
-Дата проверки: 2026-08-14.
+Дата проверки: 2026-08-15.
+
+## Check 2026-08-15: admin operational label localization
+
+Scope:
+- User status options, audit actor/category metadata, VPN panel SSL modes, access history events, scenario QR flags and dashboard/health fallbacks must not expose raw backend/API tokens.
+- SSL select labels must fit narrow panel forms while preserving submitted API values and full row labels.
+- Technical audit action/entity, provider event type, API variant, JSON payload and provisioning diagnostics must stay unmodified.
+
+Results:
+- Roadmap progress: `754/774` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-admin-operational-label-localization`, version `0.731.0`.
+- Fail-first: focused unit/source completed `1/3` with two localization regressions, and desktop all-sections Playwright reproduced raw user status options in DOM.
+- After fix: bounded admin formatter covers user statuses, audit actor/category labels, VPN SSL modes, access-history events, scenario QR flags and support/health fallbacks. Focused localization `3/3`, source timeout guard `7/7`, frontend `180/180`, typecheck/build, admin bundle budget `565707/566272`, dependency audit `0 vulnerabilities`, targeted operational desktop/mobile Playwright `6/6` and full Playwright `270/270` are green.
+- Visual gate: all 17 admin sections passed desktop and 25 responsive viewport configurations; users/audit/vpn/panels/scenarios desktop/mobile screenshots were reviewed manually, invalid geometry `0`, browser diagnostics `0`, no clipping or overlap.
+- Release gate: backend Debug/Release `1555/1555`, API Release build `0 warnings / 0 errors`, fresh SQLite full flow with latest release, global formatter, EF pending-model check, secret scan `711/0` and strict UTF-8/BOM guard are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
 
 ## Check 2026-08-14: admin user and VPN client label localization
 

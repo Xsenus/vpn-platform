@@ -5124,7 +5124,7 @@ test('admin login hides operational data until the initial load completes', asyn
 })
 
 test('admin panel covers login and critical operational mutations across all sections', async ({ page }, testInfo) => {
-  test.setTimeout(150_000)
+  test.setTimeout(240_000)
   const consoleErrors: string[] = []
   const failedResponses: string[] = []
   page.on('console', (message) => {

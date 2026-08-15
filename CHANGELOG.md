@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.731.0 - 2026-08-15
+
+Release entry: `2026-08-15-admin-operational-label-localization`.
+
+### Исправлено
+
+- Админка локализует ограниченные operational labels для статусов пользователей, инициаторов и категорий аудита, SSL-режимов VPN-панелей, событий истории доступа, QR-флага сценариев и fallback-состояний dashboard/health вместо `Active`, `Actor`, `system`, `Strict`, `AccessRevoked`, `No QR`, `Support` и `ok`.
+- Короткие подписи SSL select сохраняют значения API без подмены и больше не обрезаются в узкой колонке панели, а строки панелей показывают полный русский режим.
+- Source/unit и all-screens guards проверяют raw API fixtures на desktop/mobile и оставляют технические audit action/entity, provider event type, API variant, JSON payload и provisioning diagnostics без смысловой локализации.
+
+### Проверено
+
+- Fail-first focused unit/source сначала завершился `1/3` с двумя регрессиями, desktop all-sections Playwright воспроизвёл raw status options; после исправления focused localization `3/3`, source timeout guard `7/7`, frontend `180/180`, typecheck/build, admin bundle `565707/566272`, dependency audit `0 vulnerabilities`, targeted operational desktop/mobile `6/6` и полный Playwright `270/270` зелёные.
+- Все 17 разделов админки прошли desktop и 25 responsive viewport-конфигураций; users/audit/vpn/panels/scenarios screenshots просмотрены вручную без overflow, clipping, overlap или browser diagnostics. Backend Debug/Release `1555/1555`, API build, fresh SQLite, formatter, EF drift, encoding и secret scan `711/0` подтверждены release gate. Roadmap `754/774` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.730.0 - 2026-08-14
 
 Release entry: `2026-08-14-admin-user-vpn-label-localization`.

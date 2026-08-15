@@ -286,7 +286,15 @@ const access = {
   disabledAt: null,
   lastSyncedAt: now,
   revision: 1,
-  history: [],
+  history: [{
+    id: 'history-all-screens',
+    accessCredentialId: 'access-all-screens',
+    subscriptionId: subscription.id,
+    eventType: 'AccessRevoked',
+    oldValueJson: '{}',
+    newValueJson: '{}',
+    createdAt: now
+  }],
   createdAt: now,
   updatedAt: now
 }
@@ -709,7 +717,7 @@ async function installApiMock(page: Page) {
         onRenewal: 'extend_subscription',
         cabinetText: 'Access is ready.',
         telegramText: 'VPN is ready.',
-        generateQrCode: true,
+        generateQrCode: false,
         maxDevices: 3,
         trafficLimit: null,
         sortOrder: 1,
@@ -803,7 +811,19 @@ async function installApiMock(page: Page) {
     }
 
     if (method === 'GET' && path === '/api/admin/audit-logs') {
-      await fulfillJson(route, [])
+      await fulfillJson(route, [{
+        id: 'audit-responsive',
+        actorType: 'system',
+        actorId: 'worker',
+        action: 'access.sync',
+        entityType: 'AccessCredential',
+        entityId: 'access-all-screens',
+        beforeJson: '{}',
+        afterJson: '{}',
+        ip: '',
+        userAgent: '',
+        createdAt: now
+      }])
       return
     }
 
@@ -1222,10 +1242,22 @@ test('every admin section renders without blank screens or browser errors', asyn
       await expect(usersPanel.getByText('Аккаунтов: 0', { exact: true })).toBeVisible()
       await expect(usersPanel.getByText(/синхронизация 14\.06\.2026/)).toBeVisible()
       await expect(usersPanel.getByText(/^(?:1 active|1 payments|0 accounts|Email confirmed)$/)).toHaveCount(0)
+      await expect(usersPanel.getByLabel('Статус').getByRole('option')).toHaveText(['Все', 'Активные', 'Ограниченные', 'Удалённые', 'Новые'])
     }
     if (section === 'panels') {
       await expect(page.locator('#panels').getByText(/Синхронизация: Синхронизирован/)).toBeVisible()
+      await expect(page.locator('#panels').getByText(/SSL Строгая проверка/)).toBeVisible()
+      await expect(page.locator('#panels').getByLabel('Проверка SSL').getByRole('option')).toHaveText(['Строгая', 'Самоподписанный', 'Отключена'])
     }
+    if (section === 'vpn') await expect(page.locator('#vpn').getByText(/История: Доступ отозван/)).toBeVisible()
+    if (section === 'audit') {
+      const auditPanel = page.locator('#audit')
+      await expect(auditPanel.getByText(/Инициатор: Система\/worker/)).toBeVisible()
+      await expect(auditPanel.getByRole('status', { name: 'Статус: Финансы' })).toBeVisible()
+      await expect(auditPanel.getByRole('status', { name: 'Статус: Поддержка' })).toBeVisible()
+      await expect(auditPanel.getByRole('status', { name: 'Статус: Telegram-бот' })).toBeVisible()
+    }
+    if (section === 'scenarios') await expect(page.locator('#scenarios').getByText('QR не создаётся', { exact: true })).toBeVisible()
     if (section === 'support') {
       await expect(page.getByText(/Сайт · tg:—/)).toBeVisible()
       await expect(page.getByText('От пользователя', { exact: true })).toBeVisible()
@@ -1544,7 +1576,7 @@ test('admin site content editor fits focused mobile and desktop viewports', asyn
 })
 
 test('every admin section fits representative responsive viewports', async ({ page }, testInfo) => {
-  test.setTimeout(900_000)
+  test.setTimeout(1_200_000)
   const browserErrors = collectBrowserErrors(page)
   await installApiMock(page)
 
@@ -1577,8 +1609,22 @@ test('every admin section fits representative responsive viewports', async ({ pa
         await expect(usersPanel.getByText('Аккаунтов: 0', { exact: true })).toBeVisible()
         await expect(usersPanel.getByText(/синхронизация 14\.06\.2026/)).toBeVisible()
         await expect(usersPanel.getByText(/^(?:1 active|1 payments|0 accounts|Email confirmed)$/)).toHaveCount(0)
+        await expect(usersPanel.getByLabel('Статус').getByRole('option')).toHaveText(['Все', 'Активные', 'Ограниченные', 'Удалённые', 'Новые'])
       }
-      if (section === 'panels') await expect(page.locator('#panels').getByText(/Синхронизация: Синхронизирован/)).toBeVisible()
+      if (section === 'panels') {
+        await expect(page.locator('#panels').getByText(/Синхронизация: Синхронизирован/)).toBeVisible()
+        await expect(page.locator('#panels').getByText(/SSL Строгая проверка/)).toBeVisible()
+        await expect(page.locator('#panels').getByLabel('Проверка SSL').getByRole('option')).toHaveText(['Строгая', 'Самоподписанный', 'Отключена'])
+      }
+      if (section === 'vpn') await expect(page.locator('#vpn').getByText(/История: Доступ отозван/)).toBeVisible()
+      if (section === 'audit') {
+        const auditPanel = page.locator('#audit')
+        await expect(auditPanel.getByText(/Инициатор: Система\/worker/)).toBeVisible()
+        await expect(auditPanel.getByRole('status', { name: 'Статус: Финансы' })).toBeVisible()
+        await expect(auditPanel.getByRole('status', { name: 'Статус: Поддержка' })).toBeVisible()
+        await expect(auditPanel.getByRole('status', { name: 'Статус: Telegram-бот' })).toBeVisible()
+      }
+      if (section === 'scenarios') await expect(page.locator('#scenarios').getByText('QR не создаётся', { exact: true })).toBeVisible()
       await expectResponsiveLayout(page, `admin ${section} at ${viewport.name}`)
       if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `admin ${section} at ${viewport.name}`)
       if (viewport.name === 'compact-mobile') {
