@@ -33,6 +33,7 @@ public class AdminTelegramBotSettingsController : ControllerBase
     private const string SecretTokenProtectedKey = "telegram_bot.secret_token_protected";
     private const string AdminChatIdKey = "telegram_bot.admin_chat_id";
     private const string WebAppUrlKey = "telegram_bot.web_app_url";
+    private const string RevisionKey = "telegram_bot.revision";
 
     private readonly IApplicationDbContext _db;
     private readonly IConfiguration _configuration;
@@ -72,14 +73,67 @@ public class AdminTelegramBotSettingsController : ControllerBase
     [Authorize(Policy = AdminPolicies.BotManage)]
     public async Task<IActionResult> UpdateSettings([FromBody] UpdateTelegramBotSettingsCommand request, CancellationToken cancellationToken)
     {
+        if (request.AdditionalFields is { Count: > 0 })
+        {
+            return BadRequest(new { error = $"Unknown Telegram bot settings field: {request.AdditionalFields.Keys.First()}." });
+        }
+
         var current = await LoadStateAsync(cancellationToken);
+        if (!request.Revision.HasValue)
+        {
+            return BadRequest(new { error = "Telegram bot settings revision is required." });
+        }
+
+        var expectedRevision = request.Revision.Value;
+        if (expectedRevision < 0)
+        {
+            return BadRequest(new { error = "Telegram bot settings revision must be zero or greater." });
+        }
+
+        if (expectedRevision != current.Revision)
+        {
+            return SettingsConflict();
+        }
+
         var validationError = ValidateUpdate(request, current);
         if (validationError is not null)
         {
             return BadRequest(new { error = validationError });
         }
 
+        if (!HasChanges(request, current))
+        {
+            return BadRequest(new { error = "Изменения настроек Telegram-бота не обнаружены." });
+        }
+
         var now = _clock.UtcNow;
+        var revision = await _db.SiteContentBlocks.FirstOrDefaultAsync(x => x.Key == RevisionKey, cancellationToken);
+        if ((revision?.Revision ?? 0) != expectedRevision)
+        {
+            return SettingsConflict();
+        }
+
+        var revisionWasCreated = revision is null;
+        if (revision is null)
+        {
+            _db.SiteContentBlocks.Add(new SiteContentBlock
+            {
+                Key = RevisionKey,
+                Group = SettingsGroup,
+                Label = "Версия настроек Telegram-бота",
+                Value = "managed",
+                InputType = "hidden",
+                IsActive = false,
+                Revision = 1,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+        else
+        {
+            revision.Revision = checked(revision.Revision + 1);
+            revision.UpdatedAt = now;
+        }
 
         await UpsertSettingAsync(EnabledKey, "Включен", request.Enabled?.ToString().ToLowerInvariant(), "checkbox", now, cancellationToken);
         await UpsertSettingAsync(ModeKey, "Режим", NormalizeMode(request.Mode), "select", now, cancellationToken);
@@ -113,7 +167,25 @@ public class AdminTelegramBotSettingsController : ControllerBase
             ToAuditSnapshot(current),
             ToAuditSnapshot(request));
         AddSecretRotationAudit(request);
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            ClearChangeTracker();
+            return SettingsConflict();
+        }
+        catch (DbUpdateException) when (revisionWasCreated)
+        {
+            ClearChangeTracker();
+            if (await _db.SiteContentBlocks.AsNoTracking().AnyAsync(x => x.Key == RevisionKey, cancellationToken))
+            {
+                return SettingsConflict();
+            }
+
+            throw;
+        }
         return Ok(ToDto(await LoadStateAsync(cancellationToken), now));
     }
 
@@ -124,10 +196,12 @@ public class AdminTelegramBotSettingsController : ControllerBase
             .Where(x => x.Channel == NotificationChannelType.Telegram && x.Language == "ru")
             .ToListAsync(cancellationToken);
 
-        var settings = await _db.SiteContentBlocks
+        var settingRows = await _db.SiteContentBlocks
             .AsNoTracking()
             .Where(x => x.Group == SettingsGroup)
-            .ToDictionaryAsync(x => x.Key, x => x.Value, cancellationToken);
+            .ToListAsync(cancellationToken);
+        var settings = settingRows.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
+        var revision = settingRows.FirstOrDefault(x => x.Key == RevisionKey)?.Revision ?? 0;
 
         var token = ReadProtectedSetting(settings, BotTokenProtectedKey) ?? _configuration["TelegramBot:BotToken"] ?? string.Empty;
         var secretToken = ReadProtectedSetting(settings, SecretTokenProtectedKey) ?? _configuration["TelegramBot:SecretToken"] ?? string.Empty;
@@ -141,7 +215,8 @@ public class AdminTelegramBotSettingsController : ControllerBase
             secretToken,
             ReadSetting(settings, AdminChatIdKey, _configuration["TelegramBot:AdminChatId"] ?? string.Empty),
             ReadSetting(settings, WebAppUrlKey, _configuration["TelegramBot:WebAppUrl"] ?? string.Empty),
-            templates);
+            templates,
+            revision);
     }
 
     private static AdminTelegramBotSettingsDto ToDto(TelegramBotSettingsState state, DateTimeOffset now)
@@ -162,7 +237,19 @@ public class AdminTelegramBotSettingsController : ControllerBase
             FindTemplate(state.Templates, RenewalKey, "Продление оформлено. После оплаты подписка будет продлена автоматически."),
             FindTemplate(state.Templates, PaymentFailedKey, "Оплата не прошла. Проверьте способ оплаты или попробуйте другой вариант."),
             FindTemplate(state.Templates, SubscriptionExpiredKey, "Срок подписки истек. Продлите тариф, чтобы восстановить VPN-доступ."),
+            state.Revision,
             now);
+
+    private IActionResult SettingsConflict()
+        => Conflict(new { error = "Настройки Telegram-бота уже изменены. Обновите данные и повторите действие." });
+
+    private void ClearChangeTracker()
+    {
+        if (_db is DbContext dbContext)
+        {
+            dbContext.ChangeTracker.Clear();
+        }
+    }
 
     private static string? ValidateUpdate(UpdateTelegramBotSettingsCommand request, TelegramBotSettingsState current)
     {
@@ -215,6 +302,30 @@ public class AdminTelegramBotSettingsController : ControllerBase
 
         return null;
     }
+
+    private static bool HasChanges(UpdateTelegramBotSettingsCommand request, TelegramBotSettingsState current)
+        => (request.Enabled.HasValue && request.Enabled.Value != current.Enabled)
+            || (request.Mode is not null && NormalizeMode(request.Mode) != current.Mode)
+            || (request.PublicBotUsername is not null && NormalizeUsername(request.PublicBotUsername) != current.PublicBotUsername)
+            || !string.IsNullOrWhiteSpace(request.BotToken)
+            || (request.WebhookUrl is not null && NormalizeOptionalUrl(request.WebhookUrl) != current.WebhookUrl)
+            || !string.IsNullOrWhiteSpace(request.SecretToken)
+            || (request.AdminChatId is not null && request.AdminChatId.Trim() != current.AdminChatId)
+            || (request.WebAppUrl is not null && NormalizeOptionalUrl(request.WebAppUrl) != current.WebAppUrl)
+            || TemplateChanged(request.WelcomeText, current.Templates, WelcomeKey, "Добро пожаловать! Выберите действие в меню.")
+            || TemplateChanged(request.InstructionText, current.Templates, InstructionKey, "Инструкция появится после выдачи VPN-доступа.")
+            || TemplateChanged(request.SupportText, current.Templates, SupportKey, "Опишите проблему одним сообщением, оператор ответит в Telegram.")
+            || TemplateChanged(request.AfterPaymentTextTemplate, current.Templates, AfterPaymentKey, "Оплата получена. Ваш VPN-доступ готов.")
+            || TemplateChanged(request.RenewalTextTemplate, current.Templates, RenewalKey, "Продление оформлено. После оплаты подписка будет продлена автоматически.")
+            || TemplateChanged(request.PaymentFailedTextTemplate, current.Templates, PaymentFailedKey, "Оплата не прошла. Проверьте способ оплаты или попробуйте другой вариант.")
+            || TemplateChanged(request.SubscriptionExpiredTextTemplate, current.Templates, SubscriptionExpiredKey, "Срок подписки истек. Продлите тариф, чтобы восстановить VPN-доступ.");
+
+    private static bool TemplateChanged(
+        string? requestedBody,
+        IReadOnlyCollection<NotificationTemplate> templates,
+        string key,
+        string fallback)
+        => requestedBody is not null && requestedBody.Trim() != FindTemplate(templates, key, fallback);
 
     private static AdminTelegramBotConnectionCheckDto BuildConnectionCheck(TelegramBotSettingsState state, DateTimeOffset now)
     {
@@ -514,5 +625,6 @@ public class AdminTelegramBotSettingsController : ControllerBase
         string SecretToken,
         string AdminChatId,
         string WebAppUrl,
-        IReadOnlyCollection<NotificationTemplate> Templates);
+        IReadOnlyCollection<NotificationTemplate> Templates,
+        int Revision);
 }

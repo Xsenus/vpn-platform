@@ -2,6 +2,22 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: versioned Telegram bot settings
+
+Scope:
+- Telegram settings updates must reject unknown, missing and stale revisions instead of overwriting a newer administrative change.
+- Settings, templates, revision and audit must commit atomically under sequential and real SQLite race conditions.
+- The admin form must disable no-op saves, support draft cancellation and reload the winning state after `409`.
+
+Results:
+- Roadmap progress: `758/778` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-telegram-settings-versioned-management`, version `0.735.0`.
+- Fail-first: focused backend regression completed `0/1`; a stale settings snapshot returned success before persisted revision enforcement.
+- After fix: controller/automation and deterministic file-SQLite race regression `6/6`, frontend `183/183`, typecheck/build, admin bundle budget `573846/574464` raw and `152397/152576` gzip, targeted desktop/mobile Telegram flows `4/4`, and full Playwright `276/276` are green.
+- Visual gate: all 17 admin sections passed desktop and 25 responsive viewport configurations; the real local Telegram form was reviewed at desktop and `320x720`, document overflow `0`, clipped controls `0`, browser diagnostics `0`.
+- Release gate: backend Debug/Release `1562/1562`, fresh SQLite full flow including versioned user and Telegram PATCH with `telegramRevision=1`, global formatter, EF pending-model check, dependency audit `0 vulnerabilities`, secret scan `721/0` and strict UTF-8/BOM guard are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: versioned admin user management
 
 Scope:

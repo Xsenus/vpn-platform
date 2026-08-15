@@ -1094,6 +1094,7 @@ export type AdminTelegramBotSettingsDto = {
   renewalTextTemplate: string
   paymentFailedTextTemplate: string
   subscriptionExpiredTextTemplate: string
+  revision: number
   generatedAt: string
 }
 
@@ -2835,7 +2836,15 @@ function isProvisioningSupportResult(value: unknown): value is { runId: string; 
 function isAdminTelegramBotSettingsDto(value: unknown): value is AdminTelegramBotSettingsDto {
   if (!isRecord(value)) return false
 
-  return hasBoolean(value, 'enabled')
+  const allowedFields = new Set([
+    'enabled', 'mode', 'publicBotUsername', 'hasBotToken', 'botTokenMasked', 'webhookUrl',
+    'hasSecretToken', 'adminChatId', 'webAppUrl', 'welcomeText', 'instructionText', 'supportText',
+    'afterPaymentTextTemplate', 'renewalTextTemplate', 'paymentFailedTextTemplate',
+    'subscriptionExpiredTextTemplate', 'revision', 'generatedAt'
+  ])
+
+  return Object.keys(value).every((key) => allowedFields.has(key))
+    && hasBoolean(value, 'enabled')
     && hasString(value, 'mode', true)
     && telegramBotModeValues.has(value.mode as string)
     && hasString(value, 'publicBotUsername')
@@ -2853,6 +2862,7 @@ function isAdminTelegramBotSettingsDto(value: unknown): value is AdminTelegramBo
     && hasString(value, 'renewalTextTemplate')
     && hasString(value, 'paymentFailedTextTemplate')
     && hasString(value, 'subscriptionExpiredTextTemplate')
+    && hasInteger(value, 'revision', 0)
     && hasDateString(value, 'generatedAt')
 }
 
@@ -4556,11 +4566,11 @@ export class ApiClient {
     }, 'object', isAdminTelegramBotConnectionCheckDto)
   }
 
-  updateAdminTelegramBotSettings(token: string, payload: UpdateTelegramBotSettingsPayload): Promise<AdminTelegramBotSettingsDto> {
+  updateAdminTelegramBotSettings(token: string, payload: UpdateTelegramBotSettingsPayload, revision: number): Promise<AdminTelegramBotSettingsDto> {
     return this.request<AdminTelegramBotSettingsDto>('/api/admin/telegram-bot/settings', {
       method: 'PATCH',
       token,
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, revision }),
       errorMessage: apiFallbackErrorMessage
     }, 'object', isAdminTelegramBotSettingsDto)
   }

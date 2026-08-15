@@ -396,6 +396,7 @@ function telegramBotSettingsFixture(overrides: Record<string, unknown> = {}) {
     renewalTextTemplate: 'Продление',
     paymentFailedTextTemplate: 'Ошибка оплаты',
     subscriptionExpiredTextTemplate: 'Подписка истекла',
+    revision: 0,
     generatedAt: adminFixtureTimestamp,
     ...overrides
   }
@@ -2463,7 +2464,7 @@ test('ApiClient admin Telegram bot settings masks token at API boundary', async 
       })
     }
 
-    return new Response(JSON.stringify({ enabled: false, mode: 'LongPolling', publicBotUsername: 'vpn_bot', hasBotToken: true, botTokenMasked: '1234***7890', webhookUrl: '', hasSecretToken: false, adminChatId: '-1001', webAppUrl: 'https://cabinet.example.test', welcomeText: 'Welcome', instructionText: 'Instruction', supportText: 'Support', afterPaymentTextTemplate: 'After', renewalTextTemplate: 'Renewal', paymentFailedTextTemplate: 'Payment failed', subscriptionExpiredTextTemplate: 'Expired', generatedAt: new Date().toISOString() }), {
+    return new Response(JSON.stringify({ enabled: false, mode: 'LongPolling', publicBotUsername: 'vpn_bot', hasBotToken: true, botTokenMasked: '1234***7890', webhookUrl: '', hasSecretToken: false, adminChatId: '-1001', webAppUrl: 'https://cabinet.example.test', welcomeText: 'Welcome', instructionText: 'Instruction', supportText: 'Support', afterPaymentTextTemplate: 'After', renewalTextTemplate: 'Renewal', paymentFailedTextTemplate: 'Payment failed', subscriptionExpiredTextTemplate: 'Expired', revision: 4, generatedAt: new Date().toISOString() }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -2471,7 +2472,7 @@ test('ApiClient admin Telegram bot settings masks token at API boundary', async 
 
   const client = new ApiClient('http://localhost:8080')
   const settings = await client.getAdminTelegramBotSettings('admin-token')
-  await client.updateAdminTelegramBotSettings('admin-token', { enabled: true, mode: 'Webhook', publicBotUsername: '@managed_bot', botToken: 'new-token', webhookUrl: 'https://api.example.test/api/channels/telegram/webhook', secretToken: 'new-secret', adminChatId: '-1001', webAppUrl: 'https://cabinet.example.test', welcomeText: 'Welcome', renewalTextTemplate: 'Renewal', paymentFailedTextTemplate: 'Payment failed', subscriptionExpiredTextTemplate: 'Expired' })
+  await client.updateAdminTelegramBotSettings('admin-token', { enabled: true, mode: 'Webhook', publicBotUsername: '@managed_bot', botToken: 'new-token', webhookUrl: 'https://api.example.test/api/channels/telegram/webhook', secretToken: 'new-secret', adminChatId: '-1001', webAppUrl: 'https://cabinet.example.test', welcomeText: 'Welcome', renewalTextTemplate: 'Renewal', paymentFailedTextTemplate: 'Payment failed', subscriptionExpiredTextTemplate: 'Expired' }, settings.revision)
   const check = await client.testAdminTelegramBotSettings('admin-token')
 
   assert.equal(calls[0]?.url, 'http://localhost:8080/api/admin/telegram-bot/settings')
@@ -2485,7 +2486,17 @@ test('ApiClient admin Telegram bot settings masks token at API boundary', async 
   assert.equal(settings.renewalTextTemplate, 'Renewal')
   assert.match(String(calls[1]?.init?.body), /managed_bot/)
   assert.match(String(calls[1]?.init?.body), /botToken/)
+  assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)).revision, 4)
   assert.equal(new Headers(calls[1]?.init?.headers).get('Authorization'), 'Bearer admin-token')
+
+  globalThis.fetch = (async () => new Response(JSON.stringify(telegramBotSettingsFixture({ internalToken: 'secret' })), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })) as typeof fetch
+  await assert.rejects(
+    () => client.getAdminTelegramBotSettings('admin-token'),
+    (error: unknown) => error instanceof ApiClientError && error.status === 502
+  )
 })
 
 test('ApiClient auth lifecycle endpoints use hashed-token-safe payloads', async () => {
@@ -3063,7 +3074,7 @@ test('ApiClient rejects malformed server, provisioning and Telegram bot DTOs', a
     () => client.markAdminProvisioningSupportNeeded('admin-token', 'run-1', 0),
     () => client.getAdminTelegramBotSettings('admin-token'),
     () => client.testAdminTelegramBotSettings('admin-token'),
-    () => client.updateAdminTelegramBotSettings('admin-token', { enabled: false })
+    () => client.updateAdminTelegramBotSettings('admin-token', { enabled: false }, 0)
   ]
   const isInvalidResponseDataError = (error: unknown) =>
     error instanceof ApiClientError && error.status === 502 && /некорректными данными/i.test(error.message)

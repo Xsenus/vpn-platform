@@ -22,12 +22,12 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1560/1560`.
+- Backend full suite: `1562/1562`.
 - API Release build: OK.
-- Frontend unit tests: `182/182`.
+- Frontend unit tests: `183/183`.
 - Frontend typecheck/build: OK.
 - Fresh local SQLite smoke: OK.
-- Browser console smoke: `274/274`; responsive all-screens `14/14` проверяет ready-state, content/modal/control geometry на 25 viewport-конфигурациях `305x568..2560x1440`, включая точные пары `N/N+1` для всех CSS-breakpoints; production inventory маршрутов и admin sections, local WebP decode и representative screenshots проверены.
+- Browser console smoke: `276/276`; responsive all-screens `14/14` проверяет ready-state, content/modal/control geometry на 25 viewport-конфигурациях `305x568..2560x1440`, включая точные пары `N/N+1` для всех CSS-breakpoints; production inventory маршрутов и admin sections, local WebP decode и representative screenshots проверены.
 - Actual PowerShell secret scan: OK.
 - Frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0.
 - UTF-8/encoding guard: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-15-admin-user-versioned-management`, версия `0.734.0`; versioned user management, session-revocation confirmation и stale conflict recovery проверены desktop/mobile, responsive и на fresh local SQLite. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence всё ещё требуются.
-- Roadmap progress: `757/777` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-15-telegram-settings-versioned-management`, версия `0.735.0`; versioned Telegram settings, atomic update/audit, no-op guard и stale conflict recovery проверены desktop/mobile, responsive и на fresh local SQLite. Real VPS/SSH/Ansible, provider/Telegram/SMTP delivery и полный staging/production-like 3x-ui evidence всё ещё требуются.
+- Roadmap progress: `758/778` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

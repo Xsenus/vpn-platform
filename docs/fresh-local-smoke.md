@@ -16,13 +16,15 @@
 6. публичные sandbox-провайдеры `/api/public/payments/providers`;
 7. создание public checkout session;
 8. регистрация нового пользователя;
-9. claim checkout session в личном кабинете;
-10. инициализация YooKassa sandbox payment;
-11. local sandbox webhook `payment.succeeded` с заголовком `X-YooKassa-Sandbox-Webhook=true`;
-12. проверка истории заказов и платежей в кабинете;
-13. проверка активной подписки;
-14. проверка созданного VPN-доступа с `vless://` URI;
-15. проверка `/api/app-version/latest`.
+9. versioned PATCH профиля пользователя через admin API;
+10. versioned PATCH настроек Telegram-бота и увеличение `revision`;
+11. claim checkout session в личном кабинете;
+12. инициализация YooKassa sandbox payment;
+13. local sandbox webhook `payment.succeeded` с заголовком `X-YooKassa-Sandbox-Webhook=true`;
+14. проверка истории заказов и платежей в кабинете;
+15. проверка активной подписки;
+16. проверка созданного VPN-доступа с `vless://` URI;
+17. проверка `/api/app-version/latest`.
 
 Скрипт не ходит во внешние платежные системы и не подключается к реальному 3x-ui. Вся выдача VPN выполняется через local sandbox-провайдер.
 
@@ -47,7 +49,7 @@ powershell -ExecutionPolicy Bypass -File scripts\fresh-local-smoke.ps1 -KeepArti
 После успешного запуска скрипт выводит строку вида:
 
 ```text
-fresh local smoke ok live=ok ready=Ready tariffs=3 providers=8 adminUser=<id> order=<id> payment=<id> subscription=<id> access=<id> latest=<releaseId>
+fresh local smoke ok live=ok ready=Ready tariffs=3 providers=8 adminUser=<id> telegramRevision=1 order=<id> payment=<id> subscription=<id> access=<id> latest=<releaseId>
 ```
 
 ## Безопасность
@@ -64,6 +66,7 @@ fresh local smoke ok live=ok ready=Ready tariffs=3 providers=8 adminUser=<id> or
 
 - API поднялся на чистой SQLite-БД;
 - seed создал тарифы и sandbox-провайдеры;
+- административные изменения пользователя и Telegram-настроек сохранились с актуальными версиями;
 - пользователь прошел checkout flow;
 - webhook перевел платеж в `Succeeded`;
 - платеж обработал активацию;

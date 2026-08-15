@@ -217,6 +217,24 @@ try {
         throw "Admin user overview does not contain the persisted display name."
     }
 
+    $telegramSettings = Invoke-SmokeJson -Uri "$apiUrl/api/admin/telegram-bot/settings" -Headers $adminHeaders
+    if ($telegramSettings.revision -lt 0) {
+        throw "Telegram bot settings response does not contain a valid revision."
+    }
+
+    $telegramWelcome = "Fresh local Telegram welcome"
+    $updatedTelegramSettings = Invoke-SmokeJson -Method "PATCH" -Uri "$apiUrl/api/admin/telegram-bot/settings" -Headers $adminHeaders -Body @{
+        welcomeText = $telegramWelcome
+        revision = $telegramSettings.revision
+    }
+    if ($updatedTelegramSettings.welcomeText -ne $telegramWelcome) {
+        throw "Telegram bot settings update did not persist the welcome text."
+    }
+
+    if ($updatedTelegramSettings.revision -ne ($telegramSettings.revision + 1)) {
+        throw "Telegram bot settings revision did not advance after the update."
+    }
+
     $order = Invoke-SmokeJson -Method "POST" -Uri "$apiUrl/api/me/checkout-sessions/$($checkout.token)/claim" -Headers $headers
     Assert-HasValue $order.id "Claim response does not contain order id."
 
@@ -275,7 +293,7 @@ try {
         throw "Unexpected access URI protocol: $($access.accessUri)"
     }
 
-    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
+    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
 }
 finally {
     if ($process -and -not $process.HasExited) {

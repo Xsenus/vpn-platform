@@ -426,6 +426,7 @@ function telegramBotSettings(overrides: Record<string, unknown> = {}) {
     renewalTextTemplate: 'Продление',
     paymentFailedTextTemplate: 'Ошибка оплаты',
     subscriptionExpiredTextTemplate: 'Подписка истекла',
+    revision: 0,
     generatedAt: now,
     ...overrides
   }
@@ -2047,6 +2048,10 @@ async function mockAdminApi(page: Page) {
         releaseDelayedBotSettingsSave = null
       }
       const payload = body as Record<string, unknown>
+      if (Number(payload.revision) !== Number(botSettings.revision)) {
+        await fulfillJson(route, { error: 'Настройки Telegram-бота уже изменены. Обновите данные и повторите действие.' }, 409)
+        return
+      }
       botSettings = telegramBotSettings({
         ...botSettings,
         enabled: payload.enabled,
@@ -2065,6 +2070,7 @@ async function mockAdminApi(page: Page) {
         hasBotToken: Boolean(payload.botToken) || Boolean(botSettings.hasBotToken),
         botTokenMasked: Boolean(payload.botToken) ? '***configured***' : botSettings.botTokenMasked,
         hasSecretToken: Boolean(payload.secretToken) || Boolean(botSettings.hasSecretToken),
+        revision: Number(botSettings.revision) + 1,
         generatedAt: now
       })
       await fulfillJson(route, botSettings)
@@ -2116,6 +2122,14 @@ async function mockAdminApi(page: Page) {
     returnInvalidServersResponse: () => { invalidServersResponse = true },
     returnInvalidProvisioningRunsResponse: () => { invalidProvisioningRunsResponse = true },
     returnInvalidBotSettingsResponse: () => { invalidBotSettingsResponse = true },
+    changeBotSettingsExternally: (welcomeText = 'Приветствие изменено извне') => {
+      botSettings = telegramBotSettings({
+        ...botSettings,
+        welcomeText,
+        revision: Number(botSettings.revision) + 1,
+        generatedAt: now
+      })
+    },
     changeReleaseExternally: (id: string, title = 'Релиз изменен извне') => {
       const index = releases.findIndex((item) => item.id === id)
       if (index < 0) return
@@ -4036,7 +4050,8 @@ test('admin Telegram bot settings support secure save and reload lifecycle', asy
     botToken: 'e2e-bot-token-value',
     secretToken: 'e2e-bot-webhook-value',
     welcomeText: 'Добро пожаловать в E2E-бота',
-    supportText: 'Поддержка E2E доступна в кабинете'
+    supportText: 'Поддержка E2E доступна в кабинете',
+    revision: 0
   })
   await expect(page.getByText('e2e-bot-token-value', { exact: true })).toHaveCount(0)
   await expect(page.getByText('e2e-bot-webhook-value', { exact: true })).toHaveCount(0)
@@ -4059,10 +4074,44 @@ test('admin Telegram bot settings support secure save and reload lifecycle', asy
   expect(api.getLastRequest('/api/admin/telegram-bot/settings', 'PATCH')?.body).toMatchObject({
     welcomeText: 'Обновленное приветствие E2E',
     botToken: '',
-    secretToken: ''
+    secretToken: '',
+    revision: 1
   })
   expect(api.getRequestCount('/api/admin/telegram-bot/settings', 'PATCH')).toBe(2)
   expect(api.getAuthorizedRequestCount('/api/admin/telegram-bot/settings', 'PATCH', 'Bearer admin-bot-token')).toBe(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(browserErrors).toEqual([])
+})
+
+test('admin reloads current Telegram bot settings after a stale save conflict', async ({ page }) => {
+  const browserErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error' && !message.text().includes('409 (Conflict)')) browserErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => browserErrors.push(error.message))
+
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-bot-conflict-token', 'admin-bot-conflict-refresh')
+  await page.goto('/')
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  await openAdminSection(page, 'Telegram-бот', 'bot')
+
+  const botPanel = page.locator('#bot')
+  const saveButton = botPanel.getByRole('button', { name: 'Сохранить настройки бота' })
+  await expect(saveButton).toBeDisabled()
+  await botPanel.getByLabel('Приветствие').fill('Устаревшая локальная версия')
+  api.delayNextBotSettingsSave()
+  await saveButton.click()
+  await expect.poll(() => api.getRequestCount('/api/admin/telegram-bot/settings', 'PATCH')).toBe(1)
+  await botPanel.getByLabel('Приветствие').fill('Новый локальный черновик')
+  api.changeBotSettingsExternally('Актуальное внешнее приветствие')
+  api.releaseBotSettingsSave()
+
+  await expect(page.getByText('Настройки Telegram-бота уже изменены. Обновите данные и повторите действие.')).toBeVisible()
+  await expect(botPanel.getByLabel('Приветствие')).toHaveValue('Новый локальный черновик')
+  await expect(saveButton).toBeEnabled()
+  expect(api.getLastRequest('/api/admin/telegram-bot/settings', 'PATCH')?.body).toMatchObject({ revision: 0 })
+  expect(api.getRequestCount('/api/admin/telegram-bot/settings', 'GET')).toBeGreaterThanOrEqual(2)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(browserErrors).toEqual([])
 })

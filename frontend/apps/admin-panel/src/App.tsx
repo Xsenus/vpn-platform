@@ -57,6 +57,7 @@ import { adminUserToEditForm, buildAdminUserOverviewStats, formatAdminMoney, isA
 import { formatAdminDisplayLabel, formatAdminRoleLabels } from './admin-display-labels'
 import { adminSectionIds, adminSectionLabels, canAccessAdminSection, canWriteAdminSection, parseAdminSectionHref, type AdminSectionId } from './admin-capabilities'
 import { getAdminPageMetadata } from './admin-page-metadata'
+import { isTelegramBotSettingsFormChanged, telegramBotSettingsToForm } from './admin-telegram-settings'
 import { getAdminAccessCommandBlocker, getAdminAccessTerminalReason, getNextAdminAccessExpiryDelay, isAdminAccessExpired } from './admin-accesses'
 import { getAdminSubscriptionActionAvailability, getAdminSubscriptionActionBlocker, getAdminSubscriptionEffectiveEndTime, getNextAdminSubscriptionExpiryDelay, type AdminSubscriptionAction } from './admin-subscriptions'
 import { canCancelProvisioningRun, canRetryProvisioningRun, isProvisioningStateConflict } from './provisioning-state'
@@ -840,6 +841,7 @@ const defaultBotSettings: AdminTelegramBotSettingsDto = {
   renewalTextTemplate: '',
   paymentFailedTextTemplate: '',
   subscriptionExpiredTextTemplate: '',
+  revision: 0,
   generatedAt: ''
 }
 
@@ -1578,23 +1580,7 @@ export function App() {
     botSettingsCheckRequestId.current += 1
     setBotSettingsCheck(null)
     if (!botSettingsFormDirty.current) {
-      setBotSettingsForm({
-        enabled: nextBotSettings.enabled,
-        mode: nextBotSettings.mode,
-        publicBotUsername: nextBotSettings.publicBotUsername,
-        botToken: '',
-        webhookUrl: nextBotSettings.webhookUrl,
-        secretToken: '',
-        adminChatId: nextBotSettings.adminChatId,
-        webAppUrl: nextBotSettings.webAppUrl,
-        welcomeText: nextBotSettings.welcomeText,
-        instructionText: nextBotSettings.instructionText,
-        supportText: nextBotSettings.supportText,
-        afterPaymentTextTemplate: nextBotSettings.afterPaymentTextTemplate,
-        renewalTextTemplate: nextBotSettings.renewalTextTemplate,
-        paymentFailedTextTemplate: nextBotSettings.paymentFailedTextTemplate,
-        subscriptionExpiredTextTemplate: nextBotSettings.subscriptionExpiredTextTemplate
-      })
+      setBotSettingsForm(telegramBotSettingsToForm(nextBotSettings))
     }
     setLoadErrors(errors)
     setAdminDataReady(true)
@@ -3857,14 +3843,40 @@ export function App() {
       setError(validationErrors[0])
       return
     }
+    if (!isTelegramBotSettingsFormChanged(botSettingsForm, botSettings)) {
+      setError('Изменения настроек Telegram-бота не обнаружены.')
+      return
+    }
     return runAction('bot', 'bot-settings', async (action) => {
       const submittedForm = botSettingsForm
-      const saved = await api.updateAdminTelegramBotSettings(token, submittedForm)
+      const submittedRevision = botSettings.revision
+      let saved: AdminTelegramBotSettingsDto
+      try {
+        saved = await api.updateAdminTelegramBotSettings(token, submittedForm, submittedRevision)
+      } catch (actionError) {
+        if (actionError instanceof ApiClientError && actionError.status === 409 && action.isCurrent()) {
+          try {
+            const latest = await api.getAdminTelegramBotSettings(token)
+            if (action.isCurrent()) {
+              setBotSettings(latest)
+              if (botSettingsFormRef.current === submittedForm) {
+                botSettingsFormDirty.current = false
+                setBotSettingsForm(telegramBotSettingsToForm(latest))
+              }
+              botSettingsCheckRequestId.current += 1
+              setBotSettingsCheck(null)
+            }
+          } catch {
+            // Preserve the original conflict as the actionable error.
+          }
+        }
+        throw actionError
+      }
       if (!action.isCurrent()) return
       setBotSettings(saved)
       if (botSettingsFormRef.current === submittedForm) {
         botSettingsFormDirty.current = false
-        setBotSettingsForm((current) => ({ ...current, botToken: '', secretToken: '' }))
+        setBotSettingsForm(telegramBotSettingsToForm(saved))
       }
       botSettingsCheckRequestId.current += 1
       setBotSettingsCheck(null)
@@ -3908,6 +3920,7 @@ export function App() {
   const inboundFormErrors = validateInboundForm(inboundForm, selectedVpnPanelId)
   const workScenarioFormErrors = validateWorkScenarioForm(workScenarioForm)
   const botSettingsFormErrors = validateTelegramBotUrlFields(botSettingsForm)
+  const botSettingsFormChanged = isTelegramBotSettingsFormChanged(botSettingsForm, botSettings)
 
   if (token && !adminAccessVerified) {
     return (
@@ -5254,7 +5267,8 @@ export function App() {
             </fieldset>
             <FormValidationSummary errors={botSettingsFormErrors} />
             <div className="form-footer">
-              <PrimaryButton type="submit" disabled={!token || botSettingsActionBusy || botSettingsFormErrors.length > 0} title={adminDisabledTitle} aria-busy={botSettingsActionBusy}>Сохранить настройки бота</PrimaryButton>
+              <PrimaryButton type="submit" disabled={!token || !botSettingsFormChanged || botSettingsActionBusy || botSettingsFormErrors.length > 0} title={adminDisabledTitle} aria-busy={botSettingsActionBusy}>Сохранить настройки бота</PrimaryButton>
+              <PrimaryButton type="button" className="button-ghost" disabled={!botSettingsFormChanged || botSettingsActionBusy} onClick={() => { botSettingsFormDirty.current = false; setBotSettingsForm(telegramBotSettingsToForm(botSettings)) }}>Отменить изменения</PrimaryButton>
               <PrimaryButton className="button-secondary" type="button" disabled={!token || botSettingsActionBusy} title={adminDisabledTitle} aria-busy={botSettingsActionBusy} onClick={() => { void handleTestBotSettings() }}>Проверить подключение</PrimaryButton>
             </div>
           </form>

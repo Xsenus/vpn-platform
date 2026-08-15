@@ -17346,5 +17346,32 @@
         "text": "Roadmap progress is 757/777 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram/Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-15-telegram-settings-versioned-management",
+    "version": "0.735.0",
+    "releasedAt": "2026-08-15T13:25:51+07:00",
+    "title": "Telegram bot settings prevent stale administrative updates",
+    "summary": "Telegram bot settings use a persisted revision, atomic updates and responsive conflict recovery without exposing configured secrets.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Telegram settings reject unknown, missing and stale revisions instead of overwriting newer parameters or message templates."
+      },
+      {
+        "type": "fixed",
+        "text": "Settings, templates, audit and revision are committed atomically under sequential and concurrent SQLite updates."
+      },
+      {
+        "type": "improved",
+        "text": "The administrative form disables no-op saves, cancels local drafts and reloads the winning state after a conflict."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 758/778 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; SSH/Ansible, provider cabinets, Telegram Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

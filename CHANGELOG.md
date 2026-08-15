@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.735.0 - 2026-08-15
+
+Release entry: `2026-08-15-telegram-settings-versioned-management`.
+
+### Исправлено
+
+- Настройки Telegram-бота получили сохранённую `revision`: API отклоняет неизвестные, отсутствующие и устаревшие версии ответом `409`, не перезаписывая более новые данные.
+- Параметры, шаблоны, аудит и увеличение версии сохраняются атомарно; конкурентное создание или обновление revision-sentinel безопасно откатывается.
+- Админ-форма блокирует сохранение без изменений, умеет отменить черновик и после конфликта загружает актуальные настройки без повторения устаревшей команды.
+
+### Проверено
+
+- Fail-first backend regression завершился `0/1`: устаревший снимок ошибочно возвращал успех; после исправления controller/SQLite race regression `6/6`, включая победителя конкурентной записи и rollback устаревшего аудита.
+- Backend Debug/Release `1562/1562`, frontend `183/183`, полный Playwright `276/276` за `12.3 min`, targeted Telegram desktop/mobile `4/4`, typecheck/build, admin bundle raw `573846/574464` и gzip `152397/152576`, fresh SQLite full flow с `telegramRevision=1`, EF drift, dependency audit `0 vulnerabilities` и secret scan `721/0` зелёные. Все 17 разделов админки прошли desktop и 25 responsive viewport-конфигураций; реальная локальная форма просмотрена на desktop и `320x720` без overflow, clipping, overlap или diagnostics. Roadmap `758/778` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.734.0 - 2026-08-15
 
 Release entry: `2026-08-15-admin-user-versioned-management`.

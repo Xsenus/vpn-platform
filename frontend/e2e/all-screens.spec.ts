@@ -848,7 +848,7 @@ async function installApiMock(page: Page) {
       await fulfillJson(route, {
         enabled: false, mode: 'LongPolling', publicBotUsername: 'vpn_smoke_bot', hasBotToken: false, botTokenMasked: '', webhookUrl: '', hasSecretToken: false,
         adminChatId: '', webAppUrl: 'https://cabinet.example.test', welcomeText: 'Welcome', instructionText: 'Instruction', supportText: 'Support',
-        afterPaymentTextTemplate: 'After payment', renewalTextTemplate: 'Renewal', paymentFailedTextTemplate: 'Payment failed', subscriptionExpiredTextTemplate: 'Expired', generatedAt: now
+        afterPaymentTextTemplate: 'After payment', renewalTextTemplate: 'Renewal', paymentFailedTextTemplate: 'Payment failed', subscriptionExpiredTextTemplate: 'Expired', revision: 0, generatedAt: now
       })
       return
     }

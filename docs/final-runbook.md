@@ -176,12 +176,12 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-15 локально подтверждено:
 
-- backend full suite: 1560/1560;
-- frontend tests: 182/182;
+- backend full suite: 1562/1562;
+- frontend tests: 183/183;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
-- browser console smoke: 274/274; responsive all-screens: 14/14 на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints;
+- browser console smoke: 276/276; responsive all-screens: 14/14 на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints;
 - visual assets: local same-origin WebP decode/dimensions OK; representative desktop/mobile screenshots reviewed;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - API operation boundary regression: malformed enum/JSON returns 400 without partial database mutations; payment webhooks cover all 8 provider routes; VPN provisioning remains fail-closed.
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-15-admin-user-versioned-management`, версия `0.734.0`; административный user PATCH защищён от неизвестных и устаревших полей, session revocation атомарен, fresh local SQLite и полный responsive browser gate зелёные.
-- roadmap progress: `757/777` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-15-telegram-settings-versioned-management`, версия `0.735.0`; административные Telegram settings защищены revision, no-op и exact guards, atomic update/audit и conflict recovery проверены на fresh local SQLite и полном responsive browser gate.
+- roadmap progress: `758/778` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

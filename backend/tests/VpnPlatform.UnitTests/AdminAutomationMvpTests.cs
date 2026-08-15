@@ -601,6 +601,7 @@ public class AdminAutomationMvpTests
 
         var before = await controller.GetSettings(CancellationToken.None);
         var okBefore = Assert.IsType<OkObjectResult>(before);
+        var settingsBefore = Assert.IsType<AdminTelegramBotSettingsDto>(okBefore.Value);
         var jsonBefore = JsonSerializer.Serialize(okBefore.Value);
         Assert.Contains("BotTokenMasked", jsonBefore, StringComparison.Ordinal);
         Assert.DoesNotContain("super-secret-token", jsonBefore, StringComparison.OrdinalIgnoreCase);
@@ -621,7 +622,8 @@ public class AdminAutomationMvpTests
             AfterPaymentTextTemplate: "After payment",
             RenewalTextTemplate: "Renewal",
             PaymentFailedTextTemplate: "Payment failed",
-            SubscriptionExpiredTextTemplate: "Subscription expired"), CancellationToken.None);
+            SubscriptionExpiredTextTemplate: "Subscription expired",
+            Revision: settingsBefore.Revision), CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(after);
         Assert.Contains(await db.NotificationTemplates.ToListAsync(), x => x.Key == "telegram.welcome" && x.Body == "Welcome");

@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `757/777` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `758/778` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,12 +85,12 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1560/1560`.
-- [x] Frontend unit tests: `182/182`.
+- [x] Backend full suite: `1562/1562`.
+- [x] Frontend unit tests: `183/183`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `274/274`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `276/276`.
 - [x] Responsive matrix: 25 viewport-конфигураций `305x568..2560x1440`, точные пары `N/N+1` для всех CSS-breakpoints, same-origin decode локальных WebP и ручной review `18` desktop/`17` mobile admin screenshots.
 - [x] Pristine create-формы шести обязательных admin-сущностей не показывают validation summary до изменения; после interaction invalid feedback сохраняется.
 - [x] Fresh local SQLite smoke: OK.
@@ -169,7 +169,7 @@
 - [x] Hidden releases/FAQ/content/scenarios/support/Telegram forms не обходят write capabilities при programmatic submit.
 - [x] Все admin action dispatcher callsites явно проверяют capability целевого section, а не active tab.
 - [x] Пользователи управляются через валидируемый адаптивный редактор; destructive status/block transitions явно завершают сессии, а version conflict загружает актуальный профиль без stale overwrite.
-- [x] Latest "Что нового": `2026-08-15-admin-user-versioned-management`, версия `0.734.0`; backend `1560/1560`, frontend `182/182`, полный Playwright `274/274`, fresh SQLite admin PATCH зелёный.
+- [x] Latest "Что нового": `2026-08-15-telegram-settings-versioned-management`, версия `0.735.0`; backend `1562/1562`, frontend `183/183`, полный Playwright `276/276`, fresh SQLite versioned user/Telegram PATCH зелёный.
 
 ## Как вести дальше
 

@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using VpnPlatform.Domain.Entities;
 using VpnPlatform.Domain.Enums;
 
@@ -327,6 +329,7 @@ public sealed record AdminTelegramBotSettingsDto(
     string RenewalTextTemplate,
     string PaymentFailedTextTemplate,
     string SubscriptionExpiredTextTemplate,
+    int Revision,
     DateTimeOffset GeneratedAt);
 
 public sealed record AdminTelegramBotConnectionCheckDto(
@@ -351,7 +354,12 @@ public sealed record UpdateTelegramBotSettingsCommand(
     string? AfterPaymentTextTemplate,
     string? RenewalTextTemplate,
     string? PaymentFailedTextTemplate,
-    string? SubscriptionExpiredTextTemplate);
+    string? SubscriptionExpiredTextTemplate,
+    int? Revision)
+{
+    [JsonExtensionData]
+    public IDictionary<string, JsonElement>? AdditionalFields { get; init; }
+}
 
 public sealed record PaymentProviderSettingDto(Guid Id, Guid PaymentProviderAccountId, string Key, string? Value, bool IsSecret, string Description);
 public sealed record PaymentWebhookEventDto(
