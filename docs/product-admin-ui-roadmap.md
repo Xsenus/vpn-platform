@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `762/782` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `763/783` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -86,11 +86,11 @@
 ## Проверки, которыми закрыт локальный продуктовый слой
 
 - [x] Backend full suite: `1574/1574`.
-- [x] Frontend unit tests: `189/189`.
+- [x] Frontend unit tests: `191/191`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
 - [x] Frontend production build: OK.
-- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `280/280`.
+- [x] Playwright public/cabinet/admin/all-screens/mobile/console smoke: `282/282`.
 - [x] Responsive matrix: 25 viewport-конфигураций `305x568..2560x1440`, точные пары `N/N+1` для всех CSS-breakpoints, same-origin decode локальных WebP и ручной review `18` desktop/`17` mobile admin screenshots.
 - [x] Pristine create-формы шести обязательных admin-сущностей не показывают validation summary до изменения; после interaction invalid feedback сохраняется.
 - [x] Fresh local SQLite smoke: OK.
@@ -173,7 +173,8 @@
 - [x] Tariff, referral-program и app-release editors отклоняют нормализованный no-op без revision/audit churn; delayed tariff conflict сохраняет более новый local draft.
 - [x] 3x-ui panel/inbound editors отклоняют no-op до revision/audit и remote provider mutation; delayed conflict сохраняет более новый local draft.
 - [x] Payment-provider accounts требуют persisted revision, отклоняют no-op/stale update и state action, а delayed conflict сохраняет более новый local draft.
-- [x] Latest "Что нового": `2026-08-15-payment-provider-concurrency-integrity`, версия `0.739.0`; backend `1574/1574`, frontend `189/189`, полный Playwright `280/280`, fresh SQLite `providerGuards=400,400,409` зелёные.
+- [x] Payment-provider, tariff, referral-program, app-release, VPN panel и inbound drafts после delayed conflict получают winning revision и повторно сохраняются.
+- [x] Latest "Что нового": `2026-08-15-admin-conflict-draft-recovery`, версия `0.740.0`; backend `1574/1574`, frontend `191/191`, полный Playwright `282/282`, fresh SQLite full flow зелёные.
 
 ## Как вести дальше
 

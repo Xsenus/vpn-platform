@@ -68,6 +68,7 @@ import { validateServerForm } from './admin-server-validation'
 import { isVpnInboundFormChanged, isVpnPanelFormChanged } from './admin-vpn-editors'
 import { getAdminOrderPaymentRecheckBlocker, getAdminPaymentRecheckBlocker } from './admin-payments'
 import { isPaymentProviderAccountFormChanged } from './admin-payment-provider-editors'
+import { rebaseAdminRevision, rebaseAdminRevisionedDraft } from './admin-revision-recovery'
 import { buildReferralProgramPayload, defaultReferralProgramForm, isReferralProgramFormChanged, referralProgramToForm, validateReferralProgramForm, type ReferralProgramFormState } from './admin-referrals'
 import { validateWorkScenarioForm } from './admin-work-scenarios'
 
@@ -1892,6 +1893,8 @@ export function App() {
     })
     setError('')
     setNotice('')
+    let actionFailed = false
+    let actionError: unknown
     try {
       await action({
         operationId,
@@ -1901,7 +1904,8 @@ export function App() {
           : Promise.resolve(false)
       })
     } catch (e) {
-      if (operationIsCurrent()) setError(normalizeApiError(e, 'Не удалось выполнить действие. Повторите попытку.'))
+      actionFailed = true
+      actionError = e
     } finally {
       actionRequestsInFlight.current.delete(requestKey)
       const releasedResourceKeys = ownedResourceKeys.filter((key) => actionResourceOwners.current.get(key) === requestKey)
@@ -1913,6 +1917,9 @@ export function App() {
           return next
         })
       }
+    }
+    if (actionFailed && operationIsCurrent()) {
+      setError(normalizeApiError(actionError, 'Не удалось выполнить действие. Повторите попытку.'))
     }
   }
 
@@ -2438,11 +2445,24 @@ export function App() {
       const saved = editingId
         ? await api.updateAdminPaymentProviderAccount(token, editingId, submittedForm).catch(async (e: unknown) => {
             if (!(e instanceof ApiClientError) || e.status !== 409) throw e
-            await action.reloadAll()
-            if (action.isCurrent()
-              && providerFormRef.current === submittedForm
-              && editingProviderAccountIdRef.current === editingId) {
-              resetProviderForm()
+            const latestAccounts = await api.getAdminPaymentProviderAccounts(token)
+            if (action.isCurrent()) {
+              setPaymentProviderAccounts(latestAccounts)
+              if (providerFormRef.current === submittedForm
+                && editingProviderAccountIdRef.current === editingId) {
+                resetProviderForm()
+              } else if (editingProviderAccountIdRef.current === editingId) {
+                const latestAccount = latestAccounts.find((account) => account.id === editingId)
+                if (latestAccount) {
+                  setProviderForm((current) => rebaseAdminRevisionedDraft(
+                    current,
+                    submittedForm.revision,
+                    latestAccount.revision
+                  ))
+                } else {
+                  resetProviderForm()
+                }
+              }
             }
             throw new ApiClientError('Способ оплаты уже изменён другим администратором. Список обновлён: повторите действие с актуальной версией.', 409, e.payload)
           })
@@ -2598,13 +2618,28 @@ export function App() {
     action: AdminActionContext,
     tariffId: string,
     submittedForm?: UpdateTariffPayload,
-    submittedFeaturesText?: string
+    submittedFeaturesText?: string,
+    submittedRevision?: number | null
   ): Promise<never> => {
     if (!(error instanceof ApiClientError) || error.status !== 409) throw error
-    await action.reloadAll()
+    const latestTariffs = await api.getAdminTariffs(token)
     const submittedDraftIsCurrent = submittedForm === undefined
       || (tariffFormRef.current === submittedForm && tariffFeaturesTextRef.current === submittedFeaturesText)
-    if (action.isCurrent() && editingTariffIdRef.current === tariffId && submittedDraftIsCurrent) resetTariffForm()
+    if (action.isCurrent()) {
+      setTariffs(latestTariffs)
+      if (editingTariffIdRef.current === tariffId) {
+        if (submittedDraftIsCurrent) {
+          resetTariffForm()
+        } else {
+          const latestTariff = latestTariffs.find((tariff) => tariff.id === tariffId)
+          if (latestTariff) {
+            setEditingTariffRevision((current) => rebaseAdminRevision(current, submittedRevision, latestTariff.revision) ?? null)
+          } else {
+            resetTariffForm()
+          }
+        }
+      }
+    }
     throw new ApiClientError('Тариф уже изменен другим администратором. Список обновлен: повторите действие с актуальной версией.', 409, error.payload)
   }
 
@@ -2660,7 +2695,7 @@ export function App() {
         try {
           await api.updateAdminTariff(token, editingId, payload, submittedRevision)
         } catch (error) {
-          await throwTariffConflict(error, action, editingId, submittedForm, submittedFeaturesText)
+          await throwTariffConflict(error, action, editingId, submittedForm, submittedFeaturesText, submittedRevision)
         }
       } else {
         await api.createAdminTariff(token, payload)
@@ -2741,9 +2776,25 @@ export function App() {
           await api.updateAdminReferralProgram(token, editingId, payload, submittedForm.revision)
         } catch (error) {
           if (error instanceof ApiClientError && error.status === 409) {
-            await action.reloadAll()
-            if (action.isCurrent() && referralProgramFormRef.current === submittedForm && editingReferralProgramIdRef.current === editingId) resetReferralProgramForm()
-            throw new ApiClientError('Реферальная программа уже изменена другим администратором. Список обновлен: откройте актуальную версию и повторите правку.', 409, error.payload)
+            const latestPrograms = await api.getAdminReferralPrograms(token)
+            if (action.isCurrent()) {
+              setReferralPrograms(latestPrograms)
+              if (referralProgramFormRef.current === submittedForm && editingReferralProgramIdRef.current === editingId) {
+                resetReferralProgramForm()
+              } else if (editingReferralProgramIdRef.current === editingId) {
+                const latestProgram = latestPrograms.find((program) => program.id === editingId)
+                if (latestProgram) {
+                  setReferralProgramForm((current) => rebaseAdminRevisionedDraft(
+                    current,
+                    submittedForm.revision,
+                    latestProgram.revision
+                  ))
+                } else {
+                  resetReferralProgramForm()
+                }
+              }
+            }
+            throw new ApiClientError('Реферальная программа уже изменена другим администратором. Список обновлен: повторите действие с актуальной версией.', 409, error.payload)
           }
           throw error
         }
@@ -2820,9 +2871,32 @@ export function App() {
           await api.updateAdminAppRelease(token, editingId, payload)
         } catch (error) {
           if (error instanceof ApiClientError && error.status === 409) {
-            await action.reloadAll()
-            if (action.isCurrent() && releaseFormRef.current === submittedForm && editingReleaseIdRef.current === editingId) resetReleaseForm()
-            throw new ApiClientError('Релиз уже изменен другим администратором. Список обновлен: откройте актуальную версию и повторите правку.', 409, error.payload)
+            const latestReleases = await api.getAdminAppReleases(token, {
+              visibility: releaseVisibilityFilter,
+              source: releaseSourceFilter,
+              search: releaseSearch
+            })
+            let latestRelease = latestReleases.find((release) => release.id === editingId)
+            if (!latestRelease) {
+              latestRelease = (await api.getAdminAppReleases(token)).find((release) => release.id === editingId)
+            }
+            if (action.isCurrent()) {
+              setAppReleases(latestReleases)
+              if (releaseFormRef.current === submittedForm && editingReleaseIdRef.current === editingId) {
+                resetReleaseForm()
+              } else if (editingReleaseIdRef.current === editingId) {
+                if (latestRelease) {
+                  setReleaseForm((current) => rebaseAdminRevisionedDraft(
+                    current,
+                    submittedForm.revision,
+                    latestRelease.revision
+                  ))
+                } else {
+                  resetReleaseForm()
+                }
+              }
+            }
+            throw new ApiClientError('Релиз уже изменен другим администратором. Список обновлен: повторите действие с актуальной версией.', 409, error.payload)
           }
           throw error
         }
@@ -3453,15 +3527,39 @@ export function App() {
     await action.reloadAll()
     if (action.isCurrent()) {
       if (draft?.kind === 'panel') {
+        const latestPanels = await api.getAdminVpnPanels(token)
+        if (!action.isCurrent()) throw error
+        setVpnPanels(latestPanels)
         const submittedDraftIsCurrent = vpnPanelFormRef.current === draft.form
           && editingVpnPanelIdRef.current === draft.id
           && selectedVpnPanelIdRef.current === draft.panelId
-        if (submittedDraftIsCurrent) cancelVpnPanelEdit()
+        if (submittedDraftIsCurrent) {
+          cancelVpnPanelEdit()
+        } else if (editingVpnPanelIdRef.current === draft.id) {
+          const latestPanel = latestPanels.find((panel) => panel.id === draft.id)
+          if (latestPanel) {
+            setVpnPanelForm((current) => rebaseAdminRevisionedDraft(current, draft.form.revision, latestPanel.revision))
+          } else {
+            cancelVpnPanelEdit()
+          }
+        }
       } else if (draft?.kind === 'inbound') {
+        const latestInbounds = await api.getAdminVpnPanelInbounds(token, draft.panelId)
+        if (!action.isCurrent()) throw error
+        setVpnInbounds(latestInbounds)
         const submittedDraftIsCurrent = inboundFormRef.current === draft.form
           && editingInboundIdRef.current === draft.id
           && selectedVpnPanelIdRef.current === draft.panelId
-        if (submittedDraftIsCurrent) cancelInboundEdit()
+        if (submittedDraftIsCurrent) {
+          cancelInboundEdit()
+        } else if (editingInboundIdRef.current === draft.id) {
+          const latestInbound = latestInbounds.find((inbound) => inbound.id === draft.id)
+          if (latestInbound) {
+            setInboundForm((current) => rebaseAdminRevisionedDraft(current, draft.form.revision, latestInbound.revision))
+          } else {
+            cancelInboundEdit()
+          }
+        }
       } else {
         cancelVpnPanelEdit()
         cancelInboundEdit()

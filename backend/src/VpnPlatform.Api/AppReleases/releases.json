@@ -17481,5 +17481,32 @@
         "text": "Roadmap progress is 762/782 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-15-admin-conflict-draft-recovery",
+    "version": "0.740.0",
+    "releasedAt": "2026-08-15T17:26:20+07:00",
+    "title": "Administrative conflict recovery keeps drafts retryable",
+    "summary": "Newer administrative drafts now adopt the winning revision after delayed conflicts and can be saved again without a repeated conflict loop.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Payment provider, tariff, referral program, app release, VPN panel and inbound drafts preserve newer local fields while adopting the current persisted revision after a delayed conflict."
+      },
+      {
+        "type": "improved",
+        "text": "The next save uses the winning revision and succeeds instead of repeating the same stale conflict."
+      },
+      {
+        "type": "improved",
+        "text": "Release recovery finds the current record outside active filters, while editors close cleanly when the conflicting record has already been deleted."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 763/783 closed, readiness 97.4%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

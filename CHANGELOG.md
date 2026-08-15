@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.740.0 - 2026-08-15
+
+Release entry: `2026-08-15-admin-conflict-draft-recovery`.
+
+### Исправлено
+
+- Более новый локальный черновик платежного аккаунта, тарифа, реферальной программы, релиза приложения, VPN-панели или inbound после отложенного `409` получает актуальную revision и повторно сохраняется без бесконечного цикла конфликтов.
+- Восстановление релиза находит актуальную запись независимо от текущих фильтров; если конфликтующая сущность уже удалена, соответствующий редактор закрывается вместо сохранения безвыходного stale-state.
+- Ошибка административного действия публикуется после освобождения action/resource locks, а проверка обновления платежного статуса кабинета допускает несколько корректных чтений при совпавших refresh-триггерах.
+
+### Проверено
+
+- Fail-first browser regressions воспроизвели повторный `409`; после исправления frontend `191/191`, typecheck/build, целевой Playwright `12/12` и full Playwright `282/282` за `12.9 min` зелёные.
+- Backend Debug/Release `1574/1574`, admin bundle raw `583299/583680` и gzip `155189/155648`, fresh SQLite full flow, dependency audit `0 vulnerabilities`, responsive all-screens на 25 viewport-конфигурациях, EF drift, formatter, strict UTF-8 и secret scan `723/0` зелёные. Roadmap `763/783` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Реальные VPS/SSH/Ansible, provider кабинеты, live payment, Telegram Bot API, SMTP и production-like 3x-ui остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.739.0 - 2026-08-15
 
 Release entry: `2026-08-15-payment-provider-concurrency-integrity`.

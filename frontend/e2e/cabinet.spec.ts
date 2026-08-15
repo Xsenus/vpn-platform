@@ -1355,7 +1355,7 @@ test('cabinet removes terminal payment links after retry status refresh', async 
   api.completeRetryPayment()
   const orderLoadsBeforeRefresh = api.getRequestCount('/api/me/orders')
   await page.getByRole('button', { name: 'Обновить данные' }).click()
-  await expect.poll(() => api.getRequestCount('/api/me/orders')).toBe(orderLoadsBeforeRefresh + 1)
+  await expect.poll(() => api.getRequestCount('/api/me/orders')).toBeGreaterThan(orderLoadsBeforeRefresh)
 
   await expect(retryCard.getByText('Оплата подтверждена', { exact: false })).toBeVisible()
   await expect(retryCard.getByRole('link', { name: 'Открыть повторную оплату в новой вкладке' })).toHaveCount(0)

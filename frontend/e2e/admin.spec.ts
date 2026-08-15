@@ -1415,8 +1415,18 @@ async function mockAdminApi(page: Page) {
 
     const referralProgramMutationMatch = path.match(/^\/api\/admin\/referral-programs\/([^/]+)$/)
     if (referralProgramMutationMatch && method === 'PATCH') {
+      if (delayedManagedUpdatePath === path) {
+        delayedManagedUpdatePath = null
+        await new Promise<void>((resolve) => { releaseDelayedManagedUpdate = resolve })
+        releaseDelayedManagedUpdate = null
+      }
       const index = referralPrograms.findIndex((item) => item.id === referralProgramMutationMatch[1])
-      const updated = referralProgram({ ...referralPrograms[index], ...(body as Record<string, unknown>), id: referralProgramMutationMatch[1], revision: Number((body as Record<string, unknown>).revision) + 1, updatedAt: now })
+      const referralBody = body as Record<string, unknown>
+      if (index < 0 || referralBody.revision !== referralPrograms[index].revision) {
+        await fulfillJson(route, { error: 'Referral program changed. Reload it and retry.' }, 409)
+        return
+      }
+      const updated = referralProgram({ ...referralPrograms[index], ...referralBody, id: referralProgramMutationMatch[1], revision: Number(referralPrograms[index].revision) + 1, updatedAt: now })
       if (index >= 0) referralPrograms[index] = updated
       await fulfillJson(route, updated)
       return
@@ -1462,6 +1472,11 @@ async function mockAdminApi(page: Page) {
 
     const releaseMutationMatch = path.match(/^\/api\/app-version\/admin\/releases\/([^/]+)$/)
     if (releaseMutationMatch && method === 'PUT') {
+      if (delayedManagedUpdatePath === path) {
+        delayedManagedUpdatePath = null
+        await new Promise<void>((resolve) => { releaseDelayedManagedUpdate = resolve })
+        releaseDelayedManagedUpdate = null
+      }
       const index = releases.findIndex((item) => item.id === releaseMutationMatch[1])
       const releaseBody = body as Record<string, unknown>
       if (index < 0 || releaseBody.revision !== releases[index].revision) {
@@ -2208,6 +2223,16 @@ async function mockAdminApi(page: Page) {
         ...releases[index],
         title,
         revision: Number(releases[index].revision) + 1,
+        updatedAt: now
+      })
+    },
+    changeReferralProgramExternally: (id: string, name = 'Реферальная программа изменена извне') => {
+      const index = referralPrograms.findIndex((item) => item.id === id)
+      if (index < 0) return
+      referralPrograms[index] = referralProgram({
+        ...referralPrograms[index],
+        name,
+        revision: Number(referralPrograms[index].revision) + 1,
         updatedAt: now
       })
     },
@@ -4137,6 +4162,11 @@ test('admin payment provider conflict keeps a newer draft and reloads the winnin
   await expect(paymentsPanel.getByLabel('Название для пользователя')).toHaveValue('Новый локальный черновик оплаты')
   await expect(paymentsPanel.getByRole('button', { name: 'Сохранить изменения' })).toBeEnabled()
   expect(api.getLastRequest('/api/admin/payment-providers/accounts/provider-yookassa', 'PATCH')?.body).toMatchObject({ revision: 0 })
+
+  await paymentsPanel.getByRole('button', { name: 'Сохранить изменения' }).click()
+  await expect(page.getByText('Способ оплаты yookassa-sandbox обновлен. Секреты не отображаются.')).toBeVisible()
+  await expect(paymentsPanel.locator('.list-item-vertical strong').filter({ hasText: 'Новый локальный черновик оплаты' })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/payment-providers/accounts/provider-yookassa', 'PATCH')?.body).toMatchObject({ revision: 1 })
 })
 
 test('admin Telegram bot settings support secure save and reload lifecycle', async ({ page }) => {
@@ -5071,6 +5101,51 @@ test('admin app release editor recovers from a stale revision', async ({ page })
   expect(api.getRequestCount('/api/app-version/admin/releases/release-admin-e2e', 'PUT')).toBe(1)
 })
 
+test('admin referral and release conflicts keep newer drafts retryable', async ({ page }) => {
+  const api = await mockAdminApi(page)
+  await seedAdminSession(page, 'admin-managed-draft-conflict-token', 'admin-managed-draft-conflict-refresh')
+  await page.goto('/#referrals')
+
+  const referralsPanel = page.locator('#referrals')
+  const referralForm = referralsPanel.locator('form').first()
+  const referralRow = referralsPanel.locator('.list-item-vertical').filter({ hasText: 'Welcome E2E' })
+  await referralRow.getByRole('button', { name: 'Редактировать' }).click()
+  await referralsPanel.getByLabel('Название').fill('Устаревшая локальная реферальная программа')
+  api.delayNextManagedUpdate('/api/admin/referral-programs/referral-program-e2e')
+  await referralForm.evaluate((form) => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+  await expect.poll(() => api.hasDelayedManagedUpdate()).toBe(true)
+  await referralsPanel.getByLabel('Название').fill('Новый локальный реферальный черновик')
+  api.changeReferralProgramExternally('referral-program-e2e', 'Актуальная внешняя реферальная программа')
+  api.releaseManagedUpdate()
+
+  await expect(page.locator('.error-block')).toContainText('Реферальная программа уже изменена другим администратором')
+  await expect(referralsPanel.getByLabel('Название')).toHaveValue('Новый локальный реферальный черновик')
+  await referralForm.evaluate((form) => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+  await expect(page.getByText('Реферальная программа обновлена.')).toBeVisible()
+  await expect(referralsPanel.getByText('Новый локальный реферальный черновик', { exact: true })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/referral-programs/referral-program-e2e', 'PATCH')?.body).toMatchObject({ revision: 1 })
+
+  await openAdminSection(page, 'Что нового', 'releases')
+  const releasesPanel = page.locator('#releases')
+  const releaseForm = releasesPanel.locator('form').first()
+  const releaseRow = releasesPanel.locator('.list-item-vertical').filter({ hasText: 'Админский E2E seed' })
+  await releaseRow.getByRole('button', { name: 'Редактировать' }).click()
+  await releasesPanel.getByLabel('Заголовок').fill('Устаревший локальный релиз')
+  api.delayNextManagedUpdate('/api/app-version/admin/releases/release-admin-e2e')
+  await releaseForm.evaluate((form) => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+  await expect.poll(() => api.hasDelayedManagedUpdate()).toBe(true)
+  await releasesPanel.getByLabel('Заголовок').fill('Новый локальный черновик релиза')
+  api.changeReleaseExternally('release-admin-e2e', 'Актуальный внешний релиз')
+  api.releaseManagedUpdate()
+
+  await expect(page.locator('.error-block')).toContainText('Релиз уже изменен другим администратором')
+  await expect(releasesPanel.getByLabel('Заголовок')).toHaveValue('Новый локальный черновик релиза')
+  await releaseForm.evaluate((form) => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+  await expect(page.getByText('Релиз обновлен.')).toBeVisible()
+  await expect(releasesPanel.getByText('Новый локальный черновик релиза', { exact: true })).toBeVisible()
+  expect(api.getLastRequest('/api/app-version/admin/releases/release-admin-e2e', 'PUT')?.body).toMatchObject({ revision: 1 })
+})
+
 test('admin app release handler rejects malformed release ids and partially blank items', async ({ page }) => {
   const api = await mockAdminApi(page)
   await seedAdminSession(page)
@@ -5131,6 +5206,11 @@ test('admin tariff editor recovers from a stale revision', async ({ page }) => {
   await expect(tariffSaveButton).toBeEnabled()
   await expect(tariffsPanel.getByText('Актуальный внешний тариф', { exact: true })).toBeVisible()
   expect(api.getRequestCount('/api/admin/tariffs/tariff-admin-pro', 'PATCH')).toBe(1)
+
+  await tariffSaveButton.click()
+  await expect(page.getByText('Тариф обновлён.')).toBeVisible()
+  await expect(tariffsPanel.getByText('Новый локальный черновик', { exact: true })).toBeVisible()
+  expect(api.getLastRequest('/api/admin/tariffs/tariff-admin-pro', 'PATCH')?.body).toMatchObject({ revision: 1 })
 })
 
 test('admin tariff delete keeps an externally changed tariff', async ({ page }) => {
@@ -5216,6 +5296,10 @@ test('admin VPN panel conflict keeps a newer draft while reloading the winning s
   await expect(panelsPanel.getByLabel('Название панели')).toHaveValue('Новый локальный черновик панели')
   await expect(panelsPanel.getByRole('button', { name: 'Сохранить панель' })).toBeEnabled()
   expect(api.getLastRequest('/api/admin/vpn-panels/panel-eu', 'PATCH')?.body).toMatchObject({ revision: 0 })
+
+  await panelsPanel.getByRole('button', { name: 'Сохранить панель' }).click()
+  await expect(page.getByText('VPN-панель Новый локальный черновик панели обновлена. Пароль не возвращается из API.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/vpn-panels/panel-eu', 'PATCH')?.body).toMatchObject({ revision: 1 })
 })
 
 test('admin VPN inbound conflict keeps a newer draft while reloading the winning state', async ({ page }) => {
@@ -5241,6 +5325,10 @@ test('admin VPN inbound conflict keeps a newer draft while reloading the winning
   await expect(inboundForm.getByLabel('Название inbound-правила')).toHaveValue('Новый локальный черновик inbound')
   await expect(inboundForm.getByRole('button', { name: 'Сохранить inbound-правило' })).toBeEnabled()
   expect(api.getLastRequest('/api/admin/vpn-inbounds/inbound-backup', 'PATCH')?.body).toMatchObject({ revision: 0 })
+
+  await inboundForm.getByRole('button', { name: 'Сохранить inbound-правило' }).click()
+  await expect(page.getByText('Inbound-правило Новый локальный черновик inbound обновлено.')).toBeVisible()
+  expect(api.getLastRequest('/api/admin/vpn-inbounds/inbound-backup', 'PATCH')?.body).toMatchObject({ revision: 1 })
 })
 
 test('admin app release delete keeps an externally changed release', async ({ page }) => {

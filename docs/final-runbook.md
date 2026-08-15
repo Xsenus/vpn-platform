@@ -177,11 +177,11 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 На 2026-08-15 локально подтверждено:
 
 - backend full suite: 1574/1574;
-- frontend tests: 189/189;
+- frontend tests: 191/191;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
-- browser console smoke: 280/280; responsive all-screens: 14/14 на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints;
+- browser console smoke: 282/282; responsive all-screens: 14/14 на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints;
 - visual assets: local same-origin WebP decode/dimensions OK; representative desktop/mobile screenshots reviewed;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - API operation boundary regression: malformed enum/JSON returns 400 without partial database mutations; payment webhooks cover all 8 provider routes; VPN provisioning remains fail-closed.
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-15-payment-provider-concurrency-integrity`, версия `0.739.0`; payment-provider accounts защищены persisted revision/no-op границами, а delayed conflict сохраняет более новый draft.
-- roadmap progress: `762/782` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-15-admin-conflict-draft-recovery`, версия `0.740.0`; payment-provider, tariff, referral, release, VPN panel и inbound drafts получают winning revision после delayed conflict и повторно сохраняются.
+- roadmap progress: `763/783` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

@@ -2,6 +2,21 @@
 
 Дата проверки: 2026-08-15.
 
+## Check 2026-08-15: retryable admin conflict draft recovery
+
+Scope:
+- A newer local draft must keep its fields and receive the winning revision after a delayed administrative `409`.
+- The next save must succeed for payment providers, tariffs, referral programs, app releases, VPN panels and VPN inbounds.
+- Filtered or deleted conflicting records must not leave an editor in an unrecoverable stale state.
+
+Results:
+- Roadmap progress: `763/783` closed, readiness `97.4%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- What's New: `2026-08-15-admin-conflict-draft-recovery`, version `0.740.0`.
+- Fail-first: extended browser regressions preserved the newer text but the second save reused the losing revision and returned another `409`.
+- After fix: frontend `191/191`, typecheck/build, admin bundle budget `583299/583680` raw and `155189/155648` gzip, targeted Playwright `12/12`, and full Playwright `282/282` in `12.9 min` are green.
+- Release gate: backend Debug/Release `1574/1574`, fresh SQLite full flow, all 17 admin sections and 25 responsive viewport configurations, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, secret scan `723/0` and strict UTF-8/BOM guard are green.
+- External boundary: real VPS/SSH/Ansible, provider cabinets, live payment, Telegram Bot API, SMTP and production-like 3x-ui were not verified locally; status remains `staging-ready baseline`, not production-ready.
+
 ## Check 2026-08-15: payment provider concurrency and no-op integrity
 
 Scope:
