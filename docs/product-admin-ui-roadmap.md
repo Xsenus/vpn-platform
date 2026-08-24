@@ -175,7 +175,7 @@
 - [x] Payment-provider accounts требуют persisted revision, отклоняют no-op/stale update и state action, а delayed conflict сохраняет более новый local draft.
 - [x] Payment-provider, tariff, referral-program, app-release, VPN panel и inbound drafts после delayed conflict получают winning revision и повторно сохраняются.
 - [x] VPN-server editor отклоняет no-op без revision/audit churn и сохраняет новый draft при delayed conflict для повторной отправки.
-- [x] Latest "Что нового": `2026-08-24-controlled-production-database-migrations`, версия `0.754.0`; явный manual deploy без email блокирует password reset контролируемым `503`, а systemd migration path требует backup. Frontend `197/197`, real VPS partial report остаётся `8 passed / 2 failed / 8 blocked`; production admin, SMTP, providers и VPN открыты.
+- [x] Latest "Что нового": `2026-08-24-controlled-production-database-migrations`, версия `0.754.0`; run `32693643728` успешно развернул degraded mode после backup и `27` migrations, password reset отвечает контролируемым `503`. Frontend `197/197`, полный real VPS report остаётся `8 passed / 2 failed / 8 blocked`; production admin, SMTP, providers и VPN открыты.
 
 ## Как вести дальше
 

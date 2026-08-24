@@ -374,6 +374,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-24-controlled-production-database-migrations`, версия `0.754.0`;
 - production deploy fail-fast проверяет SMTP до upload; ручной запуск с `allow_disabled_email` явно включает временный degraded mode, в котором password reset и email delivery недоступны;
 - systemd deploy только по явному `apply_database_migrations` останавливает API, создаёт и проверяет PostgreSQL backup, затем применяет pending EF migrations; отказ возвращает старый API до swap релиза;
+- real run `32693643728` успешно создал backup, применил `27` migrations и развернул commit `4975528e`; live/ready и три SPA отвечают `200`, password reset в degraded mode отвечает `503`;
 - sanitized live VPS report подтверждает `8/18` read-only checks; deploy/payment readiness не прошли, ещё `8/18` checks заблокированы внешними доступами и интеграциями;
 - server API, own-VPS onboarding, queue и executor отклоняют inventory-breaking IP/SSH values; executor использует фиксированный alias и `ArgumentList`, а admin-форма показывает те же diagnostics до submit;
 - 3x-ui panel/inbound/client mutations требуют актуальную revision, diagnostics ограничены до materialization, а stale UI восстанавливает актуальные данные;

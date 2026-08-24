@@ -232,7 +232,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-24-controlled-production-database-migrations`, версия `0.754.0`; systemd deploy получил явный backup-before-migrate path, но sanitized VPS report всё ещё фиксирует `8 passed / 2 failed / 8 blocked`.
+- latest "Что нового": `2026-08-24-controlled-production-database-migrations`, версия `0.754.0`; run `32693643728` успешно создал backup, применил `27` migrations и развернул degraded release. Предыдущий полный sanitized VPS report всё ещё фиксирует `8 passed / 2 failed / 8 blocked`, потому что admin/payment/VPN acceptance не выполнялся.
 - roadmap progress: `778/798` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - полноценный production по-прежнему требует реального SMTP; degraded deployment и полный production smoke ещё не подтверждены на VPS.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.

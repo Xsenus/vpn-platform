@@ -10,7 +10,10 @@ Scope:
 - Roadmap progress: `778/798` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
 - Systemd workflow меняет схему только при явном `apply_database_migrations=true`: останавливает API, запускает isolated `database-migrate` через systemd `EnvironmentFile` и при отказе возвращает предыдущий API без release swap.
 - `PostgresMigrationRunner` требует абсолютный backup path и PostgreSQL, проверяет pending migrations, создаёт non-empty custom dump через argument list, проверяет manifest через `pg_restore --list`, затем вызывает `MigrateAsync`; пароль отсутствует в process arguments.
-- Targeted `PostgresMigrationRunnerTests` `4/4`, status/documentation guards `35/35`, полный backend Release `1613/1613`; API Release build `0 warnings / 0 errors`, formatter, strict UTF-8 `15/15`, audit `0 vulnerabilities` и secret scan проходят. Финальный workflow validate и live deployment выполняются после коммита.
+- Targeted `PostgresMigrationRunnerTests` `4/4`, status/documentation guards `35/35`, полный backend Release `1613/1613`; API Release build `0 warnings / 0 errors`, formatter, strict UTF-8 `15/15`, audit `0 vulnerabilities` и secret scan `730/0` проходят.
+- GitHub Actions run `32693643728` на commit `4975528e49f39a233599d8ea4a78085d3558d113`: validate `3m07s`, systemd deploy `2m05s`, backup manifest OK, `27` pending migrations applied, API active, post-deploy smoke passed.
+- Sanitized backup evidence: `$VPS_APP_DIR/backups/db/vpnplatform-20260824T053315Z.dump`; GitHub log не содержит connection string или password.
+- Независимая live-проверка: `/health/live`, `/health/ready`, public `:5173`, cabinet `:5174`, admin `:5175` вернули HTTP `200`; `/api/auth/forgot-password` и `/api/auth/reset-password` вернули HTTP `503` с `email_delivery_disabled`.
 - External boundary: этот пункт подтверждает механизм controlled migration, но не закрывает `P11-ACC-002`, staging restore drill, production admin, live payments или production-like 3x-ui.
 
 ## Check 2026-08-24: explicit production email degraded mode

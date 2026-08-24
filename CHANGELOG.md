@@ -12,7 +12,8 @@ Release entry: `2026-08-24-controlled-production-database-migrations`.
 
 ### Verification
 
-- Targeted `PostgresMigrationRunnerTests` `4/4` и API Release build `0 warnings / 0 errors` проходят; полный финальный gate приведён в `TEST_RESULTS.md`.
+- Targeted `PostgresMigrationRunnerTests` `4/4`, backend `1613/1613`, API Release build `0 warnings / 0 errors` и GitHub validate проходят. Manual run `32693643728` создал и проверил backup, применил `27` pending migrations, запустил systemd release и завершил post-deploy smoke успешно.
+- Независимая live-проверка получила HTTP `200` от live/ready и трёх SPA; forgot/reset password получили ожидаемый `503 email_delivery_disabled`.
 - Roadmap `778/798` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Контролируемый migration path не закрывает полный VPS acceptance, restore drill, production admin, payments или production-like 3x-ui.
 
 ## 0.753.0 - 2026-08-24

@@ -17867,7 +17867,11 @@
       },
       {
         "type": "important",
-        "text": "Roadmap progress is 778/798 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required; full acceptance, restore drill and production admin remain open."
+        "text": "Manual run 32693643728 created and verified a backup, applied 27 pending migrations, deployed the systemd release and passed live/ready plus three-web-app smoke checks."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 778/798 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required for full acceptance; restore drill and production admin remain open."
       }
     ]
   }
