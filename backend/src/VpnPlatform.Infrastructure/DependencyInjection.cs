@@ -111,6 +111,7 @@ public static class DependencyInjection
         services.AddScoped<IProvisioningExecutor, AnsibleProvisioningExecutor>();
         services.AddScoped<ProvisioningRunCoordinator>();
         services.AddScoped<AppReleaseSeedService>();
+        services.AddScoped<PostgresMigrationRunner>();
         services.AddScoped<IOutboxMessageSink, LocalOutboxMessageSink>();
         services.AddScoped<IEmailSender, SmtpEmailSender>();
 

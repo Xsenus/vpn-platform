@@ -21,6 +21,11 @@ on:
         type: boolean
         required: false
         default: false
+      apply_database_migrations:
+        description: "Stop API, create and verify a PostgreSQL backup, then apply pending migrations. Systemd only."
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -110,6 +115,7 @@ jobs:
       VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
       PRODUCTION_ENV_FILE: ${{ secrets.PRODUCTION_ENV_FILE }}
       REQUESTED_DEPLOY_MODE: ${{ github.event.inputs.deploy_mode || secrets.VPS_DEPLOY_MODE || 'auto' }}
+      APPLY_DATABASE_MIGRATIONS: ${{ github.event.inputs.apply_database_migrations || 'false' }}
       VITE_API_BASE_URL_SECRET: ${{ secrets.VITE_API_BASE_URL }}
       VITE_PUBLIC_WEB_URL_SECRET: ${{ secrets.VITE_PUBLIC_WEB_URL }}
       POST_DEPLOY_API_URL_SECRET: ${{ secrets.POST_DEPLOY_API_URL }}
@@ -178,6 +184,16 @@ jobs:
             echo "- Docker detected: \`$docker_detected\`"
             echo "- Reason: $reason"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate database migration mode
+        if: env.APPLY_DATABASE_MIGRATIONS == 'true'
+        env:
+          DEPLOY_MODE: ${{ steps.deploy_mode.outputs.mode }}
+        run: |
+          if [ "$DEPLOY_MODE" != "systemd" ]; then
+            echo "::error::apply_database_migrations is supported only for systemd deployments."
+            exit 1
+          fi
 
       - name: Setup .NET SDK for systemd release
         if: steps.deploy_mode.outputs.mode == 'systemd'
@@ -327,7 +343,7 @@ jobs:
       - name: Start systemd production release
         if: steps.deploy_mode.outputs.mode == 'systemd'
         run: |
-          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "APP_DIR='$VPS_APP_DIR' RELEASE_SHA='$GITHUB_SHA' bash -s" <<'REMOTE'
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "APP_DIR='$VPS_APP_DIR' RELEASE_SHA='$GITHUB_SHA' APPLY_DATABASE_MIGRATIONS='$APPLY_DATABASE_MIGRATIONS' bash -s" <<'REMOTE'
           set -euo pipefail
 
           release_dir="$APP_DIR/releases/$RELEASE_SHA"
@@ -381,6 +397,29 @@ jobs:
             systemctl restart vpn-platform-api || true
             systemctl reload nginx || true
           }
+
+          chmod +x "$release_dir/api/VpnPlatform.Api" || true
+          if [ "$APPLY_DATABASE_MIGRATIONS" = "true" ]; then
+            command -v pg_dump >/dev/null
+            command -v pg_restore >/dev/null
+            command -v systemd-run >/dev/null
+            backup_dir="$APP_DIR/backups/db"
+            mkdir -p "$backup_dir"
+            chmod 700 "$backup_dir"
+            systemctl stop vpn-platform-api >/dev/null 2>&1 || true
+            migration_unit="vpn-platform-db-migrate-${RELEASE_SHA:0:12}"
+            if ! systemd-run --quiet --wait --pipe --collect \
+              --unit="$migration_unit" \
+              --property="Type=oneshot" \
+              --property="WorkingDirectory=$release_dir/api" \
+              --property="EnvironmentFile=$APP_DIR/shared/.env" \
+              --setenv="DatabaseMaintenance__BackupDirectory=$backup_dir" \
+              "$release_dir/api/VpnPlatform.Api" database-migrate; then
+              systemctl restart vpn-platform-api || true
+              echo "Database backup or migration failed; the previous API release was restarted." >&2
+              exit 1
+            fi
+          fi
 
           rm -rf "$APP_DIR/api.next" "$APP_DIR/web.next" "$APP_DIR/api.previous" "$APP_DIR/web.previous"
           mkdir -p "$APP_DIR/api.next" "$APP_DIR/web.next"

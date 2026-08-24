@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-24 локально подтверждено:
 
-- backend full suite: 1609/1609;
+- backend full suite: 1613/1613;
 - frontend tests: 197/197;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-24-production-email-degraded-mode`, версия `0.753.0`; ручной deploy может явно отключить email и password reset, но sanitized VPS report всё ещё фиксирует `8 passed / 2 failed / 8 blocked`.
-- roadmap progress: `777/797` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-24-controlled-production-database-migrations`, версия `0.754.0`; systemd deploy получил явный backup-before-migrate path, но sanitized VPS report всё ещё фиксирует `8 passed / 2 failed / 8 blocked`.
+- roadmap progress: `778/798` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - полноценный production по-прежнему требует реального SMTP; degraded deployment и полный production smoke ещё не подтверждены на VPS.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 

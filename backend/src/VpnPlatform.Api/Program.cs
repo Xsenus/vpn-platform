@@ -19,6 +19,8 @@ using VpnPlatform.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 var isAdminBootstrapCommand = args.Any(x => string.Equals(x, "admin-bootstrap", StringComparison.OrdinalIgnoreCase));
+var isDatabaseMigrateCommand = args.Any(x => string.Equals(x, "database-migrate", StringComparison.OrdinalIgnoreCase));
+var isMaintenanceCommand = isAdminBootstrapCommand || isDatabaseMigrateCommand;
 
 builder.Host.UseSerilog((context, configuration) =>
 {
@@ -28,7 +30,7 @@ builder.Host.UseSerilog((context, configuration) =>
 });
 
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration, includeHostedServices: !isAdminBootstrapCommand, includeOperationalWorkers: !isAdminBootstrapCommand);
+builder.Services.AddInfrastructure(builder.Configuration, includeHostedServices: !isMaintenanceCommand, includeOperationalWorkers: !isMaintenanceCommand);
 builder.Services.AddSingleton<ApiObservabilityMetrics>();
 builder.Services.AddScoped<ObservabilityHealthService>();
 
@@ -113,6 +115,12 @@ if (isAdminBootstrapCommand)
     return;
 }
 
+if (isDatabaseMigrateCommand)
+{
+    await RunDatabaseMigrateCommandAsync(app.Services, app.Configuration);
+    return;
+}
+
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<RequestObservabilityMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
@@ -152,6 +160,33 @@ app.MapGet("/health/ready", async (HttpContext context, ObservabilityHealthServi
 app.MapGet("/metrics", (ApiObservabilityMetrics metrics) => Results.Text(metrics.ToPrometheus(), "text/plain; version=0.0.4; charset=utf-8"));
 
 app.Run();
+
+static async Task RunDatabaseMigrateCommandAsync(IServiceProvider services, IConfiguration configuration)
+{
+    var backupDirectory = configuration["DatabaseMaintenance:BackupDirectory"];
+    if (string.IsNullOrWhiteSpace(backupDirectory))
+    {
+        throw new InvalidOperationException("DatabaseMaintenance:BackupDirectory is required for the database-migrate command.");
+    }
+
+    using var scope = services.CreateScope();
+    var result = await scope.ServiceProvider
+        .GetRequiredService<PostgresMigrationRunner>()
+        .RunAsync(backupDirectory, CancellationToken.None);
+
+    if (result.AppliedMigrations.Count == 0)
+    {
+        Console.WriteLine("Database is already up to date; no backup or migration was needed.");
+        return;
+    }
+
+    Console.WriteLine($"Verified pre-migration backup: {result.BackupPath}");
+    Console.WriteLine($"Applied migrations: {result.AppliedMigrations.Count}");
+    foreach (var migration in result.AppliedMigrations)
+    {
+        Console.WriteLine($"- {migration}");
+    }
+}
 
 static async Task RunAdminBootstrapCommandAsync(IServiceProvider services)
 {

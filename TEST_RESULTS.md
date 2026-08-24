@@ -2,6 +2,17 @@
 
 Дата проверки: 2026-08-24.
 
+## Check 2026-08-24: controlled production database migrations
+
+Scope:
+
+- Release entry: `2026-08-24-controlled-production-database-migrations`, version `0.754.0`.
+- Roadmap progress: `778/798` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- Systemd workflow меняет схему только при явном `apply_database_migrations=true`: останавливает API, запускает isolated `database-migrate` через systemd `EnvironmentFile` и при отказе возвращает предыдущий API без release swap.
+- `PostgresMigrationRunner` требует абсолютный backup path и PostgreSQL, проверяет pending migrations, создаёт non-empty custom dump через argument list, проверяет manifest через `pg_restore --list`, затем вызывает `MigrateAsync`; пароль отсутствует в process arguments.
+- Targeted `PostgresMigrationRunnerTests` `4/4`, status/documentation guards `35/35`, полный backend Release `1613/1613`; API Release build `0 warnings / 0 errors`, formatter, strict UTF-8 `15/15`, audit `0 vulnerabilities` и secret scan проходят. Финальный workflow validate и live deployment выполняются после коммита.
+- External boundary: этот пункт подтверждает механизм controlled migration, но не закрывает `P11-ACC-002`, staging restore drill, production admin, live payments или production-like 3x-ui.
+
 ## Check 2026-08-24: explicit production email degraded mode
 
 Scope:

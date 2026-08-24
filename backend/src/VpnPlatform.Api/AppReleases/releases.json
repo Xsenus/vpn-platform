@@ -17847,5 +17847,28 @@
         "text": "Roadmap progress is 777/797 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required; degraded deployment does not prove SMTP delivery or production-ready admin acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-24-controlled-production-database-migrations",
+    "version": "0.754.0",
+    "releasedAt": "2026-08-24T12:18:37+07:00",
+    "title": "Systemd deploys can migrate PostgreSQL after a verified backup",
+    "summary": "An explicit deployment switch now stops the API, creates and validates a PostgreSQL backup, and applies pending EF migrations before replacing the running release.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "The one-shot database command requires PostgreSQL and an absolute backup directory, verifies a non-empty custom dump with pg_restore, and only then applies pending migrations."
+      },
+      {
+        "type": "important",
+        "text": "Database credentials are loaded from the systemd environment file; the password is passed to pg_dump only through its child environment and is never placed in command arguments."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 778/798 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required; full acceptance, restore drill and production admin remain open."
+      }
+    ]
   }
 ]

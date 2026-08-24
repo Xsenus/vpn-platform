@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.754.0 - 2026-08-24
+
+Release entry: `2026-08-24-controlled-production-database-migrations`.
+
+### Added
+
+- Systemd deploy получил явный `apply_database_migrations`: API останавливается, а отдельная `database-migrate` команда создаёт PostgreSQL custom backup и проверяет его через `pg_restore --list` до применения pending EF migrations.
+- Пароль PostgreSQL передаётся `pg_dump` только через дочернее окружение `PGPASSWORD`; shell interpolation и вывод connection string не используются.
+- При ошибке backup/migration workflow перезапускает предыдущий API, не заменяя release directories; обычный push и deploy без переключателя схему не меняют.
+
+### Verification
+
+- Targeted `PostgresMigrationRunnerTests` `4/4` и API Release build `0 warnings / 0 errors` проходят; полный финальный gate приведён в `TEST_RESULTS.md`.
+- Roadmap `778/798` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Контролируемый migration path не закрывает полный VPS acceptance, restore drill, production admin, payments или production-like 3x-ui.
+
 ## 0.753.0 - 2026-08-24
 
 Release entry: `2026-08-24-production-email-degraded-mode`.

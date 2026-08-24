@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-24.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-24-production-email-degraded-mode`, версия `0.753.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `777/797` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-24-controlled-production-database-migrations`, версия `0.754.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `778/798` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-24:
 
-- [x] `STATE-001` Backend test suite проходит: `1609/1609`.
+- [x] `STATE-001` Backend test suite проходит: `1613/1613`.
 - [x] `STATE-002` Frontend test suite проходит: `197/197`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2804,6 +2804,10 @@ git diff --check
   - Что сделать: разрешить deploy без SMTP только по отдельному операторскому подтверждению, не ослабляя обычный production guard и не создавая reset-коды, которые невозможно доставить.
   - Что сделано: startup safety допускает только явную пару `Email:Mode=Disabled` и `Email:AllowDisabledInProduction=true`; ручной `deploy-vps` input `allow_disabled_email` принудительно выставляет эту пару, а обычный deploy сохраняет SMTP preflight. Forgot/reset endpoints возвращают `503 email_delivery_disabled`, email worker не регистрируется, frontend локализует отказ.
   - Доказательство: PowerShell normalizer regression покрывает SMTP, missing-SMTP и degraded ветки; targeted backend/SQLite `35/35`, backend Debug/Release `1609/1609`, frontend `197/197`, typecheck/build, Playwright `282/282`, API Release build `0 warnings / 0 errors`, formatter, UTF-8 `15/15`, audit `0 vulnerabilities`, secret scan `728/0` и cleanup зелёные. Режим не закрывает real SMTP delivery, production admin, live payments, production-like 3x-ui или `P11-ACC-002`.
+- [x] `P11-ACC-487` Добавить контролируемые backup и migration в systemd deploy. 2026-08-24.
+  - Что сделать: production deploy не должен запускать новый код против устаревшей схемы; изменение PostgreSQL разрешено только отдельным операторским флагом, после проверенного backup и без вывода connection string/password.
+  - Что сделано: одноразовая команда `database-migrate` проверяет PostgreSQL и абсолютный backup path, создаёт custom dump через `pg_dump`, проверяет non-empty файл и `pg_restore --list`, затем применяет pending EF migrations. Workflow input `apply_database_migrations` доступен только systemd path, останавливает API перед backup и перезапускает предыдущий API при отказе до release swap; пароль передаётся только в child `PGPASSWORD`.
+  - Доказательство: targeted `PostgresMigrationRunnerTests` `4/4`, API Release build `0 warnings / 0 errors`; полный gate зафиксирован в `TEST_RESULTS.md`. Реальный deployment этой команды подтверждает только обновление текущей схемы и не закрывает restore drill, полный `P11-ACC-002`, production admin, payments или production-like 3x-ui.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

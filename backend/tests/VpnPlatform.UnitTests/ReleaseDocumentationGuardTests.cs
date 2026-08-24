@@ -396,6 +396,7 @@ public class ReleaseDocumentationGuardTests
         new("P11-ACC-180", "2026-08-04-subscription-node-integrity-hardening"),
         new("P11-ACC-402", "2026-08-13-server-management-boundary"),
         new("P11-ACC-403", "2026-08-13-vpn-panel-management-boundary"),
+        new("P11-ACC-487", "2026-08-24-controlled-production-database-migrations"),
         new("P9-TST-007J", "2026-07-02-staging-smoke-report-self-link"),
         new("P0-PAY-019", "2026-07-02-payment-provider-smoke-report-self-link"),
         new("P0-VPN-011", "2026-07-02-vpn-live-smoke-report-self-link")
