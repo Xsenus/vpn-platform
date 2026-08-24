@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
 - [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `775/795` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `776/796` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -85,7 +85,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1605/1605`.
+- [x] Backend full suite: `1606/1606`.
 - [x] Frontend unit tests: `197/197`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -175,7 +175,7 @@
 - [x] Payment-provider accounts требуют persisted revision, отклоняют no-op/stale update и state action, а delayed conflict сохраняет более новый local draft.
 - [x] Payment-provider, tariff, referral-program, app-release, VPN panel и inbound drafts после delayed conflict получают winning revision и повторно сохраняются.
 - [x] VPN-server editor отклоняет no-op без revision/audit churn и сохраняет новый draft при delayed conflict для повторной отправки.
-- [x] Latest "Что нового": `2026-08-24-deploy-production-smtp-preflight`, версия `0.751.0`; backend `1605/1605`, frontend `197/197`, полный Playwright `282/282`, deploy SMTP preflight `9/9` и normalizer regression зелёные. Внешний SMTP secret и успешный VPS deploy остаются открыты.
+- [x] Latest "Что нового": `2026-08-24-live-vps-partial-evidence`, версия `0.752.0`; backend `1606/1606`, frontend `197/197`, полный Playwright `282/282`, real VPS partial report `8 passed / 2 failed / 8 blocked`. Production admin, SMTP, providers и VPN остаются открыты.
 
 ## Как вести дальше
 

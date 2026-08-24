@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-24.
 
+## Check 2026-08-24: live VPS partial evidence
+
+Scope:
+
+- Release entry: `2026-08-24-live-vps-partial-evidence`, version `0.752.0`.
+- Roadmap progress: `776/796` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- Real deploy: run `32686617348` passed pre-deploy build/tests and stopped at SMTP normalization before upload, restart or post-deploy smoke.
+- Read-only HTTP: `/health/live` and `/health/ready` returned HTTP 200; database/runtime were Ready; public tariffs returned 3 active records; 7 public providers were all `Sandbox/Unknown`.
+- Browser: public, cabinet and admin SPAs rendered expected headings/forms with zero captured console errors. No credentials were entered.
+- Evidence report: `docs/evidence/staging-smoke-2026-08-24-partial.json`, structural validator `8 passed / 2 failed / 8 blocked`; acceptance remains intentionally red.
+- Fail-first report guard `0/1`; targeted after-fix `1/1`. Final gate: backend Debug/Release `1606/1606`, API Release build `0 warnings / 0 errors`, formatter, strict UTF-8/BOM guard and secret scan are green.
+
 ## Check 2026-08-24: production SMTP deploy preflight
 
 Scope:

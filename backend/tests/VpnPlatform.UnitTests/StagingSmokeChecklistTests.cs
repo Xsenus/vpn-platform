@@ -293,6 +293,54 @@ public class StagingSmokeChecklistTests
     }
 
     [Fact]
+    public void Live_Vps_Partial_Report_Should_Preserve_Observed_Statuses_And_Open_Gates()
+    {
+        var root = FindRepositoryRoot();
+        var reportPath = Path.Combine(root, "docs", "evidence", "staging-smoke-2026-08-24-partial.json");
+        using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(reportPath));
+        var report = document.RootElement;
+
+        Assert.Equal("production-vps-rollback", report.GetProperty("environmentName").GetString());
+        Assert.Equal("2026-08-24-deploy-production-smtp-preflight", report.GetProperty("releaseId").GetString());
+        Assert.Equal("docs/evidence/staging-smoke-2026-08-24-partial.json", report.GetProperty("smokeReportPath").GetString());
+
+        var checks = report.GetProperty("checks")
+            .EnumerateArray()
+            .ToDictionary(
+                x => x.GetProperty("id").GetString()!,
+                x => x.GetProperty("status").GetString()!,
+                StringComparer.Ordinal);
+
+        Assert.Equal(RequiredCheckIds.Length, checks.Count);
+        Assert.Equal(8, checks.Count(x => x.Value == "passed"));
+        Assert.Equal(2, checks.Count(x => x.Value == "failed"));
+        Assert.Equal(8, checks.Count(x => x.Value == "blocked"));
+        Assert.Equal("failed", checks["deploy"]);
+        Assert.Equal("failed", checks["payment-providers"]);
+
+        foreach (var passed in new[]
+                 {
+                     "health-live",
+                     "health-ready",
+                     "public-web",
+                     "cabinet-web",
+                     "admin-web",
+                     "tariffs",
+                     "no-console-errors",
+                     "no-secret-leak"
+                 })
+        {
+            Assert.Equal("passed", checks[passed]);
+        }
+
+        var guide = File.ReadAllText(Path.Combine(root, "docs", "staging-smoke-checklist.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+        Assert.Contains("staging-smoke-2026-08-24-partial.json", guide, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-485`", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[~] `P9-TST-007`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Staging_Smoke_Checklist_Should_Be_Linked_From_Docs_And_Release_Seed()
     {
         var root = FindRepositoryRoot();

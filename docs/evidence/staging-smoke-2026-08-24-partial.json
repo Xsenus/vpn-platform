@@ -1,0 +1,106 @@
+{
+  "reportId": "staging-smoke-20260824-103406-partial",
+  "environmentName": "production-vps-rollback",
+  "apiBaseUrl": "http://83.147.222.145:8080",
+  "publicWebUrl": "http://83.147.222.145:5173/",
+  "cabinetWebUrl": "http://83.147.222.145:5174/",
+  "adminWebUrl": "http://83.147.222.145:5175/",
+  "smokeReportPath": "docs/evidence/staging-smoke-2026-08-24-partial.json",
+  "startedAt": "2026-08-24T10:34:06+07:00",
+  "completedAt": "2026-08-24T10:37:31+07:00",
+  "releaseId": "2026-08-24-deploy-production-smtp-preflight",
+  "operator": "codex-live-audit-run-32686617348",
+  "notes": "Partial read-only audit of the rolled-back production VPS. The target release was not uploaded. This report contains no sensitive values.",
+  "checks": [
+    {
+      "id": "deploy",
+      "status": "failed",
+      "evidence": "GitHub Actions run https://github.com/Xsenus/vpn-platform/actions/runs/32686617348 passed pre-deploy validation, then rejected incomplete mail settings during normalization; upload, restart and post-deploy smoke were skipped."
+    },
+    {
+      "id": "health-live",
+      "status": "passed",
+      "evidence": "Read-only GET /health/live returned HTTP 200 with status=ok and environment=Production at 2026-08-24T10:36+07:00."
+    },
+    {
+      "id": "health-ready",
+      "status": "passed",
+      "evidence": "Read-only GET /health/ready returned HTTP 200 with status=Ready; database and runtime checks were Ready, with 3 active tariffs and no pending outbox or unhealthy nodes."
+    },
+    {
+      "id": "public-web",
+      "status": "passed",
+      "evidence": "Browser loaded the public SPA title VPN Platform - быстрый VPN-доступ с автоматической выдачей, rendered the VPN Platform heading and 2884 visible text characters."
+    },
+    {
+      "id": "cabinet-web",
+      "status": "passed",
+      "evidence": "Browser loaded the cabinet SPA title VPN Platform - личный кабинет and rendered the login/register interface with two forms."
+    },
+    {
+      "id": "admin-web",
+      "status": "passed",
+      "evidence": "Browser loaded the admin SPA title VPN Platform - админ-панель and rendered the administrator login form; visible copy identifies the rolled-back 15-section UI."
+    },
+    {
+      "id": "admin-login",
+      "status": "blocked",
+      "evidence": "No verified production administrator account was available for this audit; no login data was entered."
+    },
+    {
+      "id": "tariffs",
+      "status": "passed",
+      "evidence": "Read-only GET /api/public/tariffs returned HTTP 200 with 3 active tariffs: trial, one-month and three-month."
+    },
+    {
+      "id": "payment-providers",
+      "status": "failed",
+      "evidence": "Read-only GET /api/public/payments/providers returned HTTP 200 with 7 providers, but every provider reported mode=Sandbox and healthStatus=Unknown, so readiness is not proven."
+    },
+    {
+      "id": "checkout",
+      "status": "blocked",
+      "evidence": "A state-changing checkout was not started on Production while all public providers lacked confirmed readiness."
+    },
+    {
+      "id": "payment-init",
+      "status": "blocked",
+      "evidence": "Payment initialization requires a safe test account and a provider with externally confirmed readiness."
+    },
+    {
+      "id": "provider-confirmation",
+      "status": "blocked",
+      "evidence": "No provider cabinet confirmation or externally verifiable provider payment identifier was available."
+    },
+    {
+      "id": "subscription",
+      "status": "blocked",
+      "evidence": "Subscription activation depends on a confirmed provider payment and authenticated test user."
+    },
+    {
+      "id": "vpn-access",
+      "status": "blocked",
+      "evidence": "No production-like panel, inbound and issued access evidence was available."
+    },
+    {
+      "id": "support",
+      "status": "blocked",
+      "evidence": "End-to-end support verification requires authenticated user and administrator sessions."
+    },
+    {
+      "id": "no-console-errors",
+      "status": "passed",
+      "evidence": "Browser inspection recorded zero console error entries while loading public, cabinet and admin SPAs."
+    },
+    {
+      "id": "secret-rotation",
+      "status": "blocked",
+      "evidence": "No external secret-manager rotation record was available for this audit."
+    },
+    {
+      "id": "no-secret-leak",
+      "status": "passed",
+      "evidence": "The sanitized report contains no credentials or protected values; inspected GitHub failure output kept protected values masked and reported configuration key names only."
+    }
+  ]
+}

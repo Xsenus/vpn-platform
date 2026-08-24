@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-24.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-24-deploy-production-smtp-preflight`, версия `0.751.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `775/795` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-24-live-vps-partial-evidence`, версия `0.752.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `776/796` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-24:
 
-- [x] `STATE-001` Backend test suite проходит: `1605/1605`.
+- [x] `STATE-001` Backend test suite проходит: `1606/1606`.
 - [x] `STATE-002` Frontend test suite проходит: `197/197`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -1269,8 +1269,8 @@ git diff --check
 - [~] `P9-TST-007` Real staging smoke checklist.
   - Что сделать: вручную или полуавтоматически пройти покупку и выдачу VPN на staging.
   - Что сделано: добавлен `docs/staging-smoke-checklist.md`, безопасный шаблон `docs/staging-smoke-report.template.json` и валидатор `scripts/validate-staging-smoke-report.ps1`. Валидатор проверяет обязательные пункты deploy, health, public/cabinet/admin web, admin login, tariffs, payment providers, checkout, payment init, provider confirmation, subscription, VPN access, support, browser console, secret rotation и отсутствие секретов в отчете. Режим `-RequireAllPassed` fail-closed и не принимает `blocked`, `failed` или `skipped`.
-  - Что осталось: заполнить реальный staging/VPS smoke report после deploy, ротации секретов, настройки provider sandbox и production-like 3x-ui окружения.
-  - Доказательство: `StagingSmokeChecklistTests` 3/3, validator structural check, backend full suite 478/478, local SQLite HTTP-smoke latest release `2026-06-14-all-screens-browser-smoke`, версия `0.107.0`; заполненный live/staging smoke report еще нужен.
+  - Что осталось: довести partial real VPS report до `18/18 passed` после успешного deploy, ротации секретов, настройки provider sandbox, production admin и production-like 3x-ui окружения.
+  - Доказательство: `docs/evidence/staging-smoke-2026-08-24-partial.json` структурно валиден и фиксирует `8 passed / 2 failed / 8 blocked`: health, три SPA, тарифы и console подтверждены на реальном VPS; deploy и payment readiness не прошли. Acceptance `-RequireAllPassed` остается красным.
 
 - [x] `P9-TST-007A` Staging smoke report secret sanitizer. 2026-06-14.
   - Что сделать: усилить валидатор staging smoke report, чтобы он не принимал отчеты с cookies, `.env`, client secrets, API keys, private headers, Telegram secret header и GitHub/VPS secret names.
@@ -2796,6 +2796,10 @@ git diff --check
   - Что сделать: deploy не должен сначала останавливать рабочий systemd API и только затем обнаруживать, что `PRODUCTION_ENV_FILE` не проходит актуальный startup safety contract.
   - Что сделано: normalizer получил `-RequireStartupReady`; после принудительных production-флагов он fail-fast проверяет SMTP mode/host/port/from и password при username, не выводя значения. `deploy-vps` запускает preflight до Docker/systemd upload, а regression покрывает готовый и missing-SMTP файлы и cleanup.
   - Доказательство: реальный GitHub Actions deploy `32685191446` воспроизвёл поздний отказ `Email:Mode=Smtp is required in Production` и выполнил rollback; fail-first guard `0/1`; after-fix PowerShell regression, `DeployWorkflowGuardTests`, backend Debug/Release `1605/1605`, formatter, UTF-8 и secret scan зелёные. Production SMTP credentials по-прежнему должны быть добавлены во внешний `PRODUCTION_ENV_FILE` до успешного VPS deploy.
+- [x] `P11-ACC-485` Зафиксировать безопасный partial live VPS smoke без завышения readiness. 2026-08-24.
+  - Что сделать: сохранить реальное evidence доступных read-only проверок и явно отделить их от admin/payment/VPN acceptance, для которого нет внешних credentials и готовых интеграций.
+  - Что сделано: добавлен sanitized report `docs/evidence/staging-smoke-2026-08-24-partial.json`; browser проверил public/cabinet/admin SPA и отсутствие console errors, HTTP проверил live/ready health, тарифы и публичную provider readiness.
+  - Доказательство: fail-first report guard `0/1`; real deploy run `32686617348` прошел pre-deploy suite и остановился на mail preflight до upload/restart; report validator, `StagingSmokeChecklistTests`, backend Debug/Release `1606/1606`, formatter, UTF-8 и secret scan подтверждают `8 passed / 2 failed / 8 blocked`. `P9-TST-007` и `P11-ACC-002` остаются открытыми.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.

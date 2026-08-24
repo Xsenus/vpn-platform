@@ -17801,5 +17801,28 @@
         "text": "Roadmap progress is 775/795 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. The external PRODUCTION_ENV_FILE still needs valid SMTP settings; Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-24-live-vps-partial-evidence",
+    "version": "0.752.0",
+    "releasedAt": "2026-08-24T10:40:13+07:00",
+    "title": "Live VPS checks now have explicit partial evidence",
+    "summary": "A sanitized report records the exact checks that passed, failed or remained blocked on the rolled-back production VPS.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "Read-only live and ready health, public tariffs, three web applications and their browser consoles were verified against the real VPS."
+      },
+      {
+        "type": "important",
+        "text": "The report records 8 passed, 2 failed and 8 blocked checks: deployment stopped before upload and all public payment providers remained Sandbox with Unknown health."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 776/796 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
+      }
+    ]
   }
 ]

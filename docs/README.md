@@ -27,6 +27,7 @@
 - [VPS production smoke report template](vps-production-smoke-report.template.json)
 - [Smoke-проверка админки на VPS](admin-vps-smoke.md)
 - [Staging smoke checklist](staging-smoke-checklist.md)
+- [Partial live VPS smoke evidence 2026-08-24](evidence/staging-smoke-2026-08-24-partial.json)
 - [Production readiness gate](production-readiness-gate.md)
 - [Staging validation runbook](STAGING_VALIDATION_RUNBOOK.md)
 

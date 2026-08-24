@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-24 локально подтверждено:
 
-- backend full suite: 1605/1605;
+- backend full suite: 1606/1606;
 - frontend tests: 197/197;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-24-deploy-production-smtp-preflight`, версия `0.751.0`; deploy проверяет production SMTP до upload и не раскрывает значения настроек.
-- roadmap progress: `775/795` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-24-live-vps-partial-evidence`, версия `0.752.0`; sanitized VPS report фиксирует `8 passed / 2 failed / 8 blocked` без завышения acceptance.
+- roadmap progress: `776/796` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - внешний `PRODUCTION_ENV_FILE` еще требует реальных SMTP-настроек; успешный VPS deploy и production smoke не подтверждены.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 

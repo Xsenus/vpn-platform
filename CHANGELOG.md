@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.752.0 - 2026-08-24
+
+Release entry: `2026-08-24-live-vps-partial-evidence`.
+
+### Evidence
+
+- На реальном откатившемся production VPS read-only проверены live/ready health, public/cabinet/admin SPA, публичные тарифы и browser console.
+- Sanitized report `docs/evidence/staging-smoke-2026-08-24-partial.json` фиксирует фактический результат `8 passed / 2 failed / 8 blocked` и проходит структурный validator.
+- Deploy run `32686617348` подтвердил новый SMTP preflight до upload/restart; payment providers вернули `Sandbox/Unknown`, поэтому payment readiness не принята.
+
+### Verification
+
+- Fail-first evidence guard `0/1`; after-fix targeted report guard и structural validator проходят. Backend Debug/Release `1606/1606`, API Release build `0 warnings / 0 errors`, formatter, strict UTF-8/BOM guard и secret scan подтверждают финальный gate.
+- Roadmap `776/796` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked. `P9-TST-007`, `P11-ACC-002`, production admin, live payments и production-like 3x-ui остаются незакрытыми.
+
 ## 0.751.0 - 2026-08-24
 
 Release entry: `2026-08-24-deploy-production-smtp-preflight`.
