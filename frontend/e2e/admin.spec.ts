@@ -1787,8 +1787,8 @@ async function mockAdminApi(page: Page) {
       const updated = vpnServer({
         ...server,
         revision: Number(server.revision) + 1,
-        status: action === 'maintenance' ? 'Maintenance' : action === 'disable' ? 'Disabled' : action === 'disable-allocation' ? 'Draining' : action === 'disable-maintenance' || action === 'enable-allocation' ? 'Ready' : server.status,
-        isAvailableForNewUsers: action === 'enable-allocation' ? true : action === 'disable-allocation' || action === 'maintenance' || action === 'disable' ? false : server.isAvailableForNewUsers,
+        status: action === 'maintenance' ? 'Maintenance' : action === 'disable' ? 'Disabled' : action === 'disable-allocation' || action === 'disable-maintenance' ? 'Draining' : action === 'enable-allocation' ? 'Ready' : server.status,
+        isAvailableForNewUsers: action === 'enable-allocation' ? true : action === 'disable-allocation' || action === 'disable-maintenance' || action === 'maintenance' || action === 'disable' ? false : server.isAvailableForNewUsers,
         updatedAt: now
       })
       if (index >= 0) servers[index] = updated
@@ -4456,7 +4456,7 @@ test('admin VPN infrastructure supports secure managed lifecycle', async ({ page
     panelPassword: ''
   })
   serverRow = nodesPanel.locator('.list-item-vertical').filter({ hasText: 'E2E NL Node Updated' })
-  await expect(serverRow.getByRole('button', { name: 'Вернуть в работу' })).toHaveCount(0)
+  await expect(serverRow.getByRole('button', { name: 'Завершить обслуживание' })).toHaveCount(0)
   await expect(serverRow.getByRole('button', { name: 'Открыть набор' })).toHaveCount(0)
   await serverRow.getByRole('button', { name: 'Закрыть набор' }).click()
   await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
@@ -4473,15 +4473,20 @@ test('admin VPN infrastructure supports secure managed lifecycle', async ({ page
   await expect(serverRow.getByRole('button', { name: 'В обслуживание' })).toHaveCount(0)
   await expect(serverRow.getByRole('button', { name: 'Закрыть набор' })).toHaveCount(0)
   await expect(serverRow.getByRole('button', { name: 'Открыть набор' })).toHaveCount(0)
-  await expect(serverRow.getByRole('button', { name: 'Вернуть в работу' })).toBeVisible()
-  await serverRow.getByRole('button', { name: 'Вернуть в работу' }).click()
-  await expect(page.getByText('Сервер E2E NL Node Updated: вернуть в работу.')).toBeVisible()
-  await expect(serverRow.getByRole('button', { name: 'Вернуть в работу' })).toHaveCount(0)
+  await expect(serverRow.getByRole('button', { name: 'Завершить обслуживание' })).toBeVisible()
+  await serverRow.getByRole('button', { name: 'Завершить обслуживание' }).click()
+  await expect(page.getByText('Сервер E2E NL Node Updated: завершить обслуживание.')).toBeVisible()
+  await expect(serverRow).toContainText('новые пользователи: закрыты')
+  await expect(serverRow.getByRole('button', { name: 'Завершить обслуживание' })).toHaveCount(0)
+  await expect(serverRow.getByRole('button', { name: 'Открыть набор' })).toBeVisible()
+  await serverRow.getByRole('button', { name: 'Открыть набор' }).click()
+  await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(serverRow).toContainText('новые пользователи: разрешены')
   await expect(serverRow.getByRole('button', { name: 'В обслуживание' })).toBeVisible()
   await serverRow.getByRole('button', { name: 'Отключить' }).click()
   await nodesPanel.getByRole('button', { name: 'Подтвердить' }).click()
   await expect(page.getByText('Сервер E2E NL Node Updated: отключить сервер.')).toBeVisible()
-  for (const actionName of ['В обслуживание', 'Вернуть в работу', 'Закрыть набор', 'Открыть набор', 'Отключить']) {
+  for (const actionName of ['В обслуживание', 'Завершить обслуживание', 'Закрыть набор', 'Открыть набор', 'Отключить']) {
     await expect(serverRow.getByRole('button', { name: actionName, exact: true })).toHaveCount(0)
   }
   await serverRow.getByRole('button', { name: 'Удалить' }).click()

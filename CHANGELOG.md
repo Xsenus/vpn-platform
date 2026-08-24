@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.750.0 - 2026-08-24
+
+Release entry: `2026-08-24-maintenance-and-mobile-heading-guard`.
+
+### Fixed
+
+- Завершение обслуживания VPN-сервера сохраняет fail-closed состояние `Draining`: набор новых пользователей остаётся закрытым до отдельной подтверждённой команды «Открыть набор».
+- Admin UI, mock API и desktop/mobile lifecycle regression используют последовательные действия «Завершить обслуживание» и «Открыть набор» без неявного возврата в `Ready`.
+- Мобильный hero-заголовок публичного сайта переносит только целые слова; all-screens regression проверяет каждое слово через DOM Range на representative viewport-конфигурациях.
+
+### Verification
+
+- Fail-first backend `0/1`; after-fix `AdminOperationBoundaryTests` `22/22`, targeted admin desktop/mobile Playwright `2/2` и targeted responsive all-screens `1/1` зелёные.
+- Backend Debug/Release `1604/1604`, API Release build `0 warnings / 0 errors`, frontend `197/197`, typecheck/build, полный Playwright `282/282`, dependency audit `0 vulnerabilities`, formatter, strict UTF-8/BOM guard и secret scan проходят. Roadmap `774/794` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- Реальные VPS/SSH/Ansible, production-like 3x-ui/x-ui, provider кабинеты, live payment, Telegram Bot API и SMTP остаются внешней проверкой; статус `staging-ready baseline`, не production-ready.
+
 ## 0.749.0 - 2026-08-15
 
 Release entry: `2026-08-15-server-archive-active-workload-guard`.

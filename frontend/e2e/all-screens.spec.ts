@@ -1180,6 +1180,24 @@ async function expectResponsiveLayout(page: Page, screenName: string) {
   expect(issues, `${screenName} must fit the viewport`).toEqual([])
 }
 
+async function expectWordsStayIntact(page: Page, selector: string, screenName: string) {
+  const splitWords = await page.locator(selector).evaluate((element) => {
+    const textNode = Array.from(element.childNodes).find((node) => node.nodeType === Node.TEXT_NODE)
+    if (!textNode?.textContent) return []
+
+    const split: string[] = []
+    for (const match of textNode.textContent.matchAll(/[\p{L}\p{N}]+/gu)) {
+      const range = document.createRange()
+      range.setStart(textNode, match.index)
+      range.setEnd(textNode, match.index + match[0].length)
+      if (range.getClientRects().length > 1) split.push(match[0])
+    }
+    return split
+  })
+
+  expect(splitWords, `${screenName} must not split words across lines`).toEqual([])
+}
+
 test('all public routes render without blank screens or browser errors', async ({ page }, testInfo) => {
   const browserErrors = collectBrowserErrors(page)
   await installApiMock(page)
@@ -1351,6 +1369,9 @@ test('all public routes fit representative responsive viewports', async ({ page 
     for (const route of publicRoutes) {
       await page.goto(route)
       await expectResponsiveLayout(page, `${route} at ${viewport.name}`)
+      if (route === '/') {
+        await expectWordsStayIntact(page, '.landing-hero h2', `public hero at ${viewport.name}`)
+      }
       if (viewport.name === 'compact-mobile') await expectWcagQuality(page, `${route} at ${viewport.name}`)
       if (viewport.name === 'compact-mobile' && (route === '/' || route === '/account')) {
         await captureAuditScreenshot(page, testInfo, `public-${route === '/' ? 'home' : 'account'}-mobile`)

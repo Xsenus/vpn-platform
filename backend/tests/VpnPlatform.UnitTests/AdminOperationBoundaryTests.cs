@@ -292,6 +292,10 @@ public class AdminOperationBoundaryTests
         Assert.False(node.IsAvailableForNewUsers);
 
         Assert.IsType<OkObjectResult>(await controller.DisableMaintenance(node.Id, new ServerStateActionHttpRequest(node.Revision), CancellationToken.None));
+        Assert.Equal(NodeStatus.Draining, node.Status);
+        Assert.False(node.IsAvailableForNewUsers);
+
+        Assert.IsType<OkObjectResult>(await controller.EnableAllocation(node.Id, new ServerStateActionHttpRequest(node.Revision), CancellationToken.None));
         Assert.Equal(NodeStatus.Ready, node.Status);
         Assert.True(node.IsAvailableForNewUsers);
 
@@ -307,7 +311,30 @@ public class AdminOperationBoundaryTests
         Assert.Equal(NodeStatus.Disabled, node.Status);
         Assert.False(node.IsAvailableForNewUsers);
 
-        Assert.Equal(5, await db.AuditLogs.CountAsync());
+        Assert.Equal(6, await db.AuditLogs.CountAsync());
+    }
+
+    [Fact]
+    public async Task Leaving_Maintenance_Should_Keep_Allocation_Closed_Until_Explicit_Enable()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+
+        var node = Node("maintenance-exit", NodeStatus.Maintenance, false);
+        db.VpnNodes.Add(node);
+        await db.SaveChangesAsync();
+        var controller = CreateController(db, Guid.NewGuid(), new FixedClock(new DateTimeOffset(2026, 8, 15, 17, 0, 0, TimeSpan.Zero)));
+
+        Assert.IsType<OkObjectResult>(await controller.DisableMaintenance(node.Id, new ServerStateActionHttpRequest(node.Revision), CancellationToken.None));
+        Assert.Equal(NodeStatus.Draining, node.Status);
+        Assert.False(node.IsAvailableForNewUsers);
+
+        Assert.IsType<OkObjectResult>(await controller.EnableAllocation(node.Id, new ServerStateActionHttpRequest(node.Revision), CancellationToken.None));
+        Assert.Equal(NodeStatus.Ready, node.Status);
+        Assert.True(node.IsAvailableForNewUsers);
+        Assert.Equal(2, await db.AuditLogs.CountAsync());
     }
 
     [Theory]

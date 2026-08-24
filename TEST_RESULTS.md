@@ -1,6 +1,19 @@
 # Результаты проверок
 
-Дата проверки: 2026-08-15.
+Дата проверки: 2026-08-24.
+
+## Check 2026-08-24: fail-closed maintenance exit and mobile hero
+
+Scope:
+
+- Release entry: `2026-08-24-maintenance-and-mobile-heading-guard`, version `0.750.0`.
+- Roadmap progress: `774/794` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- Fail-first backend: `0/1`, потому что завершение обслуживания возвращало `Ready` вместо ожидаемого `Draining` и неявно открывало набор.
+- After fix: `AdminOperationBoundaryTests` `22/22`; отдельная команда `EnableAllocation` требуется для перехода `Draining/false -> Ready/true`.
+- Frontend unit tests `197/197`; targeted admin desktop/mobile Playwright `2/2` подтверждает последовательные действия «Завершить обслуживание» и «Открыть набор».
+- Targeted all-screens responsive Playwright `1/1` подтверждает целостность слов hero-заголовка через DOM Range на representative viewport-конфигурациях.
+- Backend Debug/Release `1604/1604`, API Release build `0 warnings / 0 errors`, typecheck/build, полный Playwright `282/282`, dependency audit `0 vulnerabilities`, formatter, strict UTF-8/BOM guard и secret scan проходят.
+- Реальный VPS, production-like 3x-ui/x-ui, provider cabinets, live payments, Telegram Bot API и SMTP не проверялись и остаются внешним evidence; release status остаётся `staging-ready baseline`, не production-ready.
 
 ## Check 2026-08-15: active VPN server archive boundary
 

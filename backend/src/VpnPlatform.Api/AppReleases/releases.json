@@ -17751,5 +17751,32 @@
         "text": "Roadmap progress is 772/792 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-24-maintenance-and-mobile-heading-guard",
+    "version": "0.750.0",
+    "releasedAt": "2026-08-24T09:27:54+07:00",
+    "title": "Server maintenance exit is fail-closed",
+    "summary": "Finishing maintenance keeps VPN allocation closed until an operator explicitly reopens it, while the mobile public heading now preserves whole words.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "fixed",
+        "text": "Leaving maintenance now moves the VPN server to Draining with new-user allocation still disabled."
+      },
+      {
+        "type": "improved",
+        "text": "The admin lifecycle exposes separate Finish maintenance and Enable allocation actions on desktop and mobile."
+      },
+      {
+        "type": "fixed",
+        "text": "The public mobile hero keeps words intact, with a responsive DOM Range regression covering representative viewports."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 774/794 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance; provider cabinets, SSH/Ansible, Telegram Bot API and SMTP must also be confirmed externally."
+      }
+    ]
   }
 ]

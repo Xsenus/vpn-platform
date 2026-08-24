@@ -3883,7 +3883,7 @@ export function App() {
   }
 
   const handleServerMode = async (server: VpnNodeDto, action: 'maintenance' | 'ready' | 'drain' | 'allocate' | 'disable') => {
-    const actionLabel = action === 'maintenance' ? 'перевести в обслуживание' : action === 'ready' ? 'вернуть в работу' : action === 'drain' ? 'закрыть набор пользователей' : action === 'disable' ? 'отключить сервер' : 'открыть набор пользователей'
+    const actionLabel = action === 'maintenance' ? 'перевести в обслуживание' : action === 'ready' ? 'завершить обслуживание' : action === 'drain' ? 'закрыть набор пользователей' : action === 'disable' ? 'отключить сервер' : 'открыть набор пользователей'
     await runAction('nodes', `${action}-${server.id}`, async (adminAction) => {
       const command = action === 'maintenance'
         ? api.enableAdminServerMaintenance(token, server.id, server.revision)
@@ -5176,7 +5176,7 @@ export function App() {
                   <PrimaryButton disabled={server.status === 'Archived' || isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleQueuePrecheck(server)}>Проверить VPS</PrimaryButton>
                   <ConfirmButton className="button-danger" disabled={!serverProvisioningCanDeploy(server) || isActionResourceBusy(serverActionResourceKey(server.id))} message={`Запустить подготовку сервера "${server.name}"? Режим: ${provisioningDeployModeLabel(serverProvisioningMode(server))}. ${server.provisioningOperatorWarning || 'Проверьте сервер перед запуском.'}`} onConfirm={() => handleQueueProvision(server)}>Подготовить</ConfirmButton>
                   {stateActions.canEnterMaintenance && <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} message="Перевести сервер в обслуживание? Новые пользователи не должны попадать на него." onConfirm={() => handleServerMode(server, 'maintenance')}>В обслуживание</ConfirmButton>}
-                  {stateActions.canLeaveMaintenance && <PrimaryButton className="button-secondary" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleServerMode(server, 'ready')}>Вернуть в работу</PrimaryButton>}
+                  {stateActions.canLeaveMaintenance && <PrimaryButton className="button-secondary" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} onClick={() => void handleServerMode(server, 'ready')}>Завершить обслуживание</PrimaryButton>}
                   {stateActions.canDisableAllocation && <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} message="Закрыть набор на сервер? Это изменит распределение новых пользователей." onConfirm={() => handleServerMode(server, 'drain')}>Закрыть набор</ConfirmButton>}
                   {stateActions.canEnableAllocation && <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} message="Открыть набор на сервер? Это изменит распределение новых пользователей." onConfirm={() => handleServerMode(server, 'allocate')}>Открыть набор</ConfirmButton>}
                   {stateActions.canDisable && <ConfirmButton className="button-secondary" disabled={isActionResourceBusy(serverActionResourceKey(server.id))} message={`Отключить сервер "${server.name}"? Новые подключения и автоматическое распределение будут закрыты.`} onConfirm={() => handleServerMode(server, 'disable')}>Отключить</ConfirmButton>}

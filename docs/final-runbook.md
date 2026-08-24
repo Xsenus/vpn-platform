@@ -174,9 +174,9 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 ## 7. Текущий статус
 
-На 2026-08-15 локально подтверждено:
+На 2026-08-24 локально подтверждено:
 
-- backend full suite: 1603/1603;
+- backend full suite: 1604/1604;
 - frontend tests: 197/197;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -232,8 +232,8 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-15-server-archive-active-workload-guard`, версия `0.749.0`; active subscription/access/migration и reserved capacity блокируют archive, operational reserve/release повышают revision, а occupied card не показывает delete.
-- roadmap progress: `772/792` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- latest "Что нового": `2026-08-24-maintenance-and-mobile-heading-guard`, версия `0.750.0`; выход из maintenance сохраняет закрытый набор до отдельной команды, а mobile hero не разрывает слова.
+- roadmap progress: `774/794` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
 ## 8. Ограничения перед production

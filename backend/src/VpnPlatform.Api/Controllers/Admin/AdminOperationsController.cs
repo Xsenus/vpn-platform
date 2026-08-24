@@ -3179,7 +3179,7 @@ public class AdminOperationsController : ControllerBase
         {
             ServerStateTransition.Disable => (NodeStatus.Disabled, false, "server.disable"),
             ServerStateTransition.EnterMaintenance => (NodeStatus.Maintenance, false, "server.maintenance.enable"),
-            ServerStateTransition.LeaveMaintenance => (NodeStatus.Ready, true, "server.maintenance.disable"),
+            ServerStateTransition.LeaveMaintenance => (NodeStatus.Draining, false, "server.maintenance.disable"),
             ServerStateTransition.DisableAllocation => (NodeStatus.Draining, false, "server.allocation.disable"),
             ServerStateTransition.EnableAllocation => (NodeStatus.Ready, true, "server.allocation.enable"),
             _ => throw new InvalidOperationException("Unsupported server state transition.")

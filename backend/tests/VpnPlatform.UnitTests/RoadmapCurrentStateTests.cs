@@ -7,8 +7,8 @@ namespace VpnPlatform.UnitTests;
 
 public class RoadmapCurrentStateTests
 {
-    private const string CurrentReleaseId = "2026-08-15-server-archive-active-workload-guard";
-    private const string CurrentVersion = "0.749.0";
+    private const string CurrentReleaseId = "2026-08-24-maintenance-and-mobile-heading-guard";
+    private const string CurrentVersion = "0.750.0";
 
     [Fact]
     public void Roadmap_Current_State_Should_Match_Latest_Local_Evidence()
@@ -16,8 +16,10 @@ public class RoadmapCurrentStateTests
         var root = FindRepositoryRoot();
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
 
-        Assert.Contains("Дата актуализации: 2026-08-15", roadmap, StringComparison.Ordinal);
-        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1603/1603`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("Дата актуализации: 2026-08-24", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1604/1604`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `P11-ACC-483`", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `P11-ACC-482`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-480`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-479`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P11-ACC-468`", roadmap, StringComparison.Ordinal);
@@ -388,9 +390,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("1603/1603", readme, StringComparison.Ordinal);
-        Assert.Contains("1603/1603", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("1603/1603", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("1604/1604", readme, StringComparison.Ordinal);
+        Assert.Contains("1604/1604", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("1604/1604", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,

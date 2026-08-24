@@ -19,8 +19,8 @@ public class FinalDocsChangelogTests
         Assert.Contains("docs/final-runbook.md", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1603/1603", readme, StringComparison.Ordinal);
-        Assert.Contains("2026-08-15-server-archive-active-workload-guard", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1604/1604", readme, StringComparison.Ordinal);
+        Assert.Contains("2026-08-24-maintenance-and-mobile-heading-guard", readme, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("../CHANGELOG.md", docsIndex, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("final-runbook.md", docsIndex, StringComparison.OrdinalIgnoreCase);
@@ -65,9 +65,9 @@ public class FinalDocsChangelogTests
 
         foreach (var expected in new[]
                  {
-                     "1603/1603",
-                     "2026-08-15-server-archive-active-workload-guard",
-                     "0.749.0",
+                     "1604/1604",
+                     "2026-08-24-maintenance-and-mobile-heading-guard",
+                     "0.750.0",
                      "staging-ready baseline",
                      "production-ready",
                      "live VPS smoke",
@@ -241,14 +241,14 @@ public class FinalDocsChangelogTests
 
         var changelogTopEntry = Regex.Match(
             changelog,
-            @"(?s)\A# Changelog\s+## (?<version>[^\r\n]+?) - 2026-08-15(?<body>.*?)(?:\r?\n## |\z)");
+            @"(?s)\A# Changelog\s+## (?<version>[^\r\n]+?) - 2026-08-24(?<body>.*?)(?:\r?\n## |\z)");
         Assert.True(changelogTopEntry.Success, "CHANGELOG.md must start with the latest release block.");
         Assert.Contains(version, changelogTopEntry.Groups["version"].Value, StringComparison.Ordinal);
         Assert.Contains(releaseId, changelogTopEntry.Groups["body"].Value, StringComparison.OrdinalIgnoreCase);
 
         var testResultsTopEntry = Regex.Match(
             testResults,
-            @"(?s)\A# .+?\r?\n\r?\nДата проверки: 2026-08-15\.\s+## Check 2026-08-15: (?<title>[^\r\n]+)(?<body>.*?)(?:\r?\n## Check |\z)");
+            @"(?s)\A# .+?\r?\n\r?\nДата проверки: 2026-08-24\.\s+## Check 2026-08-24: (?<title>[^\r\n]+)(?<body>.*?)(?:\r?\n## Check |\z)");
         Assert.True(testResultsTopEntry.Success, "TEST_RESULTS.md must start with the latest release check block.");
         Assert.Contains(releaseId, testResultsTopEntry.Groups["body"].Value, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(version, testResultsTopEntry.Groups["body"].Value, StringComparison.Ordinal);

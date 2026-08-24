@@ -35,6 +35,9 @@
   color: #fff;
   font-size: 68px;
   line-height: 1.02;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
 .landing-hero p {
@@ -633,6 +636,10 @@
 
   .landing-hero p {
     font-size: 16px;
+  }
+
+  .landing-hero h2 {
+    font-size: 34px;
   }
 
   .landing-hero-visual {

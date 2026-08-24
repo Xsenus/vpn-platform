@@ -2,11 +2,11 @@
 
 Документ нужен как единая рабочая карта проекта. По нему агент или разработчик должен идти сверху вниз, отмечать выполненные пункты и оставлять доказательства: тесты, скриншоты, ссылки на коммиты, результаты smoke-проверок и замечания.
 
-Дата актуализации: 2026-08-15.
+Дата актуализации: 2026-08-24.
 
-Дата последней сверки: 2026-08-15.
+Дата последней сверки: 2026-08-24.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-15-server-archive-active-workload-guard`, версия `0.749.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `772/792` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-24-maintenance-and-mobile-heading-guard`, версия `0.750.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `774/794` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -35,9 +35,9 @@ git diff --check
 
 ## Текущее резюме состояния
 
-Что подтверждено на 2026-08-15:
+Что подтверждено на 2026-08-24:
 
-- [x] `STATE-001` Backend test suite проходит: `1603/1603`.
+- [x] `STATE-001` Backend test suite проходит: `1604/1604`.
 - [x] `STATE-002` Frontend test suite проходит: `197/197`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2784,6 +2784,14 @@ git diff --check
   - Что сделать: занятая емкость, non-terminal subscription/access или активная migration должны блокировать delete/archive до mutation; capacity reservation должна принимать только operational node и участвовать в revision concurrency, а UI не должен предлагать удаление занятого сервера.
   - Что сделано: delete после freshness/archive checks отклоняет reserved capacity, non-terminal subscription/access и planned/running migration без audit churn; reserve допускает только ready/healthy/allocatable node; reserve/release и 3x-ui migration повышают node revision; frontend helper и handler скрывают и повторно блокируют delete при `usedCapacity > 0`, сохраняя archive завершённой истории.
   - Доказательство: fail-first backend `0/8`, frontend `2/3`; after-fix targeted backend/SQLite `9/9`, server/capacity/3x-ui/subscription `199/199`, backend Debug/Release `1603/1603`, API Release build `0 warnings / 0 errors`, frontend `197/197`, typecheck/build, admin bundle raw `586693/586752`, gzip `156177/156672`, targeted desktop/mobile Playwright `2/2`, полный Playwright `282/282` за `13.4 min`, dependency audit `0 vulnerabilities`, EF pending-model check, formatter, strict UTF-8/BOM guard и secret scan `727/0` зелёные. Все 17 admin sections и 25 responsive viewport-конфигураций проходят; реальные VPS/SSH/Ansible/3x-ui outcomes остаются внешним evidence.
+- [x] `P11-ACC-482` Оставлять набор пользователей закрытым после завершения обслуживания VPN-сервера. 2026-08-24.
+  - Что сделать: выход из `Maintenance` не должен неявно возвращать сервер в `Ready` и открывать автоматическое распределение; оператор должен отдельно подтвердить открытие набора.
+  - Что сделано: `DisableMaintenance` переводит узел в `Draining` с `IsAvailableForNewUsers=false`; админка показывает отдельные последовательные команды «Завершить обслуживание» и «Открыть набор», а mock API следует тому же fail-closed контракту.
+  - Доказательство: fail-first backend `0/1` (`Ready` вместо `Draining`); after-fix `AdminOperationBoundaryTests` `22/22`, frontend `197/197`, targeted admin desktop/mobile Playwright `2/2`, backend Debug/Release `1604/1604`, полный Playwright `282/282`, typecheck/build, formatter, dependency audit и strict UTF-8/BOM guard зелёные. Реальное распределение на VPS/3x-ui этим пунктом не подтверждается.
+- [x] `P11-ACC-483` Запретить разрыв слов в мобильном hero-заголовке публичного сайта. 2026-08-24.
+  - Что сделать: общий `overflow-wrap:anywhere` не должен разбивать русские слова заголовка на произвольных символах в узком viewport.
+  - Что сделано: hero восстанавливает обычный перенос целых слов и получает ограниченный мобильный размер шрифта; responsive Playwright проверяет каждое слово через DOM Range на всех representative viewport-конфигурациях.
+  - Доказательство: визуальное воспроизведение на `390x844`; after-fix targeted all-screens Playwright `1/1`, полный Playwright `282/282`, все 25 responsive viewport-конфигураций, frontend `197/197`, typecheck/build и dependency audit зелёные.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3433,6 +3441,8 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-24-016` | P2 | Public mobile hero | Общий `overflow-wrap:anywhere` разрывал длинные русские слова hero-заголовка на произвольных символах в узком viewport. | Исправлено локально | Локальное правило целых слов и responsive DOM Range regression проходят на всех representative viewport-конфигурациях. |
+| `BUG-2026-08-24-015` | P1 | Admin VPN server maintenance | Завершение обслуживания сразу переводило сервер в `Ready` и неявно открывало набор новых пользователей без отдельного решения оператора. | Исправлено локально | Backend сохраняет `Draining/false`; unit и desktop/mobile E2E подтверждают отдельное явное открытие набора. Реальный VPS allocation smoke остаётся внешним evidence. |
 | `BUG-2026-08-15-014` | P1 | Admin VPN server active workload archive | Сервер с занятым slot, активной подпиской/VPN-доступом или migration переходил в terminal archive; capacity service резервировал Archived/Disabled/Maintenance node, а UI показывал delete занятого сервера. | Исправлено локально | Active workload guards, operational reserve predicate, revisioned capacity mutations и occupied-card zero-delete проверены SQLite, backend, desktop/mobile и полной responsive-матрицей. Реальные VPS/3x-ui concurrency outcomes остаются внешним evidence. |
 | `BUG-2026-08-15-013` | P1 | Admin VPN server provisioning archive | Сервер с queued run архивировался, worker продолжал claim/execution, lease recovery менял archive на Error, cancel возвращал узел в New, а UI оставлял четыре actions исторического запуска. | Исправлено локально | Active-run archive conflict, DB-side worker filter, terminal-preserving recovery, direct command guards и zero-action historical run проверены SQLite/desktop/mobile/full responsive regressions. Реальные VPS/SSH/Ansible/3x-ui outcomes остаются внешним evidence. |
 | `BUG-2026-08-15-012` | P1 | Admin VPN server archive | Terminal server archive блокировал update/state/provision/delete, но health endpoint создавал synthetic history/audit, а UI оставлял edit, health и disabled provisioning controls. | Исправлено локально | Early archived health guard, SQLite no-churn и zero-action historical card проверены desktop/mobile/full responsive regressions. Реальные VPS/SSH/Ansible/3x-ui outcomes остаются внешним evidence. |
