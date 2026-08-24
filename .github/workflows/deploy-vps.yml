@@ -254,7 +254,7 @@ jobs:
       - name: Normalize production environment file
         run: |
           printf '%s\n' "$PRODUCTION_ENV_FILE" > production.env
-          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/normalize-production-env.ps1 -Path production.env -OutputPath production.env
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/normalize-production-env.ps1 -Path production.env -OutputPath production.env -RequireStartupReady
 
       - name: Upload Docker release and environment file
         if: steps.deploy_mode.outputs.mode == 'docker'

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.751.0 - 2026-08-24
+
+Release entry: `2026-08-24-deploy-production-smtp-preflight`.
+
+### Fixed
+
+- VPS deploy теперь fail-fast проверяет обязательную production SMTP-конфигурацию до загрузки релиза и остановки действующего systemd API.
+- Проверка требует SMTP mode, host, port, from address и password при заданном username, но выводит только имена неполных настроек без значений и секретов.
+- Regression покрывает готовый и неполный `PRODUCTION_ENV_FILE`, принудительные production-safe флаги и cleanup временных файлов.
+
+### Verification
+
+- Реальный GitHub Actions deploy `32685191446` воспроизвел поздний startup failure из-за отсутствующего `Email:Mode=Smtp` и успешно откатил предыдущий релиз; fail-first workflow guard завершился `0/1`.
+- After-fix `DeployWorkflowGuardTests` `9/9` и PowerShell normalizer regression проходят. Backend Debug/Release `1605/1605`, API Release build `0 warnings / 0 errors`, formatter, strict UTF-8/BOM guard и secret scan `727/0` подтверждают финальный gate этого релиза.
+- Roadmap `775/795` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Внешний `PRODUCTION_ENV_FILE` все еще требует реальных SMTP-настроек; VPS deploy, production-like 3x-ui/x-ui, live payments и полный staging evidence не закрыты.
+
 ## 0.750.0 - 2026-08-24
 
 Release entry: `2026-08-24-maintenance-and-mobile-heading-guard`.

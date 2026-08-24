@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1604/1604`.
+- Backend full suite: `1605/1605`.
 - API Release build: OK.
 - Frontend unit tests: `197/197`.
 - Frontend typecheck/build: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-24-maintenance-and-mobile-heading-guard`, версия `0.750.0`; maintenance exit сохраняет `Draining/false` до отдельного открытия allocation, а mobile hero word integrity проверена responsive regression. Real VPS/SSH/Ansible, production-like 3x-ui/x-ui, provider/Telegram/SMTP delivery и полный staging evidence всё ещё требуются.
-- Roadmap progress: `774/794` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-24-deploy-production-smtp-preflight`, версия `0.751.0`; production SMTP теперь проверяется до upload и остановки systemd API. Реальный deploy `32685191446` откатился из-за неполного внешнего `PRODUCTION_ENV_FILE`; successful VPS deploy, production-like 3x-ui/x-ui, provider/Telegram/SMTP delivery и полный staging evidence всё ещё требуются.
+- Roadmap progress: `775/795` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

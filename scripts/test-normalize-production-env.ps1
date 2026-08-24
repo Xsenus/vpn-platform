@@ -49,6 +49,12 @@ try {
         "Database__ApplyMigrationsOnStartup=true",
         "Database__SeedDemoData=true",
         "Swagger__Enabled=true",
+        "Email__Mode=Smtp",
+        "Email__Host=smtp.test.invalid",
+        "Email__Port=587",
+        "Email__FromAddress=no-reply@test.invalid",
+        "Email__Username=smtp-test-user",
+        "Email__Password=smtp-test-password",
         "ConnectionStrings__DefaultConnection=Host=127.0.0.1;Database=vpnplatform;Username=vpnplatform;Password=db-secret",
         "Jwt__SigningKey=jwt-secret"
     )
@@ -56,7 +62,7 @@ try {
     $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
     [System.IO.File]::WriteAllLines($inputPath, $inputLines, $utf8NoBom)
 
-    & $scriptPath -Path $inputPath -OutputPath $outputPath
+    & $scriptPath -Path $inputPath -OutputPath $outputPath -RequireStartupReady
 
     $outputBytes = [System.IO.File]::ReadAllBytes($outputPath)
     if ($outputBytes.Length -ge 3 -and $outputBytes[0] -eq 0xEF -and $outputBytes[1] -eq 0xBB -and $outputBytes[2] -eq 0xBF) {
@@ -73,6 +79,12 @@ try {
         "Database__ApplyMigrationsOnStartup=false",
         "Database__SeedDemoData=false",
         "Swagger__Enabled=false",
+        "Email__Mode=Smtp",
+        "Email__Host=smtp.test.invalid",
+        "Email__Port=587",
+        "Email__FromAddress=no-reply@test.invalid",
+        "Email__Username=smtp-test-user",
+        "Email__Password=smtp-test-password",
         "ConnectionStrings__DefaultConnection=Host=127.0.0.1;Database=vpnplatform;Username=vpnplatform;Password=db-secret",
         "Jwt__SigningKey=jwt-secret"
     )) {
@@ -92,6 +104,39 @@ try {
         if ($content.Contains($forbidden)) {
             throw "Normalized env still contains forbidden line/value: $forbidden"
         }
+    }
+
+    $invalidInputPath = Join-Path $testRoot "production-missing-smtp.env"
+    $invalidOutputPath = Join-Path $testRoot "normalized-missing-smtp.env"
+    $smtpValueThatMustNotLeak = "smtp-value-that-must-not-leak"
+    [System.IO.File]::WriteAllLines($invalidInputPath, @(
+        "ASPNETCORE_ENVIRONMENT=Production",
+        "Email__Mode=Disabled",
+        "Email__Username=smtp-test-user",
+        "Email__Password=$smtpValueThatMustNotLeak"
+    ), $utf8NoBom)
+
+    $failureMessage = ""
+    try {
+        & $scriptPath -Path $invalidInputPath -OutputPath $invalidOutputPath -RequireStartupReady | Out-Null
+        throw "Expected missing SMTP settings to fail production startup preflight."
+    }
+    catch {
+        if ($_.Exception.Message.IndexOf("Expected missing SMTP settings", [System.StringComparison]::Ordinal) -ge 0) {
+            throw
+        }
+
+        $failureMessage = $_.Exception.Message
+    }
+
+    foreach ($expectedFailure in @("Email__Mode", "Email__Host", "Email__Port", "Email__FromAddress")) {
+        if ($failureMessage.IndexOf($expectedFailure, [System.StringComparison]::Ordinal) -lt 0) {
+            throw "Missing SMTP settings failure did not mention $expectedFailure."
+        }
+    }
+
+    if ($failureMessage.IndexOf($smtpValueThatMustNotLeak, [System.StringComparison]::Ordinal) -ge 0) {
+        throw "Production startup preflight exposed an SMTP value."
     }
 
     Write-Host "normalize production env regression ok"

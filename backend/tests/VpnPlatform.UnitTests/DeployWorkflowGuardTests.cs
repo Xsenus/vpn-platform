@@ -82,6 +82,39 @@ public class DeployWorkflowGuardTests
     }
 
     [Fact]
+    public void Deploy_Workflow_Should_Validate_Production_Smtp_Before_Upload()
+    {
+        var root = FindRepositoryRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-vps.yml"));
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "normalize-production-env.ps1"));
+        var regression = File.ReadAllText(Path.Combine(root, "scripts", "test-normalize-production-env.ps1"));
+        var documentation = File.ReadAllText(Path.Combine(root, "docs", "github-deployment.md"));
+        var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
+
+        Assert.Contains("-RequireStartupReady", workflow, StringComparison.Ordinal);
+        Assert.Contains("RequireStartupReady", script, StringComparison.Ordinal);
+        Assert.Contains("Production env startup preflight passed", script, StringComparison.Ordinal);
+
+        foreach (var expected in new[]
+                 {
+                     "Email__Mode",
+                     "Email__Host",
+                     "Email__Port",
+                     "Email__FromAddress",
+                     "Email__Username",
+                     "Email__Password"
+                 })
+        {
+            Assert.Contains(expected, script, StringComparison.Ordinal);
+            Assert.Contains(expected, regression, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("missing SMTP settings", regression, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("before upload", documentation, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P11-ACC-484`", roadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Production_Env_Normalizer_Regression_Should_Cleanup_Default_Tmp()
     {
         var root = FindRepositoryRoot();

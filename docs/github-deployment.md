@@ -122,7 +122,7 @@ Email__Username=<smtp-user>
 Email__Password=<smtp-secret>
 ```
 
-Workflow перед upload запускает `scripts/normalize-production-env.ps1` и принудительно сохраняет production-safe флаги в загружаемом `.env`: `ASPNETCORE_ENVIRONMENT=Production`, `AdminBootstrap__Enabled=false`, пустой `AdminBootstrap__Password`, `AdminBootstrap__ResetExistingPassword=false`, `Database__ApplyMigrationsOnStartup=false`, `Database__SeedDemoData=false`, `Swagger__Enabled=false`. Первый admin/reset выполняйте отдельным `admin-bootstrap`/`admin-vps-bootstrap-smoke`, а не постоянным bootstrap в shared `.env`.
+Workflow перед upload запускает `scripts/normalize-production-env.ps1 -RequireStartupReady` и принудительно сохраняет production-safe флаги в загружаемом `.env`: `ASPNETCORE_ENVIRONMENT=Production`, `AdminBootstrap__Enabled=false`, пустой `AdminBootstrap__Password`, `AdminBootstrap__ResetExistingPassword=false`, `Database__ApplyMigrationsOnStartup=false`, `Database__SeedDemoData=false`, `Swagger__Enabled=false`. После нормализации preflight требует `Email__Mode=Smtp`, непустой `Email__Host`, порт `1..65535`, валидный `Email__FromAddress` и `Email__Password`, если задан `Email__Username`. Проверка выполняется before upload и сообщает только имена неполных настроек, не их значения. Первый admin/reset выполняйте отдельным `admin-bootstrap`/`admin-vps-bootstrap-smoke`, а не постоянным bootstrap в shared `.env`.
 
 Платежные провайдеры, Telegram bot и live provisioning включай только после добавления реальных учетных данных. Production API не запустится без SMTP-конфигурации: это защищает password reset от незаметного накопления недоставляемых писем.
 
@@ -134,7 +134,7 @@ Workflow перед upload запускает `scripts/normalize-production-env.
 2. Проверяются `.NET 9`, backend build/test, frontend typecheck/test/build и `docker compose config`.
 3. Job `deploy` подключается к VPS по SSH.
 4. В режиме `auto` workflow сам выбирает `docker` или `systemd`.
-5. Workflow нормализует `PRODUCTION_ENV_FILE` в `production.env`, чтобы stale секреты не включили Local/Swagger/demo seed/auto migrations или постоянный admin bootstrap на VPS.
+5. Workflow нормализует `PRODUCTION_ENV_FILE` в `production.env` и fail-fast проверяет обязательную production SMTP-конфигурацию до upload, чтобы stale секреты не включили Local/Swagger/demo seed/auto migrations/постоянный admin bootstrap и не остановили рабочий API поздним startup failure.
 6. В режиме `docker` загружается архив исходников и нормализованный env, затем на VPS выполняется `docker compose up -d --build --remove-orphans`.
 7. В режиме `systemd` GitHub Actions собирает self-contained API под `linux-x64`, собирает frontend, загружает архив и нормализованный env на VPS, заменяет `/opt/vpn-platform/api` и `/opt/vpn-platform/web`, затем перезапускает `vpn-platform-api`.
 8. После деплоя проверяются `http://127.0.0.1:8080/health/live` и `/health/ready`.

@@ -1,9 +1,94 @@
 param(
     [Parameter(Mandatory = $true)][string]$Path,
-    [string]$OutputPath = $Path
+    [string]$OutputPath = $Path,
+    [switch]$RequireStartupReady
 )
 
 $ErrorActionPreference = "Stop"
+
+function Get-ProductionEnvValues {
+    param([Parameter(Mandatory = $true)][string]$EnvPath)
+
+    $values = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $lineNumber = 0
+    foreach ($line in [System.IO.File]::ReadAllLines($EnvPath)) {
+        $lineNumber++
+        $trimmed = $line.Trim()
+        if ([string]::IsNullOrWhiteSpace($trimmed) -or $trimmed.StartsWith("#")) {
+            continue
+        }
+
+        $separatorIndex = $line.IndexOf("=")
+        if ($separatorIndex -le 0) {
+            throw "Production env startup preflight failed: malformed setting at line $lineNumber."
+        }
+
+        $key = $line.Substring(0, $separatorIndex).Trim()
+        $value = $line.Substring($separatorIndex + 1).Trim()
+        if ($value.Length -ge 2 -and (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'")))) {
+            $value = $value.Substring(1, $value.Length - 2)
+        }
+
+        if ($values.ContainsKey($key)) {
+            throw "Production env startup preflight failed: duplicate setting $key."
+        }
+
+        $values.Add($key, $value)
+    }
+
+    return $values
+}
+
+function Assert-ProductionStartupReady {
+    param([Parameter(Mandatory = $true)][string]$EnvPath)
+
+    $values = Get-ProductionEnvValues -EnvPath $EnvPath
+    $errors = [System.Collections.Generic.List[string]]::new()
+
+    $emailMode = if ($values.ContainsKey("Email__Mode")) { $values["Email__Mode"] } else { "" }
+    if (-not [string]::Equals($emailMode, "Smtp", [System.StringComparison]::OrdinalIgnoreCase)) {
+        $errors.Add("Email__Mode must be Smtp")
+    }
+
+    $emailHost = if ($values.ContainsKey("Email__Host")) { $values["Email__Host"] } else { "" }
+    if ([string]::IsNullOrWhiteSpace($emailHost)) {
+        $errors.Add("Email__Host is required")
+    }
+
+    $emailPortText = if ($values.ContainsKey("Email__Port")) { $values["Email__Port"] } else { "" }
+    $emailPort = 0
+    if (-not [int]::TryParse($emailPortText, [ref]$emailPort) -or $emailPort -lt 1 -or $emailPort -gt 65535) {
+        $errors.Add("Email__Port must be between 1 and 65535")
+    }
+
+    $fromAddress = if ($values.ContainsKey("Email__FromAddress")) { $values["Email__FromAddress"] } else { "" }
+    $validFromAddress = $false
+    if (-not [string]::IsNullOrWhiteSpace($fromAddress)) {
+        try {
+            $parsedAddress = [System.Net.Mail.MailAddress]::new($fromAddress)
+            $validFromAddress = -not [string]::IsNullOrWhiteSpace($parsedAddress.Address)
+        }
+        catch {
+            $validFromAddress = $false
+        }
+    }
+
+    if (-not $validFromAddress) {
+        $errors.Add("Email__FromAddress must be a valid email address")
+    }
+
+    $emailUsername = if ($values.ContainsKey("Email__Username")) { $values["Email__Username"] } else { "" }
+    $emailPassword = if ($values.ContainsKey("Email__Password")) { $values["Email__Password"] } else { "" }
+    if (-not [string]::IsNullOrWhiteSpace($emailUsername) -and [string]::IsNullOrWhiteSpace($emailPassword)) {
+        $errors.Add("Email__Password is required when Email__Username is configured")
+    }
+
+    if ($errors.Count -gt 0) {
+        throw "Production env startup preflight failed: $($errors -join '; ')."
+    }
+
+    Write-Host "Production env startup preflight passed. Required SMTP settings are present."
+}
 
 if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
     throw "Production env file was not found: $Path"
@@ -61,3 +146,7 @@ $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 [System.IO.File]::WriteAllLines($resolvedOutputPath, $normalized, $utf8NoBom)
 
 Write-Host "Production env normalized for deploy. Forced keys: $($requiredProductionValues.Keys -join ', ')"
+
+if ($RequireStartupReady) {
+    Assert-ProductionStartupReady -EnvPath $resolvedOutputPath
+}

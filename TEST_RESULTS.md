@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-24.
 
+## Check 2026-08-24: production SMTP deploy preflight
+
+Scope:
+
+- Release entry: `2026-08-24-deploy-production-smtp-preflight`, version `0.751.0`.
+- Roadmap progress: `775/795` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- Real deploy evidence: GitHub Actions run `32685191446` reached the production VPS, selected systemd, failed startup safety because the external `PRODUCTION_ENV_FILE` did not enable required SMTP, and rolled back the previous release.
+- Fail-first workflow guard: `0/1`, because deploy did not validate production SMTP before upload and service restart.
+- After fix: `DeployWorkflowGuardTests` `9/9`; production env regression validates ready and missing-SMTP fixtures, does not expose the synthetic secret marker and cleans temporary files.
+- Final gate: backend Debug/Release `1605/1605`, API Release build `0 warnings / 0 errors`, formatter, strict UTF-8/BOM guard, secret scan `727/0` and frontend dependency audit `0 vulnerabilities` are green.
+- External boundary: valid SMTP values must be added to the GitHub `PRODUCTION_ENV_FILE` secret before a successful deploy can be proven. VPS production smoke, real admin account, production-like 3x-ui/x-ui, provider cabinets and live payments remain open.
+
 ## Check 2026-08-24: fail-closed maintenance exit and mobile hero
 
 Scope:

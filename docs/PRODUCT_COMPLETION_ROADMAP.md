@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-24.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-24-maintenance-and-mobile-heading-guard`, версия `0.750.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `774/794` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-24-deploy-production-smtp-preflight`, версия `0.751.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `775/795` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-24:
 
-- [x] `STATE-001` Backend test suite проходит: `1604/1604`.
+- [x] `STATE-001` Backend test suite проходит: `1605/1605`.
 - [x] `STATE-002` Frontend test suite проходит: `197/197`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -2792,6 +2792,10 @@ git diff --check
   - Что сделать: общий `overflow-wrap:anywhere` не должен разбивать русские слова заголовка на произвольных символах в узком viewport.
   - Что сделано: hero восстанавливает обычный перенос целых слов и получает ограниченный мобильный размер шрифта; responsive Playwright проверяет каждое слово через DOM Range на всех representative viewport-конфигурациях.
   - Доказательство: визуальное воспроизведение на `390x844`; after-fix targeted all-screens Playwright `1/1`, полный Playwright `282/282`, все 25 responsive viewport-конфигураций, frontend `197/197`, typecheck/build и dependency audit зелёные.
+- [x] `P11-ACC-484` Проверять production SMTP-конфигурацию до загрузки релиза на VPS. 2026-08-24.
+  - Что сделать: deploy не должен сначала останавливать рабочий systemd API и только затем обнаруживать, что `PRODUCTION_ENV_FILE` не проходит актуальный startup safety contract.
+  - Что сделано: normalizer получил `-RequireStartupReady`; после принудительных production-флагов он fail-fast проверяет SMTP mode/host/port/from и password при username, не выводя значения. `deploy-vps` запускает preflight до Docker/systemd upload, а regression покрывает готовый и missing-SMTP файлы и cleanup.
+  - Доказательство: реальный GitHub Actions deploy `32685191446` воспроизвёл поздний отказ `Email:Mode=Smtp is required in Production` и выполнил rollback; fail-first guard `0/1`; after-fix PowerShell regression, `DeployWorkflowGuardTests`, backend Debug/Release `1605/1605`, formatter, UTF-8 и secret scan зелёные. Production SMTP credentials по-прежнему должны быть добавлены во внешний `PRODUCTION_ENV_FILE` до успешного VPS deploy.
 - [ ] `P11-ACC-002` VPS production smoke.
   - Что сделать: deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access.
   - Что сделано: добавлен `scripts/vps-production-smoke.ps1` и инструкция `docs/vps-production-smoke.md`. Runner проверяет `/health/live`, `/health/ready`, опционально public/cabinet/admin SPA, admin login/dashboard, публичные тарифы и способы оплаты, checkout session, регистрацию пользователя, claim заказа, payment init, sandbox webhook только в non-Production, историю заказов/платежей, активную подписку, VPN access и latest "Что нового". Для `YooKassa` добавлен безопасный sandbox webhook header. Скрипт fail-closed: без `-AllowSandboxWebhook` останавливается после payment init с `partial ok`, а с `-AllowSandboxWebhook` запрещает запуск, если API сообщает `Production`.
@@ -3441,6 +3445,7 @@ git diff --check
 
 | ID | Приоритет | Область | Ошибка/риск | Статус | Что нужно сделать |
 | --- | --- | --- | --- | --- | --- |
+| `BUG-2026-08-24-017` | P1 | VPS production deploy | `PRODUCTION_ENV_FILE` нормализовал старые safety-флаги, но не проверял обязательный SMTP contract; реальный systemd deploy останавливал API, ждал health timeout и только затем откатывался. | Исправлено локально | Fail-fast SMTP preflight запускается до upload, не печатает значения и покрыт positive/missing-config regression; внешний secret всё ещё требует настройки. |
 | `BUG-2026-08-24-016` | P2 | Public mobile hero | Общий `overflow-wrap:anywhere` разрывал длинные русские слова hero-заголовка на произвольных символах в узком viewport. | Исправлено локально | Локальное правило целых слов и responsive DOM Range regression проходят на всех representative viewport-конфигурациях. |
 | `BUG-2026-08-24-015` | P1 | Admin VPN server maintenance | Завершение обслуживания сразу переводило сервер в `Ready` и неявно открывало набор новых пользователей без отдельного решения оператора. | Исправлено локально | Backend сохраняет `Draining/false`; unit и desktop/mobile E2E подтверждают отдельное явное открытие набора. Реальный VPS allocation smoke остаётся внешним evidence. |
 | `BUG-2026-08-15-014` | P1 | Admin VPN server active workload archive | Сервер с занятым slot, активной подпиской/VPN-доступом или migration переходил в terminal archive; capacity service резервировал Archived/Disabled/Maintenance node, а UI показывал delete занятого сервера. | Исправлено локально | Active workload guards, operational reserve predicate, revisioned capacity mutations и occupied-card zero-delete проверены SQLite, backend, desktop/mobile и полной responsive-матрицей. Реальные VPS/3x-ui concurrency outcomes остаются внешним evidence. |

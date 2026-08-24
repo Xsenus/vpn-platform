@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-24",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `1604/1604`",
+                     "Backend full suite: `1605/1605`",
                      "Frontend unit tests: `197/197`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `282/282`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-24-maintenance-and-mobile-heading-guard",
-                     "0.750.0"
+                     "2026-08-24-deploy-production-smtp-preflight",
+                     "0.751.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -58,8 +58,8 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-24-maintenance-and-mobile-heading-guard", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-24-maintenance-and-mobile-heading-guard", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-24-deploy-production-smtp-preflight", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-24-deploy-production-smtp-preflight", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `1604/1604`",
+                     "Backend full suite: `1605/1605`",
                      "Frontend unit tests: `197/197`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-24-maintenance-and-mobile-heading-guard",
-                     "0.750.0",
+                     "2026-08-24-deploy-production-smtp-preflight",
+                     "0.751.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",
