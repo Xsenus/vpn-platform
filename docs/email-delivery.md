@@ -10,10 +10,12 @@ API материализует пользовательские email-уведо
 Email__Mode=Disabled
 ```
 
-В Production startup validator требует рабочую SMTP-конфигурацию:
+В полноценном Production startup validator требует рабочую SMTP-конфигурацию:
 
 ```text
 Email__Mode=Smtp
+Email__AllowDisabledInProduction=false
+Auth__PasswordReset__Enabled=true
 Email__Host=smtp.provider.example
 Email__Port=587
 Email__UseSsl=true
@@ -24,6 +26,16 @@ Email__Password=<secret-manager-value>
 ```
 
 Пароль SMTP передается только через secret manager или переменные окружения. Его нельзя добавлять в JSON, логи, audit или evidence reports.
+
+Временный ручной deploy допускает явный degraded mode:
+
+```text
+Email__Mode=Disabled
+Email__AllowDisabledInProduction=true
+Auth__PasswordReset__Enabled=false
+```
+
+При этом `forgot-password` и `reset-password` возвращают `503 email_delivery_disabled`, а email dispatcher не запускается. Обычный push/deploy не включает этот флаг; режим не считается подтверждением production email и должен быть отключен после настройки SMTP.
 
 ## Сброс пароля
 

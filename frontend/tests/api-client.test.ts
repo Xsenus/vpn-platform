@@ -902,6 +902,7 @@ test('auth helpers validate forms and translate backend codes to Russian text', 
   assert.equal(translateAuthError(new Error('unknown_auth_failure'), 'Не удалось войти'), 'Не удалось войти')
   assert.equal(translateAuthError(new Error('email_exists')), 'Аккаунт с таким email уже зарегистрирован. Войдите или восстановите пароль.')
   assert.equal(translateAuthError(new Error('invalid_referral_code')), 'Реферальный код не найден или больше недоступен.')
+  assert.equal(translateAuthError(new ApiClientError('Запрос не выполнен.', 503, { error: 'email_delivery_disabled' })), 'Восстановление пароля временно недоступно. Обратитесь в поддержку.')
   assert.equal(
     translateAuthMessage('If the account exists, a password reset instruction has been queued for the configured delivery channel.'),
     'Если аккаунт существует, инструкция по сбросу пароля поставлена в очередь отправки.'

@@ -17824,5 +17824,28 @@
         "text": "Roadmap progress is 776/796 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required before production-ready acceptance."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-24-production-email-degraded-mode",
+    "version": "0.753.0",
+    "releasedAt": "2026-08-24T11:14:45+07:00",
+    "title": "Production can explicitly run without email",
+    "summary": "A manual VPS deployment can now opt into a temporary degraded mode that disables email delivery and password recovery without weakening the default SMTP guard.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "Manual deploys expose an explicit allow_disabled_email switch, while push and default manual deploys continue to require complete SMTP settings before upload."
+      },
+      {
+        "type": "important",
+        "text": "Password reset request and confirmation return a controlled service-unavailable response in degraded mode, and the email dispatcher does not run."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 777/797 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required; degraded deployment does not prove SMTP delivery or production-ready admin acceptance."
+      }
+    ]
   }
 ]

@@ -128,9 +128,16 @@ public sealed class StartupSafetyValidator : IHostedService
                 errors.Add("Vpn:X3Ui:Mode=Sandbox is forbidden in Production.");
             }
 
-            if (!smtpEnabled)
+            if (!smtpEnabled && !(emailDisabled && _emailOptions.AllowDisabledInProduction))
             {
-                errors.Add("Email:Mode=Smtp is required in Production so queued account notifications are delivered.");
+                errors.Add("Email:Mode=Smtp is required in Production unless Email:Mode=Disabled and Email:AllowDisabledInProduction=true are explicitly configured for degraded operation.");
+            }
+
+            if (emailDisabled
+                && _emailOptions.AllowDisabledInProduction
+                && _configuration.GetValue("Auth:PasswordReset:Enabled", true))
+            {
+                errors.Add("Auth:PasswordReset:Enabled must be false when production email delivery is disabled.");
             }
 
             foreach (var pair in FlattenConfiguration(_configuration))
@@ -172,6 +179,12 @@ public sealed class StartupSafetyValidator : IHostedService
             }
 
             throw new InvalidOperationException("Startup safety validation failed: " + string.Join("; ", errors));
+        }
+
+        if (_environment.IsProduction() && emailDisabled && _emailOptions.AllowDisabledInProduction)
+        {
+            _logger.LogWarning(
+                "Production is running in degraded email mode. Password reset and email notification delivery are disabled.");
         }
 
         _logger.LogInformation(

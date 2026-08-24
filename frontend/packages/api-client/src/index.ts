@@ -1332,7 +1332,8 @@ const authErrorMessages: Record<string, string> = {
   refresh_token_expired: 'Сессия истекла. Войдите заново.',
   user_not_active: 'Аккаунт недоступен. Обратитесь в поддержку.',
   invalid_reset_request: 'Проверьте код сброса и новый пароль: пароль должен быть не короче 8 символов.',
-  invalid_or_expired_reset_token: 'Код сброса неверный или уже истек. Запросите новый код.'
+  invalid_or_expired_reset_token: 'Код сброса неверный или уже истек. Запросите новый код.',
+  email_delivery_disabled: 'Восстановление пароля временно недоступно. Обратитесь в поддержку.'
 }
 
 const authErrorFallbacks: Record<string, string> = {

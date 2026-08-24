@@ -470,7 +470,8 @@ public class SecurityHardeningMvpTests
                 ["Security:SecretEncryptionKey"] = "unit-test-secret-encryption-key-000000000000000000",
                 ["Auth:RefreshTokenDays"] = "30",
                 ["Auth:PasswordReset:ExpiryMinutes"] = "30",
-                ["Auth:PasswordReset:ReturnTokenForValidation"] = returnResetTokenForValidation ? "true" : "false"
+                ["Auth:PasswordReset:ReturnTokenForValidation"] = returnResetTokenForValidation ? "true" : "false",
+                ["Email:Mode"] = "Smtp"
             })
             .Build();
         var controller = new AuthController(db, new PasswordService(), new JwtTokenService(configuration), new TestClock(), configuration, new SecretProtector(configuration));

@@ -94,6 +94,11 @@ public class DeployWorkflowGuardTests
         Assert.Contains("-RequireStartupReady", workflow, StringComparison.Ordinal);
         Assert.Contains("RequireStartupReady", script, StringComparison.Ordinal);
         Assert.Contains("Production env startup preflight passed", script, StringComparison.Ordinal);
+        Assert.Contains("allow_disabled_email", workflow, StringComparison.Ordinal);
+        Assert.Contains("-AllowDisabledEmail", workflow, StringComparison.Ordinal);
+        Assert.Contains("Email__AllowDisabledInProduction", script, StringComparison.Ordinal);
+        Assert.Contains("Auth__PasswordReset__Enabled", script, StringComparison.Ordinal);
+        Assert.Contains("AllowDisabledEmail", regression, StringComparison.OrdinalIgnoreCase);
 
         foreach (var expected in new[]
                  {

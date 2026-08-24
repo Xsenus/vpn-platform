@@ -256,6 +256,11 @@ public class AuthController : ControllerBase
     [EnableRateLimiting(ApiRateLimitPolicies.AuthSensitive)]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken)
     {
+        if (!IsPasswordResetEnabled())
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = "email_delivery_disabled" });
+        }
+
         var normalizedEmail = NormalizeEmail(request?.Email);
         const int maxAttempts = 5;
         for (var attempt = 0; attempt < maxAttempts; attempt++)
@@ -355,6 +360,11 @@ public class AuthController : ControllerBase
     [EnableRateLimiting(ApiRateLimitPolicies.AuthSensitive)]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken cancellationToken)
     {
+        if (!IsPasswordResetEnabled())
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = "email_delivery_disabled" });
+        }
+
         var token = request?.Token ?? string.Empty;
         var newPassword = request?.NewPassword ?? string.Empty;
         if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(newPassword) || newPassword.Trim().Length < 8)
@@ -769,6 +779,9 @@ public class AuthController : ControllerBase
             true,
             "If the account exists, a password reset instruction has been queued for the configured delivery channel.",
             validationToken));
+
+    private bool IsPasswordResetEnabled()
+        => _configuration.GetValue("Auth:PasswordReset:Enabled", true);
 
     private void ClearChangeTracker()
     {

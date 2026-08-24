@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.753.0 - 2026-08-24
+
+Release entry: `2026-08-24-production-email-degraded-mode`.
+
+### Added
+
+- Ручной `deploy-vps` получил явный переключатель `allow_disabled_email` для временного production deployment без SMTP.
+- Startup safety принимает `Email:Mode=Disabled` только вместе с `Email:AllowDisabledInProduction=true`; обычный push и ручной deploy без переключателя по-прежнему fail-closed требуют SMTP.
+- В degraded mode оба password-reset endpoint возвращают контролируемый `503 email_delivery_disabled`, email dispatcher не запускается, а кабинет показывает понятное русское сообщение.
+
+### Verification
+
+- PowerShell regression подтверждает SMTP, missing-SMTP и degraded ветки normalizer без вывода секретов. Targeted backend/SQLite `35/35`; полный backend Debug/Release `1609/1609`, frontend `197/197`, typecheck/build и Playwright `282/282` проходят.
+- API Release build `0 warnings / 0 errors`, formatter, UTF-8 `15/15`, dependency audit `0 vulnerabilities`, secret scan `728/0`, cleanup и `git diff --check` подтверждают финальный gate.
+- Roadmap `777/797` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked. Degraded deployment не закрывает реальную SMTP-доставку, production admin, live payments, production-like 3x-ui и полный VPS acceptance.
+
 ## 0.752.0 - 2026-08-24
 
 Release entry: `2026-08-24-live-vps-partial-evidence`.

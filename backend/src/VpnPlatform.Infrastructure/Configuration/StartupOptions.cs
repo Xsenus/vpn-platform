@@ -39,6 +39,7 @@ public sealed class TelegramBotOptions
 public sealed class EmailDeliveryOptions
 {
     public string Mode { get; set; } = "Disabled";
+    public bool AllowDisabledInProduction { get; set; }
     public string Host { get; set; } = string.Empty;
     public int Port { get; set; } = 587;
     public bool UseSsl { get; set; } = true;

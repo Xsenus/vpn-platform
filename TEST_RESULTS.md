@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-24.
 
+## Check 2026-08-24: explicit production email degraded mode
+
+Scope:
+
+- Release entry: `2026-08-24-production-email-degraded-mode`, version `0.753.0`.
+- Roadmap progress: `777/797` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blockers.
+- Startup safety разрешает production без SMTP только при паре `Email:Mode=Disabled` и `Email:AllowDisabledInProduction=true`; default и обычный deploy остаются fail-closed.
+- Ручной `deploy-vps` input `allow_disabled_email` принудительно включает degraded mode до preflight. Password reset request/confirm возвращают `503 email_delivery_disabled`, email dispatcher не регистрируется.
+- Targeted backend/SQLite `35/35`, PowerShell SMTP/missing/degraded regression и frontend `197/197` зелёные.
+- Final gate: backend Debug/Release `1609/1609`; API Release build `0 warnings / 0 errors`; frontend typecheck/build; Playwright `282/282` за `22.6 min`; formatter; UTF-8 `15/15`; audit `0 vulnerabilities`; secret scan `728/0`; cleanup и `git diff --check` проходят.
+- External boundary: режим временный и не является доказательством SMTP delivery или production-ready acceptance; admin, live payment, production-like 3x-ui и полный VPS smoke остаются открыты.
+
 ## Check 2026-08-24: live VPS partial evidence
 
 Scope:

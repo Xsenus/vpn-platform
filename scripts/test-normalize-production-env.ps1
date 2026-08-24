@@ -49,6 +49,8 @@ try {
         "Database__ApplyMigrationsOnStartup=true",
         "Database__SeedDemoData=true",
         "Swagger__Enabled=true",
+        "Auth__PasswordReset__Enabled=false",
+        "Email__AllowDisabledInProduction=true",
         "Email__Mode=Smtp",
         "Email__Host=smtp.test.invalid",
         "Email__Port=587",
@@ -79,6 +81,8 @@ try {
         "Database__ApplyMigrationsOnStartup=false",
         "Database__SeedDemoData=false",
         "Swagger__Enabled=false",
+        "Auth__PasswordReset__Enabled=true",
+        "Email__AllowDisabledInProduction=false",
         "Email__Mode=Smtp",
         "Email__Host=smtp.test.invalid",
         "Email__Port=587",
@@ -137,6 +141,22 @@ try {
 
     if ($failureMessage.IndexOf($smtpValueThatMustNotLeak, [System.StringComparison]::Ordinal) -ge 0) {
         throw "Production startup preflight exposed an SMTP value."
+    }
+
+    $degradedInputPath = Join-Path $testRoot "production-degraded-email.env"
+    $degradedOutputPath = Join-Path $testRoot "normalized-degraded-email.env"
+    [System.IO.File]::WriteAllLines($degradedInputPath, @(
+        "ASPNETCORE_ENVIRONMENT=Production",
+        "Email__Mode=Smtp",
+        "Email__AllowDisabledInProduction=false"
+    ), $utf8NoBom)
+
+    & $scriptPath -Path $degradedInputPath -OutputPath $degradedOutputPath -RequireStartupReady -AllowDisabledEmail
+    $degradedContent = Get-Content -LiteralPath $degradedOutputPath -Raw -Encoding UTF8
+    foreach ($expected in @("Email__Mode=Disabled", "Email__AllowDisabledInProduction=true", "Auth__PasswordReset__Enabled=false")) {
+        if (-not $degradedContent.Contains($expected)) {
+            throw "Degraded email env does not contain expected line: $expected"
+        }
     }
 
     Write-Host "normalize production env regression ok"

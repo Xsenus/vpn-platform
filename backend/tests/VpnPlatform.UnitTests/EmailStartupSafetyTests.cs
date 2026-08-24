@@ -40,6 +40,18 @@ public sealed class EmailStartupSafetyTests
     }
 
     [Fact]
+    public async Task Production_Should_Accept_Explicit_Degraded_Email_Mode()
+    {
+        var validator = CreateValidator(new EmailDeliveryOptions
+        {
+            Mode = "Disabled",
+            AllowDisabledInProduction = true
+        }, passwordResetEnabled: false);
+
+        await validator.StartAsync(CancellationToken.None);
+    }
+
+    [Fact]
     public async Task Smtp_Sender_Should_Fail_Closed_When_Mode_Is_Disabled()
     {
         var sender = new SmtpEmailSender(Options.Create(new EmailDeliveryOptions()));
@@ -62,7 +74,21 @@ public sealed class EmailStartupSafetyTests
         Assert.Contains("FromAddress", error.Message, StringComparison.Ordinal);
     }
 
-    private static StartupSafetyValidator CreateValidator(EmailDeliveryOptions email)
+    [Fact]
+    public async Task Production_Degraded_Email_Mode_Should_Reject_Enabled_Password_Reset()
+    {
+        var validator = CreateValidator(new EmailDeliveryOptions
+        {
+            Mode = "Disabled",
+            AllowDisabledInProduction = true
+        });
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains("Auth:PasswordReset:Enabled", error.Message, StringComparison.Ordinal);
+    }
+
+    private static StartupSafetyValidator CreateValidator(EmailDeliveryOptions email, bool passwordResetEnabled = true)
     {
         var values = new Dictionary<string, string?>
         {
@@ -71,7 +97,8 @@ public sealed class EmailStartupSafetyTests
             ["Database:Provider"] = "Postgres",
             ["Swagger:Enabled"] = "false",
             ["Vpn:X3Ui:Mode"] = "Production",
-            ["TelegramBot:Enabled"] = "false"
+            ["TelegramBot:Enabled"] = "false",
+            ["Auth:PasswordReset:Enabled"] = passwordResetEnabled.ToString()
         };
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(values).Build();
         return new StartupSafetyValidator(

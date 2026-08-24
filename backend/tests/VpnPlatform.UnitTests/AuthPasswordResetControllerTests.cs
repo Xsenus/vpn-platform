@@ -28,6 +28,28 @@ namespace VpnPlatform.UnitTests;
 public class AuthPasswordResetControllerTests
 {
     [Fact]
+    public async Task Password_Reset_Endpoints_Should_Be_Unavailable_When_Email_Is_Disabled()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateSqliteDbContext(connection);
+        await db.Database.EnsureCreatedAsync();
+        var controller = CreateAuthController(
+            db,
+            new TestClock(new DateTimeOffset(2026, 8, 24, 12, 0, 0, TimeSpan.Zero)),
+            passwordResetEnabled: false);
+
+        AssertServiceUnavailable(
+            await controller.ForgotPassword(new ForgotPasswordRequest("user@example.test"), CancellationToken.None),
+            "email_delivery_disabled");
+        AssertServiceUnavailable(
+            await controller.ResetPassword(new ResetPasswordRequest("reset-token", "NewPassword123!"), CancellationToken.None),
+            "email_delivery_disabled");
+        Assert.Empty(await db.PasswordResetTokens.AsNoTracking().ToListAsync());
+        Assert.Empty(await db.OutboxMessages.AsNoTracking().ToListAsync());
+    }
+
+    [Fact]
     public async Task Forgot_And_Reset_Password_Should_Work_With_Sqlite_And_Revoke_Old_Sessions()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -462,7 +484,15 @@ public class AuthPasswordResetControllerTests
         Assert.Equal(expectedError, error);
     }
 
-    private static AuthController CreateAuthController(ApplicationDbContext db, TestClock clock)
+    private static void AssertServiceUnavailable(IActionResult result, string expectedError)
+    {
+        var unavailable = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, unavailable.StatusCode);
+        var error = unavailable.Value?.GetType().GetProperty("error")?.GetValue(unavailable.Value)?.ToString();
+        Assert.Equal(expectedError, error);
+    }
+
+    private static AuthController CreateAuthController(ApplicationDbContext db, TestClock clock, bool passwordResetEnabled = true)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -473,7 +503,8 @@ public class AuthPasswordResetControllerTests
                 ["Security:SecretEncryptionKey"] = "unit-test-secret-encryption-key-000000000000000000",
                 ["Auth:RefreshTokenDays"] = "30",
                 ["Auth:PasswordReset:ExpiryMinutes"] = "30",
-                ["Auth:PasswordReset:ReturnTokenForValidation"] = "true"
+                ["Auth:PasswordReset:ReturnTokenForValidation"] = "true",
+                ["Auth:PasswordReset:Enabled"] = passwordResetEnabled.ToString()
             })
             .Build();
         var controller = new AuthController(db, new PasswordService(), new JwtTokenService(configuration), clock, configuration, new SecretProtector(configuration));

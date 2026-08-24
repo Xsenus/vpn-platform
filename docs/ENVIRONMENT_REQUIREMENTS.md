@@ -30,7 +30,7 @@
 ## Безопасные значения по умолчанию
 
 - `TelegramBot:Enabled=false`.
-- `Email:Mode=Disabled` локально; Production требует `Email:Mode=Smtp`, host, port и from address.
+- `Email:Mode=Disabled` локально; полноценный Production требует `Email:Mode=Smtp`, host, port и from address. Временный degraded запуск допускается только с `Email:AllowDisabledInProduction=true` и отключает password reset/email delivery.
 - `Vpn:X3Ui:Mode=Sandbox` для локальной проверки.
 - `Provisioning:LiveExecutionEnabled=false`.
 - `Provisioning:AllowLiveDeploy=false`.

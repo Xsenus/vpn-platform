@@ -22,7 +22,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1606/1606`.
+- Backend full suite: `1609/1609`.
 - API Release build: OK.
 - Frontend unit tests: `197/197`.
 - Frontend typecheck/build: OK.
@@ -84,8 +84,8 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-24-live-vps-partial-evidence`, версия `0.752.0`; real VPS report подтверждает `8 passed / 2 failed / 8 blocked`. Deploy не прошёл mail preflight, providers остались `Sandbox/Unknown`; successful VPS deploy, production-like 3x-ui/x-ui, provider/Telegram/SMTP delivery и полный staging evidence всё ещё требуются.
-- Roadmap progress: `776/796` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Latest "Что нового": `2026-08-24-production-email-degraded-mode`, версия `0.753.0`; manual deploy получил явный режим без email/password reset. Real VPS report остаётся `8 passed / 2 failed / 8 blocked`, providers `Sandbox/Unknown`; successful degraded deployment, production-like 3x-ui/x-ui, provider/Telegram/SMTP delivery и полный staging evidence всё ещё требуются.
+- Roadmap progress: `777/797` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 
