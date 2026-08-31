@@ -375,6 +375,7 @@ jobs:
           WorkingDirectory=$APP_DIR/api
           EnvironmentFile=
           EnvironmentFile=-$APP_DIR/shared/.env
+          EnvironmentFile=-$APP_DIR/shared/production.override.env
           Environment=ASPNETCORE_URLS=http://0.0.0.0:8080
           ExecStart=
           ExecStart=$APP_DIR/api/VpnPlatform.Api

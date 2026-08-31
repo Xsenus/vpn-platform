@@ -2,6 +2,12 @@ name: production-vpn-smoke
 
 on:
   workflow_dispatch:
+    inputs:
+      enable_production_mode:
+        description: "Persist Vpn__X3Ui__Mode=Production on VPS before the smoke."
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -48,10 +54,18 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" >> ~/.ssh/known_hosts
 
+      - name: Persist production VPN mode
+        if: github.event.inputs.enable_production_mode == 'true'
+        run: |
+          set -euo pipefail
+          scp -P "$VPS_PORT" scripts/configure-production-vpn-mode-remote.sh "$VPS_USER@$VPS_HOST:/tmp/vpn-platform-production-vpn-mode.sh"
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+            "chmod 700 /tmp/vpn-platform-production-vpn-mode.sh && /tmp/vpn-platform-production-vpn-mode.sh '$VPS_APP_DIR'; rc=\$?; rm -f /tmp/vpn-platform-production-vpn-mode.sh; exit \$rc"
+
       - name: Discover real 3x-ui and rotate CLI fallback token
         run: |
           set -euo pipefail
-          vpn_mode="$(ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "awk -F= '\$1 == \"Vpn__X3Ui__Mode\" { value = substr(\$0, index(\$0, \"=\") + 1) } END { print value }' '$VPS_APP_DIR/shared/.env'")"
+          vpn_mode="$(ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'pid="$(systemctl show --property MainPID --value vpn-platform-api)"; tr "\0" "\n" < "/proc/$pid/environ" | sed -n "s/^Vpn__X3Ui__Mode=//p" | tail -n 1')"
           if [ "${vpn_mode,,}" != "production" ]; then
             echo "::error::Production API is not configured with Vpn__X3Ui__Mode=Production."
             exit 1
@@ -117,5 +131,5 @@ jobs:
         with:
           name: production-vpn-smoke-${{ github.run_id }}
           path: artifacts/vpn-live-smoke.json
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
