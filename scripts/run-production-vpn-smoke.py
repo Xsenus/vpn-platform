@@ -72,7 +72,7 @@ def panel_payload(panel_url: str, api_token: str, revision=None):
         "password": api_token,
         "region": "production",
         "capacity": 5000,
-        "sslVerificationMode": "AllowInsecure",
+        "sslVerificationMode": "Disabled",
         "apiVariant": "X3UiOfficial",
         "authenticationMode": "ApiToken",
         "autoCreateInbound": False,
@@ -225,4 +225,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

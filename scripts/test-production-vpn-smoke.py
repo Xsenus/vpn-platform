@@ -15,6 +15,7 @@ class ProductionVpnSmokeTests(unittest.TestCase):
         payload = MODULE.panel_payload("http://127.0.0.1:2053/example", "masked-token", 4)
         self.assertEqual("ApiToken", payload["authenticationMode"])
         self.assertEqual("masked-token", payload["password"])
+        self.assertEqual("Disabled", payload["sslVerificationMode"])
         self.assertEqual(4, payload["revision"])
         self.assertEqual("http://127.0.0.1:2053/example/", payload["baseUrl"])
 
@@ -25,4 +26,3 @@ class ProductionVpnSmokeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
