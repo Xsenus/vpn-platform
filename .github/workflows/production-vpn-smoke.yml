@@ -114,7 +114,7 @@ jobs:
           set -euo pipefail
           api_url="${API_BASE_URL:-http://$VPS_HOST:8080}"
           admin_url="${ADMIN_WEB_URL:-http://$VPS_HOST:5175}"
-          release_id="$(python3 -c 'import json; print(next(x["releaseId"] for x in json.load(open("backend/src/VpnPlatform.Api/AppReleases/releases.json", encoding="utf-8")) if x["isActive"]))')"
+          release_id="$(python3 -c 'import json; releases=json.load(open("backend/src/VpnPlatform.Api/AppReleases/releases.json", encoding="utf-8")); print(max((x for x in releases if x["isActive"]), key=lambda x: x["releasedAt"])["releaseId"])')"
           python3 scripts/run-production-vpn-smoke.py \
             --api-base-url "$api_url" \
             --admin-web-url "$admin_url" \

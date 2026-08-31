@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import importlib.util
+import argparse
 import unittest
 from pathlib import Path
 
@@ -22,6 +23,19 @@ class ProductionVpnSmokeTests(unittest.TestCase):
     def test_find_named_is_exact(self):
         items = [{"name": "production-vps-3xui-old"}, {"name": "production-vps-3xui", "id": "ok"}]
         self.assertEqual("ok", MODULE.find_named(items, "production-vps-3xui")["id"])
+
+    def test_report_removes_private_panel_base_path(self):
+        args = argparse.Namespace(
+            api_base_url="http://api.test",
+            admin_web_url="http://admin.test",
+            panel_url="http://127.0.0.1:54321/private-path/",
+            output="artifacts/report.json",
+            release_id="release",
+            operator="test",
+        )
+        checks = {check_id: ("blocked", "safe") for check_id in MODULE.CHECK_IDS}
+        report = MODULE.build_report(args, "2026-08-31T00:00:00+00:00", checks)
+        self.assertEqual("http://127.0.0.1:54321", report["x3uiPanelUrl"])
 
 
 if __name__ == "__main__":

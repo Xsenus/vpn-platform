@@ -9,6 +9,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
+import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -86,12 +87,16 @@ def panel_payload(panel_url: str, api_token: str, revision=None):
 
 def build_report(args, started_at: str, checks: dict[str, tuple[str, str]]):
     completed_at = datetime.now(timezone.utc).isoformat()
+    parsed_panel_url = urllib.parse.urlsplit(args.panel_url)
+    sanitized_panel_url = urllib.parse.urlunsplit(
+        (parsed_panel_url.scheme, parsed_panel_url.netloc, "", "", "")
+    )
     return {
         "reportId": f"vpn-live-smoke-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}",
         "environmentName": "production-vps",
         "apiBaseUrl": args.api_base_url.rstrip("/"),
         "adminWebUrl": args.admin_web_url.rstrip("/"),
-        "x3uiPanelUrl": args.panel_url.rstrip("/"),
+        "x3uiPanelUrl": sanitized_panel_url,
         "smokeReportPath": str(Path(args.output).resolve()),
         "startedAt": started_at,
         "completedAt": completed_at,
