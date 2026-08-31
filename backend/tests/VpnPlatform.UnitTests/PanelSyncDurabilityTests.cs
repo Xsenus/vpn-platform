@@ -201,10 +201,10 @@ public class PanelSyncDurabilityTests
         public Task<X3UiInboundDto> UpdateInboundAsync(VpnPanel panel, string password, X3UiUpdateInboundRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<X3UiClientDto> AddClientAsync(VpnPanel panel, string password, X3UiAddClientRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<X3UiClientDto> UpdateClientAsync(VpnPanel panel, string password, X3UiUpdateClientRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public Task DeleteClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public Task EnableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public Task DisableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public Task ResetClientTrafficAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public Task<X3UiTrafficSnapshot> GetClientTrafficAsync(VpnPanel panel, string password, string clientId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task DeleteClientAsync(VpnPanel panel, string password, string inboundId, string clientId, string email, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task EnableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, string email, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task DisableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, string email, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task ResetClientTrafficAsync(VpnPanel panel, string password, string inboundId, string email, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<X3UiTrafficSnapshot> GetClientTrafficAsync(VpnPanel panel, string password, string email, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

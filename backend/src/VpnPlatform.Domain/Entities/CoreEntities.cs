@@ -485,6 +485,7 @@ public class VpnPanel : AuditableEntity
     public string EncryptedPassword { get; set; } = string.Empty;
     public VpnSslVerificationMode SslVerificationMode { get; set; } = VpnSslVerificationMode.Strict;
     public X3UiApiVariant ApiVariant { get; set; } = X3UiApiVariant.X3UiOfficial;
+    public VpnPanelAuthenticationMode AuthenticationMode { get; set; } = VpnPanelAuthenticationMode.PasswordSession;
     public int Capacity { get; set; } = 5000;
     public int UsedCapacity { get; set; }
     public bool AutoCreateInbound { get; set; }

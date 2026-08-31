@@ -36,7 +36,7 @@ public class X3UiHttpClientTests
         var client = CreateClient(handler, new FixedClock(now));
 
         var session = await client.LoginAsync(Panel(), "secret", CancellationToken.None);
-        var traffic = await client.GetClientTrafficAsync(Panel(), "secret", "client-1", CancellationToken.None);
+        var traffic = await client.GetClientTrafficAsync(Panel(), "secret", "user@example.test", CancellationToken.None);
 
         Assert.Equal(now, session.CreatedAt);
         Assert.Equal(now, traffic.SyncedAt);
@@ -113,6 +113,24 @@ public class X3UiHttpClientTests
     }
 
     [Fact]
+    public async Task GetInbounds_Should_Use_Bearer_Token_Without_Login()
+    {
+        var handler = new QueueHandler(
+            JsonResponse("{\"success\":true,\"obj\":[{\"id\":1,\"remark\":\"vless\",\"protocol\":\"vless\",\"port\":31008,\"settings\":{\"clients\":[]},\"enable\":true}]}"));
+        var client = CreateClient(handler);
+        var panel = Panel();
+        panel.AuthenticationMode = VpnPanelAuthenticationMode.ApiToken;
+
+        var inbound = Assert.Single(await client.GetInboundsAsync(panel, "token-secret", CancellationToken.None));
+
+        Assert.Equal("1", inbound.Id);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("/panel/api/inbounds/list", request.Path);
+        Assert.Equal("Bearer token-secret", request.Authorization);
+        Assert.Equal(string.Empty, request.Cookie);
+    }
+
+    [Fact]
     public async Task GetInbounds_Should_Accept_Supported_Root_Array_Response()
     {
         var handler = new QueueHandler(
@@ -153,6 +171,99 @@ public class X3UiHttpClientTests
     }
 
     [Fact]
+    public async Task AddClient_Should_Use_Modern_ThreeXUi_Clients_Api()
+    {
+        var handler = new QueueHandler(JsonResponse("{\"success\":true,\"msg\":\"Client added\"}"));
+        var client = CreateClient(handler);
+        var panel = ThreeXUiPanel();
+        var expiry = new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero);
+
+        await client.AddClientAsync(panel, "token-secret", new X3UiAddClientRequest(
+            "1",
+            "user@example.test",
+            "11111111-1111-1111-1111-111111111111",
+            "xtls-rprx-vision",
+            2,
+            1073741824,
+            expiry,
+            true), CancellationToken.None);
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("/panel/api/clients/add", request.Path);
+        Assert.Equal("Bearer token-secret", request.Authorization);
+        using var body = JsonDocument.Parse(request.Body);
+        Assert.Equal(1, Assert.Single(body.RootElement.GetProperty("inboundIds").EnumerateArray()).GetInt32());
+        var payload = body.RootElement.GetProperty("client");
+        Assert.Equal("11111111-1111-1111-1111-111111111111", payload.GetProperty("id").GetString());
+        Assert.Equal("user@example.test", payload.GetProperty("email").GetString());
+        Assert.Equal(expiry.ToUnixTimeMilliseconds(), payload.GetProperty("expiryTime").GetInt64());
+    }
+
+    [Fact]
+    public async Task DisableClient_Should_Preserve_Modern_ThreeXUi_Identity()
+    {
+        const long expiryTime = 2082758400000;
+        var handler = new QueueHandler(
+            JsonResponse("""
+            {
+              "success": true,
+              "obj": {
+                "client": {
+                  "email": "user@example.test",
+                  "uuid": "11111111-1111-1111-1111-111111111111",
+                  "subId": "subscription-id",
+                  "flow": "xtls-rprx-vision",
+                  "limitIp": 3,
+                  "totalGB": 987654321,
+                  "expiryTime": 2082758400000,
+                  "enable": true,
+                  "tgId": 42
+                }
+              }
+            }
+            """),
+            JsonResponse("{\"success\":true,\"msg\":\"Client updated\"}"));
+        var client = CreateClient(handler);
+
+        await client.DisableClientAsync(
+            ThreeXUiPanel(),
+            "token-secret",
+            "1",
+            "11111111-1111-1111-1111-111111111111",
+            "user@example.test",
+            CancellationToken.None);
+
+        Assert.Contains(handler.Requests, x => x.Path == "/panel/api/clients/get/user%40example.test");
+        var update = Assert.Single(handler.Requests, x => x.Path == "/panel/api/clients/update/user%40example.test");
+        using var body = JsonDocument.Parse(update.Body);
+        Assert.Equal("11111111-1111-1111-1111-111111111111", body.RootElement.GetProperty("id").GetString());
+        Assert.Equal("subscription-id", body.RootElement.GetProperty("subId").GetString());
+        Assert.Equal(expiryTime, body.RootElement.GetProperty("expiryTime").GetInt64());
+        Assert.False(body.RootElement.GetProperty("enable").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Modern_ThreeXUi_Client_Lifecycle_Should_Use_Email_Routes()
+    {
+        var handler = new QueueHandler(
+            JsonResponse("{\"success\":true}"),
+            JsonResponse("{\"success\":true}"),
+            JsonResponse("{\"success\":true,\"obj\":{\"up\":11,\"down\":22}}"));
+        var client = CreateClient(handler);
+        var panel = ThreeXUiPanel();
+
+        await client.DeleteClientAsync(panel, "token-secret", "1", "client-id", "user@example.test", CancellationToken.None);
+        await client.ResetClientTrafficAsync(panel, "token-secret", "1", "user@example.test", CancellationToken.None);
+        var traffic = await client.GetClientTrafficAsync(panel, "token-secret", "user@example.test", CancellationToken.None);
+
+        Assert.Contains(handler.Requests, x => x.Path == "/panel/api/clients/del/user%40example.test" && x.Query == "?keepTraffic=0");
+        Assert.Contains(handler.Requests, x => x.Path == "/panel/api/clients/resetTraffic/user%40example.test");
+        Assert.Contains(handler.Requests, x => x.Path == "/panel/api/clients/traffic/user%40example.test");
+        Assert.Equal(33, traffic.Up + traffic.Down);
+        Assert.All(handler.Requests, x => Assert.Equal("Bearer token-secret", x.Authorization));
+    }
+
+    [Fact]
     public async Task DeleteInbound_Should_Call_Delete_Endpoint()
     {
         var handler = new QueueHandler(LoginResponse(), new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(string.Empty) });
@@ -187,7 +298,7 @@ public class X3UiHttpClientTests
             new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(string.Empty) });
         var client = CreateClient(handler);
 
-        await client.DisableClientAsync(Panel(), "secret", "1", "client-1", CancellationToken.None);
+        await client.DisableClientAsync(Panel(), "secret", "1", "client-1", "user@example.test", CancellationToken.None);
 
         var update = Assert.Single(handler.Requests, x => x.Path == "/panel/api/inbounds/updateClient/client-1");
         Assert.Contains("\\\"enable\\\":false", update.Body);
@@ -227,7 +338,7 @@ public class X3UiHttpClientTests
             new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(string.Empty) });
         var client = CreateClient(handler);
 
-        await client.DisableClientAsync(Panel(), "secret", "1", "client-1", CancellationToken.None);
+        await client.DisableClientAsync(Panel(), "secret", "1", "client-1", "customer@example.test", CancellationToken.None);
 
         Assert.Contains(handler.Requests, x => x.Path == "/panel/api/inbounds/get/1");
         var update = Assert.Single(handler.Requests, x => x.Path == "/panel/api/inbounds/updateClient/client-1");
@@ -255,7 +366,7 @@ public class X3UiHttpClientTests
         var client = CreateClient(handler);
 
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            client.DisableClientAsync(Panel(), "secret", "1", "client-1", CancellationToken.None));
+            client.DisableClientAsync(Panel(), "secret", "1", "client-1", "user@example.test", CancellationToken.None));
 
         Assert.Equal("3x-ui inbound client configuration was not found.", error.Message);
         Assert.DoesNotContain(handler.Requests, x => x.Path.Contains("updateClient", StringComparison.Ordinal));
@@ -267,9 +378,9 @@ public class X3UiHttpClientTests
         var handler = new QueueHandler(LoginResponse(), new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(string.Empty) });
         var client = CreateClient(handler);
 
-        await client.DeleteClientAsync(Panel(), "secret", "1", "client-1", CancellationToken.None);
+        await client.DeleteClientAsync(Panel(), "secret", "1", "client-1", "user@example.test", CancellationToken.None);
 
-        Assert.Contains(handler.Requests, x => x.Path == "/panel/api/inbounds/delClient/1/client-1");
+        Assert.Contains(handler.Requests, x => x.Path == "/panel/api/inbounds/1/delClient/client-1");
     }
 
     [Fact]
@@ -281,7 +392,7 @@ public class X3UiHttpClientTests
         var client = CreateClient(handler);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            client.DeleteClientAsync(Panel(), "secret", "1", "client-1", CancellationToken.None));
+            client.DeleteClientAsync(Panel(), "secret", "1", "client-1", "user@example.test", CancellationToken.None));
     }
 
     [Fact]
@@ -290,7 +401,7 @@ public class X3UiHttpClientTests
         var handler = new QueueHandler(LoginResponse(), new HttpResponseMessage(HttpStatusCode.BadGateway) { Content = new StringContent("panel password secret session=test") });
         var client = CreateClient(handler);
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => client.DeleteClientAsync(Panel(), "secret", "1", "client-1", CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => client.DeleteClientAsync(Panel(), "secret", "1", "client-1", "user@example.test", CancellationToken.None));
 
         Assert.DoesNotContain("secret", ex.Message.ToLowerInvariant());
         Assert.DoesNotContain("session=test", ex.Message.ToLowerInvariant());
@@ -301,6 +412,18 @@ public class X3UiHttpClientTests
 
     private static VpnPanel Panel()
         => new() { Id = Guid.NewGuid(), Name = "panel", BaseUrl = "https://panel.test", Login = "admin", SslVerificationMode = VpnSslVerificationMode.Strict };
+
+    private static VpnPanel ThreeXUiPanel()
+        => new()
+        {
+            Id = Guid.NewGuid(),
+            Name = "three-x-ui-panel",
+            BaseUrl = "https://panel.test",
+            Login = string.Empty,
+            SslVerificationMode = VpnSslVerificationMode.Strict,
+            ApiVariant = X3UiApiVariant.ThreeXUi,
+            AuthenticationMode = VpnPanelAuthenticationMode.ApiToken
+        };
 
     private static HttpResponseMessage LoginResponse()
     {
@@ -332,12 +455,17 @@ public class X3UiHttpClientTests
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var body = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);
-            Requests.Add(new CapturedRequest(request.RequestUri?.AbsolutePath ?? string.Empty, body, request.Headers.TryGetValues("Cookie", out var cookies) ? string.Join(";", cookies) : string.Empty));
+            Requests.Add(new CapturedRequest(
+                request.RequestUri?.AbsolutePath ?? string.Empty,
+                request.RequestUri?.Query ?? string.Empty,
+                body,
+                request.Headers.TryGetValues("Cookie", out var cookies) ? string.Join(";", cookies) : string.Empty,
+                request.Headers.Authorization?.ToString() ?? string.Empty));
             return _responses.Count > 0 ? _responses.Dequeue() : new HttpResponseMessage(HttpStatusCode.NotFound) { Content = new StringContent("{}") };
         }
     }
 
-    private sealed record CapturedRequest(string Path, string Body, string Cookie);
+    private sealed record CapturedRequest(string Path, string Query, string Body, string Cookie, string Authorization);
 
     private sealed class FixedClock(DateTimeOffset utcNow) : IClock
     {

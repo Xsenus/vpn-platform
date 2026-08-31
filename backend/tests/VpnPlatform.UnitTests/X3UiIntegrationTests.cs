@@ -656,6 +656,59 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Panel_Create_Should_Accept_Api_Token_Without_Login()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.CreatePanelAsync(new CreateVpnPanelCommand(
+            "token-panel",
+            "https://panel.example.test/api-path",
+            string.Empty,
+            "token-secret",
+            "ru",
+            100,
+            "Strict",
+            "ThreeXUi",
+            false,
+            "{}",
+            "ApiToken"), CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal("ApiToken", result.Value!.AuthenticationMode);
+        var panel = await db.VpnPanels.SingleAsync();
+        Assert.Equal(VpnPanelAuthenticationMode.ApiToken, panel.AuthenticationMode);
+        Assert.Equal(string.Empty, panel.Login);
+        Assert.Equal(new TestSecretProtector().Protect("token-secret"), panel.EncryptedPassword);
+    }
+
+    [Fact]
+    public async Task Panel_Create_Should_Reject_Unknown_Authentication_Mode()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.CreatePanelAsync(new CreateVpnPanelCommand(
+            "invalid-auth-panel",
+            "https://panel.example.test",
+            "admin",
+            "secret",
+            "eu",
+            100,
+            "Strict",
+            "X3UiOfficial",
+            false,
+            "{}",
+            "Unknown"), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Authentication mode", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await db.VpnPanels.ToListAsync());
+    }
+
+    [Fact]
     public async Task Panel_Update_Should_Reject_Invalid_Configuration_Without_Mutation()
     {
         await using var db = CreateDbContext();
@@ -3222,7 +3275,7 @@ public class X3UiIntegrationTests
             return Task.FromResult(new X3UiClientDto(request.ClientId, request.Email, request.Uuid, request.Flow, request.LimitIp, request.TotalGb, request.ExpiryTime, request.Enable, null, null));
         }
 
-        public Task DeleteClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken)
+        public Task DeleteClientAsync(VpnPanel panel, string password, string inboundId, string clientId, string email, CancellationToken cancellationToken)
         {
             DeleteClientCalls += 1;
             DeleteInboundIds.Add(inboundId);
@@ -3234,17 +3287,17 @@ public class X3UiIntegrationTests
             }
             return Task.CompletedTask;
         }
-        public Task EnableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken)
+        public Task EnableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, string email, CancellationToken cancellationToken)
         {
             EnableClientCalls += 1;
             return Task.CompletedTask;
         }
-        public Task DisableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken)
+        public Task DisableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, string email, CancellationToken cancellationToken)
         {
             DisableClientCalls += 1;
             return Task.CompletedTask;
         }
-        public Task ResetClientTrafficAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken)
+        public Task ResetClientTrafficAsync(VpnPanel panel, string password, string inboundId, string email, CancellationToken cancellationToken)
         {
             ResetTrafficCalls += 1;
             AfterResetTraffic?.Invoke();
@@ -3255,10 +3308,10 @@ public class X3UiIntegrationTests
             }
             return Task.CompletedTask;
         }
-        public Task<X3UiTrafficSnapshot> GetClientTrafficAsync(VpnPanel panel, string password, string clientId, CancellationToken cancellationToken)
+        public Task<X3UiTrafficSnapshot> GetClientTrafficAsync(VpnPanel panel, string password, string email, CancellationToken cancellationToken)
         {
             GetTrafficCalls += 1;
-            return Task.FromResult(new X3UiTrafficSnapshot(clientId, 0, 0, _now));
+            return Task.FromResult(new X3UiTrafficSnapshot(email, 0, 0, _now));
         }
 
         private X3UiInboundDto DefaultInbound()

@@ -82,7 +82,6 @@ async function mockPublicApi(page: Page) {
   let forcedProfileFailure: { accessToken: string; status: number; error: string } | null = null
   let rejectNextProfileRequest = true
   let rejectNextCheckoutPromo = false
-  let checkoutDelayMs = 0
   let holdNextCheckout = false
   let releaseDelayedCheckout: (() => void) | null = null
   let checkoutClaimDelayMs = 0
@@ -216,11 +215,6 @@ async function mockPublicApi(page: Page) {
       holdNextCheckout = false
       await new Promise<void>((resolve) => { releaseDelayedCheckout = resolve })
       releaseDelayedCheckout = null
-    }
-    if (checkoutDelayMs > 0) {
-      const delay = checkoutDelayMs
-      checkoutDelayMs = 0
-      await new Promise((resolve) => setTimeout(resolve, delay))
     }
     if (rejectNextCheckoutPromo) {
       rejectNextCheckoutPromo = false
@@ -438,7 +432,6 @@ async function mockPublicApi(page: Page) {
     releaseRefresh: () => { releaseDelayedRefresh?.() },
     failLogout: () => { logoutShouldFail = true },
     rejectCheckoutPromo: () => { rejectNextCheckoutPromo = true },
-    delayNextCheckout: (delayMs: number) => { checkoutDelayMs = delayMs },
     holdNextCheckout: () => { holdNextCheckout = true },
     releaseCheckout: () => { releaseDelayedCheckout?.() },
     getCheckoutResponseCount: () => checkoutResponseCount,
@@ -1239,12 +1232,14 @@ test('public website covers landing, tariffs, FAQ and checkout start', async ({ 
   await expect(providerSelect.locator('option')).toContainText(['YooKassa sandbox · проверка'])
 
   api.rejectCheckoutPromo()
-  api.delayNextCheckout(300)
+  api.holdNextCheckout()
   await page.getByLabel('Промокод').fill('UNKNOWN')
   await page.getByRole('button', { name: 'Купить' }).first().click()
+  await expect.poll(() => api.getCheckoutRequestCounts().checkout).toBe(1)
   await expect(providerSelect).toBeDisabled()
   await expect(page.getByLabel('Промокод')).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Создаем заказ...' })).toBeDisabled()
+  api.releaseCheckout()
   await expect(page).toHaveURL(/\/tariffs$/)
   await expect(page.getByText('Промокод не найден. Проверьте написание.')).toBeVisible()
   await expect(providerSelect).toBeEnabled()

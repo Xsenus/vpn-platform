@@ -26,6 +26,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey("DateKind")) {
+    $PSDefaultParameterValues["ConvertFrom-Json:DateKind"] = "String"
+}
+
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $bootstrapScript = Join-Path $repoRoot "scripts/admin-bootstrap.ps1"
 $smokeScript = Join-Path $repoRoot "scripts/admin-vps-smoke.ps1"
@@ -55,7 +59,7 @@ function Get-LatestReleaseId {
     }
 
     $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [System.DateTimeOffset]::Parse([string]$_.releasedAt, [System.Globalization.CultureInfo]::InvariantCulture) } -Descending | Select-Object -First 1)
+    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [System.DateTimeOffset]::Parse([string]$_.releasedAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::RoundtripKind) } -Descending | Select-Object -First 1)
     if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
         return "manual-admin-vps-bootstrap-smoke"
     }

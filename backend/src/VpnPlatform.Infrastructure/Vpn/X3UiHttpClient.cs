@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -35,6 +36,11 @@ public class X3UiHttpClient : IX3UiClient
 
     public async Task<X3UiSession> LoginAsync(VpnPanel panel, string password, CancellationToken cancellationToken)
     {
+        if (panel.AuthenticationMode == VpnPanelAuthenticationMode.ApiToken)
+        {
+            throw new InvalidOperationException("3x-ui API token authentication does not use the login endpoint.");
+        }
+
         using var lease = CreateClient(panel);
         var client = lease.Client;
         using var request = new HttpRequestMessage(HttpMethod.Post, BuildUri(panel, "login"));
@@ -61,7 +67,10 @@ public class X3UiHttpClient : IX3UiClient
         var sw = Stopwatch.StartNew();
         try
         {
-            await LoginAsync(panel, password, cancellationToken);
+            if (panel.AuthenticationMode == VpnPanelAuthenticationMode.PasswordSession)
+            {
+                await LoginAsync(panel, password, cancellationToken);
+            }
             var version = await GetPanelVersionAsync(panel, password, cancellationToken);
             sw.Stop();
             return new X3UiHealthResult(true, version.Version, sw.ElapsedMilliseconds);
@@ -79,11 +88,20 @@ public class X3UiHttpClient : IX3UiClient
 
     public async Task<X3UiPanelVersionResult> GetPanelVersionAsync(VpnPanel panel, string password, CancellationToken cancellationToken)
     {
-        var raw = await GetRawAsync(panel, password, "server/status", cancellationToken, allowNotFound: true);
+        var raw = await GetRawAsync(panel, password, "panel/api/server/status", cancellationToken, allowNotFound: true);
         var version = TryReadString(raw, "version");
         if (string.IsNullOrWhiteSpace(version))
         {
             version = TryReadNestedString(raw, "obj", "xray", "version");
+        }
+        if (string.IsNullOrWhiteSpace(version))
+        {
+            raw = await GetRawAsync(panel, password, "server/status", cancellationToken, allowNotFound: true);
+            version = TryReadString(raw, "version");
+            if (string.IsNullOrWhiteSpace(version))
+            {
+                version = TryReadNestedString(raw, "obj", "xray", "version");
+            }
         }
         return new X3UiPanelVersionResult(string.IsNullOrWhiteSpace(version) ? "unknown" : version, raw);
     }
@@ -146,48 +164,137 @@ public class X3UiHttpClient : IX3UiClient
 
     public async Task<X3UiClientDto> AddClientAsync(VpnPanel panel, string password, X3UiAddClientRequest request, CancellationToken cancellationToken)
     {
+        if (panel.ApiVariant == X3UiApiVariant.ThreeXUi)
+        {
+            if (!int.TryParse(request.InboundId, NumberStyles.None, CultureInfo.InvariantCulture, out var inboundId) || inboundId <= 0)
+            {
+                throw new InvalidOperationException("3x-ui inbound id must be a positive integer.");
+            }
+
+            var client = BuildModernClientPayload(
+                request.Email,
+                request.Uuid,
+                request.Flow,
+                request.LimitIp,
+                request.TotalGb,
+                request.ExpiryTime,
+                request.Enable,
+                subId: string.Empty,
+                telegramId: 0);
+            await PostRawAsync(panel, password, "panel/api/clients/add", new { client, inboundIds = new[] { inboundId } }, cancellationToken, allowEmptySuccess: true);
+            return new X3UiClientDto(request.Uuid, request.Email, request.Uuid, request.Flow, request.LimitIp, request.TotalGb, request.ExpiryTime, request.Enable, null, null);
+        }
+
         var settings = BuildClientSettings(request.Email, request.Uuid, request.Flow, request.LimitIp, request.TotalGb, request.ExpiryTime, request.Enable);
         var payload = new { id = request.InboundId, settings };
-        var raw = await PostRawAsync(panel, password, "panel/api/inbounds/addClient", payload, cancellationToken, allowEmptySuccess: true);
+        await PostRawAsync(panel, password, "panel/api/inbounds/addClient", payload, cancellationToken, allowEmptySuccess: true);
         return new X3UiClientDto(request.Uuid, request.Email, request.Uuid, request.Flow, request.LimitIp, request.TotalGb, request.ExpiryTime, request.Enable, null, null);
     }
 
     public async Task<X3UiClientDto> UpdateClientAsync(VpnPanel panel, string password, X3UiUpdateClientRequest request, CancellationToken cancellationToken)
     {
+        if (panel.ApiVariant == X3UiApiVariant.ThreeXUi)
+        {
+            var remote = await GetModernClientAsync(panel, password, request.Email, cancellationToken);
+            var modernPayload = BuildModernClientPayload(
+                request.Email,
+                request.Uuid,
+                request.Flow,
+                request.LimitIp,
+                request.TotalGb,
+                request.ExpiryTime,
+                request.Enable,
+                ReadNodeString(remote, "subId"),
+                ReadNodeLong(remote, "tgId"));
+            await PostRawAsync(panel, password, $"panel/api/clients/update/{Uri.EscapeDataString(request.Email)}", modernPayload, cancellationToken, allowEmptySuccess: true);
+            return new X3UiClientDto(request.ClientId, request.Email, request.Uuid, request.Flow, request.LimitIp, request.TotalGb, request.ExpiryTime, request.Enable, null, null);
+        }
+
         var settings = BuildClientSettings(request.Email, request.Uuid, request.Flow, request.LimitIp, request.TotalGb, request.ExpiryTime, request.Enable);
         var payload = new { id = request.InboundId, settings };
         await PostRawAsync(panel, password, $"panel/api/inbounds/updateClient/{Uri.EscapeDataString(request.ClientId)}", payload, cancellationToken, allowEmptySuccess: true);
         return new X3UiClientDto(request.ClientId, request.Email, request.Uuid, request.Flow, request.LimitIp, request.TotalGb, request.ExpiryTime, request.Enable, null, null);
     }
 
-    public async Task DeleteClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken)
+    public async Task DeleteClientAsync(VpnPanel panel, string password, string inboundId, string clientId, string email, CancellationToken cancellationToken)
     {
-        await PostRawAsync(panel, password, $"panel/api/inbounds/delClient/{Uri.EscapeDataString(inboundId)}/{Uri.EscapeDataString(clientId)}", new { }, cancellationToken, allowEmptySuccess: true);
+        var path = panel.ApiVariant == X3UiApiVariant.ThreeXUi
+            ? $"panel/api/clients/del/{Uri.EscapeDataString(email)}?keepTraffic=0"
+            : $"panel/api/inbounds/{Uri.EscapeDataString(inboundId)}/delClient/{Uri.EscapeDataString(clientId)}";
+        await PostRawAsync(panel, password, path, new { }, cancellationToken, allowEmptySuccess: true);
     }
 
-    public Task EnableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken)
-        => SetClientEnabledAsync(panel, password, inboundId, clientId, true, cancellationToken);
+    public Task EnableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, string email, CancellationToken cancellationToken)
+        => SetClientEnabledAsync(panel, password, inboundId, clientId, email, true, cancellationToken);
 
-    public Task DisableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken)
-        => SetClientEnabledAsync(panel, password, inboundId, clientId, false, cancellationToken);
+    public Task DisableClientAsync(VpnPanel panel, string password, string inboundId, string clientId, string email, CancellationToken cancellationToken)
+        => SetClientEnabledAsync(panel, password, inboundId, clientId, email, false, cancellationToken);
 
-    public async Task ResetClientTrafficAsync(VpnPanel panel, string password, string inboundId, string clientId, CancellationToken cancellationToken)
+    public async Task ResetClientTrafficAsync(VpnPanel panel, string password, string inboundId, string email, CancellationToken cancellationToken)
     {
-        await PostRawAsync(panel, password, $"panel/api/inbounds/{Uri.EscapeDataString(inboundId)}/resetClientTraffic/{Uri.EscapeDataString(clientId)}", new { }, cancellationToken, allowEmptySuccess: true);
+        var path = panel.ApiVariant == X3UiApiVariant.ThreeXUi
+            ? $"panel/api/clients/resetTraffic/{Uri.EscapeDataString(email)}"
+            : $"panel/api/inbounds/{Uri.EscapeDataString(inboundId)}/resetClientTraffic/{Uri.EscapeDataString(email)}";
+        await PostRawAsync(panel, password, path, new { }, cancellationToken, allowEmptySuccess: true);
     }
 
-    public async Task<X3UiTrafficSnapshot> GetClientTrafficAsync(VpnPanel panel, string password, string clientId, CancellationToken cancellationToken)
+    public async Task<X3UiTrafficSnapshot> GetClientTrafficAsync(VpnPanel panel, string password, string email, CancellationToken cancellationToken)
     {
-        var raw = await GetRawAsync(panel, password, $"panel/api/inbounds/getClientTraffics/{Uri.EscapeDataString(clientId)}", cancellationToken, allowNotFound: true);
-        return new X3UiTrafficSnapshot(clientId, TryReadLong(raw, "up"), TryReadLong(raw, "down"), _clock.UtcNow);
+        var path = panel.ApiVariant == X3UiApiVariant.ThreeXUi
+            ? $"panel/api/clients/traffic/{Uri.EscapeDataString(email)}"
+            : $"panel/api/inbounds/getClientTraffics/{Uri.EscapeDataString(email)}";
+        var raw = await GetRawAsync(panel, password, path, cancellationToken, allowNotFound: true);
+        return new X3UiTrafficSnapshot(email, TryReadLong(raw, "up"), TryReadLong(raw, "down"), _clock.UtcNow);
     }
 
-    private async Task SetClientEnabledAsync(VpnPanel panel, string password, string inboundId, string clientId, bool enabled, CancellationToken cancellationToken)
+    private async Task SetClientEnabledAsync(VpnPanel panel, string password, string inboundId, string clientId, string email, bool enabled, CancellationToken cancellationToken)
     {
+        if (panel.ApiVariant == X3UiApiVariant.ThreeXUi)
+        {
+            var remote = await GetModernClientAsync(panel, password, email, cancellationToken);
+            var uuid = ReadNodeString(remote, "uuid");
+            if (string.IsNullOrWhiteSpace(uuid))
+            {
+                throw new InvalidOperationException("3x-ui client UUID was not returned by the panel.");
+            }
+
+            var payload = BuildModernClientPayload(
+                email,
+                uuid,
+                ReadNodeString(remote, "flow"),
+                ReadNodeInt(remote, "limitIp"),
+                ReadNullableNodeLong(remote, "totalGB"),
+                DateTimeOffset.FromUnixTimeMilliseconds(ReadNodeLong(remote, "expiryTime")),
+                enabled,
+                ReadNodeString(remote, "subId"),
+                ReadNodeLong(remote, "tgId"));
+            await PostRawAsync(panel, password, $"panel/api/clients/update/{Uri.EscapeDataString(email)}", payload, cancellationToken, allowEmptySuccess: true);
+            return;
+        }
+
         var inbound = await GetInboundAsync(panel, password, inboundId, cancellationToken)
             ?? throw new InvalidOperationException("3x-ui inbound client configuration was not found.");
         var settings = BuildClientEnabledSettings(inbound.SettingsJson, clientId, enabled);
         await PostRawAsync(panel, password, $"panel/api/inbounds/updateClient/{Uri.EscapeDataString(clientId)}", new { id = inboundId, settings }, cancellationToken, allowEmptySuccess: true);
+    }
+
+    private async Task<JsonObject> GetModernClientAsync(VpnPanel panel, string password, string email, CancellationToken cancellationToken)
+    {
+        var raw = await GetRawAsync(panel, password, $"panel/api/clients/get/{Uri.EscapeDataString(email)}", cancellationToken);
+        try
+        {
+            var root = JsonNode.Parse(raw)?.AsObject();
+            return root?["obj"]?["client"]?.AsObject()
+                ?? throw new InvalidOperationException("3x-ui client response did not contain a client object.");
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is JsonException or FormatException)
+        {
+            throw new InvalidOperationException("3x-ui client response was invalid.", ex);
+        }
     }
 
     private ClientLease CreateClient(VpnPanel panel)
@@ -221,11 +328,10 @@ public class X3UiHttpClient : IX3UiClient
         bool allowNotFound = false,
         bool allowArrayResponse = false)
     {
-        var session = await LoginAsync(panel, password, cancellationToken);
         using var lease = CreateClient(panel);
         var client = lease.Client;
         using var request = new HttpRequestMessage(HttpMethod.Get, BuildUri(panel, path));
-        request.Headers.Add("Cookie", session.SessionCookie);
+        await ApplyAuthenticationAsync(request, panel, password, cancellationToken);
         using var response = await SendWithRetryAsync(client, request, cancellationToken);
         var raw = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode && !(allowNotFound && response.StatusCode == HttpStatusCode.NotFound))
@@ -241,11 +347,10 @@ public class X3UiHttpClient : IX3UiClient
 
     private async Task<string> PostRawAsync(VpnPanel panel, string password, string path, object payload, CancellationToken cancellationToken, bool allowEmptySuccess = false)
     {
-        var session = await LoginAsync(panel, password, cancellationToken);
         using var lease = CreateClient(panel);
         var client = lease.Client;
         using var request = new HttpRequestMessage(HttpMethod.Post, BuildUri(panel, path));
-        request.Headers.Add("Cookie", session.SessionCookie);
+        await ApplyAuthenticationAsync(request, panel, password, cancellationToken);
         request.Content = JsonContent.Create(payload, options: JsonOptions);
         using var response = await SendWithRetryAsync(client, request, cancellationToken);
         var raw = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -271,6 +376,27 @@ public class X3UiHttpClient : IX3UiClient
         }
 
         return raw;
+    }
+
+    private async Task ApplyAuthenticationAsync(
+        HttpRequestMessage request,
+        VpnPanel panel,
+        string credential,
+        CancellationToken cancellationToken)
+    {
+        if (panel.AuthenticationMode == VpnPanelAuthenticationMode.ApiToken)
+        {
+            if (string.IsNullOrWhiteSpace(credential))
+            {
+                throw new InvalidOperationException("3x-ui API token is not configured.");
+            }
+
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", credential);
+            return;
+        }
+
+        var session = await LoginAsync(panel, credential, cancellationToken);
+        request.Headers.Add("Cookie", session.SessionCookie);
     }
 
     private sealed class ClientLease : IDisposable
@@ -346,6 +472,49 @@ public class X3UiHttpClient : IX3UiClient
 
     private static Uri BuildUri(VpnPanel panel, string path)
         => new(new Uri(panel.BaseUrl.TrimEnd('/') + "/"), path.TrimStart('/'));
+
+    private static object BuildModernClientPayload(
+        string email,
+        string uuid,
+        string flow,
+        int limitIp,
+        long? totalGb,
+        DateTimeOffset expiry,
+        bool enable,
+        string subId,
+        long telegramId)
+        => new
+        {
+            email,
+            id = uuid,
+            subId,
+            flow,
+            limitIp,
+            totalGB = totalGb ?? 0,
+            expiryTime = expiry.ToUnixTimeMilliseconds(),
+            enable,
+            tgId = telegramId
+        };
+
+    private static string ReadNodeString(JsonObject value, string propertyName)
+        => value[propertyName] is JsonValue property && property.TryGetValue<string>(out var result)
+            ? result
+            : string.Empty;
+
+    private static long ReadNodeLong(JsonObject value, string propertyName)
+        => value[propertyName] is JsonValue property && property.TryGetValue<long>(out var result)
+            ? result
+            : 0;
+
+    private static long? ReadNullableNodeLong(JsonObject value, string propertyName)
+        => value[propertyName] is JsonValue property && property.TryGetValue<long>(out var result)
+            ? result
+            : null;
+
+    private static int ReadNodeInt(JsonObject value, string propertyName)
+        => value[propertyName] is JsonValue property && property.TryGetValue<int>(out var result)
+            ? result
+            : 0;
 
     private static string BuildClientSettings(string email, string uuid, string flow, int limitIp, long? totalGb, DateTimeOffset expiry, bool enable)
         => JsonSerializer.Serialize(new

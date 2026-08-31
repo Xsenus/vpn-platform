@@ -4,11 +4,11 @@ import type { CreateVpnInboundPayload, CreateVpnPanelPayload, VpnInboundDto, Vpn
 import { isVpnInboundFormChanged, isVpnPanelFormChanged, isVpnPanelReadOnly } from '../apps/admin-panel/src/admin-vpn-editors.ts'
 
 const panel: VpnPanelDto = {
-  id: 'panel-1', name: 'EU panel', baseUrl: 'https://panel.example.test', region: 'eu', status: 'Active', healthStatus: 'Healthy', login: 'admin', sslVerificationMode: 'Strict', apiVariant: 'X3UiOfficial', capacity: 100, usedCapacity: 1, autoCreateInbound: false, defaultInboundTemplateJson: '{}', lastHealthCheckAt: null, lastSyncAt: null, version: '2.4.9', lastError: '', revision: 4, createdAt: '2026-08-15T00:00:00Z', updatedAt: '2026-08-15T00:00:00Z'
+  id: 'panel-1', name: 'EU panel', baseUrl: 'https://panel.example.test', region: 'eu', status: 'Active', healthStatus: 'Healthy', login: 'admin', sslVerificationMode: 'Strict', apiVariant: 'X3UiOfficial', authenticationMode: 'PasswordSession', capacity: 100, usedCapacity: 1, autoCreateInbound: false, defaultInboundTemplateJson: '{}', lastHealthCheckAt: null, lastSyncAt: null, version: '2.4.9', lastError: '', revision: 4, createdAt: '2026-08-15T00:00:00Z', updatedAt: '2026-08-15T00:00:00Z'
 }
 
 const panelForm: CreateVpnPanelPayload = {
-  name: ' EU panel ', baseUrl: 'https://panel.example.test/', login: ' admin ', password: '', region: ' eu ', capacity: 100, sslVerificationMode: 'strict', apiVariant: 'x3uiofficial', autoCreateInbound: false, defaultInboundTemplateJson: ' {} ', revision: 4
+  name: ' EU panel ', baseUrl: 'https://panel.example.test/', login: ' admin ', password: '', region: ' eu ', capacity: 100, sslVerificationMode: 'strict', apiVariant: 'x3uiofficial', authenticationMode: 'passwordsession', autoCreateInbound: false, defaultInboundTemplateJson: ' {} ', revision: 4
 }
 
 const inbound: VpnInboundDto = {

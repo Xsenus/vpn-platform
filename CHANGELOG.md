@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.755.0 - 2026-08-31
+
+Release entry: `2026-08-31-production-admin-and-threexui-api-token`.
+
+### Added
+
+- 3x-ui panel authentication now supports an explicit write-only `ApiToken` mode in the API, persistence model, admin editor and generated EF migration; password-session mode remains backward compatible.
+- The `ThreeXUi` client uses the 3x-ui 3.6 `/panel/api/clients/*` contract for add/update/state/delete/traffic/reset and preserves remote UUID/subscription metadata during updates.
+
+### Fixed
+
+- Legacy x-ui deletion uses the inbound-scoped route, while traffic/reset calls use the provider email contract instead of an internal client ID.
+- PowerShell 7.6 evidence scripts preserve ISO JSON timestamps as strings and keep strict `DateTimeOffset` release ordering.
+
+### Verification
+
+- Real VPS admin preflight passed `10/10`; login, logout, admin API and all `17/17` required sections passed with no JavaScript errors or post-login 401/403. Sanitized reports: `docs/evidence/admin-vps-smoke-preflight-2026-08-31.json` and `docs/evidence/admin-vps-smoke-2026-08-31.json`.
+- Direct ephemeral-token probes against the real 3x-ui 3.6 panel confirmed bearer auth, server status, inbound listing and the modern client payload contract; probe clients and tokens were removed after verification.
+- Targeted 3x-ui/panel tests `123/123`, backend Release `1619/1619` and frontend `197/197` pass. The standard Playwright run confirmed `281/282`; its only failure was the 30-second timeout of a multi-route WCAG smoke. After scoped 60-second timeout boundaries, the complete all-screens project passed `14/14` in `16.4 min`, establishing the current `282/282` matrix without skipped or flaky tests.
+- Admin build remains inside a reviewed fail-closed budget: `5` chunks, largest `278589`, total raw `587524/587776`, gzip `156320/156672`; only total raw increased by `1 KiB` for the new authentication contract.
+- Roadmap `781/798` closed, readiness `97.9%`, `17` remaining, `16` open, `1` in progress, `0` blocked. Provider payments, application-level live VPN issuance, full staging acceptance, HTTPS and real SMTP delivery still require external evidence.
+
 ## 0.754.0 - 2026-08-24
 
 Release entry: `2026-08-24-controlled-production-database-migrations`.

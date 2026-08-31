@@ -14,6 +14,7 @@ export function isVpnPanelFormChanged(form: CreateVpnPanelPayload, current: VpnP
     || form.capacity !== current.capacity
     || form.sslVerificationMode.toLowerCase() !== current.sslVerificationMode.toLowerCase()
     || form.apiVariant.toLowerCase() !== current.apiVariant.toLowerCase()
+    || form.authenticationMode.toLowerCase() !== current.authenticationMode.toLowerCase()
     || form.autoCreateInbound !== current.autoCreateInbound
     || (form.defaultInboundTemplateJson.trim() || current.defaultInboundTemplateJson) !== current.defaultInboundTemplateJson
 }

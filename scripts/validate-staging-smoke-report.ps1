@@ -6,6 +6,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey("DateKind")) {
+    $PSDefaultParameterValues["ConvertFrom-Json:DateKind"] = "String"
+}
+
 function Assert-ReportValue {
     param(
         [object]$Value,
@@ -85,7 +89,7 @@ function Get-LatestActiveReleaseId {
     $root = Resolve-RepositoryRoot
     $releasesPath = Join-Path $root "backend/src/VpnPlatform.Api/AppReleases/releases.json"
     $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [DateTimeOffset]::Parse([string]$_.releasedAt) } -Descending | Select-Object -First 1)
+    $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [System.DateTimeOffset]::Parse([string]$_.releasedAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::RoundtripKind) } -Descending | Select-Object -First 1)
 
     if ($latest.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
         throw "Latest active release was not found in AppReleases seed."

@@ -129,6 +129,7 @@ function vpnPanelFixture(overrides: Record<string, unknown> = {}) {
     login: 'admin',
     sslVerificationMode: 'Strict',
     apiVariant: 'X3UiOfficial',
+    authenticationMode: 'PasswordSession',
     capacity: 5000,
     usedCapacity: 1,
     autoCreateInbound: false,
@@ -1977,8 +1978,8 @@ test('ApiClient VPN panel endpoints are tokenized', async () => {
 
   const client = new ApiClient('http://localhost:8080')
   await client.getAdminVpnPanels('admin-token')
-  await client.createAdminVpnPanel('admin-token', { name: 'panel', baseUrl: 'https://panel.example.test', login: 'admin', password: 'secret', region: 'eu', capacity: 5000, sslVerificationMode: 'Strict', apiVariant: 'X3UiOfficial', autoCreateInbound: false, defaultInboundTemplateJson: '{}' })
-  await client.updateAdminVpnPanel('admin-token', 'panel-1', { name: 'edited-panel', password: '', sslVerificationMode: 'AllowSelfSigned', apiVariant: 'ThreeXUi', autoCreateInbound: true, revision: 7 })
+  await client.createAdminVpnPanel('admin-token', { name: 'panel', baseUrl: 'https://panel.example.test', login: 'admin', password: 'secret', region: 'eu', capacity: 5000, sslVerificationMode: 'Strict', apiVariant: 'X3UiOfficial', authenticationMode: 'PasswordSession', autoCreateInbound: false, defaultInboundTemplateJson: '{}' })
+  await client.updateAdminVpnPanel('admin-token', 'panel-1', { name: 'edited-panel', password: '', sslVerificationMode: 'AllowSelfSigned', apiVariant: 'ThreeXUi', authenticationMode: 'ApiToken', autoCreateInbound: true, revision: 7 })
   await client.testAdminVpnPanel('admin-token', 'panel-1')
   await client.syncAdminVpnPanel('admin-token', 'panel-1')
   await client.getAdminVpnPanelInbounds('admin-token', 'panel-1')
@@ -2977,6 +2978,7 @@ test('ApiClient rejects malformed VPN panel, inbound, client and observation DTO
     capacity: 100,
     sslVerificationMode: 'Strict',
     apiVariant: 'X3UiOfficial',
+    authenticationMode: 'PasswordSession',
     autoCreateInbound: false,
     defaultInboundTemplateJson: '{}'
   }

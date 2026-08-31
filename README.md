@@ -207,9 +207,9 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 
 ## Текущий статус
 
-На 2026-08-24 локально подтверждено:
+На 2026-08-31 локально подтверждено:
 
-- backend на .NET 9: `1613/1613` unit tests;
+- backend на .NET 9: `1619/1619` unit tests;
 - API Release build: без ошибок и предупреждений;
 - frontend unit tests: `197/197`;
 - frontend typecheck и production build: OK;
@@ -292,7 +292,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - кабинет выполняет Telegram deep-link/unlink и close/reopen обращения с optimistic revision и reload persistence на desktop/mobile;
 - платежные аккаунты проходят secure create/edit/disable/reload/enable/check browser lifecycle без раскрытия write-only secrets на desktop/mobile;
 - настройки Telegram-бота проходят secure save/check/reload/edit browser lifecycle без возврата raw bot/webhook tokens на desktop/mobile;
-- admin production bundle: `5` JS chunks, largest `277529`, total raw `586266/586752`, gzip `156003/156672` bytes; build budget fail-closed проверяет largest/total raw/gzip;
+- admin production bundle: `5` JS chunks, largest `278589`, total raw `587524/587776`, gzip `156320/156672` bytes; reviewed 3x-ui auth-mode growth raised only total raw by `1 KiB`, while build remains fail-closed for file count, largest, total raw and gzip;
 - неизвестный public URL показывает доступную страницу `404` с возвратом на главную/помощь и проходит desktop/mobile плюс 25-viewport responsive gate;
 - public route metadata и focus/scroll lifecycle проходят direct load, SPA navigation и browser Back на desktop/mobile;
 - admin login/hydration и 17 hash-разделов синхронизируют title/meta description при deep-link, section switch и logout;
@@ -352,7 +352,7 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - verified `CHECKOUT.ORDER.APPROVED` запускает server-side PayPal capture с idempotency/reconciliation и не активирует VPN без capture proof;
 - manual recheck Stripe, YooKassa и Т-Банка сверяет фактические provider ID, сумму, валюту, internal order/account и paid marker до активации;
 - refund YooKassa/Stripe/PayPal/Т-Банка применяет результат только после совпадения provider source reference и доступных amount/currency/internal payment proof; последовательные partial refund Т-Банка имеют отдельные operation IDs;
-- backend `1613/1613`, frontend `197/197`, полный console-responsive Playwright `282/282`, controlled migration targeted `4/4`, live VPS partial report `8 passed / 2 failed / 8 blocked`, deploy SMTP preflight `9/9`, maintenance allocation desktop/mobile Playwright `2/2`, mobile hero responsive Playwright `1/1`, active-workload archive desktop/mobile Playwright `2/2`, server archive provisioning/read-only Playwright `1/1`, VPN archive desktop/mobile Playwright `2/2`, VPN state-actions desktop/mobile Playwright `4/4`, VPN-server no-op/conflict desktop/mobile Playwright `2/2`, retryable admin conflict targeted Playwright `12/12`, payment-provider no-op/conflict desktop/mobile Playwright `4/4`, VPN editor no-op/conflict targeted Playwright `3/3`, commercial editor no-op/conflict targeted Playwright `3/3`, managed editor stale/no-op desktop/mobile Playwright `6/6`, Telegram settings save/conflict desktop/mobile Playwright `4/4`, targeted user management desktop/mobile Playwright `2/2`, dashboard RBAC desktop/mobile Playwright `4/4`, notification masking/retry desktop/mobile Playwright `2/2`, audit RBAC desktop/mobile Playwright `4/4`, order/recheck/finance RBAC desktop/mobile Playwright `8/8`, finance/recheck/refund lifecycle desktop/mobile Playwright `8/8`, support lifecycle desktop/mobile Playwright `8/8`, dependency audit `0 vulnerabilities`;
+- backend `1619/1619`, frontend `197/197`, повторный all-screens responsive Playwright `14/14`, полный console-responsive baseline `282/282`, targeted 3x-ui/panel suite `123/123`, controlled migration targeted `4/4`, production admin preflight `10/10` и browser sections `17/17`, dependency audit `0 vulnerabilities`;
 - user overview, 3x-ui client и operational admin surfaces используют bounded Russian labels для source/auth/roles/email/counts/events/sync, user status, audit actor/category, SSL, access history, QR и health/support fallback; технические VPN identifiers не подменяются;
 - карточки рабочих сценариев, платежные аккаунты, серверы и подготовка VPS локализуют bounded business/operation metadata без изменения raw API-значений, а локальный SQLite repair обновляет существующие базы с revision-колонками;
 - управление профилем пользователя в админке использует strict versioned PATCH, валидируемую адаптивную форму и явное подтверждение отзыва сессий; конфликт загружает актуальную карточку без stale overwrite;
@@ -371,7 +371,9 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - active provisioning блокирует archive, worker не claim-ит legacy очередь архивного узла, recovery сохраняет terminal status, а historical run не показывает mutation controls;
 - занятая емкость, активная подписка/VPN-доступ или migration блокируют server archive; capacity reserve принимает только operational node, а каждая capacity mutation повышает revision;
 - завершение обслуживания оставляет VPN-сервер в `Draining` с закрытым набором до отдельной команды оператора, а мобильный hero переносит только целые слова;
-- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-24-controlled-production-database-migrations`, версия `0.754.0`;
+- changelog, финальный runbook, release decision, roadmap, продуктовый UI-roadmap и журнал ошибок синхронизированы с разделом "Что нового": `2026-08-31-production-admin-and-threexui-api-token`, версия `0.755.0`;
+- production admin на VPS подтвержден: preflight `10/10`, все `17/17` разделов, login/logout и admin API прошли без JS errors и post-login 401/403; sanitized evidence хранится в `docs/evidence`;
+- интеграция 3x-ui 3.6 поддерживает write-only bearer API token и modern client API; live issuance останется открытой до проверки уже развернутого приложения;
 - production deploy fail-fast проверяет SMTP до upload; ручной запуск с `allow_disabled_email` явно включает временный degraded mode, в котором password reset и email delivery недоступны;
 - systemd deploy только по явному `apply_database_migrations` останавливает API, создаёт и проверяет PostgreSQL backup, затем применяет pending EF migrations; отказ возвращает старый API до swap релиза;
 - real run `32693643728` успешно создал backup, применил `27` migrations и развернул commit `4975528e`; live/ready и три SPA отвечают `200`, password reset в degraded mode отвечает `503`;
@@ -389,6 +391,6 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - admin notification status/template/search и latest top-500 выполняются в БД до materialization;
 - admin dashboard subscription/recent/payment readiness metrics считаются DB-side aggregates без загрузки строк;
 - auto-target миграция подписки выбирает node/panel/inbound одним ordered SQL query без N+1;
-- roadmap progress: `778/798` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked;
+- roadmap progress: `781/798` closed, readiness `97.9%`, `17` remaining, `16` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

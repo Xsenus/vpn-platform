@@ -1,6 +1,6 @@
 # Product/UI roadmap: сайт, кабинет и админка VPN Platform
 
-Дата актуализации: 2026-08-24.
+Дата актуализации: 2026-08-31.
 
 Этот документ был исходным продуктовым планом по единому сайту, кабинету и админке. Актуальный источник правды по production-ready статусу находится в [PRODUCT_COMPLETION_ROADMAP.md](PRODUCT_COMPLETION_ROADMAP.md). Здесь оставлен компактный продуктовый срез, чтобы старые незакрытые чекбоксы не противоречили фактическим проверкам.
 
@@ -15,14 +15,14 @@
 - [x] Общая UI-система, состояния loading/empty/error, мобильные viewport, доступность и русская локализация покрыты тестами и smoke-проверками.
 - [~] Staging/VPS smoke checklist готов, но реальный заполненный отчет после deploy еще нужен.
 - [x] Payment provider smoke report template, generator и validator готовы для всех web-провайдеров, но реальные кабинеты еще нужно пройти.
-- [x] Admin VPS smoke report template, generator, validator, sections contract, парный evidence validator и regression harness, явный browser runner, единый preflight+browser smoke wrapper с regression harness, bootstrap+smoke wrapper с regression harness и sanitized report validator, preflight, preflight validator и regression harness, локальная SQLite-проверка runner, локальная CLI bootstrap smoke-проверка и strict acceptance evidence gate готовы для проверки всех разделов админки, но реальный VPS admin smoke еще нужно пройти.
+- [x] Admin VPS smoke report contract и runner проверены реальным production smoke: preflight `10/10`, login/logout, admin API и все `17/17` разделов прошли без JS errors и post-login 401/403; sanitized evidence сохранено в `docs/evidence`.
 - [x] VPN live smoke report template, generator и validator готовы для 3x-ui/inbound/node проверки, но реальную 3x-ui выдачу еще нужно пройти.
 - [x] Production readiness gate требует полный пакет evidence reports: staging/VPS, платежи, админка VPS и live VPN/3x-ui.
 - [ ] Live-платежи всех провайдеров не подтверждены реальными кабинетами.
 - [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
-- [ ] Админка на VPS не проверена под рабочим production admin-аккаунтом.
+- [x] Админка на VPS проверена под рабочим production admin-аккаунтом; пароль не сохранен, preflight `10/10`, sections `17/17`.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `778/798` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `781/798` closed, readiness `97.9%`, `17` remaining, `16` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -69,8 +69,8 @@
 
 Эти пункты нельзя закрыть локальными unit/E2E тестами. Нужны реальные внешние окружения и безопасные секреты.
 
-- [ ] Создать или восстановить production admin-аккаунт на VPS и пройти вход в админку.
-- [ ] Пройти все разделы админки на VPS под рабочим admin-аккаунтом.
+- [x] Production admin-аккаунт на VPS создан/сброшен через maintenance CLI; вход, admin API и logout подтверждены 2026-08-31.
+- [x] Все `17/17` разделов админки пройдены на VPS под рабочим production admin-аккаунтом без browser/API ошибок.
 - [ ] Подключить реальную 3x-ui панель, inbound и VPN node.
 - [ ] Провести production-like order smoke: checkout, payment, webhook, subscription, VPN access.
 - [ ] Проверить live/sandbox кабинеты YooKassa, RoboKassa, YooMoney, CloudPayments, TBank, Prodamus, Stripe, PayPal.
@@ -85,7 +85,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1613/1613`.
+- [x] Backend full suite: `1619/1619`.
 - [x] Frontend unit tests: `197/197`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -152,7 +152,7 @@
 - [x] Subscription actions проходят activate/extend/sync/block/reload/unblock/migrate/reload/cancel lifecycle с persisted access state и terminal masking на desktop/mobile.
 - [x] Payment refund lifecycle сохраняет partial/full refund state, автоматически подставляет остаток и блокирует повторный полный возврат на desktop/mobile.
 - [x] Notification retry сохраняет Pending state, attempts reset/error cleanup и masked recipient; finance/support роли остаются read-only.
-- [x] Admin production bundle budget: `5` chunks, largest `277529`, total raw `586266/586752`, gzip `156003/156672`.
+- [x] Admin production bundle budget: `5` chunks, largest `278589`, total raw `587524/587776`, gzip `156320/156672`; reviewed 3x-ui auth-mode growth changed only total raw by `1 KiB`.
 - [x] Public catch-all `404` recovery проходит desktop/mobile, Axe и 25 viewport-конфигураций без blank screen/overflow.
 - [x] Public route metadata/focus lifecycle проходит direct load, navigation и browser Back на desktop/mobile.
 - [x] Admin metadata lifecycle проходит hydration/login, deep-link, 17 sections и logout на desktop/mobile.
@@ -175,7 +175,7 @@
 - [x] Payment-provider accounts требуют persisted revision, отклоняют no-op/stale update и state action, а delayed conflict сохраняет более новый local draft.
 - [x] Payment-provider, tariff, referral-program, app-release, VPN panel и inbound drafts после delayed conflict получают winning revision и повторно сохраняются.
 - [x] VPN-server editor отклоняет no-op без revision/audit churn и сохраняет новый draft при delayed conflict для повторной отправки.
-- [x] Latest "Что нового": `2026-08-24-controlled-production-database-migrations`, версия `0.754.0`; run `32693643728` успешно развернул degraded mode после backup и `27` migrations, password reset отвечает контролируемым `503`. Frontend `197/197`, полный real VPS report остаётся `8 passed / 2 failed / 8 blocked`; production admin, SMTP, providers и VPN открыты.
+- [x] Latest "Что нового": `2026-08-31-production-admin-and-threexui-api-token`, версия `0.755.0`; backend `1619/1619`, frontend `197/197`, repeat responsive Playwright `14/14`, production admin preflight `10/10` и sections `17/17`. SMTP delivery, provider payments, real VPN issuance и полный staging report остаются открыты.
 
 ## Как вести дальше
 

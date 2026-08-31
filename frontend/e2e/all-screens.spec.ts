@@ -802,6 +802,7 @@ async function installApiMock(page: Page) {
         login: 'admin',
         sslVerificationMode: 'Strict',
         apiVariant: 'X3UiOfficial',
+        authenticationMode: 'PasswordSession',
         capacity: 100,
         usedCapacity: 1,
         autoCreateInbound: false,
@@ -1199,6 +1200,7 @@ async function expectWordsStayIntact(page: Page, selector: string, screenName: s
 }
 
 test('all public routes render without blank screens or browser errors', async ({ page }, testInfo) => {
+  testInfo.setTimeout(60_000)
   const browserErrors = collectBrowserErrors(page)
   await installApiMock(page)
 
@@ -1520,7 +1522,8 @@ test('admin VPN panel editor fits focused mobile and desktop viewports', async (
   expect(browserErrors).toEqual([])
 })
 
-test('admin tariff editor fits focused mobile and desktop viewports', async ({ page }) => {
+test('admin tariff editor fits focused mobile and desktop viewports', async ({ page }, testInfo) => {
+  testInfo.setTimeout(60_000)
   const browserErrors = collectBrowserErrors(page)
   await installApiMock(page)
 

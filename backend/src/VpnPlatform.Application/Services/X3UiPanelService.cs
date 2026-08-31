@@ -67,6 +67,7 @@ public class X3UiPanelService
             command.Capacity,
             command.SslVerificationMode,
             command.ApiVariant,
+            command.AuthenticationMode,
             command.DefaultInboundTemplateJson,
             status: null,
             passwordRequired: true);
@@ -86,11 +87,12 @@ public class X3UiPanelService
 
         var sslMode = Enum.Parse<VpnSslVerificationMode>(command.SslVerificationMode, true);
         var apiVariant = Enum.Parse<X3UiApiVariant>(command.ApiVariant, true);
+        var authenticationMode = Enum.Parse<VpnPanelAuthenticationMode>(command.AuthenticationMode, true);
         var panel = new VpnPanel
         {
             Name = name,
             BaseUrl = baseUrl,
-            Login = command.Login.Trim(),
+            Login = command.Login?.Trim() ?? string.Empty,
             EncryptedPassword = _secretProtector.Protect(command.Password),
             Region = string.IsNullOrWhiteSpace(command.Region) ? "default" : command.Region.Trim(),
             Status = VpnPanelStatus.New,
@@ -98,6 +100,7 @@ public class X3UiPanelService
             Capacity = command.Capacity,
             SslVerificationMode = sslMode,
             ApiVariant = apiVariant,
+            AuthenticationMode = authenticationMode,
             AutoCreateInbound = command.AutoCreateInbound,
             DefaultInboundTemplateJson = string.IsNullOrWhiteSpace(command.DefaultInboundTemplateJson) ? "{}" : command.DefaultInboundTemplateJson.Trim()
         };
@@ -142,6 +145,7 @@ public class X3UiPanelService
         var capacity = command.Capacity ?? panel.Capacity;
         var sslModeText = string.IsNullOrWhiteSpace(command.SslVerificationMode) ? panel.SslVerificationMode.ToString() : command.SslVerificationMode;
         var apiVariantText = string.IsNullOrWhiteSpace(command.ApiVariant) ? panel.ApiVariant.ToString() : command.ApiVariant;
+        var authenticationModeText = string.IsNullOrWhiteSpace(command.AuthenticationMode) ? panel.AuthenticationMode.ToString() : command.AuthenticationMode;
         var templateJson = string.IsNullOrWhiteSpace(command.DefaultInboundTemplateJson) ? panel.DefaultInboundTemplateJson : command.DefaultInboundTemplateJson.Trim();
         var statusText = string.IsNullOrWhiteSpace(command.Status) ? panel.Status.ToString() : command.Status;
         var validationError = ValidatePanelCommand(
@@ -153,6 +157,7 @@ public class X3UiPanelService
             capacity,
             sslModeText,
             apiVariantText,
+            authenticationModeText,
             templateJson,
             statusText,
             passwordRequired: false);
@@ -175,6 +180,7 @@ public class X3UiPanelService
         var region = string.IsNullOrWhiteSpace(command.Region) ? panel.Region : command.Region.Trim();
         var sslMode = Enum.Parse<VpnSslVerificationMode>(sslModeText, true);
         var apiVariant = Enum.Parse<X3UiApiVariant>(apiVariantText, true);
+        var authenticationMode = Enum.Parse<VpnPanelAuthenticationMode>(authenticationModeText, true);
         var autoCreateInbound = command.AutoCreateInbound ?? panel.AutoCreateInbound;
         var status = Enum.Parse<VpnPanelStatus>(statusText, true);
         if (status == VpnPanelStatus.Archived)
@@ -189,6 +195,7 @@ public class X3UiPanelService
             && panel.Capacity == capacity
             && panel.SslVerificationMode == sslMode
             && panel.ApiVariant == apiVariant
+            && panel.AuthenticationMode == authenticationMode
             && panel.AutoCreateInbound == autoCreateInbound
             && panel.DefaultInboundTemplateJson == templateJson
             && panel.Status == status)
@@ -205,6 +212,7 @@ public class X3UiPanelService
         panel.Capacity = capacity;
         panel.SslVerificationMode = sslMode;
         panel.ApiVariant = apiVariant;
+        panel.AuthenticationMode = authenticationMode;
         panel.AutoCreateInbound = autoCreateInbound;
         panel.DefaultInboundTemplateJson = templateJson;
         panel.Status = status;
@@ -1205,6 +1213,7 @@ public class X3UiPanelService
         int capacity,
         string sslVerificationMode,
         string apiVariant,
+        string authenticationMode,
         string defaultInboundTemplateJson,
         string? status,
         bool passwordRequired)
@@ -1223,11 +1232,16 @@ public class X3UiPanelService
         {
             return "Base URL must be an absolute HTTP or HTTPS URL.";
         }
-        if (string.IsNullOrWhiteSpace(login))
+        if (!Enum.TryParse<VpnPanelAuthenticationMode>(authenticationMode, true, out var parsedAuthenticationMode)
+            || !Enum.IsDefined(parsedAuthenticationMode))
         {
-            return "Login is required.";
+            return "Authentication mode is invalid.";
         }
-        if (login.Trim().Length > 200) return "Login must not exceed 200 characters.";
+        if (parsedAuthenticationMode == VpnPanelAuthenticationMode.PasswordSession && string.IsNullOrWhiteSpace(login))
+        {
+            return "Login is required for password session authentication.";
+        }
+        if (!string.IsNullOrWhiteSpace(login) && login.Trim().Length > 200) return "Login must not exceed 200 characters.";
         if (!string.IsNullOrWhiteSpace(password) && password.Length > 4096) return "Password must not exceed 4096 characters.";
         if (!string.IsNullOrWhiteSpace(region) && region.Trim().Length > 120) return "Region must not exceed 120 characters.";
         if (passwordRequired && string.IsNullOrWhiteSpace(password))
@@ -1337,7 +1351,7 @@ public class X3UiPanelService
             }
 
             var password = _secretProtector.Unprotect(client.VpnPanel.EncryptedPassword);
-            await _client.GetClientTrafficAsync(client.VpnPanel, password, client.Uuid, cancellationToken);
+            await _client.GetClientTrafficAsync(client.VpnPanel, password, client.Email, cancellationToken);
         }
 
         client.SyncStatus = IsSandboxMode() ? "sandbox-synced" : "synced";
@@ -1403,7 +1417,7 @@ public class X3UiPanelService
             try
             {
                 remoteMutationAttempted = true;
-                await _client.ResetClientTrafficAsync(client.VpnPanel, password, client.VpnInbound.ExternalInboundId, client.Uuid, cancellationToken);
+                await _client.ResetClientTrafficAsync(client.VpnPanel, password, client.VpnInbound.ExternalInboundId, client.Email, cancellationToken);
                 remoteMutationCompleted = true;
             }
             catch (Exception remoteError)
@@ -1586,6 +1600,7 @@ public class X3UiPanelService
                     targetInbound,
                     targetPassword!,
                     client.Uuid,
+                    client.Email,
                     actorUserId,
                     before,
                     targetCreateError,
@@ -1595,14 +1610,14 @@ public class X3UiPanelService
 
             try
             {
-                await _client.DeleteClientAsync(sourcePanel, sourcePassword!, sourceInbound.ExternalInboundId, client.Uuid, cancellationToken);
+                await _client.DeleteClientAsync(sourcePanel, sourcePassword!, sourceInbound.ExternalInboundId, client.Uuid, client.Email, cancellationToken);
             }
             catch (Exception sourceDeleteError)
             {
                 try
                 {
                     await _client.AddClientAsync(sourcePanel, sourcePassword!, sourceRequest, CancellationToken.None);
-                    await _client.DeleteClientAsync(targetInbound.VpnPanel, targetPassword!, targetInbound.ExternalInboundId, client.Uuid, CancellationToken.None);
+                    await _client.DeleteClientAsync(targetInbound.VpnPanel, targetPassword!, targetInbound.ExternalInboundId, client.Uuid, client.Email, CancellationToken.None);
                     ClearTracker();
                     await ReleaseMigrationTargetCapacityAsync(targetInbound.Id, reservedTargetNodeId, CancellationToken.None);
                 }
@@ -1701,7 +1716,7 @@ public class X3UiPanelService
                 if (!IsSandboxMode())
                 {
                     await _client.AddClientAsync(sourcePanel, sourcePassword!, sourceRequest, CancellationToken.None);
-                    await _client.DeleteClientAsync(targetInbound.VpnPanel, targetPassword!, targetInbound.ExternalInboundId, client.Uuid, CancellationToken.None);
+                    await _client.DeleteClientAsync(targetInbound.VpnPanel, targetPassword!, targetInbound.ExternalInboundId, client.Uuid, client.Email, CancellationToken.None);
                 }
                 await ReleaseMigrationTargetCapacityAsync(targetInbound.Id, reservedTargetNodeId, CancellationToken.None);
             }
@@ -2132,6 +2147,7 @@ public class X3UiPanelService
         VpnInbound targetInbound,
         string targetPassword,
         string clientUuid,
+        string clientEmail,
         Guid? actorUserId,
         object before,
         Exception migrationError,
@@ -2139,7 +2155,7 @@ public class X3UiPanelService
     {
         try
         {
-            await _client.DeleteClientAsync(targetInbound.VpnPanel!, targetPassword, targetInbound.ExternalInboundId, clientUuid, CancellationToken.None);
+            await _client.DeleteClientAsync(targetInbound.VpnPanel!, targetPassword, targetInbound.ExternalInboundId, clientUuid, clientEmail, CancellationToken.None);
             ClearTracker();
             await ReleaseMigrationTargetCapacityAsync(targetInbound.Id, targetNodeId, CancellationToken.None);
         }
@@ -2218,8 +2234,10 @@ public class X3UiPanelService
         => _db.VpnClients.Include(x => x.VpnPanel).Include(x => x.VpnInbound).FirstOrDefaultAsync(x => x.Id == clientId, cancellationToken);
 
     private static string? ValidatePanelCredentials(VpnPanel panel)
-        => string.IsNullOrWhiteSpace(panel.BaseUrl) || string.IsNullOrWhiteSpace(panel.Login) || string.IsNullOrWhiteSpace(panel.EncryptedPassword)
-            ? "Panel not configured: base URL, login and password are required."
+        => string.IsNullOrWhiteSpace(panel.BaseUrl)
+           || string.IsNullOrWhiteSpace(panel.EncryptedPassword)
+           || (panel.AuthenticationMode == VpnPanelAuthenticationMode.PasswordSession && string.IsNullOrWhiteSpace(panel.Login))
+            ? "Panel not configured: base URL and credential are required; login is also required for password sessions."
             : null;
 
     private async Task UpdateLinkedAccessCredentialsAsync(VpnClient client, CancellationToken cancellationToken, Guid? targetNodeId = null)
@@ -2451,6 +2469,7 @@ public class X3UiPanelService
             panel.HealthStatus,
             panel.SslVerificationMode,
             panel.ApiVariant,
+            panel.AuthenticationMode,
             panel.Capacity,
             panel.UsedCapacity,
             panel.AutoCreateInbound,
@@ -2581,7 +2600,7 @@ public class X3UiPanelService
         => element.TryGetProperty(propertyName, out var value) && value.TryGetInt64(out var parsed) ? parsed : null;
 
     private static VpnPanelDto MapPanel(VpnPanel x)
-        => new(x.Id, x.Name, x.BaseUrl, x.Region, x.Status.ToString(), x.HealthStatus.ToString(), x.Login, x.SslVerificationMode.ToString(), x.ApiVariant.ToString(), x.Capacity, x.UsedCapacity, x.AutoCreateInbound, x.DefaultInboundTemplateJson, x.LastHealthCheckAt, x.LastSyncAt, x.Version, x.LastError, x.Revision, x.CreatedAt, x.UpdatedAt);
+        => new(x.Id, x.Name, x.BaseUrl, x.Region, x.Status.ToString(), x.HealthStatus.ToString(), x.Login, x.SslVerificationMode.ToString(), x.ApiVariant.ToString(), x.AuthenticationMode.ToString(), x.Capacity, x.UsedCapacity, x.AutoCreateInbound, x.DefaultInboundTemplateJson, x.LastHealthCheckAt, x.LastSyncAt, x.Version, x.LastError, x.Revision, x.CreatedAt, x.UpdatedAt);
 
     private static VpnInboundDto MapInbound(VpnInbound x)
         => new(x.Id, x.VpnPanelId, x.ExternalInboundId, x.Name, x.Protocol, x.Port, x.Listen, x.SettingsJson, x.StreamSettingsJson, x.SniffingJson, x.IsDefault, x.IsActive, x.Capacity, x.UsedCapacity, x.Revision);

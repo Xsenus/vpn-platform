@@ -8,6 +8,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey("DateKind")) {
+    $PSDefaultParameterValues["ConvertFrom-Json:DateKind"] = "String"
+}
+
 function Resolve-RequiredPath {
     param([string]$PathValue)
 

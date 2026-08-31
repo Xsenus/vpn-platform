@@ -466,7 +466,8 @@ public sealed record CreateVpnPanelCommand(
     string SslVerificationMode,
     string ApiVariant,
     bool AutoCreateInbound,
-    string DefaultInboundTemplateJson);
+    string DefaultInboundTemplateJson,
+    string AuthenticationMode = "PasswordSession");
 
 public sealed record UpdateVpnPanelCommand(
     string? Name,
@@ -480,7 +481,8 @@ public sealed record UpdateVpnPanelCommand(
     bool? AutoCreateInbound,
     string? DefaultInboundTemplateJson,
     string? Status,
-    int? Revision = null);
+    int? Revision = null,
+    string? AuthenticationMode = null);
 
 public sealed record VpnPanelDto(
     Guid Id,
@@ -492,6 +494,7 @@ public sealed record VpnPanelDto(
     string Login,
     string SslVerificationMode,
     string ApiVariant,
+    string AuthenticationMode,
     int Capacity,
     int UsedCapacity,
     bool AutoCreateInbound,

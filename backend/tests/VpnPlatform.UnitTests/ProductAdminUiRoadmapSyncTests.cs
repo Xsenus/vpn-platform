@@ -15,18 +15,18 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Дата актуализации: 2026-08-24",
+                     "Дата актуализации: 2026-08-31",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `1613/1613`",
+                     "Backend full suite: `1619/1619`",
                      "Frontend unit tests: `197/197`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `282/282`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-24-controlled-production-database-migrations",
-                     "0.754.0"
+                     "2026-08-31-production-admin-and-threexui-api-token",
+                     "0.755.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -47,7 +47,6 @@ public class ProductAdminUiRoadmapSyncTests
                  {
                      "Live-платежи всех провайдеров не подтверждены",
                      "Реальная production-like выдача через 3x-ui",
-                     "Админка на VPS не проверена",
                      "Production-ready решение не принято",
                      "Заполнить staging/VPS smoke report"
                  })
@@ -57,9 +56,11 @@ public class ProductAdminUiRoadmapSyncTests
 
         Assert.Contains("[ ] `STATE-011`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[ ] `STATE-012`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("[ ] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-24-controlled-production-database-migrations", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-24-controlled-production-database-migrations", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `P0-ADMIN-001`", masterRoadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `P0-ADMIN-002`", masterRoadmap, StringComparison.Ordinal);
+        Assert.Contains("2026-08-31-production-admin-and-threexui-api-token", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-31-production-admin-and-threexui-api-token", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -71,12 +72,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `1613/1613`",
+                     "Backend full suite: `1619/1619`",
                      "Frontend unit tests: `197/197`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-24-controlled-production-database-migrations",
-                     "0.754.0",
+                     "2026-08-31-production-admin-and-threexui-api-token",
+                     "0.755.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",
@@ -92,7 +93,6 @@ public class ProductAdminUiRoadmapSyncTests
                  {
                      "[ ] `STATE-011`",
                      "[ ] `STATE-012`",
-                     "[ ] `STATE-013`",
                      "[ ] `P11-ACC-002`",
                      "[~] `P9-TST-007`"
                  })
@@ -112,9 +112,9 @@ public class ProductAdminUiRoadmapSyncTests
                      new ExpectedStatus("~", "Staging/VPS smoke checklist"),
                      new ExpectedStatus(" ", "Live-"),
                      new ExpectedStatus(" ", "production-like", "3x-ui"),
-                     new ExpectedStatus(" ", "VPS", "production admin"),
                      new ExpectedStatus(" ", "Production-ready"),
-                     new ExpectedStatus(" ", "production admin", "VPS"),
+                     new ExpectedStatus("x", "Production admin-аккаунт", "VPS"),
+                     new ExpectedStatus("x", "17/17", "разделов админки"),
                      new ExpectedStatus(" ", "3x-ui", "VPN node"),
                      new ExpectedStatus(" ", "production-like order smoke"),
                      new ExpectedStatus(" ", "YooKassa", "PayPal"),

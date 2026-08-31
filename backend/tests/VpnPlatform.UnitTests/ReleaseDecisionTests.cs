@@ -23,7 +23,7 @@ public class ReleaseDecisionTests
         Assert.Contains("[x] `P11-ACC-007`", roadmap, StringComparison.Ordinal);
 
         Assert.Contains("staging-ready baseline", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-24-controlled-production-database-migrations", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-31-production-admin-and-threexui-api-token", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0.104.0 - 2026-06-14", changelog, StringComparison.Ordinal);
         Assert.Contains("staging-ready baseline", changelog, StringComparison.OrdinalIgnoreCase);
     }
@@ -86,9 +86,6 @@ public class ReleaseDecisionTests
                  {
                      "[ ] `STATE-011`",
                      "[ ] `STATE-012`",
-                     "[ ] `STATE-013`",
-                     "[ ] `P0-ADMIN-001`",
-                     "[ ] `P0-ADMIN-002`",
                      "[ ] `P0-VPN-001`",
                      "[ ] `P0-VPN-004`",
                      "[ ] `P0-PAY-002`",

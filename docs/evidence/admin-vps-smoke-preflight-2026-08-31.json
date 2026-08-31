@@ -1,0 +1,75 @@
+{
+  "reportId": "admin-vps-smoke-preflight-20260831-014946",
+  "generatedAt": "2026-08-31T01:49:46.3377182Z",
+  "environmentName": "production",
+  "operator": "codex-roadmap-closeout",
+  "releaseId": "2026-08-24-controlled-production-database-migrations",
+  "remoteReleaseId": "2026-08-24-controlled-production-database-migrations",
+  "remoteReleaseCheckRequired": true,
+  "remoteReleaseMatched": true,
+  "remoteReleaseStatus": "matched",
+  "remoteReleaseMessage": "Remote latest release matches the local smoke release.",
+  "apiBaseUrl": "http://83.147.222.145:8080",
+  "adminWebUrl": "http://83.147.222.145:5175",
+  "adminEmail": "roadmap-smoke-admin@vpn-platform.test",
+  "smokeReportPath": "C:\\Users\\User16\\source\\repos\\vpn-platform\\docs\\evidence\\admin-vps-smoke-2026-08-31.json",
+  "preflightReportPath": "C:\\Users\\User16\\source\\repos\\vpn-platform\\docs\\evidence\\admin-vps-smoke-preflight-2026-08-31.json",
+  "passwordEnvPresent": true,
+  "readyForLiveSmoke": true,
+  "checkCount": 10,
+  "passedCheckCount": 10,
+  "failedCheckCount": 0,
+  "failedChecks": [],
+  "checks": [
+    {
+      "name": "api-base-url",
+      "passed": true,
+      "message": "ADMIN_VPS_SMOKE_API_BASE_URL must be an absolute http/https URL."
+    },
+    {
+      "name": "admin-web-url",
+      "passed": true,
+      "message": "ADMIN_VPS_SMOKE_ADMIN_WEB_URL must be an absolute http/https URL."
+    },
+    {
+      "name": "admin-email",
+      "passed": true,
+      "message": "ADMIN_VPS_SMOKE_ADMIN_EMAIL must be set."
+    },
+    {
+      "name": "password-env-present",
+      "passed": true,
+      "message": "ADMIN_VPS_SMOKE_ADMIN_PASSWORD must be set in the process environment and is never printed."
+    },
+    {
+      "name": "frontend-directory",
+      "passed": true,
+      "message": "Frontend directory must exist."
+    },
+    {
+      "name": "package-command",
+      "passed": true,
+      "message": "frontend/package.json must expose e2e:admin-vps-smoke."
+    },
+    {
+      "name": "browser-runner",
+      "passed": true,
+      "message": "scripts/admin-vps-browser-smoke.ps1 must exist."
+    },
+    {
+      "name": "report-validator",
+      "passed": true,
+      "message": "scripts/validate-admin-vps-smoke-report.ps1 must exist."
+    },
+    {
+      "name": "preflight-validator",
+      "passed": true,
+      "message": "scripts/validate-admin-vps-smoke-preflight-report.ps1 must exist."
+    },
+    {
+      "name": "remote-latest-release",
+      "passed": true,
+      "message": "Remote /api/app-version/latest releaseId must match the smoke ReleaseId before live browser smoke."
+    }
+  ]
+}

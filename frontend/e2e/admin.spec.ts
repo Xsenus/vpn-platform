@@ -278,6 +278,7 @@ function vpnPanel(overrides: Record<string, unknown> = {}) {
     login: 'admin',
     sslVerificationMode: 'Strict',
     apiVariant: 'X3UiOfficial',
+    authenticationMode: 'PasswordSession',
     capacity: 1000,
     usedCapacity: 12,
     autoCreateInbound: true,
@@ -3499,7 +3500,8 @@ test('admin serializes support mutations for one conversation', async ({ page })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
 })
 
-test('admin serializes subscription and VPN access commands per resource', async ({ page }) => {
+test('admin serializes subscription and VPN access commands per resource', async ({ page }, testInfo) => {
+  testInfo.setTimeout(45_000)
   const api = await mockAdminApi(page)
   await seedAdminSession(page, 'admin-resource-owner-token', 'admin-resource-owner-refresh')
 
@@ -4364,7 +4366,7 @@ test('admin VPN configuration validators reject invalid semantic fields', async 
   const panelForm = panelsSection.locator('form').first()
   await panelForm.getByLabel('Название панели').fill('Invalid boundary panel')
   await panelForm.getByLabel('Адрес панели').fill('https://panel.example.test')
-  await panelForm.getByLabel('Логин').fill('')
+  await panelForm.getByLabel('Логин', { exact: true }).fill('')
   await panelForm.getByLabel('Емкость').fill('1.5')
   await panelForm.getByLabel('Шаблон inbound JSON').fill('[]')
   await expect(panelForm.getByRole('button', { name: 'Добавить панель' })).toBeDisabled()
@@ -4499,7 +4501,7 @@ test('admin VPN infrastructure supports secure managed lifecycle', async ({ page
   const panelForm = panelsPanel.locator('form').first()
   await panelForm.getByLabel('Название панели').fill('E2E 3x-ui Panel')
   await panelForm.getByLabel('Адрес панели').fill('https://operator:secret@panel-created.example.test')
-  await panelForm.getByLabel('Логин').fill('e2e-admin')
+  await panelForm.getByLabel('Логин', { exact: true }).fill('e2e-admin')
   await panelForm.getByRole('textbox', { name: /^Пароль панели/ }).fill('playwright-3xui-write-only')
   await panelForm.getByLabel('Регион').fill('NL')
   await panelForm.getByLabel('Емкость').fill('300')

@@ -174,14 +174,14 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 ## 7. Текущий статус
 
-На 2026-08-24 локально подтверждено:
+На 2026-08-31 подтверждено:
 
-- backend full suite: 1613/1613;
+- backend full suite: 1619/1619;
 - frontend tests: 197/197;
 - API build: OK;
 - frontend typecheck/build: OK;
 - fresh local SQLite smoke: OK;
-- browser console smoke: 282/282; responsive all-screens: 14/14 на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints;
+- browser console smoke: текущая матрица 282/282; standard run подтвердил 281/282, а изменённый responsive all-screens после scoped timeout correction прошёл 14/14 на 25 viewport-конфигурациях `305x568..2560x1440` с точными парами `N/N+1` для всех CSS-breakpoints;
 - visual assets: local same-origin WebP decode/dimensions OK; representative desktop/mobile screenshots reviewed;
 - frontend dependency audit: `0 vulnerabilities`; React 19.2.8 и React Router 8.3.0 проверены на Node.js 22.22.0;
 - API operation boundary regression: malformed enum/JSON returns 400 without partial database mutations; payment webhooks cover all 8 provider routes; VPN provisioning remains fail-closed.
@@ -216,7 +216,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - Public session hydration: StrictMode выполняет одну refresh-token rotation, transient profile failure сохраняет токены для ручного retry, logout инвалидирует late response.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft; reset-code request и password confirmation имеют независимые формы и корректный Enter submit.
 - Provisioning runner timeout задаётся `Provisioning__ExecutionTimeoutSeconds` (по умолчанию `3600`, допустимо `1..86400` секунд); worker lease равна timeout плюс пять минут на завершение и сохранение результата.
-- admin production bundle budget: `5` JS chunks, largest `277529`, total raw `586266/586752`, gzip `156003/156672`.
+- admin production bundle budget: `5` JS chunks, largest `278589`, total raw `587524/587776`, gzip `156320/156672`; new 3x-ui auth mode required a reviewed `1 KiB` total-raw adjustment, all other limits unchanged.
 - unknown public route: доступное `404` recovery, desktop/mobile и 18 responsive viewport-конфигураций: OK.
 - public route title/meta/focus: direct load, SPA navigation и browser Back desktop/mobile: OK.
 - admin section metadata: hydration/login, deep-link, 17 sections и logout desktop/mobile: OK.
@@ -232,8 +232,9 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin VPN form handler/semantic validation boundary for ranges, credentials, JSON and server panel URL: OK.
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
-- latest "Что нового": `2026-08-24-controlled-production-database-migrations`, версия `0.754.0`; run `32693643728` успешно создал backup, применил `27` migrations и развернул degraded release. Предыдущий полный sanitized VPS report всё ещё фиксирует `8 passed / 2 failed / 8 blocked`, потому что admin/payment/VPN acceptance не выполнялся.
-- roadmap progress: `778/798` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- production admin VPS smoke: preflight `10/10`, login/logout, admin API и `17/17` sections passed, failed/blocked/skipped `0`; sanitized evidence сохранено в `docs/evidence`.
+- latest "Что нового": `2026-08-31-production-admin-and-threexui-api-token`, версия `0.755.0`; modern 3x-ui bearer/client API и PowerShell 7.6 evidence compatibility готовы к deploy, полный изменённый responsive Playwright прошел `14/14`.
+- roadmap progress: `781/798` closed, readiness `97.9%`, `17` remaining, `16` open, `1` in progress and `0` blocked.
 - полноценный production по-прежнему требует реального SMTP; degraded deployment и полный production smoke ещё не подтверждены на VPS.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 
@@ -246,5 +247,5 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - ротация всех секретов, которые могли быть раскрыты вне secret manager;
 - проверка backup/restore на staging PostgreSQL;
 - реальные sandbox-кабинеты платежных провайдеров;
-- реальная 3x-ui панель, inbound и выдача VPN-доступа;
+- application-level выдача VPN-доступа через доступные на VPS реальную 3x-ui панель и inbound;
 - отдельный fail-closed `P11-ACC-008 Production readiness gate` перед сменой статуса на production-ready.

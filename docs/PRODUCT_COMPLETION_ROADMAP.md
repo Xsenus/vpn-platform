@@ -2,11 +2,11 @@
 
 Документ нужен как единая рабочая карта проекта. По нему агент или разработчик должен идти сверху вниз, отмечать выполненные пункты и оставлять доказательства: тесты, скриншоты, ссылки на коммиты, результаты smoke-проверок и замечания.
 
-Дата актуализации: 2026-08-24.
+Дата актуализации: 2026-08-31.
 
-Дата последней сверки: 2026-08-24.
+Дата последней сверки: 2026-08-31.
 
-Временный статус работы с roadmap: активная локальная доработка синхронизирована до `2026-08-24-controlled-production-database-migrations`, версия `0.754.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `778/798` проверяемых пунктов, готовность `97.5%`, осталось `20`, открыто `19`, в работе `1`, блокеров `[!]` нет. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `STATE-013`, `P0-ADMIN-001`, `P0-ADMIN-002`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live evidence.
+Временный статус работы с roadmap: активная доработка синхронизирована до `2026-08-31-production-admin-and-threexui-api-token`, версия `0.755.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `781/798` проверяемых пунктов, готовность `97.9%`, осталось `17`, открыто `16`, в работе `1`, блокеров `[!]` нет. Production admin acceptance подтвержден реальным VPS evidence. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live provider evidence.
 
 ## Как вести этот roadmap
 
@@ -35,9 +35,9 @@ git diff --check
 
 ## Текущее резюме состояния
 
-Что подтверждено на 2026-08-24:
+Что подтверждено на 2026-08-31:
 
-- [x] `STATE-001` Backend test suite проходит: `1613/1613`.
+- [x] `STATE-001` Backend test suite проходит: `1619/1619`.
 - [x] `STATE-002` Frontend test suite проходит: `197/197`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -49,7 +49,9 @@ git diff --check
 - [x] `STATE-010` Полный mock-based browser E2E основных экранов завершен. 2026-06-14.
 - [ ] `STATE-011` Live-платежи всех провайдеров не подтверждены.
 - [ ] `STATE-012` Live-выдача через реальный 3x-ui не подтверждена.
-- [ ] `STATE-013` Админка на VPS не проверена под рабочим admin-аккаунтом.
+- [x] `STATE-013` Админка на VPS проверена под рабочим production admin-аккаунтом. 2026-08-31.
+  - Что сделано: production account безопасно создан/сброшен через maintenance CLI без сохранения пароля; подтверждены login, admin API HTTP 200, logout и повторный переход в unauthenticated state.
+  - Доказательство: `docs/evidence/admin-vps-smoke-preflight-2026-08-31.json` (`10/10`, SHA-256 `5c91ff1f0796edc50b4743258da1932e733e4d9502bb57ea513f9ee2565d4cc8`) и `docs/evidence/admin-vps-smoke-2026-08-31.json` (`17/17`, SHA-256 `7019d5b37eba7d5ff549938c5a7a3259883b8addab6f1873e831a4c1e3b2fc10`); failed/blocked/skipped `0`, секретов в отчетах нет.
 - [x] `STATE-014` Roadmap и текущие статусные документы синхронизированы с проверками 2026-08-05.
   - Что сделано: верхний статус roadmap, README, final runbook, release decision, changelog, TEST_RESULTS, product/admin UI roadmap и seed "Что нового" приведены к одному состоянию: backend `1112/1112`, frontend `99/99`, browser console/responsive smoke `18/18`, dependency audit `0 vulnerabilities`, latest release `2026-08-09-admin-finance-support-api-dto-validation`, версия `0.532.0`.
   - Что осталось: live-платежи, реальная 3x-ui выдача, VPS admin/live smoke и production-ready решение остаются отдельными открытыми задачами `STATE-011`, `STATE-012`, `STATE-013`, `P11-ACC-002` и P0.
@@ -61,10 +63,11 @@ git diff --check
 
 Проблема: страница `/admin/` открывается, но рабочий вход в админку на VPS не подтвержден. Локальные demo-credentials возвращали `401 invalid_credentials`.
 
-- [ ] `P0-ADMIN-001` Создать или восстановить production admin-аккаунт на VPS.
+- [x] `P0-ADMIN-001` Создать или восстановить production admin-аккаунт на VPS. 2026-08-31.
   - Что сделать: добавить безопасный способ seed/reset admin-пользователя через CLI, миграцию, one-shot команду или защищенный endpoint только для maintenance.
   - Критерий готовности: можно войти в админку на VPS, токены создаются, logout работает.
-  - Доказательство: скриншот входа, HTTP 200 для admin API после логина, запись в changelog/коммит.
+  - Что сделано: production account создан/сброшен через maintenance CLI; browser smoke подтвердил вход, выдачу токенов, HTTP 200 для admin API и logout. Пароль не записан в git, отчеты или shell history.
+  - Доказательство: `docs/evidence/admin-vps-smoke-preflight-2026-08-31.json` (`10/10`, SHA-256 `5c91ff1f0796edc50b4743258da1932e733e4d9502bb57ea513f9ee2565d4cc8`) и `docs/evidence/admin-vps-smoke-2026-08-31.json` (`17/17`, SHA-256 `7019d5b37eba7d5ff549938c5a7a3259883b8addab6f1873e831a4c1e3b2fc10`).
 
 - [x] `P0-ADMIN-001A` Добавить безопасный CLI-механизм admin bootstrap/reset. 2026-06-10.
   - Что сделано: команда `admin-bootstrap` создает администратора или сбрасывает пароль существующего администратора без запуска HTTP-сервера.
@@ -214,10 +217,11 @@ git diff --check
   - Что сделано: `scripts/test-admin-vps-bootstrap-smoke-wrapper.ps1` проверяет `bad-env-max-evidence-chain-minutes` для `ADMIN_VPS_SMOKE_MAX_EVIDENCE_CHAIN_MINUTES` и очищает env-лимит для остальных сценариев, чтобы CLI/env проверки не влияли друг на друга.
   - Доказательство: admin VPS bootstrap smoke wrapper regression с CLI/env max duration scenarios, latest "Что нового" `2026-06-22-admin-vps-bootstrap-smoke-env-max-duration`, версия `0.256.0`. Реальный VPS bootstrap/login smoke остается в `P0-ADMIN-001`/`P0-ADMIN-002`.
 
-- [ ] `P0-ADMIN-002` Проверить все разделы админки под реальным admin-аккаунтом.
+- [x] `P0-ADMIN-002` Проверить все разделы админки под реальным admin-аккаунтом. 2026-08-31.
   - Что сделать: открыть dashboard, users, payments, tariffs, subscriptions, vpn, nodes, panels, support, bot, releases, faq, content, scenarios, provisioning.
   - Критерий готовности: нет белого экрана, JS-ошибок, 401/403 после логина, сломанных таблиц и пустых обязательных состояний без объяснения.
-  - Доказательство: browser smoke-отчет, список найденных ошибок или отметка "ошибок нет".
+  - Что сделано: Playwright прошел dashboard и все `17/17` обязательных разделов на реальном VPS; login/logout работают, JS/page errors и API 401/403 после входа отсутствуют.
+  - Доказательство: sanitized report `docs/evidence/admin-vps-smoke-2026-08-31.json`, SHA-256 `7019d5b37eba7d5ff549938c5a7a3259883b8addab6f1873e831a4c1e3b2fc10`; passed `17`, failed/blocked/skipped `0`, секретов нет.
 
 - [x] `P0-ADMIN-002A` Добавить безопасный browser runner для admin VPS smoke. 2026-06-19.
   - Что сделано: добавлен `frontend/e2e/admin-vps-smoke.spec.ts`, отдельный `frontend/playwright.vps-smoke.config.ts` без trace/video/screenshot artifacts и wrapper `scripts/admin-vps-browser-smoke.ps1`, который берет пароль только из `ADMIN_VPS_SMOKE_ADMIN_PASSWORD` и пишет sanitized JSON report.

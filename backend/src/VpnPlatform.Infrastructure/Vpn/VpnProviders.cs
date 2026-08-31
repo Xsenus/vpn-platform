@@ -96,11 +96,11 @@ public class X3UiVpnProvider : IVpnProvider
                 remoteMutationAttempted = true;
                 if (enabled)
                 {
-                    await _client.EnableClientAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, cancellationToken);
+                    await _client.EnableClientAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, vpnClient.Email, cancellationToken);
                 }
                 else
                 {
-                    await _client.DisableClientAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, cancellationToken);
+                    await _client.DisableClientAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, vpnClient.Email, cancellationToken);
                 }
             }
 
@@ -127,11 +127,11 @@ public class X3UiVpnProvider : IVpnProvider
                     var password = _secretProtector.Unprotect(vpnClient.VpnPanel.EncryptedPassword);
                     if (wasEnabled)
                     {
-                        await _client.EnableClientAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, CancellationToken.None);
+                        await _client.EnableClientAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, vpnClient.Email, CancellationToken.None);
                     }
                     else
                     {
-                        await _client.DisableClientAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, CancellationToken.None);
+                        await _client.DisableClientAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, vpnClient.Email, CancellationToken.None);
                     }
                 }
                 catch (Exception compensationError)
@@ -165,7 +165,7 @@ public class X3UiVpnProvider : IVpnProvider
             {
                 var password = _secretProtector.Unprotect(vpnClient.VpnPanel.EncryptedPassword);
                 remoteMutationAttempted = true;
-                await _client.DeleteClientAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, cancellationToken);
+                await _client.DeleteClientAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, vpnClient.Email, cancellationToken);
             }
 
             if (vpnClient.VpnPanel is not null && vpnClient.VpnPanel.UsedCapacity > 0)
@@ -262,7 +262,7 @@ public class X3UiVpnProvider : IVpnProvider
             {
                 var password = _secretProtector.Unprotect(vpnClient.VpnPanel.EncryptedPassword);
                 remoteMutationAttempted = true;
-                await _client.ResetClientTrafficAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Uuid, cancellationToken);
+                await _client.ResetClientTrafficAsync(vpnClient.VpnPanel, password, vpnClient.VpnInbound.ExternalInboundId, vpnClient.Email, cancellationToken);
             }
 
             vpnClient.SyncStatus = isSandboxClient ? "sandbox-traffic-reset" : "traffic-reset";
@@ -326,7 +326,7 @@ public class X3UiVpnProvider : IVpnProvider
         }
 
         var password = _secretProtector.Unprotect(vpnClient.VpnPanel.EncryptedPassword);
-        var traffic = await _client.GetClientTrafficAsync(vpnClient.VpnPanel, password, vpnClient.Uuid, cancellationToken);
+        var traffic = await _client.GetClientTrafficAsync(vpnClient.VpnPanel, password, vpnClient.Email, cancellationToken);
         return new VpnUsageSnapshot(providerAccessId, traffic.Up + traffic.Down, null, traffic.SyncedAt);
     }
 
@@ -436,7 +436,7 @@ public class X3UiVpnProvider : IVpnProvider
 
             try
             {
-                await _client.DeleteClientAsync(panel, password, inbound.ExternalInboundId, uuid, CancellationToken.None);
+                await _client.DeleteClientAsync(panel, password, inbound.ExternalInboundId, uuid, email, CancellationToken.None);
             }
             catch (Exception compensationError)
             {

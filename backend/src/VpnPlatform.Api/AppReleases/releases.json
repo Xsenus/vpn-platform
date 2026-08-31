@@ -17874,5 +17874,32 @@
         "text": "Roadmap progress is 778/798 closed, readiness 97.5%, 20 remaining, 19 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required for full acceptance; restore drill and production admin remain open."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-31-production-admin-and-threexui-api-token",
+    "version": "0.755.0",
+    "releasedAt": "2026-08-31T09:20:00+07:00",
+    "title": "Production admin acceptance and modern 3x-ui authentication",
+    "summary": "The real VPS admin flow is verified, while 3x-ui 3.6 integration now supports bearer API tokens and the modern client API without exposing panel credentials.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "improved",
+        "text": "Production admin login, logout, API access and all 17 required sections passed the sanitized VPS browser smoke with no JavaScript errors or post-login authorization failures."
+      },
+      {
+        "type": "new",
+        "text": "3x-ui panels can use a write-only bearer API token; the client supports the modern 3x-ui 3.6 add, update, enable, disable, delete, traffic and reset routes while preserving legacy panel compatibility."
+      },
+      {
+        "type": "fixed",
+        "text": "PowerShell evidence scripts keep ISO timestamps as strings on PowerShell 7.6 and continue to sort release timestamps with strict DateTimeOffset parsing."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 781/798 closed, readiness 97.9%, 17 remaining, 16 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required for application-level VPN issuance and full acceptance; HTTPS and SMTP delivery also remain external gates."
+      }
+    ]
   }
 ]

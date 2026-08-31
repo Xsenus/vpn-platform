@@ -896,6 +896,7 @@ export type VpnPanelDto = {
   login: string
   sslVerificationMode: string
   apiVariant: string
+  authenticationMode: string
   capacity: number
   usedCapacity: number
   autoCreateInbound: boolean
@@ -918,6 +919,7 @@ export type CreateVpnPanelPayload = {
   capacity: number
   sslVerificationMode: string
   apiVariant: string
+  authenticationMode: string
   autoCreateInbound: boolean
   defaultInboundTemplateJson: string
   revision?: number
@@ -1478,6 +1480,7 @@ const vpnPanelStatusValues = new Set(['New', 'Active', 'Disabled', 'Maintenance'
 const healthStatusValues = new Set(['Unknown', 'Healthy', 'Degraded', 'Unhealthy'])
 const vpnSslVerificationModeValues = new Set(['Strict', 'AllowSelfSigned', 'Disabled'])
 const x3UiApiVariantValues = new Set(['X3UiOfficial', 'ThreeXUi', 'LegacyXUi', 'Custom'])
+const vpnPanelAuthenticationModeValues = new Set(['PasswordSession', 'ApiToken'])
 const vpnInboundProtocolValues = new Set(['vless', 'vmess', 'trojan'])
 const panelSyncRunStatusValues = new Set(['Pending', 'Running', 'Succeeded', 'Failed'])
 const nodeStatusValues = new Set(['New', 'Provisioning', 'Ready', 'Degraded', 'Full', 'Draining', 'Maintenance', 'Disabled', 'Error', 'Archived'])
@@ -2522,6 +2525,8 @@ function isVpnPanelDto(value: unknown): value is VpnPanelDto {
     && vpnSslVerificationModeValues.has(value.sslVerificationMode as string)
     && hasString(value, 'apiVariant', true)
     && x3UiApiVariantValues.has(value.apiVariant as string)
+    && hasString(value, 'authenticationMode', true)
+    && vpnPanelAuthenticationModeValues.has(value.authenticationMode as string)
     && hasInteger(value, 'capacity', 1)
     && hasInteger(value, 'usedCapacity', 0)
     && (value.usedCapacity as number) <= (value.capacity as number)

@@ -22,6 +22,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey("DateKind")) {
+    $PSDefaultParameterValues["ConvertFrom-Json:DateKind"] = "String"
+}
+
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $checks = [System.Collections.Generic.List[object]]::new()
 
@@ -226,7 +230,7 @@ $releaseValue = if ([string]::IsNullOrWhiteSpace($ReleaseId)) {
     $releasesPath = Join-Path $repoRoot "backend/src/VpnPlatform.Api/AppReleases/releases.json"
     if (Test-Path -LiteralPath $releasesPath -PathType Leaf) {
         $releases = Get-Content -LiteralPath $releasesPath -Raw -Encoding UTF8 | ConvertFrom-Json
-        $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [System.DateTimeOffset]::Parse([string]$_.releasedAt, [System.Globalization.CultureInfo]::InvariantCulture) } -Descending | Select-Object -First 1)
+        $latest = @($releases | Where-Object { $_.isActive } | Sort-Object -Property { [System.DateTimeOffset]::Parse([string]$_.releasedAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::RoundtripKind) } -Descending | Select-Object -First 1)
         if ($latest.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace([string]$latest[0].releaseId)) {
             [string]$latest[0].releaseId
         }

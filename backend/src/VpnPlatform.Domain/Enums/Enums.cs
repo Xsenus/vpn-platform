@@ -57,4 +57,5 @@ public enum RewardStatus { Pending = 0, Approved = 1, Cancelled = 2, Reverted = 
 public enum VpnPanelStatus { New = 0, Active = 1, Disabled = 2, Maintenance = 3, Error = 4, Archived = 5 }
 public enum VpnSslVerificationMode { Strict = 0, AllowSelfSigned = 1, Disabled = 2 }
 public enum X3UiApiVariant { X3UiOfficial = 0, ThreeXUi = 1, LegacyXUi = 2, Custom = 3 }
+public enum VpnPanelAuthenticationMode { PasswordSession = 0, ApiToken = 1 }
 public enum PanelSyncRunStatus { Pending = 0, Running = 1, Succeeded = 2, Failed = 3 }

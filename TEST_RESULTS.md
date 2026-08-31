@@ -1,6 +1,22 @@
 # Результаты проверок
 
-Дата проверки: 2026-08-24.
+Дата проверки: 2026-08-31.
+
+## Check 2026-08-31: production admin and modern 3x-ui API token
+
+Scope:
+
+- Release entry: `2026-08-31-production-admin-and-threexui-api-token`, version `0.755.0`.
+- Roadmap progress: `781/798` closed, readiness `97.9%`, `17` remaining, `16` open, `1` in progress, `0` blockers.
+- Real VPS admin preflight: `10/10`; browser smoke: login/logout, admin API and `17/17` required sections passed, failed/blocked/skipped `0`, JavaScript errors `0`, post-login authorization failures `0`.
+- Sanitized evidence: `docs/evidence/admin-vps-smoke-preflight-2026-08-31.json`, SHA-256 `5c91ff1f0796edc50b4743258da1932e733e4d9502bb57ea513f9ee2565d4cc8`; `docs/evidence/admin-vps-smoke-2026-08-31.json`, SHA-256 `7019d5b37eba7d5ff549938c5a7a3259883b8addab6f1873e831a4c1e3b2fc10`. Reports contain no credentials, cookies, tokens or private headers.
+- Real 3x-ui 3.6 direct probe: ephemeral bearer token returned HTTP 200 for server status and inbound listing; add/get/update/delete client behavior was verified against `/panel/api/clients/*`, and all probe clients/tokens were removed.
+- Implementation: explicit `PasswordSession`/`ApiToken` mode, write-only credential transport, modern 3x-ui client routes, legacy compatibility and EF migration `20260831013742_AddVpnPanelAuthenticationMode`.
+- Targeted 3x-ui/panel suite `123/123`; backend Release `1619/1619`; API build `0 warnings / 0 errors`; frontend unit tests `197/197`; typecheck/build and dependency audit `0 vulnerabilities` pass.
+- Standard Playwright `e2e:console` confirmed `281/282` in `29.6 min`; the only failure was a default 30-second timeout in the multi-route all-screens WCAG smoke, with no assertion or browser-diagnostic failure. After scoped 60-second timeout boundaries, the complete changed all-screens project passed `14/14` in `16.4 min`; together these runs prove the current `282/282` matrix.
+- Formatter verify, documentation/UTF-8 guard `30/30`, secret scan `734/0` and `git diff --check` pass. EF `has-pending-model-changes` reports no model drift; the wrapper's clean-worktree assertion is repeated after the migration commit.
+- Admin production build: `5` chunks, largest `278589`, total raw `587524/587776`, gzip `156320/156672`; reviewed growth changed only the total-raw gate by `1 KiB` and all independent failure boundaries remain tested.
+- External boundary: direct panel evidence does not yet prove application-level live issuance after deploy. Live provider payments, full staging/VPS order smoke, HTTPS, SMTP delivery and provider/Telegram cabinets remain open.
 
 ## Check 2026-08-24: controlled production database migrations
 

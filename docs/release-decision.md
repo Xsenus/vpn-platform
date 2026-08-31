@@ -4,7 +4,7 @@
 
 ## Решение
 
-Статус на 2026-08-24: **staging-ready baseline, не production-ready**.
+Статус на 2026-08-31: **staging-ready baseline, не production-ready**.
 
 Проект можно использовать для локальной проверки, демонстрации продукта, подготовки staging и дальнейшего live smoke. Проект нельзя считать production-ready, пока не закрыт VPS production smoke и не проверены реальные внешние интеграции.
 
@@ -12,17 +12,18 @@
 
 Production-ready решение заблокировано следующими пунктами:
 
-- `P11-ACC-002 VPS production smoke` остается открытым: нет подтвержденного live deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access на реальном VPS.
+- `P11-ACC-002 VPS production smoke` остается открытым: live deploy, health и production admin login подтверждены, но нет полного public order -> provider payment -> subscription -> VPN access evidence на реальном VPS.
+- Полная acceptance-цепочка остается явной: `live deploy -> health -> admin login -> public order -> payment -> subscription -> VPN access`; первые три этапа подтверждены, последние четыре требуют нового live evidence.
 - Нужно ротировать любые секреты, которые могли быть раскрыты вне secret manager: root-пароли VPS, SSH keys, Telegram tokens, payment keys, webhook secrets, JWT/DataProtection keys.
 - Нужен реальный домен и HTTPS, а не только локальные HTTP URLs.
 - Нужна проверка PostgreSQL backup/restore на staging.
 - Нужны реальные sandbox-кабинеты платежных провайдеров и provider-specific smoke.
-- Нужна реальная 3x-ui/x-ui панель, inbound и проверка выдачи VPN-доступа на production-like сервере.
+- Реальная 3x-ui/x-ui панель и inbound доступны на VPS, но application-level выдачу VPN-доступа после deploy еще нужно подтвердить sanitized evidence.
 - Нужна отдельная проверка Telegram bot webhook/invoice flow, особенно для Telegram Stars.
 
 ## Что уже подтверждено
 
-- Backend full suite: `1613/1613`.
+- Backend full suite: `1619/1619`.
 - API Release build: OK.
 - Frontend unit tests: `197/197`.
 - Frontend typecheck/build: OK.
@@ -72,7 +73,7 @@ Production-ready решение заблокировано следующими 
 - Admin mutation session ownership исключает duplicate submit, post-logout UI/reload и потерю более нового form draft при delayed save или background reload.
 - Public/cabinet mutation ownership исключает duplicate auth/refresh/action requests, stale completion после logout/unmount и потерю более нового support/reset draft; reset-code request и password confirmation используют независимые формы с корректным Enter submit.
 - Axe WCAG 2.0/2.1/2.2 A/AA и best-practice gate без allow-list проходит 6 public route-состояний, cabinet auth/dashboard и admin auth/17 sections на desktop и 320 px.
-- Admin production bundle: `5` chunks, largest `277529`, total raw `586266/586752`, gzip `156003/156672`; fail-closed budget пройден.
+- Admin production bundle: `5` chunks, largest `278589`, total raw `587524/587776`, gzip `156320/156672`; reviewed 3x-ui auth-mode growth changed only total raw by `1 KiB`, fail-closed budget пройден.
 - Unknown public route показывает доступное `404` recovery и проходит desktop/mobile, Axe, console и 18 responsive viewport-конфигураций без blank screen/overflow.
 - Public route title/meta/focus lifecycle проходит direct load, SPA navigation и browser Back на desktop/mobile; каждый route имеет точную metadata.
 - Admin hydration/login и 17 sections имеют точную metadata; deep-link, section switch и logout проходят desktop/mobile.
@@ -84,8 +85,9 @@ Production-ready решение заблокировано следующими 
 - VPN server/inbound handlers повторно валидируют programmatic submit; server/panel/inbound semantics и server panel URL защищены в UI/API.
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
-- Latest "Что нового": `2026-08-24-controlled-production-database-migrations`, версия `0.754.0`; run `32693643728` успешно создал backup, применил `27` migrations и развернул degraded mode без email/password reset. Полный Real VPS report остаётся `8 passed / 2 failed / 8 blocked`, providers `Sandbox/Unknown`; restore drill, production admin, production-like 3x-ui/x-ui, provider/Telegram/SMTP delivery и полный staging evidence всё ещё требуются.
-- Roadmap progress: `778/798` closed, readiness `97.5%`, `20` remaining, `19` open, `1` in progress and `0` blocked.
+- Production admin acceptance: preflight `10/10`, login/logout, admin API и все `17/17` обязательных разделов прошли на реальном VPS; failed/blocked/skipped `0`, sanitized reports находятся в `docs/evidence`.
+- Latest "Что нового": `2026-08-31-production-admin-and-threexui-api-token`, версия `0.755.0`; modern 3x-ui 3.6 bearer/client API покрыт `123/123` targeted tests, repeat responsive Playwright прошел `14/14`. Restore drill, provider/Telegram/SMTP delivery, real VPN issuance и полный staging evidence всё ещё требуются.
+- Roadmap progress: `781/798` closed, readiness `97.9%`, `17` remaining, `16` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 
