@@ -72,9 +72,10 @@ jobs:
           fi
 
           settings="$(ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'x-ui setting -show true')"
-          port="$(printf '%s\n' "$settings" | sed -n 's/^port:[[:space:]]*//p' | tail -n 1)"
-          base_path="$(printf '%s\n' "$settings" | sed -n 's/^webBasePath:[[:space:]]*//p' | tail -n 1)"
-          if ! [[ "$port" =~ ^[0-9]+$ ]] || [ -z "$base_path" ]; then
+          clean_settings="$(printf '%s\n' "$settings" | sed $'s/\033\[[0-9;]*m//g' | tr -d '\r')"
+          port="$(printf '%s\n' "$clean_settings" | sed -nE 's/^[[:space:]]*port:[[:space:]]*([0-9]+).*$/\1/p' | tail -n 1)"
+          base_path="$(printf '%s\n' "$clean_settings" | sed -nE 's/^[[:space:]]*webBasePath:[[:space:]]*(.*)$/\1/p' | tail -n 1)"
+          if ! [[ "$port" =~ ^[0-9]+$ ]]; then
             echo "::error::Unable to discover the 3x-ui listen port and base path."
             exit 1
           fi
