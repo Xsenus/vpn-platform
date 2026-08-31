@@ -1,0 +1,121 @@
+name: production-vpn-smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-vpn-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: real 3x-ui application smoke
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+      VPS_APP_DIR: ${{ secrets.VPS_APP_DIR || '/opt/vpn-platform' }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      API_BASE_URL: ${{ secrets.POST_DEPLOY_API_URL }}
+      ADMIN_WEB_URL: ${{ secrets.POST_DEPLOY_ADMIN_WEB_URL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test smoke runner
+        run: python3 scripts/test-production-vpn-smoke.py
+
+      - name: Check required VPS secrets
+        run: |
+          set -euo pipefail
+          for name in VPS_HOST VPS_USER VPS_PORT VPS_APP_DIR VPS_SSH_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::GitHub secret $name is required."
+              exit 1
+            fi
+          done
+
+      - name: Configure SSH
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Discover real 3x-ui and rotate CLI fallback token
+        run: |
+          set -euo pipefail
+          vpn_mode="$(ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "awk -F= '\$1 == \"Vpn__X3Ui__Mode\" { value = substr(\$0, index(\$0, \"=\") + 1) } END { print value }' '$VPS_APP_DIR/shared/.env'")"
+          if [ "${vpn_mode,,}" != "production" ]; then
+            echo "::error::Production API is not configured with Vpn__X3Ui__Mode=Production."
+            exit 1
+          fi
+
+          settings="$(ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'x-ui setting -show true')"
+          port="$(printf '%s\n' "$settings" | sed -n 's/^port:[[:space:]]*//p' | tail -n 1)"
+          base_path="$(printf '%s\n' "$settings" | sed -n 's/^webBasePath:[[:space:]]*//p' | tail -n 1)"
+          if ! [[ "$port" =~ ^[0-9]+$ ]] || [ -z "$base_path" ]; then
+            echo "::error::Unable to discover the 3x-ui listen port and base path."
+            exit 1
+          fi
+
+          token_output="$(ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'x-ui setting -getApiToken')"
+          api_token="$(printf '%s\n' "$token_output" | sed -n 's/^apiToken:[[:space:]]*//p' | tail -n 1)"
+          if [ -z "$api_token" ]; then
+            echo "::error::3x-ui CLI did not return a fallback API token."
+            exit 1
+          fi
+          echo "::add-mask::$api_token"
+          panel_url="http://127.0.0.1:${port}/${base_path#/}"
+          panel_url="${panel_url%/}/"
+          {
+            echo "X3UI_API_TOKEN=$api_token"
+            echo "X3UI_PANEL_URL=$panel_url"
+          } >> "$GITHUB_ENV"
+          echo "3x-ui settings discovered without exposing credentials."
+
+      - name: Bootstrap ephemeral production acceptance admin
+        run: |
+          set -euo pipefail
+          admin_password="$(openssl rand -hex 32)"
+          echo "::add-mask::$admin_password"
+          admin_email="production-acceptance@localhost.invalid"
+          scp -P "$VPS_PORT" scripts/bootstrap-production-admin-remote.sh "$VPS_USER@$VPS_HOST:/tmp/vpn-platform-bootstrap-admin.sh"
+          printf '%s\n' "$admin_password" | ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+            "chmod 700 /tmp/vpn-platform-bootstrap-admin.sh && /tmp/vpn-platform-bootstrap-admin.sh '$VPS_APP_DIR' '$admin_email'; rc=\$?; rm -f /tmp/vpn-platform-bootstrap-admin.sh; exit \$rc"
+          {
+            echo "PRODUCTION_ACCEPTANCE_ADMIN_PASSWORD=$admin_password"
+            echo "PRODUCTION_ACCEPTANCE_ADMIN_EMAIL=$admin_email"
+          } >> "$GITHUB_ENV"
+
+      - name: Run application-level production VPN smoke
+        run: |
+          set -euo pipefail
+          api_url="${API_BASE_URL:-http://$VPS_HOST:8080}"
+          admin_url="${ADMIN_WEB_URL:-http://$VPS_HOST:5175}"
+          release_id="$(python3 -c 'import json; print(next(x["releaseId"] for x in json.load(open("backend/src/VpnPlatform.Api/AppReleases/releases.json", encoding="utf-8")) if x["isActive"]))')"
+          python3 scripts/run-production-vpn-smoke.py \
+            --api-base-url "$api_url" \
+            --admin-web-url "$admin_url" \
+            --panel-url "$X3UI_PANEL_URL" \
+            --admin-email "$PRODUCTION_ACCEPTANCE_ADMIN_EMAIL" \
+            --release-id "$release_id" \
+            --operator "github-run-$GITHUB_RUN_ID" \
+            --output "artifacts/vpn-live-smoke.json"
+          pwsh -NoProfile -File scripts/validate-vpn-live-smoke-report.ps1 \
+            -ReportPath artifacts/vpn-live-smoke.json
+
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-vpn-smoke-${{ github.run_id }}
+          path: artifacts/vpn-live-smoke.json
+          if-no-files-found: error
+          retention-days: 30
