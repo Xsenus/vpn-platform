@@ -114,6 +114,28 @@ public class FreshLocalSetupSmokeTests
     }
 
     [Fact]
+    public void Fresh_Local_Smoke_Should_Refresh_Server_Revision_Before_Archive()
+    {
+        var root = FindRepositoryRoot();
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "fresh-local-smoke.ps1"));
+
+        var refreshIndex = script.LastIndexOf("$currentServers = ConvertTo-SmokeArray", StringComparison.Ordinal);
+        var currentServerIndex = script.IndexOf("$currentServer = $currentServers", refreshIndex, StringComparison.Ordinal);
+        var archiveIndex = script.IndexOf("?revision=$($currentServer.revision)", currentServerIndex, StringComparison.Ordinal);
+
+        Assert.True(refreshIndex >= 0, "Fresh local smoke must reload servers after provisioning changes capacity revision.");
+        Assert.True(currentServerIndex > refreshIndex, "Fresh local smoke must select the refreshed server by id.");
+        Assert.True(archiveIndex > currentServerIndex, "Fresh local smoke must archive with the refreshed revision.");
+        Assert.DoesNotContain("?revision=$($adminServer.revision)", script, StringComparison.Ordinal);
+        Assert.Contains("$serverArchiveBlockedStatus", script, StringComparison.Ordinal);
+        Assert.Contains("$currentServer.usedCapacity -le 0", script, StringComparison.Ordinal);
+        Assert.Contains("$serverArchiveBlockedStatus -ne 409", script, StringComparison.Ordinal);
+        Assert.Contains("reserved or active VPN capacity|active subscriptions, VPN access", script, StringComparison.Ordinal);
+        Assert.Contains("serverAfterArchiveAttempt.status -eq \"Archived\"", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Linked VPN server was not archived", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Sqlite_Migration_Startup_Should_Run_Local_Repair_After_Migrate()
     {
         var root = FindRepositoryRoot();

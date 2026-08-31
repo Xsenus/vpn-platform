@@ -9,11 +9,16 @@ Release entry: `2026-08-31-production-vpn-panel-smoke`.
 - Manual `production-vpn-smoke` now uses the existing VPS SSH secrets to rotate one 3x-ui CLI fallback token, bootstrap an ephemeral acceptance admin and exercise panel health/sync through the deployed application.
 - A persistent systemd override keeps `Vpn__X3Ui__Mode=Production` after subsequent deployments; the change restarts the API and fails unless readiness recovers.
 
+### Fixed
+
+- Fresh SQLite smoke reloads the VPN server revision after provisioning and verifies the active-capacity archive rejection by status and safe error contract instead of expecting an occupied server to be archived.
+- Repository integration audit now records the configured default branch, fetch/prune result, open PR inventory and branch reachability before delivery; no unmerged working branches were found.
+
 ### Verification
 
 - Real GitHub Actions run `33365986521` passed application login, write-only panel configuration, 3x-ui bearer health-check, inbound sync, production-node adoption and sanitized evidence validation.
 - `docs/evidence/vpn-live-smoke-2026-08-31.json` records `3 passed / 6 blocked`: panel connection, one active inbound and the `Ready/Healthy` production node are proven; order/payment/subscription/client/URI/fail-closed checks remain explicitly blocked.
-- Backend Release `1622/1622`, smoke runner `4/4`, production VPN mode contract and targeted status/evidence guards `50/50` pass.
+- Backend Release `1623/1623`, frontend `197/197`, full Playwright `282/282`, fresh SQLite purchase/VPN flow, smoke runner `4/4`, production VPN mode contract, formatter, Docker Compose config and targeted status/evidence guards pass.
 - Roadmap `784/798` closed, readiness `98.2%`, `14` remaining, `13` open, `1` in progress, `0` blocked. Real paid order/client issuance, provider cabinets, SMTP/HTTPS and full staging acceptance remain external gates.
 
 ## 0.755.0 - 2026-08-31

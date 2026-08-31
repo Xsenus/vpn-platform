@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-31.
 
+## Check 2026-08-31: full main integration and clean SQLite acceptance
+
+Scope:
+
+- Release entry: `2026-08-31-production-vpn-panel-smoke`, version `0.756.0`.
+- Git default branch is `main`; after `git fetch --all --prune --tags`, local `main` and `origin/main` matched, open pull requests and additional local/remote working branches were absent, so no merge or branch deletion was required.
+- Fail-first fresh SQLite smoke correctly exposed an obsolete archive expectation: provisioning advanced the server revision and active VPN capacity now blocks archive. The smoke reloads the server, uses the current revision and accepts only the safe active-capacity `409` contract while confirming that the server remains non-archived.
+- Backend Release `1623/1623`, build `0 warnings / 0 errors`, EF migration list and pending-model drift check pass; clean SQLite covers registration, checkout, sandbox payment/webhook, subscription activation, VPN URI and archive fail-closed behavior.
+- Frontend on Node `24.19.0`: `197/197`, typecheck, all three production builds, admin bundle `587524` raw / `156320` gzip / `278589` largest, dependency audit `0 vulnerabilities`; full Playwright `282/282` passed in `18.0 min`.
+- Formatter, strict UTF-8 without BOM, secret scan `739/0`, combined Docker Compose config, production VPN mode contract, cleanup and `git diff --check` pass.
+- Roadmap remains `784/798` closed, readiness `98.2%`, `14` remaining, `13` open, `1` in progress and `0` blocked; this integration pass does not replace missing real payment, SMTP/HTTPS or full staging evidence.
+
 ## Check 2026-08-31: production 3x-ui panel and inbound smoke
 
 Scope:
@@ -11,7 +23,7 @@ Scope:
 - GitHub Actions run `33365986521` used the deployed API on `83.147.222.145`, the real local 3x-ui service and a freshly rotated write-only API token; credentials were masked and are absent from artifacts.
 - Application-level panel `test-connection` passed, admin GET omitted credentials, panel sync returned `1` active inbound, and node adoption exposed production node `e4ab6901-5866-44d5-ad0e-08f13b774f56` as `Ready/Healthy` with allocation enabled.
 - Sanitized evidence: `docs/evidence/vpn-live-smoke-2026-08-31.json`, `3 passed / 0 failed / 6 blocked`, SHA-256 `0f3c22bc0ae6d0daad9407e1b5abbd0528f2365b2ce5a7e259736b27f9f312fc`.
-- Backend Release `1622/1622`; smoke runner unit tests `4/4`, production VPN mode contract, VPN report structural validator, targeted status/evidence guards `50/50`, YAML parsing and secret scan pass.
+- Backend Release `1623/1623`; smoke runner unit tests `4/4`, production VPN mode contract, VPN report structural validator, targeted status/evidence guards, YAML parsing and secret scan pass.
 - External boundary: this closes panel connection, inbound synchronization and production-node readiness only. Paid order/webhook/subscription/client/URI/fail-closed smoke and all provider-specific payments remain open.
 
 ## Check 2026-08-31: production admin and modern 3x-ui API token

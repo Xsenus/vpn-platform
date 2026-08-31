@@ -69,6 +69,52 @@ function Invoke-SmokeJson {
     }
 }
 
+function Get-SmokeJsonResult {
+    param(
+        [string]$Method,
+        [string]$Uri,
+        [object]$Body = $null,
+        [hashtable]$Headers
+    )
+
+    $arguments = @{
+        Method = $Method
+        Uri = $Uri
+        Headers = $Headers
+        TimeoutSec = 10
+    }
+    if ($null -ne $Body) {
+        $requestBody = $Body | ConvertTo-Json -Depth 10
+        $arguments.ContentType = "application/json; charset=utf-8"
+        $arguments.Body = [System.Text.Encoding]::UTF8.GetBytes($requestBody)
+    }
+
+    try {
+        Invoke-RestMethod @arguments | Out-Null
+        return [pscustomobject]@{ Status = 200; Body = "" }
+    }
+    catch {
+        if ($_.Exception.Response) {
+            $responseBody = [string]$_.ErrorDetails.Message
+            if (-not $responseBody -and $_.Exception.Response.Content) {
+                try {
+                    $responseBody = $_.Exception.Response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+                }
+                catch {
+                    $responseBody = ""
+                }
+            }
+
+            return [pscustomobject]@{
+                Status = [int]$_.Exception.Response.StatusCode
+                Body = $responseBody
+            }
+        }
+
+        throw
+    }
+}
+
 function Assert-SmokeJsonStatus {
     param(
         [string]$Method,
@@ -78,17 +124,9 @@ function Assert-SmokeJsonStatus {
         [int]$ExpectedStatus
     )
 
-    $requestBody = $Body | ConvertTo-Json -Depth 10
-    $requestBodyBytes = [System.Text.Encoding]::UTF8.GetBytes($requestBody)
-    try {
-        Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers -ContentType "application/json; charset=utf-8" -Body $requestBodyBytes -TimeoutSec 10 | Out-Null
-        throw "HTTP $Method $Uri unexpectedly succeeded; expected status $ExpectedStatus."
-    }
-    catch {
-        $actualStatus = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 }
-        if ($actualStatus -ne $ExpectedStatus) {
-            throw "HTTP $Method $Uri returned status $actualStatus; expected $ExpectedStatus."
-        }
+    $actualStatus = (Get-SmokeJsonResult -Method $Method -Uri $Uri -Headers $Headers -Body $Body).Status
+    if ($actualStatus -ne $ExpectedStatus) {
+        throw "HTTP $Method $Uri returned status $actualStatus; expected $ExpectedStatus."
     }
 
     return $ExpectedStatus
@@ -505,18 +543,30 @@ try {
         throw "Unexpected access URI protocol: $($access.accessUri)"
     }
 
-    $archiveResult = Invoke-SmokeJson -Method "DELETE" -Uri "$apiUrl/api/admin/servers/$($adminServer.id)?revision=$($adminServer.revision)" -Headers $adminHeaders
-    if ($archiveResult.archived -ne $true -or $archiveResult.deleted -ne $false) {
-        throw "Linked VPN server was not archived by the first delete command."
+    $currentServers = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/admin/servers" -Headers $adminHeaders)
+    $currentServer = $currentServers | Where-Object { $_.id -eq $adminServer.id } | Select-Object -First 1
+    if ($null -eq $currentServer) {
+        throw "VPN server disappeared before the archive check."
     }
-    $archivedServers = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/admin/servers" -Headers $adminHeaders)
-    $archivedServer = $archivedServers | Where-Object { $_.id -eq $adminServer.id } | Select-Object -First 1
-    if ($null -eq $archivedServer -or $archivedServer.status -ne "Archived") {
-        throw "Archived VPN server was not returned by the admin list."
+    if ([int]$currentServer.usedCapacity -le 0) {
+        throw "VPN server must expose reserved capacity before the archive blocker check."
     }
-    $serverArchiveNoOpStatus = Assert-SmokeJsonStatus -Method "DELETE" -Uri "$apiUrl/api/admin/servers/$($archivedServer.id)?revision=$($archivedServer.revision)" -Headers $adminHeaders -ExpectedStatus 400 -Body @{}
 
-    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) managedNoOp=$managedNoOpStatus commerceNoOps=$tariffNoOpStatus,$referralNoOpStatus,$releaseNoOpStatus providerGuards=$providerNoOpStatus,$providerStateNoOpStatus,$providerConflictStatus serverGuards=$serverNoOpStatus,$serverStateNoOpStatus serverArchiveNoOp=$serverArchiveNoOpStatus vpnNoOps=$vpnPanelNoOpStatus,$vpnInboundNoOpStatus telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
+    $serverArchiveResult = Get-SmokeJsonResult -Method "DELETE" -Uri "$apiUrl/api/admin/servers/$($currentServer.id)?revision=$($currentServer.revision)" -Headers $adminHeaders
+    $serverArchiveBlockedStatus = $serverArchiveResult.Status
+    if ($serverArchiveBlockedStatus -ne 409) {
+        throw "Server archive with active VPN capacity returned status $serverArchiveBlockedStatus; expected 409."
+    }
+    if ($serverArchiveResult.Body -notmatch 'reserved or active VPN capacity|active subscriptions, VPN access') {
+        throw "Server archive was not rejected by the active-capacity boundary. Response=$($serverArchiveResult.Body)"
+    }
+    $serversAfterArchiveAttempt = ConvertTo-SmokeArray (Invoke-SmokeJson -Uri "$apiUrl/api/admin/servers" -Headers $adminHeaders)
+    $serverAfterArchiveAttempt = $serversAfterArchiveAttempt | Where-Object { $_.id -eq $currentServer.id } | Select-Object -First 1
+    if ($null -eq $serverAfterArchiveAttempt -or $serverAfterArchiveAttempt.status -eq "Archived") {
+        throw "Server with active VPN capacity must remain available after a rejected archive command."
+    }
+
+    Write-Output "fresh local smoke ok live=$($live.status) ready=$($readyResponse.status) tariffs=$($tariffs.Count) providers=$($providers.Count) adminUser=$($adminUser.id) managedNoOp=$managedNoOpStatus commerceNoOps=$tariffNoOpStatus,$referralNoOpStatus,$releaseNoOpStatus providerGuards=$providerNoOpStatus,$providerStateNoOpStatus,$providerConflictStatus serverGuards=$serverNoOpStatus,$serverStateNoOpStatus serverArchiveBlocked=$serverArchiveBlockedStatus vpnNoOps=$vpnPanelNoOpStatus,$vpnInboundNoOpStatus telegramRevision=$($updatedTelegramSettings.revision) order=$($order.id) payment=$($payment.paymentId) subscription=$($activeSubscription.id) access=$($access.id) latest=$($latest.latestRelease.releaseId)"
 }
 finally {
     if ($process -and -not $process.HasExited) {

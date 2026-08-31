@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-31:
 
-- [x] `STATE-001` Backend test suite проходит: `1622/1622`.
+- [x] `STATE-001` Backend test suite проходит: `1623/1623`.
 - [x] `STATE-002` Frontend test suite проходит: `197/197`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.

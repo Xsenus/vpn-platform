@@ -18,7 +18,7 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-31",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `1622/1622`",
+                     "Backend full suite: `1623/1623`",
                      "Frontend unit tests: `197/197`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `282/282`",
                      "Fresh local SQLite smoke: OK",
@@ -74,7 +74,7 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `1622/1622`",
+                     "Backend full suite: `1623/1623`",
                      "Frontend unit tests: `197/197`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",

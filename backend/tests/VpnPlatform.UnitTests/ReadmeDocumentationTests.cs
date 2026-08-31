@@ -38,7 +38,7 @@ public class ReadmeDocumentationTests
         Assert.Contains("npm run e2e:all-screens --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:mobile --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("npm run e2e:console --prefix frontend", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1622/1622", readme, StringComparison.Ordinal);
+        Assert.Contains("1623/1623", readme, StringComparison.Ordinal);
         Assert.Contains("197/197", readme, StringComparison.Ordinal);
         Assert.Contains("dependency audit: `0 vulnerabilities`", readme, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("0 vulnerabilities", readme, StringComparison.OrdinalIgnoreCase);
@@ -58,7 +58,7 @@ public class ReadmeDocumentationTests
 
         foreach (var expected in new[]
                  {
-                     "1622/1622",
+                     "1623/1623",
                      "2026-08-31-production-vpn-panel-smoke",
                      "0.756.0",
                      "staging-ready baseline",

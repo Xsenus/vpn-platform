@@ -23,7 +23,7 @@ Production-ready решение заблокировано следующими 
 
 ## Что уже подтверждено
 
-- Backend full suite: `1622/1622`.
+- Backend full suite: `1623/1623`.
 - API Release build: OK.
 - Frontend unit tests: `197/197`.
 - Frontend typecheck/build: OK.

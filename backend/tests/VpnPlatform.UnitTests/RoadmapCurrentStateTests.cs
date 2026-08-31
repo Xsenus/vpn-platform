@@ -17,7 +17,7 @@ public class RoadmapCurrentStateTests
         var roadmap = File.ReadAllText(Path.Combine(root, "docs", "PRODUCT_COMPLETION_ROADMAP.md"));
 
         Assert.Contains("Дата актуализации: 2026-08-31", roadmap, StringComparison.Ordinal);
-        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1622/1622`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `STATE-001` Backend test suite проходит: `1623/1623`.", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `STATE-013`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P0-ADMIN-001`", roadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P0-ADMIN-002`", roadmap, StringComparison.Ordinal);
@@ -390,9 +390,9 @@ public class RoadmapCurrentStateTests
 
         Assert.Contains("RoadmapCurrentStateTests", changelog, StringComparison.Ordinal);
         Assert.Contains("RoadmapCurrentStateTests", testResults, StringComparison.Ordinal);
-        Assert.Contains("1622/1622", readme, StringComparison.Ordinal);
-        Assert.Contains("1622/1622", finalRunbook, StringComparison.Ordinal);
-        Assert.Contains("1622/1622", releaseDecision, StringComparison.Ordinal);
+        Assert.Contains("1623/1623", readme, StringComparison.Ordinal);
+        Assert.Contains("1623/1623", finalRunbook, StringComparison.Ordinal);
+        Assert.Contains("1623/1623", releaseDecision, StringComparison.Ordinal);
 
         using var releasesJson = JsonDocument.Parse(File.ReadAllText(Path.Combine(
             root,

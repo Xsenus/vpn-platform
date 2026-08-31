@@ -86,7 +86,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1622/1622`.
+- [x] Backend full suite: `1623/1623`.
 - [x] Frontend unit tests: `197/197`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -176,7 +176,7 @@
 - [x] Payment-provider accounts требуют persisted revision, отклоняют no-op/stale update и state action, а delayed conflict сохраняет более новый local draft.
 - [x] Payment-provider, tariff, referral-program, app-release, VPN panel и inbound drafts после delayed conflict получают winning revision и повторно сохраняются.
 - [x] VPN-server editor отклоняет no-op без revision/audit churn и сохраняет новый draft при delayed conflict для повторной отправки.
-- [x] Latest "Что нового": `2026-08-31-production-vpn-panel-smoke`, версия `0.756.0`; backend `1622/1622`, frontend `197/197`, repeat responsive Playwright `14/14`, production admin `17/17`, real 3x-ui panel health, inbound sync и production node readiness `3/3`. SMTP delivery, provider payments, client issuance и полный staging report остаются открыты.
+- [x] Latest "Что нового": `2026-08-31-production-vpn-panel-smoke`, версия `0.756.0`; backend `1623/1623`, frontend `197/197`, full Playwright `282/282`, production admin `17/17`, real 3x-ui panel health, inbound sync и production node readiness `3/3`. SMTP delivery, provider payments, client issuance и полный staging report остаются открыты.
 
 ## Как вести дальше
 

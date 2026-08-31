@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-31 подтверждено:
 
-- backend full suite: 1622/1622;
+- backend full suite: 1623/1623;
 - frontend tests: 197/197;
 - API build: OK;
 - frontend typecheck/build: OK;

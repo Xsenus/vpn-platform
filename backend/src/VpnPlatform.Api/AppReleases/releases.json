@@ -17920,6 +17920,14 @@
         "text": "Systemd загружает отдельный устойчивый production override после общего env-файла, поэтому последующие deploy не возвращают VPN integration в Sandbox."
       },
       {
+        "type": "fixed",
+        "text": "Fresh SQLite smoke перечитывает актуальную revision VPN-сервера после provisioning и подтверждает fail-closed запрет архивирования при активной емкости вместо устаревшего ожидания успешного archive."
+      },
+      {
+        "type": "improved",
+        "text": "Полный integration audit подтвердил единственную синхронизированную ветку main, отсутствие открытых pull request и невлитых рабочих веток; backend 1623/1623, frontend 197/197 и Playwright 282/282 проходят."
+      },
+      {
         "type": "important",
         "text": "Реальный GitHub run 33365986521 подтвердил application-level panel connection, синхронизацию одного active inbound и production-ноду Ready/Healthy с allocation enabled без credentials в API/evidence; paid order, client issuance и fail-closed smoke остаются открытыми."
       },
