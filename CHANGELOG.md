@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.756.0 - 2026-08-31
+
+Release entry: `2026-08-31-production-vpn-panel-smoke`.
+
+### Added
+
+- Manual `production-vpn-smoke` now uses the existing VPS SSH secrets to rotate one 3x-ui CLI fallback token, bootstrap an ephemeral acceptance admin and exercise panel health/sync through the deployed application.
+- A persistent systemd override keeps `Vpn__X3Ui__Mode=Production` after subsequent deployments; the change restarts the API and fails unless readiness recovers.
+
+### Verification
+
+- Real GitHub Actions run `33364400597` passed application login, write-only panel configuration, 3x-ui bearer health-check, inbound sync and sanitized evidence validation.
+- `docs/evidence/vpn-live-smoke-2026-08-31.json` records `2 passed / 7 blocked`: panel connection and one active inbound are proven; node/order/payment/subscription/client/URI/fail-closed checks remain explicitly blocked.
+- Backend Release `1622/1622`, smoke runner `4/4`, production VPN mode contract and targeted status/evidence guards `50/50` pass.
+- Roadmap `783/798` closed, readiness `98.1%`, `15` remaining, `14` open, `1` in progress, `0` blocked. Real paid order, production node/client issuance, provider cabinets, SMTP/HTTPS and full staging acceptance remain external gates.
+
 ## 0.755.0 - 2026-08-31
 
 Release entry: `2026-08-31-production-admin-and-threexui-api-token`.

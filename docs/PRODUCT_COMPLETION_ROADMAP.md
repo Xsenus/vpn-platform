@@ -6,7 +6,7 @@
 
 Дата последней сверки: 2026-08-31.
 
-Временный статус работы с roadmap: активная доработка синхронизирована до `2026-08-31-production-admin-and-threexui-api-token`, версия `0.755.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `781/798` проверяемых пунктов, готовность `97.9%`, осталось `17`, открыто `16`, в работе `1`, блокеров `[!]` нет. Production admin acceptance подтвержден реальным VPS evidence. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `P0-VPN-*`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального VPS/staging/live provider evidence.
+Временный статус работы с roadmap: активная доработка синхронизирована до `2026-08-31-production-vpn-panel-smoke`, версия `0.756.0`. Roadmap остается staging-ready baseline, не production-ready: закрыто `783/798` проверяемых пунктов, готовность `98.1%`, осталось `15`, открыто `14`, в работе `1`, блокеров `[!]` нет. Production admin, подключение реальной 3x-ui панели и синхронизация active inbound подтверждены реальным VPS evidence. Дальше нельзя закрывать `STATE-011`, `STATE-012`, `P0-VPN-003` ... `P0-VPN-005`, `P0-PAY-*`, `P9-TST-007` и `P11-ACC-002` без реального order/payment/provisioning/staging evidence.
 
 ## Как вести этот roadmap
 
@@ -37,7 +37,7 @@ git diff --check
 
 Что подтверждено на 2026-08-31:
 
-- [x] `STATE-001` Backend test suite проходит: `1619/1619`.
+- [x] `STATE-001` Backend test suite проходит: `1622/1622`.
 - [x] `STATE-002` Frontend test suite проходит: `197/197`.
 - [x] `STATE-003` TypeScript typecheck проходит для public-web, cabinet и admin-panel.
 - [x] `STATE-004` Frontend production build проходит для public-web, cabinet и admin-panel.
@@ -635,15 +635,17 @@ git diff --check
 
 Проблема: код production-выдачи есть, но live-проверка с настоящей 3x-ui панелью и inbound не завершена.
 
-- [ ] `P0-VPN-001` Подключить реальную 3x-ui панель в админке.
+- [x] `P0-VPN-001` Подключить реальную 3x-ui панель в админке. 2026-08-31.
   - Что сделать: добавить panel base URL, логин, пароль/секрет, проверить подключение, сохранить без утечки секрета в API.
   - Критерий готовности: кнопка проверки подключения возвращает success, секреты не видны в ответах API.
-  - Доказательство: результат health-check панели, тест на отсутствие секрета в response.
+  - Что сделано: manual GitHub Actions smoke перевел VPS API в устойчивый `Vpn__X3Ui__Mode=Production`, безопасно ротировал CLI fallback API token, сохранил его через write-only `ApiToken` contract и выполнил application-level `test-connection`; повторный admin GET не содержит token/password/encrypted secret.
+  - Доказательство: `docs/evidence/vpn-live-smoke-2026-08-31.json`, check `panel-connection=passed`, SHA-256 `1f020942d6a47ed4ada8541e8d98834308e15f45ba33dbc9ebc6a9f121324353`; GitHub Actions run `33364400597`; секретов, auth headers, cookies и приватного panel base path в отчете нет.
 
-- [ ] `P0-VPN-002` Синхронизировать реальные inbound-ы.
+- [x] `P0-VPN-002` Синхронизировать реальные inbound-ы. 2026-08-31.
   - Что сделать: получить inbound-ы из 3x-ui, сохранить protocol, port, network, security, stream settings.
   - Критерий готовности: в админке виден хотя бы один активный inbound для VLESS или другого выбранного протокола.
-  - Доказательство: скриншот админки и API response без секретов.
+  - Что сделано: production API выполнил реальный panel sync через `/panel/api/inbounds/list` и затем вернул один active inbound через admin API без credentials или VPN URI.
+  - Доказательство: `docs/evidence/vpn-live-smoke-2026-08-31.json`, check `inbound-sync=passed`, sync run `1b53cd75-a293-4265-a02c-88a6b638d728`, active inbound count `1`; GitHub Actions run `33364400597`.
 
 - [ ] `P0-VPN-003` Подключить реальный VPN-сервер к панели.
   - Что сделать: создать VPN node, указать hostname, регион, capacity, supported protocols, panel binding, режим production.

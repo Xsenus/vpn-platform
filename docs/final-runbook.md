@@ -176,7 +176,7 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 
 На 2026-08-31 подтверждено:
 
-- backend full suite: 1619/1619;
+- backend full suite: 1622/1622;
 - frontend tests: 197/197;
 - API build: OK;
 - frontend typecheck/build: OK;
@@ -233,8 +233,9 @@ dotnet test backend\tests\VpnPlatform.UnitTests\VpnPlatform.UnitTests.csproj --c
 - admin hidden-form capability boundary for releases, FAQ, content, scenarios, support and Telegram settings: OK.
 - admin action target-section capability boundary for all typed dispatcher callsites: OK.
 - production admin VPS smoke: preflight `10/10`, login/logout, admin API и `17/17` sections passed, failed/blocked/skipped `0`; sanitized evidence сохранено в `docs/evidence`.
-- latest "Что нового": `2026-08-31-production-admin-and-threexui-api-token`, версия `0.755.0`; modern 3x-ui bearer/client API и PowerShell 7.6 evidence compatibility готовы к deploy, полный изменённый responsive Playwright прошел `14/14`.
-- roadmap progress: `781/798` closed, readiness `97.9%`, `17` remaining, `16` open, `1` in progress and `0` blocked.
+- production VPN panel smoke: GitHub run `33364400597` подключил deployed API к реальному 3x-ui, подтвердил health-check, secret-redacted admin GET и sync `1` active inbound; sanitized report `docs/evidence/vpn-live-smoke-2026-08-31.json` содержит `2 passed / 7 blocked`.
+- latest "Что нового": `2026-08-31-production-vpn-panel-smoke`, версия `0.756.0`; устойчивый production VPN mode и повторяемый real-VPS smoke готовы для ручного acceptance.
+- roadmap progress: `783/798` closed, readiness `98.1%`, `15` remaining, `14` open, `1` in progress and `0` blocked.
 - полноценный production по-прежнему требует реального SMTP; degraded deployment и полный production smoke ещё не подтверждены на VPS.
 - release decision: `staging-ready baseline`, подробнее в `docs/release-decision.md`.
 

@@ -17901,5 +17901,32 @@
         "text": "Roadmap progress is 781/798 closed, readiness 97.9%, 17 remaining, 16 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required for application-level VPN issuance and full acceptance; HTTPS and SMTP delivery also remain external gates."
       }
     ]
+  },
+  {
+    "releaseId": "2026-08-31-production-vpn-panel-smoke",
+    "version": "0.756.0",
+    "releasedAt": "2026-08-31T13:35:00+07:00",
+    "title": "Production API подключен к реальной 3x-ui панели",
+    "summary": "Ручной VPS smoke безопасно включает production VPN mode, проверяет 3x-ui через deployed API и сохраняет очищенное подтверждение panel health и inbound sync.",
+    "isActive": true,
+    "source": "agent",
+    "items": [
+      {
+        "type": "new",
+        "text": "Production VPN smoke ротирует один fallback API token 3x-ui без вывода значения, создает временный admin-доступ через maintenance CLI и запускает panel health/sync через приложение."
+      },
+      {
+        "type": "improved",
+        "text": "Systemd загружает отдельный устойчивый production override после общего env-файла, поэтому последующие deploy не возвращают VPN integration в Sandbox."
+      },
+      {
+        "type": "important",
+        "text": "Реальный GitHub run 33364400597 подтвердил application-level panel connection и синхронизацию одного active inbound без credentials в API/evidence; node, paid order, client issuance и fail-closed smoke остаются открытыми."
+      },
+      {
+        "type": "important",
+        "text": "Roadmap progress is 783/798 closed, readiness 98.1%, 15 remaining, 14 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required for production node/order/client issuance, provider payments, SMTP/HTTPS and full acceptance."
+      }
+    ]
   }
 ]

@@ -18,12 +18,12 @@ Production-ready решение заблокировано следующими 
 - Нужен реальный домен и HTTPS, а не только локальные HTTP URLs.
 - Нужна проверка PostgreSQL backup/restore на staging.
 - Нужны реальные sandbox-кабинеты платежных провайдеров и provider-specific smoke.
-- Реальная 3x-ui/x-ui панель и inbound доступны на VPS, но application-level выдачу VPN-доступа после deploy еще нужно подтвердить sanitized evidence.
+- Реальная 3x-ui панель подключена через deployed API и один active inbound синхронизирован; production node, paid order и выдачу VPN-клиента после webhook еще нужно подтвердить sanitized evidence.
 - Нужна отдельная проверка Telegram bot webhook/invoice flow, особенно для Telegram Stars.
 
 ## Что уже подтверждено
 
-- Backend full suite: `1619/1619`.
+- Backend full suite: `1622/1622`.
 - API Release build: OK.
 - Frontend unit tests: `197/197`.
 - Frontend typecheck/build: OK.
@@ -86,8 +86,9 @@ Production-ready решение заблокировано следующими 
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
 - Production admin acceptance: preflight `10/10`, login/logout, admin API и все `17/17` обязательных разделов прошли на реальном VPS; failed/blocked/skipped `0`, sanitized reports находятся в `docs/evidence`.
-- Latest "Что нового": `2026-08-31-production-admin-and-threexui-api-token`, версия `0.755.0`; modern 3x-ui 3.6 bearer/client API покрыт `123/123` targeted tests, repeat responsive Playwright прошел `14/14`. Restore drill, provider/Telegram/SMTP delivery, real VPN issuance и полный staging evidence всё ещё требуются.
-- Roadmap progress: `781/798` closed, readiness `97.9%`, `17` remaining, `16` open, `1` in progress and `0` blocked.
+- Production VPN panel acceptance: GitHub run `33364400597` подтвердил application-level health-check и sync `1` active inbound без раскрытия token/password; report `docs/evidence/vpn-live-smoke-2026-08-31.json` содержит `2 passed / 7 blocked`.
+- Latest "Что нового": `2026-08-31-production-vpn-panel-smoke`, версия `0.756.0`. Restore drill, provider/Telegram/SMTP delivery, production node/order/client issuance и полный staging evidence всё ещё требуются.
+- Roadmap progress: `783/798` closed, readiness `98.1%`, `15` remaining, `14` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

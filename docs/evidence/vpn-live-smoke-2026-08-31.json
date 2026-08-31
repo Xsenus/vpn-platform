@@ -1,0 +1,66 @@
+{
+  "reportId": "vpn-live-smoke-20260831-062959",
+  "environmentName": "production-vps",
+  "apiBaseUrl": "http://83.147.222.145:8080",
+  "adminWebUrl": "http://83.147.222.145:5175",
+  "x3uiPanelUrl": "http://127.0.0.1:54321",
+  "smokeReportPath": "docs/evidence/vpn-live-smoke-2026-08-31.json",
+  "startedAt": "2026-08-31T06:29:57.235259+00:00",
+  "completedAt": "2026-08-31T06:29:59.694739+00:00",
+  "releaseId": "2026-08-31-production-admin-and-threexui-api-token",
+  "operator": "github-run-33364400597",
+  "notes": "Application-level production VPS smoke. Evidence is sanitized; credentials, headers, cookies and VPN URIs are excluded.",
+  "panelConnected": true,
+  "inboundSynced": true,
+  "nodeReady": false,
+  "productionProvisioningEnabled": false,
+  "noSandboxFallback": false,
+  "failClosedChecked": false,
+  "checks": [
+    {
+      "id": "panel-connection",
+      "status": "passed",
+      "evidence": "Application health-check succeeded for panel 2c12ea3f-c647-4a22-bbce-bb6c86dc1370; API response omitted credentials."
+    },
+    {
+      "id": "inbound-sync",
+      "status": "passed",
+      "evidence": "Application sync run 1b53cd75-a293-4265-a02c-88a6b638d728 imported 1 active inbound(s)."
+    },
+    {
+      "id": "node-ready",
+      "status": "blocked",
+      "evidence": "A production-ready VPN node has not yet been accepted through an order flow."
+    },
+    {
+      "id": "order-create",
+      "status": "blocked",
+      "evidence": "Requires a real paid order and production provisioning acceptance run."
+    },
+    {
+      "id": "payment-webhook",
+      "status": "blocked",
+      "evidence": "Requires a real paid order and production provisioning acceptance run."
+    },
+    {
+      "id": "subscription-activated",
+      "status": "blocked",
+      "evidence": "Requires a real paid order and production provisioning acceptance run."
+    },
+    {
+      "id": "vpn-client-created",
+      "status": "blocked",
+      "evidence": "Requires a real paid order and production provisioning acceptance run."
+    },
+    {
+      "id": "access-uri-qr",
+      "status": "blocked",
+      "evidence": "Requires a real paid order and production provisioning acceptance run."
+    },
+    {
+      "id": "fail-closed-disabled-inbound",
+      "status": "blocked",
+      "evidence": "Requires a real paid order and production provisioning acceptance run."
+    }
+  ]
+}

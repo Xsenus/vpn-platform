@@ -2,6 +2,18 @@
 
 Дата проверки: 2026-08-31.
 
+## Check 2026-08-31: production 3x-ui panel and inbound smoke
+
+Scope:
+
+- Release entry: `2026-08-31-production-vpn-panel-smoke`, version `0.756.0`.
+- Roadmap progress: `783/798` closed, readiness `98.1%`, `15` remaining, `14` open, `1` in progress, `0` blockers.
+- GitHub Actions run `33364400597` used the deployed API on `83.147.222.145`, the real local 3x-ui service and a freshly rotated write-only API token; credentials were masked and are absent from artifacts.
+- Application-level panel `test-connection` passed, admin GET omitted credentials, panel sync completed and returned `1` active inbound.
+- Sanitized evidence: `docs/evidence/vpn-live-smoke-2026-08-31.json`, `2 passed / 0 failed / 7 blocked`, SHA-256 `1f020942d6a47ed4ada8541e8d98834308e15f45ba33dbc9ebc6a9f121324353`.
+- Backend Release `1622/1622`; smoke runner unit tests `4/4`, production VPN mode contract, VPN report structural validator, targeted status/evidence guards `50/50`, YAML parsing and secret scan pass.
+- External boundary: this closes panel connection and inbound synchronization only. Production node readiness, paid order/webhook/subscription/client/URI/fail-closed smoke and all provider-specific payments remain open.
+
 ## Check 2026-08-31: production admin and modern 3x-ui API token
 
 Scope:

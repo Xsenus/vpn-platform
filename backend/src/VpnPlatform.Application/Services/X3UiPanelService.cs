@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -51,6 +52,130 @@ public class X3UiPanelService
     {
         var panel = await _db.VpnPanels.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         return panel is null ? Result<VpnPanelDto>.Failure("VPN panel not found.") : Result<VpnPanelDto>.Success(MapPanel(panel));
+    }
+
+    public async Task<Result<ReadyVpnNodeDto>> AdoptReadyNodeAsync(
+        Guid panelId,
+        AdoptVpnPanelNodeCommand command,
+        Guid? actorUserId,
+        CancellationToken cancellationToken = default)
+    {
+        if (IsSandboxMode())
+        {
+            return Result<ReadyVpnNodeDto>.Failure("A production VPN node cannot be adopted while 3x-ui sandbox mode is enabled.");
+        }
+
+        var publicHostname = command.PublicHostname?.Trim() ?? string.Empty;
+        if (!IsValidPublicHostname(publicHostname))
+        {
+            return Result<ReadyVpnNodeDto>.Failure("Public hostname must be a valid DNS name, IPv4 or IPv6 address.");
+        }
+        if (command.PublicPort is < 1 or > 65535)
+        {
+            return Result<ReadyVpnNodeDto>.Failure("Public port must be between 1 and 65535.");
+        }
+
+        var panel = await _db.VpnPanels
+            .Include(x => x.Inbounds)
+            .FirstOrDefaultAsync(x => x.Id == panelId, cancellationToken);
+        if (panel is null)
+        {
+            return Result<ReadyVpnNodeDto>.Failure("VPN panel not found.");
+        }
+        if (panel.Status != VpnPanelStatus.Active || panel.HealthStatus != HealthStatus.Healthy)
+        {
+            return Result<ReadyVpnNodeDto>.Failure("VPN panel must be active and healthy before adopting a production node.");
+        }
+
+        var freshnessBoundary = _clock.UtcNow.AddMinutes(-10);
+        if (panel.LastHealthCheckAt is null || panel.LastHealthCheckAt < freshnessBoundary
+            || panel.LastSyncAt is null || panel.LastSyncAt < freshnessBoundary)
+        {
+            return Result<ReadyVpnNodeDto>.Failure("VPN panel health-check and inbound sync must both be completed within the last 10 minutes.");
+        }
+
+        var activeInbounds = panel.Inbounds
+            .Where(x => x.IsActive && VpnProtocolPolicy.IsSupported(x.Protocol))
+            .OrderByDescending(x => x.IsDefault)
+            .ThenBy(x => x.Port)
+            .ThenBy(x => x.Id)
+            .ToArray();
+        if (activeInbounds.Length == 0)
+        {
+            return Result<ReadyVpnNodeDto>.Failure("At least one active supported inbound is required before adopting a production node.");
+        }
+
+        var protocols = string.Join(',', activeInbounds
+            .Select(x => VpnProtocolPolicy.Normalize(x.Protocol))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x, StringComparer.Ordinal));
+        var primaryInbound = activeInbounds[0];
+        var panelInboundId = int.TryParse(primaryInbound.ExternalInboundId, out var parsedInboundId)
+            ? parsedInboundId
+            : (int?)null;
+        var node = await _db.VpnNodes.FirstOrDefaultAsync(
+            x => x.PanelBaseUrl == panel.BaseUrl || x.Name == panel.Name,
+            cancellationToken);
+
+        object? before = null;
+        if (node is null)
+        {
+            node = new VpnNode
+            {
+                Name = panel.Name,
+                Provider = "x3ui",
+                Region = panel.Region,
+                Capacity = panel.Capacity,
+                UsedCapacity = panel.UsedCapacity,
+                Priority = 100,
+                SshPort = 22,
+                SshUser = "root",
+                SkipHostKeyChecking = false,
+                CreatedAt = _clock.UtcNow
+            };
+            _db.VpnNodes.Add(node);
+        }
+        else
+        {
+            if (node.Status is NodeStatus.Archived or NodeStatus.Disabled or NodeStatus.Maintenance
+                || (!node.IsAvailableForNewUsers && node.Status is NodeStatus.Ready or NodeStatus.Draining))
+            {
+                return Result<ReadyVpnNodeDto>.Failure("Existing VPN node is operator-disabled, draining, in maintenance or archived and cannot be reopened by panel adoption.");
+            }
+            if (node.UsedCapacity > panel.Capacity)
+            {
+                return Result<ReadyVpnNodeDto>.Failure("VPN node used capacity exceeds panel capacity.");
+            }
+            before = ReadyNodeAuditSnapshot(node, panel.Id);
+            node.Revision = checked(node.Revision + 1);
+        }
+
+        node.Name = panel.Name;
+        node.Host = publicHostname;
+        node.IpAddress = IPAddress.TryParse(publicHostname, out _) ? publicHostname : string.Empty;
+        node.Provider = "x3ui";
+        node.Region = panel.Region;
+        node.Country = command.Country?.Trim() ?? string.Empty;
+        node.Datacenter = command.Datacenter?.Trim() ?? string.Empty;
+        node.Status = NodeStatus.Ready;
+        node.HealthStatus = HealthStatus.Healthy;
+        node.LastHealthCheckAt = panel.LastHealthCheckAt;
+        node.ProvisioningStatus = ProvisioningRunStatus.Succeeded;
+        node.Capacity = panel.Capacity;
+        node.UsedCapacity = panel.UsedCapacity;
+        node.SupportedProtocolsCsv = protocols;
+        node.IsAvailableForNewUsers = true;
+        node.PanelBaseUrl = panel.BaseUrl;
+        node.PanelUsername = panel.Login;
+        node.PanelInboundId = panelInboundId;
+        node.PublicHostname = publicHostname;
+        node.PublicPort = command.PublicPort;
+        node.TagsCsv = "production,panel-adopted";
+        node.UpdatedAt = _clock.UtcNow;
+
+        AddAudit("vpn_panel.node.adopt", "VpnNode", node.Id, actorUserId, before, ReadyNodeAuditSnapshot(node, panel.Id));
+        await _db.SaveChangesAsync(cancellationToken);
+        return Result<ReadyVpnNodeDto>.Success(MapReadyNode(node, panel.Id));
     }
 
     public Task<Result<VpnPanelDto>> CreatePanelAsync(CreateVpnPanelCommand command, CancellationToken cancellationToken = default)
@@ -2477,6 +2602,53 @@ public class X3UiPanelService
             panel.LastHealthCheckAt,
             panel.LastSyncAt
         };
+
+    private static object ReadyNodeAuditSnapshot(VpnNode node, Guid panelId)
+        => new
+        {
+            node.Id,
+            VpnPanelId = panelId,
+            node.Name,
+            node.Host,
+            node.Provider,
+            node.Region,
+            node.Status,
+            node.HealthStatus,
+            node.Capacity,
+            node.UsedCapacity,
+            node.SupportedProtocolsCsv,
+            node.IsAvailableForNewUsers,
+            node.PanelBaseUrl,
+            node.PanelInboundId,
+            node.PublicHostname,
+            node.PublicPort,
+            node.Revision
+        };
+
+    private static ReadyVpnNodeDto MapReadyNode(VpnNode node, Guid panelId)
+        => new(
+            node.Id,
+            panelId,
+            node.Name,
+            node.Host,
+            node.Region,
+            node.Status.ToString(),
+            node.HealthStatus.ToString(),
+            node.SupportedProtocolsCsv,
+            node.Capacity,
+            node.UsedCapacity,
+            node.IsAvailableForNewUsers,
+            node.PanelBaseUrl,
+            node.PublicHostname,
+            node.PublicPort,
+            node.Revision);
+
+    private static bool IsValidPublicHostname(string value)
+        => !string.IsNullOrWhiteSpace(value)
+           && value.Length <= 253
+           && !value.Any(char.IsWhiteSpace)
+           && (IPAddress.TryParse(value, out _)
+               || Uri.CheckHostName(value) == UriHostNameType.Dns);
 
     private static object InboundAuditSnapshot(VpnInbound inbound)
         => new

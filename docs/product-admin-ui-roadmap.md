@@ -16,13 +16,13 @@
 - [~] Staging/VPS smoke checklist готов, но реальный заполненный отчет после deploy еще нужен.
 - [x] Payment provider smoke report template, generator и validator готовы для всех web-провайдеров, но реальные кабинеты еще нужно пройти.
 - [x] Admin VPS smoke report contract и runner проверены реальным production smoke: preflight `10/10`, login/logout, admin API и все `17/17` разделов прошли без JS errors и post-login 401/403; sanitized evidence сохранено в `docs/evidence`.
-- [x] VPN live smoke report template, generator и validator готовы для 3x-ui/inbound/node проверки, но реальную 3x-ui выдачу еще нужно пройти.
+- [x] VPN live smoke runner подключил deployed API к реальному 3x-ui и синхронизировал active inbound; node/order/client checks остаются blocked в sanitized report.
 - [x] Production readiness gate требует полный пакет evidence reports: staging/VPS, платежи, админка VPS и live VPN/3x-ui.
 - [ ] Live-платежи всех провайдеров не подтверждены реальными кабинетами.
-- [ ] Реальная production-like выдача через 3x-ui/inbound/node не подтверждена.
+- [ ] Реальная production-like выдача через 3x-ui/inbound до VPN node/client не подтверждена.
 - [x] Админка на VPS проверена под рабочим production admin-аккаунтом; пароль не сохранен, preflight `10/10`, sections `17/17`.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `781/798` closed, readiness `97.9%`, `17` remaining, `16` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `783/798` closed, readiness `98.1%`, `15` remaining, `14` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -71,7 +71,8 @@
 
 - [x] Production admin-аккаунт на VPS создан/сброшен через maintenance CLI; вход, admin API и logout подтверждены 2026-08-31.
 - [x] Все `17/17` разделов админки пройдены на VPS под рабочим production admin-аккаунтом без browser/API ошибок.
-- [ ] Подключить реальную 3x-ui панель, inbound и VPN node.
+- [x] Подключить реальную 3x-ui панель и синхронизировать active inbound; GitHub run `33364400597`, sanitized evidence `docs/evidence/vpn-live-smoke-2026-08-31.json`.
+- [ ] Подключить production VPN node к проверенным panel/inbound и подтвердить `Ready`.
 - [ ] Провести production-like order smoke: checkout, payment, webhook, subscription, VPN access.
 - [ ] Проверить live/sandbox кабинеты YooKassa, RoboKassa, YooMoney, CloudPayments, TBank, Prodamus, Stripe, PayPal.
 - [x] Реализовать или подтвердить полноценный Telegram Stars invoice flow на локальном invoice gate; live BotFather smoke остается внешней проверкой.
@@ -85,7 +86,7 @@
 
 ## Проверки, которыми закрыт локальный продуктовый слой
 
-- [x] Backend full suite: `1619/1619`.
+- [x] Backend full suite: `1622/1622`.
 - [x] Frontend unit tests: `197/197`.
 - [x] API Release build: OK.
 - [x] Frontend typecheck: OK.
@@ -175,7 +176,7 @@
 - [x] Payment-provider accounts требуют persisted revision, отклоняют no-op/stale update и state action, а delayed conflict сохраняет более новый local draft.
 - [x] Payment-provider, tariff, referral-program, app-release, VPN panel и inbound drafts после delayed conflict получают winning revision и повторно сохраняются.
 - [x] VPN-server editor отклоняет no-op без revision/audit churn и сохраняет новый draft при delayed conflict для повторной отправки.
-- [x] Latest "Что нового": `2026-08-31-production-admin-and-threexui-api-token`, версия `0.755.0`; backend `1619/1619`, frontend `197/197`, repeat responsive Playwright `14/14`, production admin preflight `10/10` и sections `17/17`. SMTP delivery, provider payments, real VPN issuance и полный staging report остаются открыты.
+- [x] Latest "Что нового": `2026-08-31-production-vpn-panel-smoke`, версия `0.756.0`; backend `1622/1622`, frontend `197/197`, repeat responsive Playwright `14/14`, production admin `17/17`, real 3x-ui panel health и inbound sync `2/2`. SMTP delivery, provider payments, production node/client issuance и полный staging report остаются открыты.
 
 ## Как вести дальше
 

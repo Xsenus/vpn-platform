@@ -684,6 +684,109 @@ public class X3UiIntegrationTests
     }
 
     [Fact]
+    public async Task Panel_Adoption_Should_Create_Ready_Production_Node_From_Fresh_Healthy_Sync()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var panel = new VpnPanel
+        {
+            Name = "production-panel",
+            BaseUrl = "http://127.0.0.1:2053/private/",
+            Login = "api-token",
+            EncryptedPassword = "protected-token",
+            Region = "production",
+            Status = VpnPanelStatus.Active,
+            HealthStatus = HealthStatus.Healthy,
+            LastHealthCheckAt = clock.UtcNow.AddMinutes(-1),
+            LastSyncAt = clock.UtcNow.AddMinutes(-1),
+            Capacity = 5000
+        };
+        db.VpnPanels.Add(panel);
+        db.VpnInbounds.Add(new VpnInbound
+        {
+            VpnPanelId = panel.Id,
+            ExternalInboundId = "7",
+            Name = "production-vless",
+            Protocol = "vless",
+            Port = 443,
+            IsDefault = true,
+            IsActive = true,
+            Capacity = 5000
+        });
+        await db.SaveChangesAsync();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.AdoptReadyNodeAsync(
+            panel.Id,
+            new AdoptVpnPanelNodeCommand("83.147.222.145", 443, "RU", "production-vps"),
+            Guid.NewGuid(),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal("Ready", result.Value!.Status);
+        Assert.Equal("Healthy", result.Value.HealthStatus);
+        Assert.True(result.Value.IsAvailableForNewUsers);
+        Assert.Equal("vless", result.Value.SupportedProtocolsCsv);
+        Assert.Equal("83.147.222.145", result.Value.PublicHostname);
+        var node = await db.VpnNodes.SingleAsync();
+        Assert.Equal(ProvisioningRunStatus.Succeeded, node.ProvisioningStatus);
+        Assert.Equal(7, node.PanelInboundId);
+        Assert.Equal("production,panel-adopted", node.TagsCsv);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), x => x.Action == "vpn_panel.node.adopt" && x.EntityId == node.Id.ToString());
+    }
+
+    [Fact]
+    public async Task Panel_Adoption_Should_Fail_Closed_Without_Fresh_Healthy_Inbound_Evidence()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var panel = new VpnPanel
+        {
+            Name = "stale-panel",
+            BaseUrl = "https://panel.example.test",
+            Region = "production",
+            Status = VpnPanelStatus.Active,
+            HealthStatus = HealthStatus.Healthy,
+            LastHealthCheckAt = clock.UtcNow.AddMinutes(-11),
+            LastSyncAt = clock.UtcNow,
+            Capacity = 100
+        };
+        db.VpnPanels.Add(panel);
+        db.VpnInbounds.Add(new VpnInbound { VpnPanelId = panel.Id, ExternalInboundId = "1", Protocol = "vless", Port = 443, IsActive = true });
+        await db.SaveChangesAsync();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock, ProductionConfiguration());
+
+        var result = await service.AdoptReadyNodeAsync(
+            panel.Id,
+            new AdoptVpnPanelNodeCommand("vpn.example.test", 443),
+            null,
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("last 10 minutes", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await db.VpnNodes.ToListAsync());
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Panel_Adoption_Should_Reject_Sandbox_Mode()
+    {
+        await using var db = CreateDbContext();
+        var clock = new FixedClock();
+        var service = new X3UiPanelService(db, new FakeX3UiClient(clock.UtcNow), new TestSecretProtector(), clock, SandboxConfiguration());
+
+        var result = await service.AdoptReadyNodeAsync(
+            Guid.NewGuid(),
+            new AdoptVpnPanelNodeCommand("vpn.example.test", 443),
+            null,
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("sandbox", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(await db.VpnNodes.ToListAsync());
+    }
+
+    [Fact]
     public async Task Panel_Create_Should_Reject_Unknown_Authentication_Mode()
     {
         await using var db = CreateDbContext();

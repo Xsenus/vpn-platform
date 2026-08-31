@@ -18,15 +18,15 @@ public class ProductAdminUiRoadmapSyncTests
                      "Дата актуализации: 2026-08-31",
                      "PRODUCT_COMPLETION_ROADMAP.md",
                      "staging-ready baseline",
-                     "Backend full suite: `1619/1619`",
+                     "Backend full suite: `1622/1622`",
                      "Frontend unit tests: `197/197`",
                      "Playwright public/cabinet/admin/all-screens/mobile/console smoke: `282/282`",
                      "Fresh local SQLite smoke: OK",
                      "Local SQLite VPS smoke dry-run: OK",
                      "Encoding guard: OK",
                      "Secret scan: OK",
-                     "2026-08-31-production-admin-and-threexui-api-token",
-                     "0.755.0"
+                     "2026-08-31-production-vpn-panel-smoke",
+                     "0.756.0"
                  })
         {
             Assert.Contains(expected, productRoadmap, StringComparison.OrdinalIgnoreCase);
@@ -59,8 +59,10 @@ public class ProductAdminUiRoadmapSyncTests
         Assert.Contains("[x] `STATE-013`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P0-ADMIN-001`", masterRoadmap, StringComparison.Ordinal);
         Assert.Contains("[x] `P0-ADMIN-002`", masterRoadmap, StringComparison.Ordinal);
-        Assert.Contains("2026-08-31-production-admin-and-threexui-api-token", testResults, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2026-08-31-production-admin-and-threexui-api-token", releases, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[x] `P0-VPN-001`", masterRoadmap, StringComparison.Ordinal);
+        Assert.Contains("[x] `P0-VPN-002`", masterRoadmap, StringComparison.Ordinal);
+        Assert.Contains("2026-08-31-production-vpn-panel-smoke", testResults, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2026-08-31-production-vpn-panel-smoke", releases, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -72,12 +74,12 @@ public class ProductAdminUiRoadmapSyncTests
 
         foreach (var expected in new[]
                  {
-                     "Backend full suite: `1619/1619`",
+                     "Backend full suite: `1622/1622`",
                      "Frontend unit tests: `197/197`",
                      "Fresh local SQLite smoke: OK",
                      "Secret scan: OK",
-                     "2026-08-31-production-admin-and-threexui-api-token",
-                     "0.755.0",
+                     "2026-08-31-production-vpn-panel-smoke",
+                     "0.756.0",
                      "staging-ready baseline",
                      "Production-ready",
                      "Live-",
@@ -115,7 +117,8 @@ public class ProductAdminUiRoadmapSyncTests
                      new ExpectedStatus(" ", "Production-ready"),
                      new ExpectedStatus("x", "Production admin-аккаунт", "VPS"),
                      new ExpectedStatus("x", "17/17", "разделов админки"),
-                     new ExpectedStatus(" ", "3x-ui", "VPN node"),
+                     new ExpectedStatus("x", "3x-ui", "active inbound"),
+                     new ExpectedStatus(" ", "production VPN node", "Ready"),
                      new ExpectedStatus(" ", "production-like order smoke"),
                      new ExpectedStatus(" ", "YooKassa", "PayPal"),
                      new ExpectedStatus(" ", "staging/VPS smoke report")

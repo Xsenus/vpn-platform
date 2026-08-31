@@ -90,6 +90,17 @@ public class AdminVpnPanelsController : ControllerBase
     public async Task<IActionResult> GetInbounds(Guid id, CancellationToken cancellationToken)
         => Ok(await _panels.GetInboundsAsync(id, cancellationToken));
 
+    [HttpPost("vpn-panels/{id:guid}/adopt-ready-node")]
+    [Authorize(Policy = AdminPolicies.VpnManage)]
+    public async Task<IActionResult> AdoptReadyNode(
+        Guid id,
+        [FromBody] AdoptVpnPanelNodeCommand request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _panels.AdoptReadyNodeAsync(id, request, ResolveUserId(), cancellationToken);
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
+    }
+
     [HttpGet("vpn-inbounds")]
     public async Task<IActionResult> GetAllInbounds(CancellationToken cancellationToken)
         => Ok(await _panels.GetInboundsAsync(cancellationToken));

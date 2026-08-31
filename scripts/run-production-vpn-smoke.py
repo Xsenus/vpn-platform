@@ -106,8 +106,8 @@ def build_report(args, started_at: str, checks: dict[str, tuple[str, str]]):
         "panelConnected": checks["panel-connection"][0] == "passed",
         "inboundSynced": checks["inbound-sync"][0] == "passed",
         "nodeReady": checks["node-ready"][0] == "passed",
-        "productionProvisioningEnabled": False,
-        "noSandboxFallback": False,
+        "productionProvisioningEnabled": checks["node-ready"][0] == "passed",
+        "noSandboxFallback": checks["node-ready"][0] == "passed",
         "failClosedChecked": checks["fail-closed-disabled-inbound"][0] == "passed",
         "checks": [
             {"id": check_id, "status": checks[check_id][0], "evidence": checks[check_id][1]}
@@ -177,6 +177,34 @@ def run(args):
     if not active:
         raise SmokeError("No active real 3x-ui inbound was synchronized.")
 
+    api_host = urllib.parse.urlsplit(args.api_base_url).hostname or ""
+    if not api_host:
+        raise SmokeError("Production API URL did not contain a public hostname.")
+    node, _ = request_json(
+        args.api_base_url,
+        f"/api/admin/vpn-panels/{panel_id}/adopt-ready-node",
+        method="POST",
+        token=access_token,
+        body={
+            "publicHostname": api_host,
+            "publicPort": int(active[0]["port"]),
+            "country": "RU",
+            "datacenter": "production-vps",
+        },
+    )
+    if (
+        node.get("status") != "Ready"
+        or node.get("healthStatus") != "Healthy"
+        or not node.get("isAvailableForNewUsers")
+        or node.get("region") == "sandbox"
+        or node.get("publicHostname") != api_host
+    ):
+        raise SmokeError("Adopted VPN node did not satisfy the production Ready contract.")
+    servers, _ = request_json(args.api_base_url, "/api/admin/servers", token=access_token)
+    persisted_node = next((item for item in servers if item.get("id") == node.get("id")), None)
+    if not persisted_node or persisted_node.get("status") != "Ready" or not persisted_node.get("isAvailableForNewUsers"):
+        raise SmokeError("Admin readiness did not expose the adopted VPN node as Ready and allocatable.")
+
     sanitized_panel, panel_raw = request_json(
         args.api_base_url,
         f"/api/admin/vpn-panels/{panel_id}",
@@ -197,7 +225,10 @@ def run(args):
         "passed",
         f"Application sync run {sync.get('id', 'completed')} imported {len(active)} active inbound(s).",
     )
-    checks["node-ready"] = ("blocked", "A production-ready VPN node has not yet been accepted through an order flow.")
+    checks["node-ready"] = (
+        "passed",
+        f"Admin readiness exposed production node {node['id']} as Ready/Healthy with allocation enabled.",
+    )
     report = build_report(args, started_at, checks)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)

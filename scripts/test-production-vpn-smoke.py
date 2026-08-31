@@ -37,6 +37,22 @@ class ProductionVpnSmokeTests(unittest.TestCase):
         report = MODULE.build_report(args, "2026-08-31T00:00:00+00:00", checks)
         self.assertEqual("http://127.0.0.1:54321", report["x3uiPanelUrl"])
 
+    def test_ready_node_marks_production_without_sandbox_fallback(self):
+        args = argparse.Namespace(
+            api_base_url="http://api.test",
+            admin_web_url="http://admin.test",
+            panel_url="http://127.0.0.1:54321/private/",
+            output="artifacts/report.json",
+            release_id="release",
+            operator="test",
+        )
+        checks = {check_id: ("blocked", "safe") for check_id in MODULE.CHECK_IDS}
+        checks["node-ready"] = ("passed", "safe")
+        report = MODULE.build_report(args, "2026-08-31T00:00:00+00:00", checks)
+        self.assertTrue(report["nodeReady"])
+        self.assertTrue(report["productionProvisioningEnabled"])
+        self.assertTrue(report["noSandboxFallback"])
+
 
 if __name__ == "__main__":
     unittest.main()

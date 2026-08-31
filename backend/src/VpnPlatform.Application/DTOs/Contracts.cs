@@ -507,6 +507,29 @@ public sealed record VpnPanelDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
+public sealed record AdoptVpnPanelNodeCommand(
+    string PublicHostname,
+    int PublicPort,
+    string? Country = null,
+    string? Datacenter = null);
+
+public sealed record ReadyVpnNodeDto(
+    Guid Id,
+    Guid VpnPanelId,
+    string Name,
+    string Host,
+    string Region,
+    string Status,
+    string HealthStatus,
+    string SupportedProtocolsCsv,
+    int Capacity,
+    int UsedCapacity,
+    bool IsAvailableForNewUsers,
+    string PanelBaseUrl,
+    string PublicHostname,
+    int PublicPort,
+    int Revision);
+
 public sealed record VpnInboundDto(
     Guid Id,
     Guid VpnPanelId,
