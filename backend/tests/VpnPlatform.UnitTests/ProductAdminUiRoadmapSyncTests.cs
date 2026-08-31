@@ -118,7 +118,7 @@ public class ProductAdminUiRoadmapSyncTests
                      new ExpectedStatus("x", "Production admin-аккаунт", "VPS"),
                      new ExpectedStatus("x", "17/17", "разделов админки"),
                      new ExpectedStatus("x", "3x-ui", "active inbound"),
-                     new ExpectedStatus(" ", "production VPN node", "Ready"),
+                     new ExpectedStatus("x", "production VPN node", "Ready"),
                      new ExpectedStatus(" ", "production-like order smoke"),
                      new ExpectedStatus(" ", "YooKassa", "PayPal"),
                      new ExpectedStatus(" ", "staging/VPS smoke report")

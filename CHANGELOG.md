@@ -11,10 +11,10 @@ Release entry: `2026-08-31-production-vpn-panel-smoke`.
 
 ### Verification
 
-- Real GitHub Actions run `33364400597` passed application login, write-only panel configuration, 3x-ui bearer health-check, inbound sync and sanitized evidence validation.
-- `docs/evidence/vpn-live-smoke-2026-08-31.json` records `2 passed / 7 blocked`: panel connection and one active inbound are proven; node/order/payment/subscription/client/URI/fail-closed checks remain explicitly blocked.
+- Real GitHub Actions run `33365986521` passed application login, write-only panel configuration, 3x-ui bearer health-check, inbound sync, production-node adoption and sanitized evidence validation.
+- `docs/evidence/vpn-live-smoke-2026-08-31.json` records `3 passed / 6 blocked`: panel connection, one active inbound and the `Ready/Healthy` production node are proven; order/payment/subscription/client/URI/fail-closed checks remain explicitly blocked.
 - Backend Release `1622/1622`, smoke runner `4/4`, production VPN mode contract and targeted status/evidence guards `50/50` pass.
-- Roadmap `783/798` closed, readiness `98.1%`, `15` remaining, `14` open, `1` in progress, `0` blocked. Real paid order, production node/client issuance, provider cabinets, SMTP/HTTPS and full staging acceptance remain external gates.
+- Roadmap `784/798` closed, readiness `98.2%`, `14` remaining, `13` open, `1` in progress, `0` blocked. Real paid order/client issuance, provider cabinets, SMTP/HTTPS and full staging acceptance remain external gates.
 
 ## 0.755.0 - 2026-08-31
 

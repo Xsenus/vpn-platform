@@ -239,7 +239,6 @@ public class RoadmapCurrentStateTests
         {
             ["STATE-011"] = " ",
             ["STATE-012"] = " ",
-            ["P0-VPN-003"] = " ",
             ["P0-VPN-004"] = " ",
             ["P0-VPN-005"] = " ",
             ["P0-PAY-002"] = " ",
@@ -286,7 +285,7 @@ public class RoadmapCurrentStateTests
                  {
                      "STATE-011",
                      "STATE-012",
-                     "P0-VPN-003",
+                     "P0-VPN-004",
                      "P0-PAY-*",
                      "P9-TST-007",
                      "P11-ACC-002"

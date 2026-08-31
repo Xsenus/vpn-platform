@@ -1,20 +1,20 @@
 {
-  "reportId": "vpn-live-smoke-20260831-062959",
+  "reportId": "vpn-live-smoke-20260831-065337",
   "environmentName": "production-vps",
   "apiBaseUrl": "http://83.147.222.145:8080",
   "adminWebUrl": "http://83.147.222.145:5175",
   "x3uiPanelUrl": "http://127.0.0.1:54321",
   "smokeReportPath": "docs/evidence/vpn-live-smoke-2026-08-31.json",
-  "startedAt": "2026-08-31T06:29:57.235259+00:00",
-  "completedAt": "2026-08-31T06:29:59.694739+00:00",
-  "releaseId": "2026-08-31-production-admin-and-threexui-api-token",
-  "operator": "github-run-33364400597",
+  "startedAt": "2026-08-31T06:53:31.651017+00:00",
+  "completedAt": "2026-08-31T06:53:37.584368+00:00",
+  "releaseId": "2026-08-31-production-vpn-panel-smoke",
+  "operator": "github-run-33365986521",
   "notes": "Application-level production VPS smoke. Evidence is sanitized; credentials, headers, cookies and VPN URIs are excluded.",
   "panelConnected": true,
   "inboundSynced": true,
-  "nodeReady": false,
-  "productionProvisioningEnabled": false,
-  "noSandboxFallback": false,
+  "nodeReady": true,
+  "productionProvisioningEnabled": true,
+  "noSandboxFallback": true,
   "failClosedChecked": false,
   "checks": [
     {
@@ -25,12 +25,12 @@
     {
       "id": "inbound-sync",
       "status": "passed",
-      "evidence": "Application sync run 1b53cd75-a293-4265-a02c-88a6b638d728 imported 1 active inbound(s)."
+      "evidence": "Application sync run ed23a189-5404-4cba-846f-ff028c1b18f6 imported 1 active inbound(s)."
     },
     {
       "id": "node-ready",
-      "status": "blocked",
-      "evidence": "A production-ready VPN node has not yet been accepted through an order flow."
+      "status": "passed",
+      "evidence": "Admin readiness exposed production node e4ab6901-5866-44d5-ad0e-08f13b774f56 as Ready/Healthy with allocation enabled."
     },
     {
       "id": "order-create",

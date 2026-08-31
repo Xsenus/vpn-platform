@@ -86,9 +86,9 @@ Production-ready решение заблокировано следующими 
 - Hidden admin forms не обходят capability checks: releases, FAQ, content, scenarios, support и Telegram handlers проверяют write-право до API.
 - Admin action dispatcher всегда проверяет target-section capability; writable active tab не разрешает hidden mutation другого раздела.
 - Production admin acceptance: preflight `10/10`, login/logout, admin API и все `17/17` обязательных разделов прошли на реальном VPS; failed/blocked/skipped `0`, sanitized reports находятся в `docs/evidence`.
-- Production VPN panel acceptance: GitHub run `33364400597` подтвердил application-level health-check и sync `1` active inbound без раскрытия token/password; report `docs/evidence/vpn-live-smoke-2026-08-31.json` содержит `2 passed / 7 blocked`.
+- Production VPN panel acceptance: GitHub run `33365986521` подтвердил application-level health-check, sync `1` active inbound и production-ноду `Ready/Healthy` без раскрытия token/password; report `docs/evidence/vpn-live-smoke-2026-08-31.json` содержит `3 passed / 6 blocked`.
 - Latest "Что нового": `2026-08-31-production-vpn-panel-smoke`, версия `0.756.0`. Restore drill, provider/Telegram/SMTP delivery, production node/order/client issuance и полный staging evidence всё ещё требуются.
-- Roadmap progress: `783/798` closed, readiness `98.1%`, `15` remaining, `14` open, `1` in progress and `0` blocked.
+- Roadmap progress: `784/798` closed, readiness `98.2%`, `14` remaining, `13` open, `1` in progress and `0` blocked.
 
 ## Команды проверки
 

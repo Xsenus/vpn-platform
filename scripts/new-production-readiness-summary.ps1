@@ -129,7 +129,6 @@ function Get-RoadmapBlockers {
         '[ ] `P0-ADMIN-002`',
         '[ ] `P0-VPN-001`',
         '[ ] `P0-VPN-002`',
-        '[ ] `P0-VPN-003`',
         '[ ] `P0-VPN-004`',
         '[ ] `P0-VPN-005`',
         '[ ] `P0-PAY-002`',

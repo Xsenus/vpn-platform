@@ -86,7 +86,6 @@ public class ReleaseDecisionTests
                  {
                      "[ ] `STATE-011`",
                      "[ ] `STATE-012`",
-                     "[ ] `P0-VPN-003`",
                      "[ ] `P0-VPN-004`",
                      "[ ] `P0-PAY-002`",
                      "[ ] `P0-PAY-009`",

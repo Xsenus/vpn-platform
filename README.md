@@ -391,6 +391,6 @@ VPN-выдача поддерживает sandbox-режим и интеграц
 - admin notification status/template/search и latest top-500 выполняются в БД до materialization;
 - admin dashboard subscription/recent/payment readiness metrics считаются DB-side aggregates без загрузки строк;
 - auto-target миграция подписки выбирает node/panel/inbound одним ordered SQL query без N+1;
-- roadmap progress: `783/798` closed, readiness `98.1%`, `15` remaining, `14` open, `1` in progress and `0` blocked;
+- roadmap progress: `784/798` closed, readiness `98.2%`, `14` remaining, `13` open, `1` in progress and `0` blocked;
 - текущий release decision: `staging-ready baseline`, не production-ready;
 - roadmap still keeps live/staging blockers, including `P11-ACC-002`, and cannot be treated as production-ready without real secrets, payment cabinets, VPS smoke and 3x-ui checks.

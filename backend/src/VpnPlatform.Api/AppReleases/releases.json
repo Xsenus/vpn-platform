@@ -17921,11 +17921,11 @@
       },
       {
         "type": "important",
-        "text": "Реальный GitHub run 33364400597 подтвердил application-level panel connection и синхронизацию одного active inbound без credentials в API/evidence; node, paid order, client issuance и fail-closed smoke остаются открытыми."
+        "text": "Реальный GitHub run 33365986521 подтвердил application-level panel connection, синхронизацию одного active inbound и production-ноду Ready/Healthy с allocation enabled без credentials в API/evidence; paid order, client issuance и fail-closed smoke остаются открытыми."
       },
       {
         "type": "important",
-        "text": "Roadmap progress is 783/798 closed, readiness 98.1%, 15 remaining, 14 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required for production node/order/client issuance, provider payments, SMTP/HTTPS and full acceptance."
+        "text": "Roadmap progress is 784/798 closed, readiness 98.2%, 14 remaining, 13 open, 1 in progress and 0 blocked. Real VPS/staging/payment/3x-ui evidence is still required for paid order/client issuance, provider payments, SMTP/HTTPS and full acceptance."
       }
     ]
   }

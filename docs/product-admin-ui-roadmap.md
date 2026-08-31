@@ -22,7 +22,7 @@
 - [ ] Реальная production-like выдача через 3x-ui/inbound до VPN node/client не подтверждена.
 - [x] Админка на VPS проверена под рабочим production admin-аккаунтом; пароль не сохранен, preflight `10/10`, sections `17/17`.
 - [ ] Production-ready решение не принято: текущий статус `staging-ready baseline`. `P11-ACC-002` remains open until real VPS/staging smoke.
-- [x] Roadmap progress синхронизирован с master roadmap: `783/798` closed, readiness `98.1%`, `15` remaining, `14` open, `1` in progress, `0` blocked.
+- [x] Roadmap progress синхронизирован с master roadmap: `784/798` closed, readiness `98.2%`, `14` remaining, `13` open, `1` in progress, `0` blocked.
 
 ## Что уже реализовано продуктово
 
@@ -71,8 +71,8 @@
 
 - [x] Production admin-аккаунт на VPS создан/сброшен через maintenance CLI; вход, admin API и logout подтверждены 2026-08-31.
 - [x] Все `17/17` разделов админки пройдены на VPS под рабочим production admin-аккаунтом без browser/API ошибок.
-- [x] Подключить реальную 3x-ui панель и синхронизировать active inbound; GitHub run `33364400597`, sanitized evidence `docs/evidence/vpn-live-smoke-2026-08-31.json`.
-- [ ] Подключить production VPN node к проверенным panel/inbound и подтвердить `Ready`.
+- [x] Подключить реальную 3x-ui панель и синхронизировать active inbound; GitHub run `33365986521`, sanitized evidence `docs/evidence/vpn-live-smoke-2026-08-31.json`.
+- [x] Подключить production VPN node к проверенным panel/inbound и подтвердить `Ready`.
 - [ ] Провести production-like order smoke: checkout, payment, webhook, subscription, VPN access.
 - [ ] Проверить live/sandbox кабинеты YooKassa, RoboKassa, YooMoney, CloudPayments, TBank, Prodamus, Stripe, PayPal.
 - [x] Реализовать или подтвердить полноценный Telegram Stars invoice flow на локальном invoice gate; live BotFather smoke остается внешней проверкой.
@@ -176,7 +176,7 @@
 - [x] Payment-provider accounts требуют persisted revision, отклоняют no-op/stale update и state action, а delayed conflict сохраняет более новый local draft.
 - [x] Payment-provider, tariff, referral-program, app-release, VPN panel и inbound drafts после delayed conflict получают winning revision и повторно сохраняются.
 - [x] VPN-server editor отклоняет no-op без revision/audit churn и сохраняет новый draft при delayed conflict для повторной отправки.
-- [x] Latest "Что нового": `2026-08-31-production-vpn-panel-smoke`, версия `0.756.0`; backend `1622/1622`, frontend `197/197`, repeat responsive Playwright `14/14`, production admin `17/17`, real 3x-ui panel health и inbound sync `2/2`. SMTP delivery, provider payments, production node/client issuance и полный staging report остаются открыты.
+- [x] Latest "Что нового": `2026-08-31-production-vpn-panel-smoke`, версия `0.756.0`; backend `1622/1622`, frontend `197/197`, repeat responsive Playwright `14/14`, production admin `17/17`, real 3x-ui panel health, inbound sync и production node readiness `3/3`. SMTP delivery, provider payments, client issuance и полный staging report остаются открыты.
 
 ## Как вести дальше
 
